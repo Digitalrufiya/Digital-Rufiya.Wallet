@@ -4,86 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DRF Wallet</title>
-    <style>
-        body {
-            background: linear-gradient(to right, #fff, #ffe, #fee);
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 50px;
-        }
-        #connectButton, #sendButton {
-            padding: 10px 20px;
-            margin: 10px;
-            background-color: #ccf5cc;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 18px;
-        }
-        #connectButton:hover, #sendButton:hover {
-            background-color: #b3e6b3;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Web3Modal libraries -->
+    <script src="https://unpkg.com/web3modal"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+
 </head>
 <body>
     <h1>DRF Wallet</h1>
-    <img src="your_logo.png" alt="Logo" width="100" style="border-radius: 50%;"><br><br>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="Logo" width="100" style="border-radius: 50%;"><br><br>
+
     <button id="connectButton">Connect Wallet</button><br>
     <button id="sendButton" disabled>Send DRF Coins</button>
 
-    <p id="status">Connecting...</p>
+    <p id="status">Please connect wallet</p>
 
-    <script>
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                console.log('Wallet detected!');
-                document.getElementById('status').innerText = 'Wallet detected, please connect.';
-
-                document.getElementById('connectButton').addEventListener('click', connectWallet);
-                document.getElementById('sendButton').addEventListener('click', sendCoins);
-            } else {
-                document.getElementById('status').innerText = 'No Wallet Detected. Please install Trust Wallet or MetaMask.';
-                alert('No crypto wallet detected!');
-            }
-        });
-
-        async function connectWallet() {
-            try {
-                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-                const account = accounts[0];
-                document.getElementById('connectButton').innerText = 'Connected: ' + account.slice(0, 6) + '...' + account.slice(-4);
-                document.getElementById('sendButton').disabled = false;
-                document.getElementById('status').innerText = 'Connected successfully!';
-            } catch (error) {
-                console.error(error);
-                alert('Connection failed!');
-            }
-        }
-
-        async function sendCoins() {
-            const receiver = prompt('Enter receiver address:');
-            const amountEth = prompt('Enter amount in ETH:');
-
-            if (!receiver || !amountEth) {
-                alert('Receiver and amount are required.');
-                return;
-            }
-
-            try {
-                const tx = await ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [{
-                        to: receiver,
-                        from: ethereum.selectedAddress,
-                        value: '0x' + (BigInt(parseFloat(amountEth) * 10 ** 18)).toString(16)
-                    }]
-                });
-                alert('Transaction sent! TX Hash: ' + tx);
-            } catch (error) {
-                console.error(error);
-                alert('Transaction failed!');
-            }
-        }
-    </script>
+    <script src="wallet.js"></script>
 </body>
 </html>
