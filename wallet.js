@@ -1,67 +1,46 @@
-let web3Modal;
 let provider;
 let signer;
 
-async function init() {
-    const providerOptions = {
-        walletconnect: {
-            package: window.WalletConnectProvider.default,
-            options: {
-                rpc: {
-                    56: "https://bsc-dataseed.binance.org/" // BSC Mainnet
-                },
-                chainId: 56
-            }
-        }
-    };
-
-    web3Modal = new window.Web3Modal.default({
-        cacheProvider: false,
-        providerOptions,
-        theme: "light"
-    });
-
-    document.getElementById('connectButton').addEventListener('click', onConnect);
-    document.getElementById('sendButton').addEventListener('click', sendCoins);
-}
-
-async function onConnect() {
+async function connectWallet() {
+  if (typeof window.ethereum !== 'undefined') {
     try {
-        provider = await web3Modal.connect();
-        const web3Provider = new ethers.providers.Web3Provider(provider);
-        signer = web3Provider.getSigner();
-        const address = await signer.getAddress();
-        
-        document.getElementById('connectButton').innerText = 'Connected: ' + address.slice(0, 6) + '...' + address.slice(-4);
-        document.getElementById('sendButton').disabled = false;
-        document.getElementById('status').innerText = 'Connected to Wallet';
-    } catch (e) {
-        console.error(e);
-        alert('Connection failed!');
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+
+      document.getElementById('status').innerText = "Wallet connected!";
+      document.getElementById('sendButton').disabled = false;
+    } catch (error) {
+      console.error(error);
+      document.getElementById('status').innerText = "Connection failed.";
     }
+  } else {
+    document.getElementById('status').innerText = "Please install a crypto wallet like Trust Wallet or MetaMask.";
+  }
 }
 
 async function sendCoins() {
-    const receiver = prompt('Enter receiver address:');
-    const amountEth = prompt('Enter amount in BNB:');
+  if (!signer) {
+    alert('Please connect your wallet first.');
+    return;
+  }
 
-    if (!receiver || !amountEth) {
-        alert('Receiver and amount are required.');
-        return;
-    }
+  const recipientAddress = "0x1234567890abcdef1234567890abcdef12345678"; // Change this to your real address
+  const amountInEth = "0.01"; // Amount to send in ETH (or your chain's currency)
 
-    try {
-        const tx = await signer.sendTransaction({
-            to: receiver,
-            value: ethers.utils.parseEther(amountEth)
-        });
-        alert('Transaction sent! TX Hash: ' + tx.hash);
-    } catch (error) {
-        console.error(error);
-        alert('Transaction failed!');
-    }
+  try {
+    const tx = await signer.sendTransaction({
+      to: recipientAddress,
+      value: ethers.utils.parseEther(amountInEth)
+    });
+
+    document.getElementById('status').innerText = `Transaction sent! TX Hash: ${tx.hash}`;
+  } catch (error) {
+    console.error(error);
+    document.getElementById('status').innerText = "Transaction failed.";
+  }
 }
 
-window.addEventListener('load', async () => {
-    init();
-});
+// Attach functions to buttons
+document.getElementById('connectButton').addEventListener('click', connectWallet);
+document.getElementById('sendButton').addEventListener('click', sendCoins);
