@@ -150,6 +150,16 @@ function setupListeners(instance) {
     instance.on('accountsChanged', () => {
         window.location.reload();
     });
+// Copy address to clipboard when clicking on user address
+userAddressSpan.addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText(userAddress);
+        showToast('Address copied to clipboard!', 'success');
+    } catch (err) {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy address.', 'error');
+    }
+});
 
     instance.on('chainChanged', () => {
         window.location.reload();
