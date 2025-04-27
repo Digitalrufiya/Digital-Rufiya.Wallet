@@ -2,54 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Connect Wallet - Web3Modal v2</title>
-  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@walletconnect/web3modal@2.3.0/dist/web3modal.umd.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 50px;
-    }
-    #wallet-address {
-      margin-top: 20px;
-      font-weight: bold;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Digital Rufiya Wallet</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  
+  <script type="module" src="wallet.js" defer></script>
 </head>
+
 <body>
+  <div class="wallet-container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="Logo" class="logo">
+    
+    <h1>DRF Wallet</h1>
+    
+    <button id="connectButton" class="btn-primary">Connect Wallet</button>
 
-<h1>Connect Your Wallet</h1>
-<button onclick="connectWallet()">Connect Wallet</button>
-<div id="wallet-address"></div>
+    <div id="walletInfo" class="wallet-info" style="display: none;">
+      <p><strong>Network:</strong> <span id="networkName"></span></p>
+      <p><strong>Address:</strong> <span id="userAddress"></span></p>
+      <p><strong>BNB Balance:</strong> <span id="bnbBalance"></span> BNB</p>
+      <p><strong>DRF Balance:</strong> <span id="drfBalance"></span> DRF</p>
 
-<script>
-const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // Replace with your WalletConnect project ID
+      <div class="action-buttons">
+        <button id="sendButton" class="btn-secondary">Send DRF</button>
+      </div>
+    </div>
 
-const modal = new window.Web3Modal.default({
-  projectId: projectId,
-  themeMode: "light",
-  chains: [1], // Ethereum Mainnet
-  walletConnectVersion: 2
-});
+    <p id="status" class="status-text">Please connect your wallet</p>
+  </div>
 
-async function connectWallet() {
-  try {
-    const provider = await modal.connect();
-    const web3 = new Web3(provider);
-    const accounts = await web3.eth.getAccounts();
-    const address = accounts[0];
-    document.getElementById('wallet-address').innerText = `Connected: ${address}`;
-  } catch (error) {
-    console.error('Connection error:', error);
-  }
-}
-</script>
+  <!-- Send Modal -->
+  <div id="sendModal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <h2>Send DRF Tokens</h2>
+      <input type="text" id="recipientAddress" placeholder="Recipient Address">
+      <input type="number" id="sendAmount" placeholder="Amount">
+      <button id="confirmSendButton" class="btn-primary">Send</button>
+    </div>
+  </div>
 
+  <!-- Success Animation -->
+  <div id="successAnimation" style="display: none;">
+    <div class="checkmark">
+      <div class="checkmark_stem"></div>
+      <div class="checkmark_kick"></div>
+    </div>
+  </div>
 </body>
 </html>
