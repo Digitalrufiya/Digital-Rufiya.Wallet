@@ -1,91 +1,101 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #f7f9fc;
-  text-align: center;
-  padding: 20px;
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
-.container {
-  margin-top: 50px;
+.wallet-container {
+  background: #1f1f1f;
+  padding: 30px;
+  border-radius: 15px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .logo {
-  width: 150px;
+  width: 80px;
   margin-bottom: 20px;
 }
 
-button {
-  background-color: #3498db;
-  color: white;
+h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 10px 20px;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  border-radius: 30px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 16px;
+  margin-top: 15px;
 }
 
-button:hover {
-  background-color: #2980b9;
+.btn-primary {
+  background: #3498db;
+  color: #fff;
 }
 
-/* Modal Styles */
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-secondary {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: #27ae60;
+}
+
+.wallet-info {
+  margin-top: 20px;
+  text-align: left;
+}
+
+.status-text {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
 .modal {
   display: none;
   position: fixed;
-  z-index: 999;
-  padding-top: 150px;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.6);
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .modal-content {
-  background-color: #fff;
-  margin: auto;
-  padding: 25px;
-  border: 1px solid #888;
-  width: 300px;
-  border-radius: 12px;
-  text-align: center;
-}
-
-.modal-content input {
+  background-color: #2c3e50;
+  margin: 15% auto;
+  padding: 20px;
+  border-radius: 10px;
   width: 90%;
-  padding: 10px;
-  margin: 10px 0;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  max-width: 400px;
 }
 
-.modal-content button {
-  padding: 10px 20px;
-  background-color: #27ae60;
-  color: white;
+input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
-  cursor: pointer;
+  margin-bottom: 15px;
 }
 
 .close {
-  color: #aaa;
   float: right;
   font-size: 28px;
   cursor: pointer;
-}
-.close:hover {
-  color: black;
-}
-
-/* Checkmark Animation */
-#successAnimation {
-  position: fixed;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
 }
 
 .checkmark {
@@ -96,36 +106,25 @@ button:hover {
   stroke-width: 2;
   stroke: #2ecc71;
   stroke-miterlimit: 10;
+  margin: 50px auto;
   box-shadow: inset 0px 0px 0px #2ecc71;
   animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
-  position: relative;
-  background: white;
 }
 
 .checkmark_stem {
   position: absolute;
-  width: 3px;
-  height: 25px;
-  background-color: #2ecc71;
-  left: 38px;
-  top: 18px;
-  transform: rotate(45deg);
-  transform-origin: center center;
-  animation: stemGrow .3s ease-in-out .5s forwards;
-  opacity: 0;
+  width: 5px;
+  height: 30px;
+  background: #2ecc71;
+  transform: rotate(45deg) translate(12px, 12px);
 }
 
 .checkmark_kick {
   position: absolute;
-  width: 3px;
+  width: 5px;
   height: 15px;
-  background-color: #2ecc71;
-  left: 30px;
-  top: 42px;
-  transform: rotate(-45deg);
-  transform-origin: center center;
-  animation: kickGrow .3s ease-in-out .6s forwards;
-  opacity: 0;
+  background: #2ecc71;
+  transform: rotate(-45deg) translate(-2px, 22px);
 }
 
 @keyframes fill {
@@ -136,23 +135,9 @@ button:hover {
 
 @keyframes scale {
   0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: none;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-}
-
-@keyframes stemGrow {
-  100% {
-    height: 40px;
-    opacity: 1;
-  }
-}
-
-@keyframes kickGrow {
-  100% {
-    height: 20px;
-    opacity: 1;
+    transform: scale3d(1.1, 1.1, 1);
   }
 }
