@@ -151,3 +151,81 @@ h1 {
         font-size: 1.5rem;
     }
 }
+/* Checkmark Animation */
+#successAnimation {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+}
+
+.checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 2;
+    stroke: #2ecc71;
+    stroke-miterlimit: 10;
+    box-shadow: inset 0px 0px 0px #2ecc71;
+    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+    position: relative;
+    background: white;
+}
+
+.checkmark_stem {
+    position: absolute;
+    width: 3px;
+    height: 25px;
+    background-color: #2ecc71;
+    left: 38px;
+    top: 18px;
+    transform: rotate(45deg);
+    transform-origin: center center;
+    animation: stemGrow .3s ease-in-out .5s forwards;
+    opacity: 0;
+}
+
+.checkmark_kick {
+    position: absolute;
+    width: 3px;
+    height: 15px;
+    background-color: #2ecc71;
+    left: 30px;
+    top: 42px;
+    transform: rotate(-45deg);
+    transform-origin: center center;
+    animation: kickGrow .3s ease-in-out .6s forwards;
+    opacity: 0;
+}
+
+@keyframes fill {
+    100% {
+        box-shadow: inset 0px 0px 0px 30px #2ecc71;
+    }
+}
+
+@keyframes scale {
+    0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+}
+
+@keyframes stemGrow {
+    100% {
+        height: 40px;
+        opacity: 1;
+    }
+}
+
+@keyframes kickGrow {
+    100% {
+        height: 20px;
+        opacity: 1;
+    }
+}
+
