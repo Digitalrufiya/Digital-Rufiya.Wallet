@@ -2,129 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DigitalRufiya Wallet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Wallet (WalletKit)</title>
+
+  <!-- WalletConnect Core + WalletKit (Browser CDNs) -->
+  <script src="https://unpkg.com/@walletconnect/core@2.11.2/dist/core.umd.js"></script>
+  <script src="https://unpkg.com/@reown/walletkit@0.1.5/dist/walletkit.umd.js"></script>
 
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      background: #f4f6f8;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px;
-    }
-    h1 {
-      margin-top: 20px;
-      color: #333;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      margin: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    #walletInfo {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      margin-top: 20px;
-      display: none;
-      width: 300px;
+      font-family: Arial, sans-serif;
       text-align: center;
-    }
-    .info-text {
-      margin: 10px 0;
-      font-size: 14px;
+      margin-top: 50px;
     }
     .logo {
       width: 100px;
-      border-radius: 50%;
-      margin-bottom: 10px;
+      height: 100px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #walletInfo {
+      margin-top: 30px;
     }
   </style>
 </head>
-
 <body>
-  <img src="https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png" alt="Logo" class="logo">
-  <h1>🚀 DigitalRufiya Wallet</h1>
+
+  <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="Logo" class="logo">
+  <h1>🚀 DRF Wallet (WalletKit)</h1>
 
   <button id="connectButton">Connect Wallet</button>
 
-  <div id="walletInfo">
-    <div class="info-text"><strong>Address:</strong> <span id="userAddress"></span></div>
-    <div class="info-text"><strong>BNB Balance:</strong> <span id="bnbBalance"></span> BNB</div>
-    <div class="info-text"><strong>DRF Balance:</strong> <span id="tokenBalance"></span> DRF</div>
+  <div id="walletInfo" style="display: none;">
+    <p><strong>Connected Address:</strong> <span id="address"></span></p>
+    <p><strong>Chain:</strong> <span id="chain"></span></p>
   </div>
 
-  <!-- JavaScript -->
-  <script type="module">
-    import { Core } from '@walletconnect/core';
-    import { WalletKit } from '@reown/walletkit';
-    import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js';
-
-    const tokenAddress = "0x657f33094eD55c2864b0f9De0B11127e08165FAd"; // ✅ Your real DRF Token
-    const tokenDecimals = 18;
-    const tokenABI = [
-      "function balanceOf(address owner) view returns (uint256)"
-    ];
-
-    const core = new Core({
+  <script>
+    // Initialize WalletKit
+    const core = new window.WalletConnectCore.Core({
       projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
     });
 
     const metadata = {
       name: 'Digitalrufiya-wallet',
       description: 'AppKit Example',
-      url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/',
-      icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
+      url: 'https://reown.com/appkit',
+      icons: ['https://assets.reown.com/reown-profile-pic.png']
     };
-
-    const walletKit = await WalletKit.init({
-      core,
-      metadata
-    });
-
-    let provider;
-    let signer;
 
     async function connectWallet() {
       try {
+        const walletKit = await window.WalletKit.WalletKit.init({
+          core,
+          metadata
+        });
+
         const session = await walletKit.connect();
-        const address = session.accounts[0];
+        console.log('Session:', session);
 
-        provider = new ethers.providers.Web3Provider(walletKit.getProvider());
-        signer = provider.getSigner();
-
-        // Get balances
-        const bnbBalance = await provider.getBalance(address);
-        const bnbEther = ethers.utils.formatEther(bnbBalance);
-
-        const tokenContract = new ethers.Contract(tokenAddress, tokenABI, signer);
-        const tokenBalance = await tokenContract.balanceOf(address);
-        const tokenFormatted = ethers.utils.formatUnits(tokenBalance, tokenDecimals);
-
-        // Update UI
-        document.getElementById('userAddress').innerText = address;
-        document.getElementById('bnbBalance').innerText = parseFloat(bnbEther).toFixed(4);
-        document.getElementById('tokenBalance').innerText = parseFloat(tokenFormatted).toFixed(2);
+        // Display wallet info
+        document.getElementById('address').innerText = session.address;
+        document.getElementById('chain').innerText = session.chainId;
         document.getElementById('walletInfo').style.display = 'block';
-
-      } catch (err) {
-        console.error('Connection Error:', err);
+      } catch (error) {
+        console.error('Connection Error:', error);
         alert('Failed to connect wallet.');
       }
     }
 
     document.getElementById('connectButton').addEventListener('click', connectWallet);
   </script>
+
 </body>
 </html>
