@@ -173,6 +173,11 @@ userAddressSpan.addEventListener('click', async () => {
 // Event Listeners
 connectButton.addEventListener('click', connectWallet);
 sendButton.addEventListener('click', sendDRFTokens);
+showToast('Transaction Confirmed!', 'success');
+showSuccessAnimation(); // <<< ADD THIS after success
+sendModal.style.display = 'none';
+updateUI();
+
 // Success Animation Elements
 const successAnimation = document.getElementById('successAnimation');
 
