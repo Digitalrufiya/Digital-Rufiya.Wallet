@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DRF Wallet</title>
+  <title>DRF Wallet - BSC</title>
 
   <!-- Load WalletKit and WalletConnect Core -->
   <script type="module">
@@ -11,7 +11,7 @@
     import { WalletKit } from "https://cdn.jsdelivr.net/npm/@reown/walletkit@1.0.6/dist/walletkit.module.js";
 
     const core = new Core({
-      projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560' 
+      projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560' // your WalletConnect Project ID
     });
 
     const metadata = {
@@ -26,77 +26,39 @@
     async function initWalletKit() {
       walletKit = await WalletKit.init({
         core,
-        metadata
+        metadata,
+        requiredChains: [56] // Lock to Binance Smart Chain
       });
     }
 
-    async function connectWallet() {
+    async function connectWallet(isAutoReconnect = false) {
       try {
         if (!walletKit) {
           await initWalletKit();
         }
-        const session = await walletKit.connect();
+        const session = await walletKit.connect({
+          autoConnectLastSession: isAutoReconnect
+        });
         const accounts = session.accounts;
 
         console.log('Connected accounts:', accounts);
 
         document.getElementById('userAddress').innerText = accounts[0];
         document.getElementById('walletInfo').style.display = 'block';
-        document.getElementById('status').innerText = 'Wallet Connected!';
+        document.getElementById('status').innerText = 'Wallet Connected to BSC!';
+
+        if (!isAutoReconnect) {
+          localStorage.setItem('walletConnected', 'true');
+        }
+
       } catch (error) {
         console.error('Wallet connection failed:', error);
         document.getElementById('status').innerText = 'Connection failed. Please try again.';
+        localStorage.removeItem('walletConnected');
       }
     }
 
     function copyAddress() {
       const address = document.getElementById('userAddress').innerText;
       navigator.clipboard.writeText(address).then(() => {
-        alert('Wallet address copied to clipboard!');
-      });
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('connectButton').addEventListener('click', connectWallet);
-      document.getElementById('userAddress').addEventListener('click', copyAddress);
-    });
-  </script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 50px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #userAddress {
-      color: blue;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    #userAddress:hover {
-      color: darkblue;
-    }
-  </style>
-
-</head>
-
-<body>
-  <div>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="Logo" width="150">
-    <h1>DRF Wallet</h1>
-
-    <button id="connectButton">Connect Wallet</button>
-
-    <div id="walletInfo" style="display:none; margin-top:20px;">
-      <p><strong>Address:</strong> <span id="userAddress"></span></p>
-    </div>
-
-    <p id="status" style="margin-top:20px;">Please connect your wallet</p>
-  </div>
-</body>
-</html>
+        alert('Wallet address copied
