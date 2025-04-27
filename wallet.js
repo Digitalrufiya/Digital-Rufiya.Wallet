@@ -133,3 +133,38 @@ function setupListeners(instance) {
 // Event Listeners
 connectButton.addEventListener('click', connectWallet);
 sendButton.addEventListener('click', sendDRFTokens);
+
+// 1. Import WalletKit and Core
+import { Core } from '@walletconnect/core';
+import { WalletKit } from '@reown/walletkit';
+
+// 2. Initialize Core and WalletKit
+const core = new Core({
+  projectId: 'YOUR_REOWN_PROJECT_ID'
+});
+
+const metadata = {
+  name: 'Digitalrufiya-wallet',
+  description: 'Send and receive DRF Tokens',
+  url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/',
+  icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
+};
+
+const walletKit = await WalletKit.init({
+  core,
+  metadata
+});
+
+// 3. Connect Wallet function
+async function connectWallet() {
+  const session = await walletKit.connect();
+  const accounts = session.accounts;
+  console.log('Connected accounts:', accounts);
+
+  // Example: Show wallet address on page
+  document.getElementById('userAddress').innerText = accounts[0].slice(0, 6) + '...' + accounts[0].slice(-4);
+}
+
+// 4. Attach connect function to the button
+document.getElementById('connectButton').addEventListener('click', connectWallet);
+
