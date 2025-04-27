@@ -173,3 +173,14 @@ userAddressSpan.addEventListener('click', async () => {
 // Event Listeners
 connectButton.addEventListener('click', connectWallet);
 sendButton.addEventListener('click', sendDRFTokens);
+// Success Animation Elements
+const successAnimation = document.getElementById('successAnimation');
+
+// Show Success Animation
+function showSuccessAnimation() {
+    successAnimation.style.display = 'block';
+    setTimeout(() => {
+        successAnimation.style.display = 'none';
+    }, 2000); // animation visible for 2 seconds
+}
+
