@@ -1,170 +1,29 @@
-// wallet.js
-
-let provider;
-let signer;
-let userAddress;
-
-const connectButton = document.getElementById('connectButton');
-const sendButton = document.getElementById('sendButton');
-const walletInfo = document.getElementById('walletInfo');
-const statusText = document.getElementById('status');
-
-const networkName = document.getElementById('networkName');
-const userAddressSpan = document.getElementById('userAddress');
-const bnbBalanceSpan = document.getElementById('bnbBalance');
-const drfBalanceSpan = document.getElementById('drfBalance');
-
-// Your DRF Token Contract
-const DRF_TOKEN_ADDRESS = '0x657f33094eD55c2864b0f9De0B11127e08165FAd';  // ✅
-const DRF_TOKEN_ABI = [
-    "function balanceOf(address owner) view returns (uint256)",
-    "function transfer(address to, uint amount) returns (bool)"
-];
-
-// Initialize Web3Modal
-const web3Modal = new window.Web3Modal.default({
-    cacheProvider: false,
-    providerOptions: {
-        walletconnect: {
-            package: window.WalletConnectProvider.default,
-            options: {
-                rpc: {
-                    56: "https://bsc-dataseed.binance.org/"
-                },
-                network: "binance",
-            }
-        }
-    }
-});
-
-// Connect Wallet
-async function connectWallet() {
-    try {
-        const instance = await web3Modal.connect();
-        provider = new ethers.providers.Web3Provider(instance);
-        signer = provider.getSigner();
-        userAddress = await signer.getAddress();
-
-        updateUI();
-        setupListeners(instance);
-        
-        // 🆕 Start live refresh after connected
-        setInterval(updateBalances, 15000); // Every 15 seconds
-    } catch (err) {
-        console.error('Connection failed:', err);
-        showToast('Connection failed. Please try again.', 'error');
-    }
-}
-
-// Connect Wallet
-async function connectWallet() {
-  const session = await walletKit.connect();
-  const accounts = session.accounts;
-  console.log('Connected accounts:', accounts);
-}
-
-// Attach to button click
-document.getElementById('connectButton').addEventListener('click', connectWallet);
-
-
-// Update the full UI
-async function updateUI() {
-    const network = await provider.getNetwork();
-    networkName.innerText = network.name || 'Unknown';
-    userAddressSpan.innerText = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
-
-    await updateBalances();
-
-    walletInfo.style.display = 'block';
-    statusText.innerText = 'Wallet connected!';
-}
-
-// 🆕 Only update balances
-async function updateBalances() {
-    if (!signer || !userAddress) return;
-
-    const bnbBalance = await provider.getBalance(userAddress);
-    bnbBalanceSpan.innerText = ethers.utils.formatEther(bnbBalance).slice(0, 6);
-
-    const drfContract = new ethers.Contract(DRF_TOKEN_ADDRESS, DRF_TOKEN_ABI, signer);
-    const drfBalance = await drfContract.balanceOf(userAddress);
-    drfBalanceSpan.innerText = ethers.utils.formatUnits(drfBalance, 18).slice(0, 6);
-}
-
-// Send DRF tokens
-async function sendDRFTokens() {
-    const recipient = prompt('Enter recipient address:');
-    const amount = prompt('Enter amount of DRF to send:');
-
-    if (!recipient || !amount) {
-        alert('Transaction cancelled.');
-        return;
-    }
-
-    try {
-        const drfContract = new ethers.Contract(DRF_TOKEN_ADDRESS, DRF_TOKEN_ABI, signer);
-        const tx = await drfContract.transfer(recipient, ethers.utils.parseUnits(amount, 18));
-        statusText.innerText = 'Transaction sent! Waiting for confirmation...';
-        await tx.wait();
-        statusText.innerText = 'Transaction confirmed!';
-        updateUI();
-    } catch (err) {
-        console.error('Transaction failed:', err);
-        alert('Transaction failed. See console for details.');
-    }
-}
-
-// Listen to wallet events
-function setupListeners(instance) {
-    instance.on('accountsChanged', () => {
-        window.location.reload();
-    });
-
-    instance.on('chainChanged', () => {
-        window.location.reload();
-    });
-
-    instance.on('disconnect', () => {
-        web3Modal.clearCachedProvider();
-        window.location.reload();
-    });
-}
-
-// Event Listeners
-connectButton.addEventListener('click', connectWallet);
-sendButton.addEventListener('click', sendDRFTokens);
-
-// 1. Import WalletKit and Core
 import { Core } from '@walletconnect/core';
 import { WalletKit } from '@reown/walletkit';
 
-// 2. Initialize Core and WalletKit
+// Initialize WalletKit
 const core = new Core({
-  projectId: 'YOUR_REOWN_PROJECT_ID'
+  projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
 });
 
 const metadata = {
   name: 'Digitalrufiya-wallet',
-  description: 'Send and receive DRF Tokens',
-  url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/',
-  icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
+  description: 'AppKit Example',
+  url: 'https://reown.com/appkit',
+  icons: ['https://assets.reown.com/reown-profile-pic.png']
 };
 
-const walletKit = await WalletKit.init({
-  core,
-  metadata
-});
+const walletKit = await WalletKit.init({ core, metadata });
 
-// 3. Connect Wallet function
+// Connect wallet on button click
 async function connectWallet() {
   const session = await walletKit.connect();
   const accounts = session.accounts;
   console.log('Connected accounts:', accounts);
 
-  // Example: Show wallet address on page
-  document.getElementById('userAddress').innerText = accounts[0].slice(0, 6) + '...' + accounts[0].slice(-4);
+  // Update UI
+  document.getElementById('walletInfo').style.display = 'block';
+  document.getElementById('userAddress').textContent = accounts[0];
 }
 
-// 4. Attach connect function to the button
 document.getElementById('connectButton').addEventListener('click', connectWallet);
-
