@@ -17,3 +17,23 @@ async function connectWallet() {
 
 // Attach it to button click
 document.getElementById('connectButton').addEventListener('click', connectWallet);
+
+import { Core } from '@walletconnect/core';
+import { WalletKit } from '@reown/walletkit';
+
+const core = new Core({
+  projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
+});
+
+const metadata = {
+  name: 'Digitalrufiya-wallet',
+  description: 'AppKit Example',
+  url: 'https://reown.com/appkit', 
+  icons: ['https://assets.reown.com/reown-profile-pic.png']
+};
+
+const walletKit = await WalletKit.init({
+  core,
+  metadata
+});
+
