@@ -56,6 +56,17 @@ async function connectWallet() {
     }
 }
 
+// Connect Wallet
+async function connectWallet() {
+  const session = await walletKit.connect();
+  const accounts = session.accounts;
+  console.log('Connected accounts:', accounts);
+}
+
+// Attach to button click
+document.getElementById('connectButton').addEventListener('click', connectWallet);
+
+
 // Update the full UI
 async function updateUI() {
     const network = await provider.getNetwork();
