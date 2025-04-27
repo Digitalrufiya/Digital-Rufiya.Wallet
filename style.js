@@ -142,5 +142,5 @@ input {
   }
 }
 
-https://digitalrufiya.github.io/Digitalrufiya-wallet/
+
 
