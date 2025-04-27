@@ -50,6 +50,56 @@
         <button id="confirmSendButton">Send</button>
     </div>
 </div>
+        // Modal Elements
+const sendModal = document.getElementById('sendModal');
+const closeModal = document.getElementById('closeModal');
+const recipientAddressInput = document.getElementById('recipientAddress');
+const sendAmountInput = document.getElementById('sendAmount');
+const confirmSendButton = document.getElementById('confirmSendButton');
+
+// Open modal on Send button click
+sendButton.addEventListener('click', () => {
+    sendModal.style.display = 'block';
+});
+
+// Close modal
+closeModal.addEventListener('click', () => {
+    sendModal.style.display = 'none';
+});
+
+// Confirm send from modal
+confirmSendButton.addEventListener('click', async () => {
+    const recipient = recipientAddressInput.value;
+    const amount = sendAmountInput.value;
+
+    if (!recipient || !amount) {
+        showToast('Please fill all fields!', 'warning');
+        return;
+    }
+
+    try {
+        const drfContract = new ethers.Contract(DRF_TOKEN_ADDRESS, DRF_TOKEN_ABI, signer);
+        const tx = await drfContract.transfer(recipient, ethers.utils.parseUnits(amount, 18));
+        statusText.innerText = 'Transaction sent! Waiting for confirmation...';
+        showToast('Transaction sent. Waiting for confirmation...', 'info');
+        await tx.wait();
+        statusText.innerText = 'Transaction confirmed!';
+        showToast('Transaction Confirmed!', 'success');
+        sendModal.style.display = 'none';
+        updateUI();
+    } catch (err) {
+        console.error('Transaction failed:', err);
+        showToast('Transaction failed. See console for details.', 'error');
+    }
+});
+
+// Close modal if clicking outside content
+window.onclick = function(event) {
+    if (event.target == sendModal) {
+        sendModal.style.display = "none";
+    }
+}
+
 
         <p id="status" class="status-text">Please connect your wallet</p>
     </div>
