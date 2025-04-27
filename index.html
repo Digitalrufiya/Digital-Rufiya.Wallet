@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Connect Wallet Example</title>
-  <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <title>Connect Wallet - Web3Modal v2</title>
+  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3modal@2.3.0/dist/web3modal.umd.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,33 +29,24 @@
 <div id="wallet-address"></div>
 
 <script>
+const projectId = 'YOUR_WALLETCONNECT_PROJECT_ID'; // Replace with your WalletConnect project ID
+
+const modal = new window.Web3Modal.default({
+  projectId: projectId,
+  themeMode: "light",
+  chains: [1], // Ethereum Mainnet
+  walletConnectVersion: 2
+});
+
 async function connectWallet() {
-  if (window.ethereum) {
-    // MetaMask detected
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const address = accounts[0];
-      document.getElementById('wallet-address').innerText = `Connected: ${address}`;
-    } catch (error) {
-      console.error('MetaMask connection error:', error);
-    }
-  } else {
-    // WalletConnect fallback
-    try {
-      const provider = new WalletConnectProvider.default({
-        infuraId: "YOUR_INFURA_PROJECT_ID", // <-- Replace with your Infura Project ID
-      });
-
-      // Enable session (triggers QR Code modal)
-      await provider.enable();
-
-      const web3 = new Web3(provider);
-      const accounts = await web3.eth.getAccounts();
-      const address = accounts[0];
-      document.getElementById('wallet-address').innerText = `Connected via WalletConnect: ${address}`;
-    } catch (error) {
-      console.error('WalletConnect connection error:', error);
-    }
+  try {
+    const provider = await modal.connect();
+    const web3 = new Web3(provider);
+    const accounts = await web3.eth.getAccounts();
+    const address = accounts[0];
+    document.getElementById('wallet-address').innerText = `Connected: ${address}`;
+  } catch (error) {
+    console.error('Connection error:', error);
   }
 }
 </script>
