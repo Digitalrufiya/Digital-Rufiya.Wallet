@@ -1,42 +1,71 @@
-<script src="https://unpkg.com/@walletconnect/core@2.10.6/dist/index.umd.js"></script>
-<script src="https://unpkg.com/@walletconnect/utils@2.10.6/dist/index.umd.js"></script>
-<script src="https://unpkg.com/@reown/walletkit@latest/dist/index.umd.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css">
 
-<script type="module">
-  const { WalletKit } = window.walletkit;
-  const { Core } = window.WalletConnectCore;
+  <!-- Load WalletConnect Core & WalletKit from UMD CDN -->
+  <script src="https://unpkg.com/@walletconnect/core@2.10.6/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@walletconnect/utils@2.10.6/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@reown/walletkit@1.0.6/dist/index.umd.js"></script>
 
-  const core = new Core({
-    projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
-  });
+</head>
 
-  const metadata = {
-    name: 'Digitalrufiya Wallet',
-    description: 'Send and receive DRF Tokens',
-    url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/',
-    icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
-  };
+<body>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" class="logo" alt="Logo">
+    <h1>DRF Wallet</h1>
 
-  let walletKit;
+    <button id="connectButton">Connect Wallet</button><br><br>
 
-  async function initWalletKit() {
-    walletKit = await WalletKit.init({ core, metadata });
-  }
+    <div id="walletInfo" style="display:none;">
+      <p><strong>Address:</strong> <span id="userAddress" style="cursor:pointer;color:#3498db;"></span></p>
+    </div>
 
-  async function connectWallet() {
-    if (!walletKit) {
-      await initWalletKit();
+    <p id="status">Please connect your wallet</p>
+  </div>
+
+  <!-- Your Custom JS -->
+  <script type="module">
+    const { WalletKit } = window.walletkit;
+    const { Core } = window.WalletConnectCore;
+
+    const core = new Core({
+      projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
+    });
+
+    const metadata = {
+      name: 'Digitalrufiya Wallet',
+      description: 'Send and receive DRF Tokens',
+      url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/',
+      icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
+    };
+
+    let walletKit;
+
+    async function initWalletKit() {
+      walletKit = await WalletKit.init({ core, metadata });
     }
-    const session = await walletKit.connect();
-    const accounts = session.accounts;
-    console.log('Connected accounts:', accounts);
 
-    document.getElementById('userAddress').innerText = accounts[0];
-    document.getElementById('walletInfo').style.display = 'block';
-    document.getElementById('status').innerText = 'Wallet connected!';
-  }
+    async function connectWallet() {
+      if (!walletKit) {
+        await initWalletKit();
+      }
+      const session = await walletKit.connect();
+      const accounts = session.accounts;
+      console.log('Connected accounts:', accounts);
 
-  window.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('connectButton').addEventListener('click', connectWallet);
-  });
-</script>
+      document.getElementById('userAddress').innerText = accounts[0];
+      document.getElementById('walletInfo').style.display = 'block';
+      document.getElementById('status').innerText = 'Wallet connected!';
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('connectButton').addEventListener('click', connectWallet);
+    });
+  </script>
+
+</body>
+</html>
