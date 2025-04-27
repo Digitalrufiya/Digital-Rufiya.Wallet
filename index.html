@@ -2,57 +2,95 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRF Wallet</title>
-  <link rel="stylesheet" href="style.css">
 
-  <!-- External libraries -->
-  <script src="https://unpkg.com/web3modal"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="module">
+    import { Core } from '@walletconnect/core';
+    import { WalletKit } from '@reown/walletkit';
+    import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js';
+
+    // Your DRF Token Details
+    const tokenAddress = "YOUR_TOKEN_ADDRESS"; // <-- Replace this!
+    const tokenDecimals = 18;
+    const tokenABI = [
+      "function balanceOf(address owner) view returns (uint256)"
+    ];
+
+    let walletKit;
+    let provider;
+    let signer;
+
+    async function initWalletKit() {
+      const core = new Core({
+        projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560' // ✅ Your real project ID
+      });
+
+      const metadata = {
+        name: 'Digital Rufiya Wallet',
+        description: 'DRF Token Wallet',
+        url: 'https://digitalrufiya.github.io/Digitalrufiya-wallet/', 
+        icons: ['https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png']
+      };
+
+      walletKit = await WalletKit.init({
+        core,
+        metadata
+      });
+    }
+
+    async function connectWallet() {
+      try {
+        const session = await walletKit.connect();
+        const address = session.accounts[0];
+
+        provider = new ethers.providers.Web3Provider(walletKit.getProvider());
+        signer = provider.getSigner();
+
+        // Get BNB Balance
+        const bnbBalance = await provider.getBalance(address);
+        const bnbEther = ethers.utils.formatEther(bnbBalance);
+
+        // Get DRF Token Balance
+        const tokenContract = new ethers.Contract(tokenAddress, tokenABI, signer);
+        const tokenBalance = await tokenContract.balanceOf(address);
+        const tokenFormatted = ethers.utils.formatUnits(tokenBalance, tokenDecimals);
+
+        // Update HTML
+        document.getElementById('userAddress').innerText = address;
+        document.getElementById('bnbBalance').innerText = parseFloat(bnbEther).toFixed(4);
+        document.getElementById('tokenBalance').innerText = parseFloat(tokenFormatted).toFixed(2);
+        document.getElementById('walletInfo').style.display = 'block';
+
+      } catch (err) {
+        console.error(err);
+        alert('Failed to connect wallet.');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initWalletKit();
+      document.getElementById('connectButton').addEventListener('click', connectWallet);
+    });
+  </script>
+
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    .info { margin-top: 20px; }
+    .logo { width: 100px; border-radius: 50%; }
+  </style>
 </head>
 
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" class="logo" alt="Logo">
-    <h1>DRF Wallet</h1>
+  <img src="https://digitalrufiya.github.io/Digitalrufiya-wallet/logo.png" alt="Logo" class="logo">
+  <h1>🪙 DRF Wallet (WalletKit)</h1>
 
-    <button id="connectButton">Connect Wallet</button><br><br>
+  <button id="connectButton">Connect Wallet</button>
 
-    <div id="walletInfo" style="display:none;">
-      <p><strong>Network:</strong> <span id="networkName"></span></p>
-      <p><strong>Address:</strong> <span id="userAddress" style="cursor:pointer;color:#3498db;"></span></p>
-      <p><strong>BNB Balance:</strong> <span id="bnbBalance"></span> BNB</p>
-      <p><strong>DRF Balance:</strong> <span id="drfBalance"></span> DRF</p>
-
-      <button id="sendButton">Send DRF Tokens</button>
-    </div>
-
-    <p id="status">Please connect your wallet</p>
-
-    <!-- Send Modal -->
-    <div id="sendModal" class="modal">
-      <div class="modal-content">
-        <span id="closeModal" class="close">&times;</span>
-        <h2>Send DRF Tokens</h2>
-        <input type="text" id="recipientAddress" placeholder="Recipient Address">
-        <input type="number" id="sendAmount" placeholder="Amount">
-        <button id="confirmSendButton">Send</button>
-      </div>
-    </div>
-
-    <!-- Success Animation -->
-    <div id="successAnimation" style="display:none;">
-      <div class="checkmark">
-        <div class="checkmark_stem"></div>
-        <div class="checkmark_kick"></div>
-      </div>
-    </div>
+  <div id="walletInfo" class="info" style="display:none;">
+    <p><strong>Address:</strong> <span id="userAddress"></span></p>
+    <p><strong>BNB Balance:</strong> <span id="bnbBalance"></span> BNB</p>
+    <p><strong>DRF Token Balance:</strong> <span id="tokenBalance"></span> DRF</p>
   </div>
-
-  <!-- Only ONE script -->
-  <script type="module" src="/wallet.js"></script>
 </body>
 </html>
