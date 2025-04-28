@@ -1,88 +1,104 @@
-// app.js
+// ====== CONFIG ======
+const BSC_CHAIN_ID = '0x38'; // Binance Smart Chain Mainnet
+const PANCAKE_SWAP_URL = "https://pancakeswap.finance/swap?outputCurrency=";
+const DRF_TOKEN_ADDRESS = "0xYourDRFTokenAddress"; // <-- replace if needed
 
-// Login Function
-function login() {
-  const username = document.getElementById('loginUsername').value;
-  const password = document.getElementById('loginPassword').value;
+// ====== DOM ELEMENTS ======
+const connectBtn = document.getElementById('connectWalletBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const sendBtn = document.getElementById('sendTokenBtn');
+const exchangeBtn = document.getElementById('exchangeBtn');
+const addressDisplay = document.getElementById('walletAddress');
+const statusDisplay = document.getElementById('status');
 
-  if (username === 'digitalrufiya@gmail.com' && password === 'Zivian@2020') {
-    localStorage.setItem('loggedIn', 'true');
-    window.location.href = 'wallet.html'; // ✅ Redirect to wallet page
-  } else {
-    alert('Invalid login credentials. Please try again.');
-  }
+// ====== TOAST NOTIFICATIONS ======
+function showToast(message, type = "info") {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }
 
-// Register Function (basic fake register)
-function register() {
-  const username = document.getElementById('registerUsername').value;
-  const password = document.getElementById('registerPassword').value;
-
-  if (username && password) {
-    // You can extend here to save somewhere
-    alert('Registered successfully! Now you can login.');
-    window.location.href = 'index.html';
-  } else {
-    alert('Please fill all fields.');
-  }
-}
-
-// Wallet Page - Check Login
-if (window.location.pathname.includes('wallet.html')) {
-  window.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('loggedIn') !== 'true') {
-      window.location.href = 'index.html'; // 🔥 Redirect if not logged in
-    }
-  });
-}
-
-// Wallet Connection
-let provider;
-let signer;
-
+// ====== WALLET CONNECT ======
 async function connectWallet() {
-  if (typeof window.ethereum !== 'undefined') {
-    try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      signer = provider.getSigner();
-      const address = await signer.getAddress();
-      document.getElementById('walletAddress').innerText = address;
-      document.getElementById('connectWalletBtn').style.display = 'none';
-      document.getElementById('walletActions').style.display = 'block';
-      showStatus('Wallet Connected Successfully!', 'success');
-    } catch (error) {
-      console.error(error);
-      showStatus('Failed to connect wallet.', 'error');
+    if (typeof window.ethereum === 'undefined') {
+        showToast("MetaMask is not installed!", "error");
+        return;
     }
-  } else {
-    alert('Please install MetaMask!');
-  }
+    try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const chainId = await ethereum.request({ method: 'eth_chainId' });
+
+        if (chainId !== BSC_CHAIN_ID) {
+            showToast("Please connect to Binance Smart Chain!", "error");
+            return;
+        }
+
+        const account = accounts[0];
+        addressDisplay.innerText = account;
+        statusDisplay.innerText = "Wallet Connected";
+        showToast("Wallet connected successfully!", "success");
+    } catch (err) {
+        console.error(err);
+        showToast("Failed to connect wallet!", "error");
+    }
 }
 
-// Logout Function
-function logout() {
-  localStorage.removeItem('loggedIn');
-  window.location.href = 'index.html';
+// ====== LOGOUT WALLET ======
+function logoutWallet() {
+    addressDisplay.innerText = '';
+    statusDisplay.innerText = 'Not Connected';
+    showToast("Wallet disconnected!", "info");
 }
 
-// Utility: Status Message
-function showStatus(message, type) {
-  const status = document.getElementById('statusMessage');
-  status.innerText = message;
-  status.className = type; // class 'success' or 'error'
+// ====== SEND TOKENS ======
+async function sendToken() {
+    const receiver = prompt("Enter recipient address:");
+    const amount = prompt("Enter amount in BNB:");
+
+    if (!receiver || !amount) {
+        showToast("Invalid receiver or amount!", "error");
+        return;
+    }
+
+    try {
+        const tx = await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{
+                from: ethereum.selectedAddress,
+                to: receiver,
+                value: '0x' + (parseFloat(amount) * 1e18).toString(16)
+            }]
+        });
+        showToast("Transaction sent! Hash: " + tx, "success");
+    } catch (err) {
+        console.error(err);
+        showToast("Transaction failed!", "error");
+    }
 }
 
-// Placeholder functions for send/receive/exchange
-function sendCrypto() {
-  alert('Send feature is under development...');
+// ====== EXCHANGE USING PANCAKESWAP ======
+function exchangeTokens() {
+    if (!ethereum.selectedAddress) {
+        showToast("Connect your wallet first!", "error");
+        return;
+    }
+    const url = PANCAKE_SWAP_URL + DRF_TOKEN_ADDRESS;
+    window.open(url, '_blank');
 }
 
-function receiveCrypto() {
-  alert('Receive feature is under development...');
-}
+// ====== BUTTON EVENTS ======
+connectBtn?.addEventListener('click', connectWallet);
+logoutBtn?.addEventListener('click', logoutWallet);
+sendBtn?.addEventListener('click', sendToken);
+exchangeBtn?.addEventListener('click', exchangeTokens);
 
-function exchangeCrypto() {
-  alert('Exchange feature is under development...');
-}
-
+// ====== INIT ======
+window.addEventListener('load', () => {
+    if (ethereum?.isConnected()) {
+        connectWallet();
+    }
+});
