@@ -1,98 +1,72 @@
-// --- ADMIN INFO ---
-const adminEmail = "digitalrufiya@gmail.com";
-const adminPassword = "Zivian@2020";
+// ====== app.js ======
 
-// --- SIMULATED DATABASE (for fake user storage) ---
-let users = JSON.parse(localStorage.getItem("users")) || [];
+// List of tokens you want to show
+const tokenList = [
+  { name: 'DRF', address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6', decimals: 18 },
+  { name: 'BNB', address: null, decimals: 18 },
+  { name: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+  { name: 'USDC', address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', decimals: 18 },
+  { name: 'WBNB', address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c', decimals: 18 },
+  { name: 'BUSD', address: '0xe9e7cea3dedca5984780bafc599bd69add087d56', decimals: 18 }
+];
 
-// --- LOGIN FUNCTION ---
-function login() {
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
+let currentAccount = null;
 
-  if (!username || !password) {
-    alert("Please enter both username and password.");
-    return;
-  }
-
-  if (username === adminEmail && password === adminPassword) {
-    alert("Admin logged in successfully!");
-    window.location.href = "wallet.html"; // Redirect to wallet page
-  } else {
-    const userFound = users.find(user => user.username === username && user.password === password);
-    if (userFound) {
-      alert("User logged in successfully!");
-      window.location.href = "wallet.html"; // Redirect to wallet page
-    } else {
-      alert("Invalid login. Please try again or register.");
-    }
-  }
-}
-
-// --- REGISTER FUNCTION ---
-function register() {
-  const username = document.getElementById('registerUsername').value.trim();
-  const password = document.getElementById('registerPassword').value.trim();
-
-  if (!username || !password) {
-    alert("Please fill both fields.");
-    return;
-  }
-
-  const existingUser = users.find(user => user.username === username);
-  if (existingUser) {
-    alert("User already exists. Please login.");
-    return;
-  }
-
-  users.push({ username, password });
-  localStorage.setItem("users", JSON.stringify(users));
-  alert("Registration successful! Please login.");
-  window.location.href = "index.html"; // Redirect to login page
-}
-
-// --- WALLET CONNECTION SECTION ---
 async function connectWallet() {
-  if (typeof window.ethereum === 'undefined') {
-    alert("No crypto wallet found. Please install MetaMask!");
-    return;
-  }
+  if (typeof window.ethereum !== 'undefined') {
+    try {
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      currentAccount = accounts[0];
+      document.getElementById('walletAddress').innerText = currentAccount;
+      document.getElementById('status').innerText = "Connected";
 
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const userAddress = accounts[0];
-    document.getElementById('userAddress').innerText = userAddress;
-    document.getElementById('walletInfo').style.display = 'block';
-    document.getElementById('status').innerText = 'Wallet Connected!';
-  } catch (error) {
-    console.error(error);
-    alert("Wallet connection failed!");
-  }
-}
-
-function disconnectWallet() {
-  document.getElementById('userAddress').innerText = '';
-  document.getElementById('walletInfo').style.display = 'none';
-  document.getElementById('status').innerText = 'Wallet Disconnected!';
-}
-
-// --- COPY ADDRESS ---
-function copyAddress() {
-  const address = document.getElementById('userAddress').innerText;
-  if (address) {
-    navigator.clipboard.writeText(address)
-      .then(() => alert('Wallet address copied!'))
-      .catch(err => alert('Failed to copy address.'));
+      loadBalances();
+    } catch (error) {
+      console.error(error);
+      alert("Wallet connection failed!");
+    }
+  } else {
+    alert('MetaMask is not installed!');
   }
 }
 
-// --- AUTO ADD EVENTS IF ELEMENTS EXIST ---
-window.addEventListener('DOMContentLoaded', () => {
-  const connectBtn = document.getElementById('connectButton');
-  const disconnectBtn = document.getElementById('disconnectButton');
-  const userAddress = document.getElementById('userAddress');
+async function disconnectWallet() {
+  currentAccount = null;
+  document.getElementById('walletAddress').innerText = '';
+  document.getElementById('status').innerText = 'Not Connected';
+  document.getElementById('balances').innerHTML = '';
+}
 
-  if (connectBtn) connectBtn.addEventListener('click', connectWallet);
-  if (disconnectBtn) disconnectBtn.addEventListener('click', disconnectWallet);
-  if (userAddress) userAddress.addEventListener('click', copyAddress);
+async function loadBalances() {
+  const balancesList = document.getElementById('balances');
+  balancesList.innerHTML = '';
+
+  for (const token of tokenList) {
+    let balance = 0;
+
+    if (token.address) {
+      const abi = [
+        "function balanceOf(address owner) view returns (uint256)"
+      ];
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(token.address, abi, provider);
+      const rawBalance = await contract.balanceOf(currentAccount);
+      balance = parseFloat(ethers.utils.formatUnits(rawBalance, token.decimals)).toFixed(4);
+    } else {
+      // Native BNB
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const rawBalance = await provider.getBalance(currentAccount);
+      balance = parseFloat(ethers.utils.formatEther(rawBalance)).toFixed(4);
+    }
+
+    const li = document.createElement('li');
+    li.textContent = `${token.name}: ${balance}`;
+    balancesList.appendChild(li);
+  }
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+  document.getElementById('disconnectWalletBtn').addEventListener('click', disconnectWallet);
 });
