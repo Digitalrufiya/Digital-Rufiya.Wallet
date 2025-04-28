@@ -1,58 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Digital Rufiyaa Wallet</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="app.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRF Wallet - Dashboard</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="wallet-container">
-        <div class="wallet-header">
-            <img src="logo.png" alt="DRF Logo" class="wallet-logo">
-            <h1>Digital Rufiyaa Wallet</h1>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-        </div>
+<body onload="checkLogin()">
 
-        <div class="wallet-main">
-            <h2>Wallet Connected</h2>
-            <p><strong>Address:</strong> <span id="userAddress">Connecting...</span></p>
-            <p><strong>DRF Balance:</strong> <span id="drfBalance">0</span> DRF</p>
-            <p><strong>BNB Balance:</strong> <span id="bnbBalance">0</span> BNB</p>
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="logo">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet Logo" height="50">
+    </div>
+    <div class="nav-actions">
+      <span id="walletAddress">Not Connected</span>
+      <button onclick="connectWallet()" class="connect-btn">Connect Wallet</button>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </div>
 
-            <div class="wallet-actions">
-                <button id="sendTab" class="tab-btn active">Send</button>
-                <button id="receiveTab" class="tab-btn">Receive</button>
-                <button id="exchangeTab" class="tab-btn">Exchange</button>
-            </div>
+  <!-- Main Container -->
+  <div class="wallet-container">
 
-            <!-- SEND SECTION -->
-            <div id="sendSection" class="section">
-                <h3>Send DRF</h3>
-                <input type="text" id="recipientAddress" placeholder="Recipient Address">
-                <input type="number" id="sendAmount" placeholder="Amount to Send">
-                <button id="confirmSend" class="action-btn">Confirm Send</button>
-            </div>
-
-            <!-- RECEIVE SECTION -->
-            <div id="receiveSection" class="section hidden">
-                <h3>Receive DRF</h3>
-                <p>Click below to copy your wallet address:</p>
-                <button id="copyAddress" class="action-btn">Copy Address</button>
-            </div>
-
-            <!-- EXCHANGE SECTION -->
-            <div id="exchangeSection" class="section hidden">
-                <h3>Exchange DRF to BNB</h3>
-                <input type="number" id="exchangeAmount" placeholder="Amount to Exchange">
-                <button id="confirmExchange" class="action-btn">Confirm Exchange</button>
-            </div>
-        </div>
+    <!-- Tab Buttons -->
+    <div class="tabs">
+      <button onclick="switchTab('send')">Send</button>
+      <button onclick="switchTab('receive')">Receive</button>
+      <button onclick="switchTab('exchange')">Exchange</button>
     </div>
 
-    <!-- Toast notifications -->
-    <div id="toast" class="toast hidden"></div>
+    <!-- Sections -->
+
+    <!-- Send Section -->
+    <div id="sendSection" class="section">
+      <h2>Send BNB</h2>
+      <input type="text" id="sendTo" placeholder="Recipient Address">
+      <input type="number" id="sendAmount" placeholder="Amount (BNB)">
+      <button onclick="sendBNB()">Send</button>
+      <p class="info-text">*5% network fee will be deducted.</p>
+    </div>
+
+    <!-- Receive Section -->
+    <div id="receiveSection" class="section hidden">
+      <h2>Receive BNB</h2>
+      <p>Your Wallet Address:</p>
+      <div class="address-box" onclick="receiveBNB()">
+        <span id="walletAddress">Not Connected</span>
+        <small>(Click to copy)</small>
+      </div>
+    </div>
+
+    <!-- Exchange Section -->
+    <div id="exchangeSection" class="section hidden">
+      <h2>Exchange BNB to DRF</h2>
+      <input type="number" id="exchangeAmount" placeholder="Amount to Exchange">
+      <button onclick="exchangeTokens()">Exchange</button>
+      <p class="info-text">*5% exchange fee will be deducted.</p>
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
 </body>
 </html>
