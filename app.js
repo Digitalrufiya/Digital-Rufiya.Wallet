@@ -1,104 +1,189 @@
-// ====== CONFIG ======
-const BSC_CHAIN_ID = '0x38'; // Binance Smart Chain Mainnet
-const PANCAKE_SWAP_URL = "https://pancakeswap.finance/swap?outputCurrency=";
-const DRF_TOKEN_ADDRESS = "0xYourDRFTokenAddress"; // <-- replace if needed
+// Admin credentials
+const ADMIN_USERNAME = "digitalrufiya@gmail.com";
+const ADMIN_PASSWORD = "Zivian@2020";
 
-// ====== DOM ELEMENTS ======
-const connectBtn = document.getElementById('connectWalletBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const sendBtn = document.getElementById('sendTokenBtn');
-const exchangeBtn = document.getElementById('exchangeBtn');
-const addressDisplay = document.getElementById('walletAddress');
-const statusDisplay = document.getElementById('status');
+// Local Storage keys
+const USERS_KEY = "drf_wallet_users";
+const SESSION_KEY = "drf_wallet_session";
 
-// ====== TOAST NOTIFICATIONS ======
-function showToast(message, type = "info") {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+// Handle Registration
+function register() {
+  const username = document.getElementById('registerUsername').value.trim();
+  const password = document.getElementById('registerPassword').value.trim();
+
+  if (!username || !password) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+
+  if (users.find(user => user.username === username)) {
+    alert("Username already exists!");
+    return;
+  }
+
+  users.push({ username, password, walletAddress: "" });
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+  alert("Registration successful! Please login.");
+  window.location.href = "index.html";
 }
 
-// ====== WALLET CONNECT ======
+// Handle Login
+function login() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    sessionStorage.setItem(SESSION_KEY, "admin");
+    window.location.href = "admin.html";
+    return;
+  }
+
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  const user = users.find(u => u.username === username && u.password === password);
+
+  if (user) {
+    sessionStorage.setItem(SESSION_KEY, username);
+    window.location.href = "wallet.html";
+  } else {
+    alert("Invalid username or password!");
+  }
+}
+
+// Handle Admin Logout
+function logoutAdmin() {
+  sessionStorage.removeItem(SESSION_KEY);
+  window.location.href = "index.html";
+}
+
+// Handle User Logout
+function logoutUser() {
+  sessionStorage.removeItem(SESSION_KEY);
+  window.location.href = "index.html";
+}
+
+// Show Admin Users List
+function loadAdminPage() {
+  if (sessionStorage.getItem(SESSION_KEY) !== "admin") {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  const userData = document.getElementById('userData');
+
+  users.forEach(user => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${user.username}</td>
+      <td>${user.password}</td>
+      <td>${user.walletAddress || '-'}</td>
+    `;
+    userData.appendChild(row);
+  });
+}
+
+// Wallet Connect, Send, Receive, Exchange Functions
+let currentWalletAddress = "";
+
+// Connect to Wallet
 async function connectWallet() {
-    if (typeof window.ethereum === 'undefined') {
-        showToast("MetaMask is not installed!", "error");
-        return;
-    }
-    try {
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-        const chainId = await ethereum.request({ method: 'eth_chainId' });
+  if (typeof window.ethereum === 'undefined') {
+    alert("Please install MetaMask!");
+    return;
+  }
 
-        if (chainId !== BSC_CHAIN_ID) {
-            showToast("Please connect to Binance Smart Chain!", "error");
-            return;
-        }
-
-        const account = accounts[0];
-        addressDisplay.innerText = account;
-        statusDisplay.innerText = "Wallet Connected";
-        showToast("Wallet connected successfully!", "success");
-    } catch (err) {
-        console.error(err);
-        showToast("Failed to connect wallet!", "error");
-    }
+  try {
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    currentWalletAddress = accounts[0];
+    document.getElementById('walletAddress').innerText = currentWalletAddress;
+    saveWalletAddress(currentWalletAddress);
+    showToast("Wallet connected successfully!");
+  } catch (error) {
+    console.error(error);
+    alert("Wallet connection failed.");
+  }
 }
 
-// ====== LOGOUT WALLET ======
-function logoutWallet() {
-    addressDisplay.innerText = '';
-    statusDisplay.innerText = 'Not Connected';
-    showToast("Wallet disconnected!", "info");
+// Save wallet address after connection
+function saveWalletAddress(address) {
+  const username = sessionStorage.getItem(SESSION_KEY);
+  if (!username || username === "admin") return;
+
+  let users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+  const index = users.findIndex(u => u.username === username);
+  if (index !== -1) {
+    users[index].walletAddress = address;
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
 }
 
-// ====== SEND TOKENS ======
-async function sendToken() {
-    const receiver = prompt("Enter recipient address:");
-    const amount = prompt("Enter amount in BNB:");
+// Send Tokens (5% fee)
+async function sendTokens() {
+  const recipient = document.getElementById('sendTo').value.trim();
+  const amount = parseFloat(document.getElementById('sendAmount').value.trim());
 
-    if (!receiver || !amount) {
-        showToast("Invalid receiver or amount!", "error");
-        return;
-    }
+  if (!recipient || !amount) {
+    alert("Please fill recipient and amount.");
+    return;
+  }
 
-    try {
-        const tx = await ethereum.request({
-            method: 'eth_sendTransaction',
-            params: [{
-                from: ethereum.selectedAddress,
-                to: receiver,
-                value: '0x' + (parseFloat(amount) * 1e18).toString(16)
-            }]
-        });
-        showToast("Transaction sent! Hash: " + tx, "success");
-    } catch (err) {
-        console.error(err);
-        showToast("Transaction failed!", "error");
-    }
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  const signer = await provider.getSigner();
+
+  const fee = amount * 0.05;
+  const sendAmount = amount - fee;
+
+  try {
+    await signer.sendTransaction({
+      to: recipient,
+      value: ethers.parseEther(sendAmount.toString())
+    });
+
+    // Send fee to admin
+    await signer.sendTransaction({
+      to: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6", // DRF Collection Address
+      value: ethers.parseEther(fee.toString())
+    });
+
+    showToast(`Sent ${sendAmount} BNB! Fee ${fee} BNB sent to admin.`);
+  } catch (error) {
+    console.error(error);
+    alert("Transaction failed.");
+  }
 }
 
-// ====== EXCHANGE USING PANCAKESWAP ======
-function exchangeTokens() {
-    if (!ethereum.selectedAddress) {
-        showToast("Connect your wallet first!", "error");
-        return;
-    }
-    const url = PANCAKE_SWAP_URL + DRF_TOKEN_ADDRESS;
-    window.open(url, '_blank');
+// Receive Token (just wallet connect shows address)
+
+// Exchange Token (5% fee simulation)
+async function exchangeTokens() {
+  const amount = parseFloat(document.getElementById('exchangeAmount').value.trim());
+
+  if (!amount) {
+    alert("Enter amount to exchange.");
+    return;
+  }
+
+  const fee = amount * 0.05;
+  const received = amount - fee;
+
+  showToast(`Exchanged ${amount} DRF tokens! After 5% fee, you get ${received} DRF tokens.`);
 }
 
-// ====== BUTTON EVENTS ======
-connectBtn?.addEventListener('click', connectWallet);
-logoutBtn?.addEventListener('click', logoutWallet);
-sendBtn?.addEventListener('click', sendToken);
-exchangeBtn?.addEventListener('click', exchangeTokens);
+// Toast Notifications
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerText = message;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 3000);
+}
 
-// ====== INIT ======
-window.addEventListener('load', () => {
-    if (ethereum?.isConnected()) {
-        connectWallet();
-    }
-});
+// Auto Load
+window.onload = function() {
+  if (window.location.pathname.includes("admin.html")) {
+    loadAdminPage();
+  }
+};
