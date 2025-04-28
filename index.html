@@ -7,11 +7,8 @@
 
   <link rel="stylesheet" href="./style.css">
 
-  <!-- Load Ethers.js UMD version -->
+  <!-- Load ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
-
-  <!-- Load WalletKit UMD version -->
-  <script src="https://unpkg.com/@reown/walletkit@1.0.6/dist/walletkit.umd.js"></script>
 
   <style>
     body {
@@ -59,10 +56,8 @@
     <p id="status" style="margin-top:20px;">Please connect your wallet</p>
   </div>
 
-  <!-- Your custom script goes here -->
   <script>
-    const { WalletKit } = window.walletkit;
-    const { ethers } = window.ethers;
+    const { ethers } = window;
 
     const tokenAddress = '0x657f33094eD55c2864b0f9De0B11127e08165FAd';
     const tokenABI = [
@@ -70,59 +65,32 @@
       "function decimals() view returns (uint8)"
     ];
 
-    let walletKit;
     let provider;
+    let signer;
 
-    async function initWalletKit() {
-      const { Core } = window.walletkit;
-      const core = new Core({
-        projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
-      });
+    async function connectWallet() {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          const address = await signer.getAddress();
 
-      const metadata = {
-        name: 'Digitalrufiya-wallet',
-        description: 'DRF Wallet Example',
-        url: 'https://reown.com/appkit',
-        icons: ['https://assets.reown.com/reown-profile-pic.png']
-      };
+          console.log('Connected account:', address);
+          document.getElementById('userAddress').innerText = address;
+          document.getElementById('walletInfo').style.display = 'block';
+          document.getElementById('status').innerText = 'Wallet Connected!';
 
-      walletKit = await WalletKit.init({
-        core,
-        metadata,
-        requiredChains: [56] // BSC only
-      });
-    }
+          fetchTokenBalance(address);
 
-    async function connectWallet(isAutoReconnect = false) {
-      try {
-        if (!walletKit) {
-          await initWalletKit();
-        }
-        const session = await walletKit.connect({
-          autoConnectLastSession: isAutoReconnect
-        });
-
-        const accounts = session.accounts;
-        const address = accounts[0];
-
-        console.log('Connected account:', address);
-
-        document.getElementById('userAddress').innerText = address;
-        document.getElementById('walletInfo').style.display = 'block';
-        document.getElementById('status').innerText = 'Wallet Connected to BSC!';
-
-        if (!isAutoReconnect) {
           localStorage.setItem('walletConnected', 'true');
+        } catch (error) {
+          console.error('Wallet connection failed:', error);
+          document.getElementById('status').innerText = 'Connection failed. Please try again.';
+          localStorage.removeItem('walletConnected');
         }
-
-        provider = new ethers.BrowserProvider(walletKit.getProvider());
-
-        await fetchTokenBalance(address);
-
-      } catch (error) {
-        console.error('Wallet connection failed:', error);
-        document.getElementById('status').innerText = 'Connection failed. Please try again.';
-        localStorage.removeItem('walletConnected');
+      } else {
+        alert('Please install MetaMask or a compatible wallet!');
       }
     }
 
@@ -150,15 +118,14 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      document.getElementById('connectButton').addEventListener('click', () => connectWallet(false));
+      document.getElementById('connectButton').addEventListener('click', connectWallet);
       document.getElementById('userAddress').addEventListener('click', copyAddress);
 
       if (localStorage.getItem('walletConnected') === 'true') {
         console.log('Attempting auto reconnect...');
-        await connectWallet(true);
+        connectWallet();
       }
     });
   </script>
-
 </body>
 </html>
