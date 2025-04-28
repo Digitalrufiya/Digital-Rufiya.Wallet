@@ -20,3 +20,29 @@ function login() {
     alert("Invalid username or password. Please try again.");
   }
 }
+async function connectWallet() {
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const walletAddress = accounts[0];
+      
+      document.getElementById("walletAddress").innerText = walletAddress;
+      document.getElementById("walletStatus").innerText = "Connected";
+
+      // Optionally save address to localStorage
+      localStorage.setItem("walletAddress", walletAddress);
+    } catch (error) {
+      console.error(error);
+      alert("Wallet connection failed!");
+    }
+  } else {
+    alert("MetaMask not detected! Please install MetaMask.");
+  }
+}
+
+function disconnectWallet() {
+  document.getElementById("walletAddress").innerText = "";
+  document.getElementById("walletStatus").innerText = "Not Connected";
+  localStorage.removeItem("walletAddress");
+}
+
