@@ -1,180 +1,38 @@
-// app.js
-
-// Create default Admin user if not exists
-function createAdminUser() {
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-  const adminExists = users.find(u => u.username.toLowerCase() === 'digitalrufiya@gmail.com');
-  if (!adminExists) {
-    users.push({
-      username: 'digitalrufiya@gmail.com',
-      password: 'Zivian@2020', // Your chosen password
-      walletAddress: 'ADMIN' // Admin doesn't need wallet address
-    });
-    localStorage.setItem('users', JSON.stringify(users));
-  }
-}
-createAdminUser();
-
-// Check if wallet is connected (MetaMask)
+// Connect MetaMask Wallet
 async function connectWallet() {
-  if (typeof window.ethereum !== 'undefined') {
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const walletAddress = accounts[0];
-      sessionStorage.setItem('walletAddress', walletAddress);
-      const addressElement = document.getElementById('userWalletAddress');
-      if (addressElement) {
-        addressElement.innerText = walletAddress;
-      }
-      return walletAddress;
-    } catch (error) {
-      console.error('Wallet connection rejected:', error);
-      alert('Please connect your wallet to continue.');
-      return null;
-    }
-  } else {
-    alert('MetaMask is not installed. Please install it and try again.');
-    return null;
-  }
-}
-
-// Register new user
-async function register() {
-  const username = document.getElementById('registerUsername').value.trim();
-  const password = document.getElementById('registerPassword').value.trim();
-
-  if (!username || !password) {
-    alert('Please fill in all fields.');
-    return;
-  }
-
-  // Prevent anyone from registering as Admin
-  if (username.toLowerCase() === 'digitalrufiya@gmail.com') {
-    alert('This username is reserved for Admin.');
-    return;
-  }
-
-  const walletAddress = await connectWallet();
-  if (!walletAddress) {
-    return;
-  }
-
-  // Load existing users
-  let users = JSON.parse(localStorage.getItem('users')) || [];
-
-  // Check if username already exists
-  if (users.find(u => u.username === username)) {
-    alert('Username already exists.');
-    return;
-  }
-
-  // Save new user
-  users.push({ username, password, walletAddress });
-  localStorage.setItem('users', JSON.stringify(users));
-  alert('Registration successful! Please login.');
-  window.location.href = 'index.html';
-}
-
-// Login user
-function login() {
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-
-  if (!username || !password) {
-    alert('Please fill in all fields.');
-    return;
-  }
-
-  const users = JSON.parse(localStorage.getItem('users')) || [];
-  const user = users.find(u => u.username === username && u.password === password);
-
-  if (!user) {
-    alert('Invalid username or password.');
-    return;
-  }
-
-  // Save session data
-  sessionStorage.setItem('currentUser', JSON.stringify(user));
-  alert('Login successful!');
-  
-  // If Admin login
-  if (username.toLowerCase() === 'digitalrufiya@gmail.com') {
-    window.location.href = 'admin.html';
-  } else {
-    window.location.href = 'wallet.html';
-  }
-}
-
-// Load users in Admin Panel
-function loadUsers() {
-  const users = JSON.parse(localStorage.getItem('users')) || [];
-  const userData = document.getElementById('userData');
-
-  if (userData) {
-    userData.innerHTML = ''; // Clear existing
-
-    users.forEach(user => {
-      // Skip Admin entry in table
-      if (user.username.toLowerCase() !== 'digitalrufiya@gmail.com') {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${user.username}</td>
-          <td>${user.password}</td>
-          <td>${user.walletAddress}</td>
-        `;
-        userData.appendChild(row);
-      }
-    });
-  }
-}
-
-// Admin logout
-function logoutAdmin() {
-  sessionStorage.removeItem('currentUser');
-  sessionStorage.removeItem('walletAddress');
-  alert('Logged out.');
-  window.location.href = 'index.html';
-}
-
-// Wallet page logout
-function logout() {
-  sessionStorage.removeItem('currentUser');
-  sessionStorage.removeItem('walletAddress');
-  alert('Logged out.');
-  window.location.href = 'index.html';
-}
-
-// Functions to open different sections (Send, Receive, Exchange, Transactions)
-function openSend() {
-  document.getElementById('transactionArea').innerHTML = '<h3>Send Tokens - Feature coming soon!</h3>';
-}
-
-function openReceive() {
-  document.getElementById('transactionArea').innerHTML = '<h3>Receive Tokens - Feature coming soon!</h3>';
-}
-
-function openExchange() {
-  document.getElementById('transactionArea').innerHTML = '<h3>Exchange Tokens - Feature coming soon!</h3>';
-}
-
-function openHistory() {
-  document.getElementById('transactionArea').innerHTML = '<h3>Transaction History - Feature coming soon!</h3>';
-}
-
-// Auto-run wallet connection on wallet.html
-window.addEventListener('load', () => {
-  const walletPage = document.querySelector('.wallet-page');
-  if (walletPage) {
-    const savedWalletAddress = sessionStorage.getItem('walletAddress');
-    if (savedWalletAddress) {
-      document.getElementById('userWalletAddress').innerText = savedWalletAddress;
+    if (window.ethereum) {
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const walletAddress = accounts[0];
+            document.getElementById('userWalletAddress').innerText = walletAddress;
+            localStorage.setItem('connectedWallet', walletAddress);
+            console.log('Connected wallet:', walletAddress);
+        } catch (error) {
+            console.error('User denied wallet connection', error);
+            alert('Wallet connection failed.');
+        }
     } else {
-      connectWallet();
+        alert('MetaMask is not installed. Please install it to connect!');
     }
-  }
+}
 
-  // Load users automatically if on admin page
-  if (window.location.pathname.includes('admin.html')) {
-    loadUsers();
-  }
+// Auto load saved wallet address if connected
+window.addEventListener('load', () => {
+    const savedWallet = localStorage.getItem('connectedWallet');
+    if (savedWallet) {
+        document.getElementById('userWalletAddress').innerText = savedWallet;
+    }
 });
+
+// Add listener for account change
+if (window.ethereum) {
+    window.ethereum.on('accountsChanged', function (accounts) {
+        if (accounts.length > 0) {
+            document.getElementById('userWalletAddress').innerText = accounts[0];
+            localStorage.setItem('connectedWallet', accounts[0]);
+        } else {
+            document.getElementById('userWalletAddress').innerText = 'Not connected';
+            localStorage.removeItem('connectedWallet');
+        }
+    });
+}
