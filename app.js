@@ -1,154 +1,153 @@
-// Basic fake database
-const users = JSON.parse(localStorage.getItem('users')) || [];
-
-// Admin details
+// Constants
 const adminEmail = 'digitalrufiya@gmail.com';
 const adminPassword = 'Zivian@2020';
 
-// Show loading spinner
+// Global Variables
+let provider, signer, userAddress;
+
+// Loading spinner show/hide
 function showSpinner() {
-  const spinner = document.getElementById('spinner');
-  if (spinner) spinner.style.display = 'block';
+  const spinner = document.createElement('div');
+  spinner.className = 'spinner';
+  spinner.id = 'spinner';
+  document.body.appendChild(spinner);
 }
 
-// Hide loading spinner
 function hideSpinner() {
   const spinner = document.getElementById('spinner');
-  if (spinner) spinner.style.display = 'none';
+  if (spinner) spinner.remove();
 }
 
-// Register new user
-function register() {
-  const username = document.getElementById('registerUsername').value.trim();
-  const password = document.getElementById('registerPassword').value.trim();
-
-  if (!username || !password) {
-    alert('Please fill all fields.');
-    return;
-  }
-
-  const userExists = users.find(u => u.username === username);
-
-  if (userExists) {
-    alert('Username already exists.');
-    return;
-  }
-
-  users.push({ username, password });
-  localStorage.setItem('users', JSON.stringify(users));
-  alert('Registration successful! You can now login.');
-  window.location.href = 'index.html';
-}
-
-// Login user
+// Login Function
 function login() {
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-
-  if (!username || !password) {
-    alert('Please fill all fields.');
-    return;
-  }
+  const username = document.getElementById('loginUsername').value;
+  const password = document.getElementById('loginPassword').value;
 
   if (username === adminEmail && password === adminPassword) {
-    localStorage.setItem('loggedIn', 'admin');
-    window.location.href = 'wallet.html';
-    return;
-  }
-
-  const user = users.find(u => u.username === username && u.password === password);
-
-  if (user) {
-    localStorage.setItem('loggedIn', username);
+    alert('Login successful!');
+    localStorage.setItem('isLoggedIn', 'true');
     window.location.href = 'wallet.html';
   } else {
-    alert('Invalid username or password.');
+    alert('Invalid login details!');
   }
 }
 
-// Logout
+// Logout Function
 function logout() {
-  localStorage.removeItem('loggedIn');
+  localStorage.removeItem('isLoggedIn');
   window.location.href = 'index.html';
 }
 
-// Wallet Connection (BSC)
+// Wallet Connect
 async function connectWallet() {
-  showSpinner();
   try {
-    if (!window.ethereum) {
-      alert('Please install MetaMask or Trust Wallet.');
+    showSpinner();
+    if (window.ethereum) {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      document.getElementById('userAddress').innerText = userAddress;
+      document.getElementById('walletInfo').style.display = 'block';
+      document.getElementById('connectButton').style.display = 'none';
+      document.getElementById('logoutButton').style.display = 'block';
+
       hideSpinner();
-      return;
+      alert('Wallet connected!');
+    } else {
+      hideSpinner();
+      alert('No wallet found. Install MetaMask!');
     }
-
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const address = accounts[0];
-
-    document.getElementById('walletAddress').innerText = address;
-    document.getElementById('walletInfo').style.display = 'block';
-    document.getElementById('connectBtn').style.display = 'none';
-    document.getElementById('actionButtons').style.display = 'block';
-    document.getElementById('status').innerText = 'Wallet connected!';
-
   } catch (error) {
-    console.error('Wallet connection error:', error);
-    alert('Failed to connect wallet.');
+    hideSpinner();
+    console.error(error);
+    alert('Wallet connection failed!');
   }
-  hideSpinner();
 }
 
-// Send Crypto (5% fee)
-async function sendCrypto() {
+// Send Tokens
+async function sendTokens() {
   const recipient = prompt('Enter recipient address:');
-  const amount = prompt('Enter amount to send:');
+  const amount = prompt('Enter amount to send (in BNB):');
 
   if (!recipient || !amount) {
-    alert('Recipient and amount are required.');
+    alert('Recipient or amount missing.');
     return;
   }
-
-  const amountWithFee = parseFloat(amount) * 0.95;
 
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+    showSpinner();
+
+    const value = ethers.parseEther(amount);
+    const charge = value * 5n / 100n; // 5% charge
+    const finalValue = value - charge;
+
     const tx = await signer.sendTransaction({
       to: recipient,
-      value: ethers.parseEther(amountWithFee.toString())
+      value: finalValue
     });
 
-    alert(`Transaction sent! Hash: ${tx.hash}`);
+    await tx.wait();
+    hideSpinner();
+    alert('Transaction successful with 5% charge!');
   } catch (error) {
-    console.error('Send error:', error);
-    alert('Transaction failed.');
+    hideSpinner();
+    console.error(error);
+    alert('Transaction failed!');
   }
 }
 
-// Receive Crypto (just shows address)
-function receiveCrypto() {
-  const address = document.getElementById('walletAddress').innerText;
-  navigator.clipboard.writeText(address);
-  alert('Your wallet address copied!');
+// Receive Tokens (copy address)
+function receiveTokens() {
+  navigator.clipboard.writeText(userAddress)
+    .then(() => {
+      alert('Wallet address copied!');
+    })
+    .catch(() => {
+      alert('Failed to copy address.');
+    });
 }
 
-// Swap (Exchange) Crypto (5% fee simulated)
-async function swapCrypto() {
-  const tokenIn = prompt('Enter FROM token address (example: BNB address)');
-  const tokenOut = prompt('Enter TO token address (example: DRF address)');
-  const amount = prompt('Enter amount to swap:');
+// Dummy Exchange Function
+async function exchangeTokens() {
+  const amount = prompt('Enter amount of BNB to exchange:');
 
-  if (!tokenIn || !tokenOut || !amount) {
-    alert('All fields required.');
+  if (!amount) {
+    alert('Amount is missing.');
     return;
   }
 
-  alert(`Simulating swap ${parseFloat(amount) * 0.95} (after 5% fee) from ${tokenIn} to ${tokenOut}`);
-}
+  try {
+    showSpinner();
 
-// On wallet.html load
-function checkLogin() {
-  if (!localStorage.getItem('loggedIn')) {
-    window.location.href = 'index.html';
+    const bnbAmount = ethers.parseEther(amount);
+    const charge = bnbAmount * 5n / 100n; // 5% charge
+    const finalAmount = bnbAmount - charge;
+
+    // Simulate swap (no real swap happening here!)
+    setTimeout(() => {
+      hideSpinner();
+      alert(`Exchange successful! You received tokens minus 5% fee.`);
+    }, 2000);
+
+  } catch (error) {
+    hideSpinner();
+    console.error(error);
+    alert('Exchange failed.');
   }
 }
+
+// Auto reconnect
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('isLoggedIn') !== 'true') {
+    window.location.href = 'index.html';
+  }
+
+  if (window.location.pathname.includes('wallet.html')) {
+    document.getElementById('connectButton').addEventListener('click', connectWallet);
+    document.getElementById('logoutButton').addEventListener('click', logout);
+    document.getElementById('sendButton').addEventListener('click', sendTokens);
+    document.getElementById('receiveButton').addEventListener('click', receiveTokens);
+    document.getElementById('exchangeButton').addEventListener('click', exchangeTokens);
+  }
+});
