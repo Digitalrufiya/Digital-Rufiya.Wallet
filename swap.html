@@ -3,20 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Swap Tokens - DRF Wallet</title>
+  <title>Swap - DRF Wallet</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .swap-container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      margin-top: 100px;
+      width: 320px;
+    }
+    select, input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .swap-actions {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  </style>
 </head>
 <body class="wallet-page">
 
   <header>
-    <h1>Swap Tokens (PancakeSwap)</h1>
-    <button onclick="goBack()">Back to Wallet</button>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" class="wallet-logo" alt="DRF Wallet">
+    <h1>Swap Tokens</h1>
+    <button id="backBtn" onclick="goBack()">Back to Wallet</button>
   </header>
 
-  <div class="form-container">
-    <h2>Swap your tokens</h2>
+  <div class="swap-container">
+    <h2>Token Swap</h2>
 
-    <label>From Token:</label>
     <select id="fromToken">
       <option value="BNB">BNB</option>
       <option value="DRF">DRF</option>
@@ -24,9 +48,6 @@
       <option value="USDC">USDC</option>
     </select>
 
-    <input type="text" id="fromAmount" placeholder="Amount to swap">
-
-    <label>To Token:</label>
     <select id="toToken">
       <option value="DRF">DRF</option>
       <option value="BNB">BNB</option>
@@ -34,13 +55,41 @@
       <option value="USDC">USDC</option>
     </select>
 
-    <button onclick="swapTokens()">Swap</button>
+    <input type="number" id="amount" placeholder="Amount to Swap">
+
+    <div class="swap-actions">
+      <button onclick="performSwap()">Swap Now</button>
+    </div>
 
     <div id="swapStatus"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="app.js"></script>
+  <script>
+    function goBack() {
+      window.location.href = "wallet.html";
+    }
 
+    async function performSwap() {
+      const from = document.getElementById('fromToken').value;
+      const to = document.getElementById('toToken').value;
+      const amount = document.getElementById('amount').value;
+
+      if (from === to) {
+        alert("Select different tokens to swap.");
+        return;
+      }
+      if (!amount || amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      document.getElementById('swapStatus').innerText = "Preparing swap on PancakeSwap...";
+
+      // PancakeSwap interaction will be handled in app.js or another file
+      alert(`Swap from ${from} to ${to}, amount: ${amount}`);
+      document.getElementById('swapStatus').innerText = "Swap successful (Simulated)!"; // Replace with real integration
+    }
+  </script>
 </body>
 </html>
