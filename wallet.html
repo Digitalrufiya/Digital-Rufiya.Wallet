@@ -3,68 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DRF Wallet - Dashboard</title>
+  <title>Wallet - DRF Wallet</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body onload="checkLogin()">
+<body class="turquoise-bg">
 
-  <!-- Navbar -->
-  <div class="navbar">
-    <div class="logo">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet Logo" height="50">
-    </div>
-    <div class="nav-actions">
-      <span id="walletAddress">Not Connected</span>
-      <button onclick="connectWallet()" class="connect-btn">Connect Wallet</button>
-      <button onclick="logout()" class="logout-btn">Logout</button>
-    </div>
+  <div class="wallet-header">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="wallet-logo-small">
+    <h1>DRF Wallet</h1>
+    <button onclick="logout()" class="logout-btn">Logout</button>
   </div>
 
-  <!-- Main Container -->
   <div class="wallet-container">
 
-    <!-- Tab Buttons -->
-    <div class="tabs">
-      <button onclick="switchTab('send')">Send</button>
-      <button onclick="switchTab('receive')">Receive</button>
-      <button onclick="switchTab('exchange')">Exchange</button>
+    <div class="wallet-info">
+      <p><strong>Connected Wallet:</strong> <span id="walletAddress">Not connected</span></p>
+      <p><strong>BNB Balance:</strong> <span id="bnbBalance">0</span> BNB</p>
+      <p><strong>DRF Balance:</strong> <span id="drfBalance">0</span> DRF</p>
     </div>
 
-    <!-- Sections -->
-
-    <!-- Send Section -->
-    <div id="sendSection" class="section">
-      <h2>Send BNB</h2>
-      <input type="text" id="sendTo" placeholder="Recipient Address">
-      <input type="number" id="sendAmount" placeholder="Amount (BNB)">
-      <button onclick="sendBNB()">Send</button>
-      <p class="info-text">*5% network fee will be deducted.</p>
+    <div class="wallet-actions">
+      <button onclick="connectWallet()">Connect Wallet</button>
+      <button onclick="openSendModal()">Send</button>
+      <button onclick="openReceiveModal()">Receive</button>
+      <button onclick="openExchangeModal()">Exchange</button>
     </div>
 
-    <!-- Receive Section -->
-    <div id="receiveSection" class="section hidden">
-      <h2>Receive BNB</h2>
-      <p>Your Wallet Address:</p>
-      <div class="address-box" onclick="receiveBNB()">
-        <span id="walletAddress">Not Connected</span>
-        <small>(Click to copy)</small>
+    <div id="toast" class="toast">Notification</div>
+
+    <!-- Send Modal -->
+    <div id="sendModal" class="modal">
+      <div class="modal-content">
+        <span onclick="closeModal('sendModal')" class="close">&times;</span>
+        <h2>Send Tokens</h2>
+        <input type="text" id="sendTo" placeholder="Recipient Address">
+        <input type="number" id="sendAmount" placeholder="Amount">
+        <select id="sendToken">
+          <option value="BNB">BNB</option>
+          <option value="DRF">DRF</option>
+        </select>
+        <button onclick="sendTokens()">Send</button>
       </div>
     </div>
 
-    <!-- Exchange Section -->
-    <div id="exchangeSection" class="section hidden">
-      <h2>Exchange BNB to DRF</h2>
-      <input type="number" id="exchangeAmount" placeholder="Amount to Exchange">
-      <button onclick="exchangeTokens()">Exchange</button>
-      <p class="info-text">*5% exchange fee will be deducted.</p>
+    <!-- Receive Modal -->
+    <div id="receiveModal" class="modal">
+      <div class="modal-content">
+        <span onclick="closeModal('receiveModal')" class="close">&times;</span>
+        <h2>Your Address</h2>
+        <input type="text" id="yourAddress" readonly>
+        <button onclick="copyAddress()">Copy Address</button>
+      </div>
+    </div>
+
+    <!-- Exchange Modal -->
+    <div id="exchangeModal" class="modal">
+      <div class="modal-content">
+        <span onclick="closeModal('exchangeModal')" class="close">&times;</span>
+        <h2>Exchange Tokens</h2>
+        <input type="number" id="exchangeAmount" placeholder="Amount">
+        <select id="fromToken">
+          <option value="BNB">BNB</option>
+          <option value="DRF">DRF</option>
+        </select>
+        <select id="toToken">
+          <option value="DRF">DRF</option>
+          <option value="BNB">BNB</option>
+        </select>
+        <button onclick="exchangeTokens()">Exchange</button>
+      </div>
     </div>
 
   </div>
 
-  <!-- Toast Notification -->
-  <div id="toastContainer"></div>
-
-  <!-- Scripts -->
   <script src="app.js"></script>
 </body>
 </html>
