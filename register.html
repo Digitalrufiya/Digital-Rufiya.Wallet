@@ -5,22 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Register - DRF Wallet</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      display: none;
+    }
+    .loading {
+      margin-top: 10px;
+      display: none;
+      color: #1fc8db;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body class="login-page">
-
   <div class="form-container">
-    <h1>Create your DRF Wallet account</h1>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet" class="logo">
+    <h1>Register</h1>
 
-    <input type="text" id="registerUsername" placeholder="Email or Username" required>
-    <input type="password" id="registerPassword" placeholder="Password" required>
+    <input type="text" id="registerUsername" placeholder="Username">
+    <input type="password" id="registerPassword" placeholder="Password">
+    
+    <button onclick="handleRegister()">Register</button>
 
-    <button onclick="register()">Register</button>
+    <p>Already have an account? <a href="index.html">Login</a></p>
 
-    <p>Already have an account? <a href="index.html">Login here</a></p>
+    <div class="loading" id="loadingMessage">Registering...</div>
+    <div class="error-message" id="errorMessage">Please fill all fields correctly!</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="app.js"></script>
+  <script>
+    function handleRegister() {
+      const username = document.getElementById('registerUsername').value.trim();
+      const password = document.getElementById('registerPassword').value.trim();
+      const errorMessage = document.getElementById('errorMessage');
+      const loadingMessage = document.getElementById('loadingMessage');
 
+      errorMessage.style.display = 'none';
+
+      if (!username || !password) {
+        errorMessage.textContent = "Please enter both username and password.";
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      loadingMessage.style.display = 'block';
+
+      // Simulate a short delay (like calling a server)
+      setTimeout(() => {
+        register(username, password); // Call real register function from app.js
+        loadingMessage.style.display = 'none';
+      }, 800);
+    }
+  </script>
 </body>
 </html>
