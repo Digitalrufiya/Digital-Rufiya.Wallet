@@ -1,193 +1,158 @@
-// Initialize ethers.js provider
-const provider = new ethers.providers.Web3Provider(window.ethereum);
+// Include Ethers.js via CDN (make sure in HTML)
+const ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
 let signer;
 let userAddress;
+const BSC_CHAIN_ID = '0x38'; // BSC Mainnet chain ID
+const feeReceiver = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040"; // Fee address
+const BSC_SCAN_API = 'Your_BSCSCAN_API_KEY'; // <<< Insert your BscScan API Key here
+const PANCAKESWAP_BASE_URL = 'https://pancakeswap.finance/swap'; // PancakeSwap official
 
-// Contract Addresses on BSC
-const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
-const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+// Tokens
+const tokens = {
+    BNB: { symbol: 'BNB', address: null, decimals: 18 },
+    DRF: { symbol: 'DRF', address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6', decimals: 18 },
+    USDT: { symbol: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+    USDC: { symbol: 'USDC', address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', decimals: 18 },
+};
 
-// ERC20 ABI (Standard)
-const ERC20_ABI = [
-    "function balanceOf(address) view returns (uint256)",
-    "function transfer(address,uint256) returns (bool)",
-    "function decimals() view returns (uint8)",
-    "function symbol() view returns (string)"
-];
-
-// Connect Wallet
 async function connectWallet() {
-    if (window.ethereum) {
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        userAddress = await signer.getAddress();
-        document.getElementById('userWalletAddress').innerText = userAddress;
-        loadBalances();
-        generateQRCode(userAddress);
-    } else {
-        alert('Please install MetaMask!');
+    if (!window.ethereum) {
+        alert("MetaMask not installed!");
+        return;
+    }
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    signer = ethersProvider.getSigner();
+    userAddress = await signer.getAddress();
+    document.getElementById('userWalletAddress').innerText = userAddress;
+    loadBalances();
+}
+
+async function loadBalances() {
+    const ethBalance = await ethersProvider.getBalance(userAddress);
+    document.getElementById('userBalance').innerText = `${ethers.utils.formatEther(ethBalance)} BNB`;
+
+    const balancesDiv = document.getElementById('tokenBalances');
+    balancesDiv.innerHTML = '';
+
+    for (const key in tokens) {
+        if (tokens[key].address) {
+            const tokenContract = new ethers.Contract(tokens[key].address, erc20Abi, signer);
+            const balance = await tokenContract.balanceOf(userAddress);
+            const adjusted = ethers.utils.formatUnits(balance, tokens[key].decimals);
+            balancesDiv.innerHTML += `<p>${tokens[key].symbol}: ${adjusted}</p>`;
+        }
     }
 }
 
-// Load all Balances
-async function loadBalances() {
-    if (!userAddress) return;
-    const bnbBalance = await provider.getBalance(userAddress);
-    document.getElementById('userBalance').innerText = `${ethers.utils.formatEther(bnbBalance)} BNB`;
+async function sendToken() {
+    const recipient = prompt("Enter recipient address:");
+    const amount = prompt("Enter amount:");
+    const token = prompt("Enter token (BNB, DRF, USDT, USDC):");
 
-    await loadTokenBalance(DRF_ADDRESS, "DRF");
-    await loadTokenBalance(USDT_ADDRESS, "USDT");
-    await loadTokenBalance(USDC_ADDRESS, "USDC");
+    if (!recipient || !amount || !token) return alert("Missing information!");
+
+    const feeAmount = (parseFloat(amount) * 0.05).toFixed(18);
+    const realAmount = (parseFloat(amount) - parseFloat(feeAmount)).toFixed(18);
+
+    if (token.toUpperCase() === 'BNB') {
+        await signer.sendTransaction({
+            to: recipient,
+            value: ethers.utils.parseEther(realAmount)
+        });
+        await signer.sendTransaction({
+            to: feeReceiver,
+            value: ethers.utils.parseEther(feeAmount)
+        });
+    } else {
+        const contract = new ethers.Contract(tokens[token.toUpperCase()].address, erc20Abi, signer);
+        const decimals = tokens[token.toUpperCase()].decimals;
+        await contract.transfer(recipient, ethers.utils.parseUnits(realAmount, decimals));
+        await contract.transfer(feeReceiver, ethers.utils.parseUnits(feeAmount, decimals));
+    }
+    alert("Transaction Sent!");
 }
 
-// Load individual Token Balance
-async function loadTokenBalance(tokenAddress, tokenName) {
-    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-    const balance = await tokenContract.balanceOf(userAddress);
-    const decimals = await tokenContract.decimals();
-    const formatted = ethers.utils.formatUnits(balance, decimals);
-
-    const tokenBalancesDiv = document.getElementById('tokenBalances');
-    const p = document.createElement('p');
-    p.innerText = `${tokenName}: ${formatted}`;
-    tokenBalancesDiv.appendChild(p);
+function openSend() {
+    sendToken();
 }
 
-// Logout
-function logout() {
-    localStorage.clear();
-    window.location.href = "index.html";
+function openReceive() {
+    const wallet = userAddress || localStorage.getItem('connectedWallet');
+    if (!wallet) {
+        alert("Connect Wallet First!");
+        return;
+    }
+    const qrDiv = document.getElementById('transactionArea');
+    qrDiv.innerHTML = `<h3>Receive Address</h3><p>${wallet}</p><div id="qrcode"></div>`;
+
+    new QRCode(document.getElementById('qrcode'), wallet);
 }
 
-// QR Code for Receive
-function generateQRCode(address) {
-    const qrContainer = document.getElementById('transactionArea');
-    qrContainer.innerHTML = "";
-    const qr = new QRCode(qrContainer, {
-        text: address,
-        width: 128,
-        height: 128,
+function openExchange() {
+    window.open(`${PANCAKESWAP_BASE_URL}?outputCurrency=${tokens.DRF.address}`, '_blank');
+}
+
+async function openHistory() {
+    const response = await fetch(`https://api.bscscan.com/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${BSC_SCAN_API}`);
+    const data = await response.json();
+    const txs = data.result;
+
+    const historyDiv = document.getElementById('transactionArea');
+    historyDiv.innerHTML = "<h3>Transaction History</h3>";
+
+    txs.slice(0, 10).forEach(tx => {
+        historyDiv.innerHTML += `
+            <div>
+                <p>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,10)}...</a></p>
+                <p>From: ${tx.from.slice(0,6)}... To: ${tx.to.slice(0,6)}... Value: ${ethers.utils.formatEther(tx.value)} BNB</p>
+                <hr/>
+            </div>`;
     });
 }
 
-// Send Tokens
-async function openSend() {
-    const token = prompt("Send which token? (BNB, DRF, USDT, USDC)").toUpperCase();
-    const recipient = prompt("Recipient Address:");
-    const amount = prompt("Amount:");
+// Basic Authentication (Admin/User)
+const adminCredentials = { username: "digitalrufiya@gmail.com", password: "Zivian@2020" };
+const users = JSON.parse(localStorage.getItem('registeredUsers')) || [];
 
-    if (token === "BNB") {
-        const tx = await signer.sendTransaction({
-            to: recipient,
-            value: ethers.utils.parseEther(amount)
-        });
-        alert("BNB Sent! Tx Hash: " + tx.hash);
-    } else {
-        let tokenAddress;
-        if (token === "DRF") tokenAddress = DRF_ADDRESS;
-        else if (token === "USDT") tokenAddress = USDT_ADDRESS;
-        else if (token === "USDC") tokenAddress = USDC_ADDRESS;
-        else {
-            alert("Invalid token selected!");
-            return;
-        }
-
-        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-        const decimals = await tokenContract.decimals();
-        const tx = await tokenContract.transfer(recipient, ethers.utils.parseUnits(amount, decimals));
-        alert(token + " Sent! Tx Hash: " + tx.hash);
-    }
-}
-
-// Open Receive
-function openReceive() {
-    alert(`Your Wallet Address:\n${userAddress}`);
-    generateQRCode(userAddress);
-}
-
-// Exchange (basic swap simulation)
-async function openExchange() {
-    const fromToken = prompt("Swap from (DRF, USDT, USDC)").toUpperCase();
-    const toToken = prompt("Swap to (DRF, USDT, USDC)").toUpperCase();
-    const amount = prompt("Amount:");
-
-    alert(`Simulated swap ${amount} ${fromToken} to ${toToken}. (Real DEX integration coming soon.)`);
-}
-
-// Transaction History (simplified)
-async function openHistory() {
-    alert("Transaction history feature coming soon (will list last few transactions).");
-}
-
-// Admin and User Login / Register logic (simple localStorage)
-
-// Hardcoded Admin
-const adminCredentials = {
-    username: "digitalrufiya@gmail.com",
-    password: "Zivian@2020"
-};
-
-// Register User
-function register() {
-    const username = document.getElementById('registerUsername').value;
-    const password = document.getElementById('registerPassword').value;
-
-    if (username && password) {
-        let users = JSON.parse(localStorage.getItem('users')) || [];
-        users.push({ username, password });
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('Registered Successfully! Now login.');
-        window.location.href = "index.html";
-    } else {
-        alert('Please fill all fields.');
-    }
-}
-
-// Login User
 function login() {
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
 
     if (username === adminCredentials.username && password === adminCredentials.password) {
         window.location.href = "admin.html";
-        return;
-    }
-
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (user) {
-        localStorage.setItem('currentUser', JSON.stringify(user));
+    } else if (users.find(u => u.username === username && u.password === password)) {
         window.location.href = "wallet.html";
     } else {
-        alert('Invalid credentials!');
+        alert("Invalid credentials");
     }
 }
 
-// Logout Admin
+function register() {
+    const username = document.getElementById('registerUsername').value;
+    const password = document.getElementById('registerPassword').value;
+
+    if (users.find(u => u.username === username)) {
+        alert("Username already exists!");
+        return;
+    }
+
+    users.push({ username, password });
+    localStorage.setItem('registeredUsers', JSON.stringify(users));
+    alert("Registered successfully! Now login.");
+    window.location.href = "index.html";
+}
+
+function logout() {
+    localStorage.removeItem('connectedWallet');
+    window.location.href = "index.html";
+}
+
 function logoutAdmin() {
     window.location.href = "index.html";
 }
 
-// Load Users for Admin Panel
-function loadUsersForAdmin() {
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    const tbody = document.getElementById('userData');
-    tbody.innerHTML = "";
-    users.forEach(u => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${u.username}</td><td>${u.password}</td><td>-</td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-// Auto Wallet Connection Restore
-window.addEventListener('load', async () => {
-    if (window.location.pathname.includes("wallet.html")) {
-        await connectWallet();
-    }
-    if (window.location.pathname.includes("admin.html")) {
-        loadUsersForAdmin();
-    }
-});
+// ERC20 Minimal ABI
+const erc20Abi = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function transfer(address to, uint amount) returns (bool)"
+];
