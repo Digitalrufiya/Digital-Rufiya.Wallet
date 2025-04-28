@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./style.css">
 
-  <!-- Load ethers.js -->
+  <!-- Load Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
 
   <style>
@@ -15,7 +15,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding-top: 50px;
-      background-color: #f0f8ff;
+      background-color: #e8f0f7;
     }
     button {
       padding: 10px 20px;
@@ -57,9 +57,9 @@
   </div>
 
   <script>
-    const { ethers } = window;
+    const { ethers } = window.ethers;
 
-    const tokenAddress = '0x657f33094eD55c2864b0f9De0B11127e08165FAd';
+    const tokenAddress = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7'; // Your Token Address
     const tokenABI = [
       "function balanceOf(address owner) view returns (uint256)",
       "function decimals() view returns (uint8)"
@@ -69,43 +69,39 @@
     let signer;
 
     async function connectWallet() {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          provider = new ethers.BrowserProvider(window.ethereum);
-          signer = await provider.getSigner();
-          const address = await signer.getAddress();
-
-          console.log('Connected account:', address);
-          document.getElementById('userAddress').innerText = address;
-          document.getElementById('walletInfo').style.display = 'block';
-          document.getElementById('status').innerText = 'Wallet Connected!';
-
-          fetchTokenBalance(address);
-
-          localStorage.setItem('walletConnected', 'true');
-        } catch (error) {
-          console.error('Wallet connection failed:', error);
-          document.getElementById('status').innerText = 'Connection failed. Please try again.';
-          localStorage.removeItem('walletConnected');
+      try {
+        if (!window.ethereum) {
+          alert('Please install MetaMask!');
+          return;
         }
-      } else {
-        alert('Please install MetaMask or a compatible wallet!');
+
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        const address = await signer.getAddress();
+
+        document.getElementById('userAddress').innerText = address;
+        document.getElementById('walletInfo').style.display = 'block';
+        document.getElementById('status').innerText = 'Wallet Connected!';
+
+        fetchTokenBalance(address);
+
+      } catch (error) {
+        console.error(error);
+        document.getElementById('status').innerText = 'Connection failed!';
       }
     }
 
     async function fetchTokenBalance(address) {
       try {
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, provider);
-        const [balance, decimals] = await Promise.all([
-          tokenContract.balanceOf(address),
-          tokenContract.decimals()
-        ]);
+        const balance = await tokenContract.balanceOf(address);
+        const decimals = await tokenContract.decimals();
 
         const formattedBalance = ethers.formatUnits(balance, decimals);
         document.getElementById('tokenBalance').innerText = `${formattedBalance} DRF`;
       } catch (error) {
-        console.error('Error fetching token balance:', error);
+        console.error(error);
         document.getElementById('tokenBalance').innerText = 'Error fetching balance';
       }
     }
@@ -113,19 +109,15 @@
     function copyAddress() {
       const address = document.getElementById('userAddress').innerText;
       navigator.clipboard.writeText(address).then(() => {
-        alert('Wallet address copied to clipboard!');
+        alert('Wallet address copied!');
       });
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('connectButton').addEventListener('click', connectWallet);
       document.getElementById('userAddress').addEventListener('click', copyAddress);
-
-      if (localStorage.getItem('walletConnected') === 'true') {
-        console.log('Attempting auto reconnect...');
-        connectWallet();
-      }
     });
   </script>
+
 </body>
 </html>
