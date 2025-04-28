@@ -1,5 +1,20 @@
 // app.js
 
+// Create default Admin user if not exists
+function createAdminUser() {
+  let users = JSON.parse(localStorage.getItem('users')) || [];
+  const adminExists = users.find(u => u.username.toLowerCase() === 'digitalrufiya@gmail.com');
+  if (!adminExists) {
+    users.push({
+      username: 'digitalrufiya@gmail.com',
+      password: 'Zivian@2020', // Your chosen password
+      walletAddress: 'ADMIN' // Admin doesn't need wallet address
+    });
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+}
+createAdminUser();
+
 // Check if wallet is connected (MetaMask)
 async function connectWallet() {
   if (typeof window.ethereum !== 'undefined') {
@@ -30,6 +45,12 @@ async function register() {
 
   if (!username || !password) {
     alert('Please fill in all fields.');
+    return;
+  }
+
+  // Prevent anyone from registering as Admin
+  if (username.toLowerCase() === 'digitalrufiya@gmail.com') {
+    alert('This username is reserved for Admin.');
     return;
   }
 
@@ -76,8 +97,8 @@ function login() {
   sessionStorage.setItem('currentUser', JSON.stringify(user));
   alert('Login successful!');
   
-  // If admin login
-  if (username.toLowerCase() === 'admin') {
+  // If Admin login
+  if (username.toLowerCase() === 'digitalrufiya@gmail.com') {
     window.location.href = 'admin.html';
   } else {
     window.location.href = 'wallet.html';
@@ -93,13 +114,16 @@ function loadUsers() {
     userData.innerHTML = ''; // Clear existing
 
     users.forEach(user => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${user.username}</td>
-        <td>${user.password}</td>
-        <td>${user.walletAddress}</td>
-      `;
-      userData.appendChild(row);
+      // Skip Admin entry in table
+      if (user.username.toLowerCase() !== 'digitalrufiya@gmail.com') {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${user.username}</td>
+          <td>${user.password}</td>
+          <td>${user.walletAddress}</td>
+        `;
+        userData.appendChild(row);
+      }
     });
   }
 }
