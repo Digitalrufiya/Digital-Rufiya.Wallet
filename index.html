@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DRF Wallet (BSC)</title>
+  <title>DRF Wallet - BSC</title>
 
   <link rel="stylesheet" href="./style.css">
 
-  <!-- Load Ethers.js -->
+  <!-- Load Ethers.js UMD version -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
 
-  <!-- WalletKit browser bundle -->
+  <!-- Load WalletKit UMD version -->
   <script src="https://unpkg.com/@reown/walletkit@1.0.6/dist/walletkit.umd.js"></script>
 
   <style>
@@ -42,7 +42,6 @@
       color: darkblue;
     }
   </style>
-
 </head>
 
 <body>
@@ -60,21 +59,10 @@
     <p id="status" style="margin-top:20px;">Please connect your wallet</p>
   </div>
 
+  <!-- Your custom script goes here -->
   <script>
-    // Setup
-    const { ethers } = window.ethers;
     const { WalletKit } = window.walletkit;
-
-    const core = new WalletKit.Core({
-      projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
-    });
-
-    const metadata = {
-      name: 'Digitalrufiya-wallet',
-      description: 'DRF Wallet Example',
-      url: 'https://reown.com/appkit',
-      icons: ['https://assets.reown.com/reown-profile-pic.png']
-    };
+    const { ethers } = window.ethers;
 
     const tokenAddress = '0x657f33094eD55c2864b0f9De0B11127e08165FAd';
     const tokenABI = [
@@ -86,10 +74,22 @@
     let provider;
 
     async function initWalletKit() {
+      const { Core } = window.walletkit;
+      const core = new Core({
+        projectId: '5c53beb0cbc14bcf6d24f38c9bfb7560'
+      });
+
+      const metadata = {
+        name: 'Digitalrufiya-wallet',
+        description: 'DRF Wallet Example',
+        url: 'https://reown.com/appkit',
+        icons: ['https://assets.reown.com/reown-profile-pic.png']
+      };
+
       walletKit = await WalletKit.init({
         core,
         metadata,
-        requiredChains: [56]
+        requiredChains: [56] // BSC only
       });
     }
 
@@ -102,7 +102,11 @@
           autoConnectLastSession: isAutoReconnect
         });
 
-        const address = session.accounts[0];
+        const accounts = session.accounts;
+        const address = accounts[0];
+
+        console.log('Connected account:', address);
+
         document.getElementById('userAddress').innerText = address;
         document.getElementById('walletInfo').style.display = 'block';
         document.getElementById('status').innerText = 'Wallet Connected to BSC!';
@@ -112,6 +116,7 @@
         }
 
         provider = new ethers.BrowserProvider(walletKit.getProvider());
+
         await fetchTokenBalance(address);
 
       } catch (error) {
@@ -154,5 +159,6 @@
       }
     });
   </script>
+
 </body>
 </html>
