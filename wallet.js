@@ -1,4 +1,5 @@
 // wallet.js
+
 import { Core } from "https://cdn.jsdelivr.net/npm/@walletconnect/core@2.8.5/dist/esm/index.js";
 import { WalletKit } from "https://cdn.jsdelivr.net/npm/@reown/walletkit@1.0.6/dist/walletkit.module.js";
 import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.min.js";
@@ -17,10 +18,10 @@ const core = new Core({
 
 // Metadata setup
 const metadata = {
-  name: 'Digitalrufiya-wallet',
-  description: 'DRF Wallet Example',
-  url: 'https://reown.com/appkit',
-  icons: ['https://assets.reown.com/reown-profile-pic.png']
+  name: 'Digitalrufiya Wallet',
+  description: 'DRF Wallet Example for BSC',
+  url: 'https://digitalrufiya.com', // <-- Update your own domain if you have
+  icons: ['https://yourdomain.com/logo.png'] // <-- Update your logo URL
 };
 
 // Token details
@@ -37,15 +38,16 @@ async function initWalletKit() {
   walletKit = await WalletKit.init({
     core,
     metadata,
-    requiredChains: [56] // BSC only
+    requiredChains: [56] // BSC Mainnet
   });
 }
 
-export async function connectWallet(isAutoReconnect = false) {
+async function connectWallet(isAutoReconnect = false) {
   try {
     if (!walletKit) {
       await initWalletKit();
     }
+
     const session = await walletKit.connect({
       autoConnectLastSession: isAutoReconnect
     });
@@ -66,6 +68,9 @@ export async function connectWallet(isAutoReconnect = false) {
     // Initialize ethers provider
     provider = new ethers.BrowserProvider(walletKit.getProvider());
 
+    // Optional: Check and switch network to BSC if not connected
+    await ensureCorrectNetwork();
+
     // Fetch token balance
     await fetchTokenBalance(address);
 
@@ -73,6 +78,22 @@ export async function connectWallet(isAutoReconnect = false) {
     console.error('Wallet connection failed:', error);
     document.getElementById('status').innerText = 'Connection failed. Please try again.';
     localStorage.removeItem('walletConnected');
+  }
+}
+
+async function ensureCorrectNetwork() {
+  const network = await provider.getNetwork();
+  if (network.chainId !== 56n) { // 56 for Binance Smart Chain
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x38' }] // 0x38 = 56 in hex
+      });
+      console.log('Switched to BSC Network');
+    } catch (switchError) {
+      console.error('Failed to switch network:', switchError);
+      document.getElementById('status').innerText = 'Please switch manually to Binance Smart Chain (BSC)';
+    }
   }
 }
 
@@ -99,7 +120,6 @@ function copyAddress() {
   });
 }
 
-// Event Listeners
 window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('connectButton').addEventListener('click', () => connectWallet(false));
   document.getElementById('userAddress').addEventListener('click', copyAddress);
