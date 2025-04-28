@@ -3,145 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DRF Wallet - BSC</title>
-
-  <link rel="stylesheet" href="./style.css">
-
-  <!-- Load Ethers.js UMD version -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding-top: 50px;
-      background-color: #f0f8ff;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #f3ba2f;
-      border: none;
-      border-radius: 8px;
-      color: black;
-      transition: background-color 0.3s;
-      margin: 5px;
-    }
-    button:hover {
-      background-color: #d9a520;
-    }
-    #userAddress {
-      color: blue;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    #userAddress:hover {
-      color: darkblue;
-    }
-  </style>
+  <title>Login - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <div>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="Logo" width="150">
-    <h1>DRF Wallet (BSC)</h1>
-
-    <button id="connectButton">Connect Wallet</button>
-
-    <div id="walletInfo" style="display:none; margin-top:20px;">
-      <p><strong>Address:</strong> <span id="userAddress"></span></p>
-      <p><strong>DRF Token Balance:</strong> <span id="tokenBalance"></span></p>
-    </div>
-
-    <p id="status" style="margin-top:20px;">Please connect your wallet</p>
+  <div class="form-container">
+    <h1>Login</h1>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p>Don't have an account? <a href="register.html">Register</a></p>
   </div>
 
-  <script>
-    const { ethers } = window.ethers;
-
-    const tokenAddress = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6'; // DRF Token
-    const tokenABI = [
-      "function balanceOf(address owner) view returns (uint256)",
-      "function decimals() view returns (uint8)"
-    ];
-
-    let provider;
-    let connected = false;
-
-    async function connectWallet() {
-      if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask or any other Web3 wallet!');
-        return;
-      }
-
-      try {
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-        provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-
-        document.getElementById('userAddress').innerText = address;
-        document.getElementById('walletInfo').style.display = 'block';
-        document.getElementById('status').innerText = 'Wallet Connected to BSC!';
-        document.getElementById('connectButton').innerText = 'Disconnect Wallet';
-
-        fetchTokenBalance(address);
-        connected = true;
-
-      } catch (error) {
-        console.error('Wallet connection failed:', error);
-        document.getElementById('status').innerText = 'Connection failed. Please try again.';
-      }
-    }
-
-    async function disconnectWallet() {
-      provider = null;
-      connected = false;
-      document.getElementById('walletInfo').style.display = 'none';
-      document.getElementById('userAddress').innerText = '';
-      document.getElementById('tokenBalance').innerText = '';
-      document.getElementById('status').innerText = 'Wallet disconnected.';
-      document.getElementById('connectButton').innerText = 'Connect Wallet';
-    }
-
-    async function fetchTokenBalance(address) {
-      try {
-        const tokenContract = new ethers.Contract(tokenAddress, tokenABI, provider);
-        const [balance, decimals] = await Promise.all([
-          tokenContract.balanceOf(address),
-          tokenContract.decimals()
-        ]);
-
-        const formattedBalance = ethers.formatUnits(balance, decimals);
-        document.getElementById('tokenBalance').innerText = `${formattedBalance} DRF`;
-      } catch (error) {
-        console.error('Error fetching token balance:', error);
-        document.getElementById('tokenBalance').innerText = 'Error fetching balance';
-      }
-    }
-
-    function copyAddress() {
-      const address = document.getElementById('userAddress').innerText;
-      if (address) {
-        navigator.clipboard.writeText(address).then(() => {
-          alert('Wallet address copied to clipboard!');
-        });
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      document.getElementById('connectButton').addEventListener('click', async () => {
-        if (!connected) {
-          await connectWallet();
-        } else {
-          await disconnectWallet();
-        }
-      });
-      document.getElementById('userAddress').addEventListener('click', copyAddress);
-    });
-  </script>
-
+  <script src="app.js"></script>
 </body>
 </html>
