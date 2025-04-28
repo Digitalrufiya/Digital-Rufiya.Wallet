@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="./style.css">
 
-  <!-- Load Ethers.js -->
+  <!-- Load Ethers.js UMD version -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
 
   <style>
@@ -15,7 +15,7 @@
       font-family: Arial, sans-serif;
       text-align: center;
       padding-top: 50px;
-      background-color: #e8f0f7;
+      background-color: #f0f8ff;
     }
     button {
       padding: 10px 20px;
@@ -26,6 +26,7 @@
       border-radius: 8px;
       color: black;
       transition: background-color 0.3s;
+      margin: 5px;
     }
     button:hover {
       background-color: #d9a520;
@@ -59,62 +60,85 @@
   <script>
     const { ethers } = window.ethers;
 
-    const tokenAddress = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7'; // Your Token Address
+    const tokenAddress = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6'; // DRF Token
     const tokenABI = [
       "function balanceOf(address owner) view returns (uint256)",
       "function decimals() view returns (uint8)"
     ];
 
     let provider;
-    let signer;
+    let connected = false;
 
     async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('Please install MetaMask or any other Web3 wallet!');
+        return;
+      }
+
       try {
-        if (!window.ethereum) {
-          alert('Please install MetaMask!');
-          return;
-        }
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
 
         provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = await provider.getSigner();
+        const signer = await provider.getSigner();
         const address = await signer.getAddress();
 
         document.getElementById('userAddress').innerText = address;
         document.getElementById('walletInfo').style.display = 'block';
-        document.getElementById('status').innerText = 'Wallet Connected!';
+        document.getElementById('status').innerText = 'Wallet Connected to BSC!';
+        document.getElementById('connectButton').innerText = 'Disconnect Wallet';
 
         fetchTokenBalance(address);
+        connected = true;
 
       } catch (error) {
-        console.error(error);
-        document.getElementById('status').innerText = 'Connection failed!';
+        console.error('Wallet connection failed:', error);
+        document.getElementById('status').innerText = 'Connection failed. Please try again.';
       }
+    }
+
+    async function disconnectWallet() {
+      provider = null;
+      connected = false;
+      document.getElementById('walletInfo').style.display = 'none';
+      document.getElementById('userAddress').innerText = '';
+      document.getElementById('tokenBalance').innerText = '';
+      document.getElementById('status').innerText = 'Wallet disconnected.';
+      document.getElementById('connectButton').innerText = 'Connect Wallet';
     }
 
     async function fetchTokenBalance(address) {
       try {
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, provider);
-        const balance = await tokenContract.balanceOf(address);
-        const decimals = await tokenContract.decimals();
+        const [balance, decimals] = await Promise.all([
+          tokenContract.balanceOf(address),
+          tokenContract.decimals()
+        ]);
 
         const formattedBalance = ethers.formatUnits(balance, decimals);
         document.getElementById('tokenBalance').innerText = `${formattedBalance} DRF`;
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching token balance:', error);
         document.getElementById('tokenBalance').innerText = 'Error fetching balance';
       }
     }
 
     function copyAddress() {
       const address = document.getElementById('userAddress').innerText;
-      navigator.clipboard.writeText(address).then(() => {
-        alert('Wallet address copied!');
-      });
+      if (address) {
+        navigator.clipboard.writeText(address).then(() => {
+          alert('Wallet address copied to clipboard!');
+        });
+      }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('connectButton').addEventListener('click', connectWallet);
+    window.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('connectButton').addEventListener('click', async () => {
+        if (!connected) {
+          await connectWallet();
+        } else {
+          await disconnectWallet();
+        }
+      });
       document.getElementById('userAddress').addEventListener('click', copyAddress);
     });
   </script>
