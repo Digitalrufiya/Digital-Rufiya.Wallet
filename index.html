@@ -5,22 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login - DRF Wallet</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      display: none;
+    }
+    .loading {
+      margin-top: 10px;
+      display: none;
+      color: #1fc8db;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body class="login-page">
-
   <div class="form-container">
-    <h1>Login to DRF Wallet</h1>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet" class="logo">
+    <h1>Login</h1>
+    
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    
+    <button onclick="handleLogin()">Login</button>
+    
+    <p>Don't have an account? <a href="register.html">Register</a></p>
 
-    <input type="text" id="loginUsername" placeholder="Email or Username" required>
-    <input type="password" id="loginPassword" placeholder="Password" required>
-
-    <button onclick="login()">Login</button>
-
-    <p>Don't have an account? <a href="register.html">Register here</a></p>
+    <div class="loading" id="loadingMessage">Logging in...</div>
+    <div class="error-message" id="errorMessage">Invalid username or password!</div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="app.js"></script>
+  <script>
+    function handleLogin() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const errorMessage = document.getElementById('errorMessage');
+      const loadingMessage = document.getElementById('loadingMessage');
 
+      errorMessage.style.display = 'none';
+
+      if (!username || !password) {
+        errorMessage.textContent = "Please enter both username and password.";
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      loadingMessage.style.display = 'block';
+
+      // Simulate a short delay for login (like calling a server)
+      setTimeout(() => {
+        login(username, password); // Call your real login function from app.js
+        loadingMessage.style.display = 'none';
+      }, 800);
+    }
+  </script>
 </body>
 </html>
