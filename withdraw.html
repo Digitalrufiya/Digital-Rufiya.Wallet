@@ -1,94 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Withdraw DRF - Digital Rufiya</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Withdraw DRF Tokens</title>
   <style>
     body {
-      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+      background: #fff;
+      padding: 20px;
     }
-    .container {
-      max-width: 500px;
-      margin-top: 80px;
+    h2 {
+      color: #222;
     }
-    .warning-text {
-      color: #dc3545;
-      font-size: 0.9rem;
+    .form-group {
+      margin-bottom: 15px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+    }
+    .warning {
+      background: #fff3cd;
+      padding: 10px;
+      border-left: 5px solid #ffc107;
+      margin-bottom: 20px;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      background: rgba(0,0,0,0.5);
+      top: 0; left: 0; right: 0; bottom: 0;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      width: 300px;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-
-  <div class="container shadow p-4 bg-white rounded">
-    <h3 class="mb-4 text-center">Withdraw DRF</h3>
-    
-    <form id="withdrawForm">
-      <div class="mb-3">
-        <label for="walletAddress" class="form-label">Your DRF Wallet Address</label>
-        <input type="text" class="form-control" id="walletAddress" required placeholder="0x...">
-        <div class="form-text warning-text">
-          ⚠️ If the address is incorrect, your DRF coins will be lost forever. Please double-check!
-        </div>
-      </div>
-      
-      <div class="mb-3">
-        <label for="withdrawAmount" class="form-label">Amount to Withdraw (Full balance only)</label>
-        <input type="number" class="form-control" id="withdrawAmount" required min="1" step="0.01" placeholder="Enter amount in DRF">
-      </div>
-
-      <div class="d-grid">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#confirmModal">
-          Submit Withdrawal
-        </button>
-      </div>
-    </form>
+  <h2>Withdraw Request</h2>
+  <div class="warning">
+    You can only withdraw after 30 days. If you enter a wrong wallet address, your DRF tokens will be lost forever!
   </div>
+  <form id="withdrawForm">
+    <div class="form-group">
+      <label>Your Wallet Address</label>
+      <input type="text" name="wallet" required>
+    </div>
+    <div class="form-group">
+      <label>DRF Withdrawal Amount</label>
+      <input type="number" name="amount" min="1" required>
+    </div>
+    <button type="button" onclick="showConfirm()">Continue</button>
+  </form>
 
-  <!-- Confirmation Modal -->
-  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <form method="POST" action="withdraw_request.php">
-          <div class="modal-header">
-            <h5 class="modal-title" id="confirmModalLabel">Confirm Withdrawal</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p><strong>Wallet Address:</strong> <span id="confirmWallet"></span></p>
-            <p><strong>Withdrawal Amount:</strong> <span id="confirmAmount"></span> DRF</p>
-            <p class="text-danger"><strong>Warning:</strong> Incorrect wallet address will result in permanent loss.</p>
-
-            <input type="hidden" name="wallet" id="hiddenWallet">
-            <input type="hidden" name="amount" id="hiddenAmount">
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-success">Confirm</button>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          </div>
-        </form>
-      </div>
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <p><strong>Confirm Withdrawal</strong></p>
+      <p id="summary"></p>
+      <button onclick="downloadRequest()">Confirm</button>
+      <button onclick="closeModal()">Cancel</button>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    document.querySelector('[data-bs-target="#confirmModal"]').addEventListener('click', () => {
-      const wallet = document.getElementById('walletAddress').value.trim();
-      const amount = document.getElementById('withdrawAmount').value.trim();
+    function showConfirm() {
+      const wallet = document.querySelector('[name=wallet]').value;
+      const amount = document.querySelector('[name=amount]').value;
+      if (!wallet || !amount) return alert("Fill all fields");
+      document.getElementById('summary').innerText =
+        `Wallet: ${wallet}\nAmount: ${amount} DRF`;
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
 
-      if (!wallet || !amount || parseFloat(amount) <= 0) {
-        alert("Please fill in valid wallet address and amount.");
-        return;
-      }
+    function closeModal() {
+      document.getElementById('confirmModal').style.display = 'none';
+    }
 
-      document.getElementById('confirmWallet').textContent = wallet;
-      document.getElementById('confirmAmount').textContent = amount;
-      document.getElementById('hiddenWallet').value = wallet;
-      document.getElementById('hiddenAmount').value = amount;
-    });
+    function downloadRequest() {
+      const wallet = document.querySelector('[name=wallet]').value;
+      const amount = document.querySelector('[name=amount]').value;
+      const content = `Withdrawal Request\nWallet: ${wallet}\nAmount: ${amount}\nDate: ${new Date().toLocaleString()}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `withdraw_request_${wallet}.txt`;
+      a.click();
+      closeModal();
+      alert('Withdrawal request downloaded. Please wait for admin approval.');
+    }
   </script>
 </body>
 </html>
