@@ -99,3 +99,98 @@ async function openHistory() {
 
     const historyDiv = document.getElementById('transactionArea');
     historyDiv.innerHTML = "<h3>Transaction History</h3>";
+txs.slice(0, 10).forEach(tx => {
+        historyDiv.innerHTML += 
+            <div>
+                <p>Hash: <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0,10)}...</a></p>
+                <p>From: ${tx.from.slice(0,6)}... To: ${tx.to.slice(0,6)}... Value: ${ethers.utils.formatEther(tx.value)} BNB</p>
+                <hr/>
+            </div>;
+    });
+}
+
+// Basic Authentication (Admin/User)
+const adminCredentials = { username: "digitalrufiya@gmail.com", password: "Zivian@2020" };
+const users = JSON.parse(localStorage.getItem('registeredUsers')) || [];
+
+function login() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (username === adminCredentials.username && password === adminCredentials.password) {
+        window.location.href = "admin.html";
+    } else if (users.find(u => u.username === username && u.password === password)) {
+        window.location.href = "wallet.html";
+    } else {
+        alert("Invalid credentials");
+    }
+}
+
+function register() {
+    const username = document.getElementById('registerUsername').value;
+    const password = document.getElementById('registerPassword').value;
+
+    if (users.find(u => u.username === username)) {
+        alert("Username already exists!");
+        return;
+    }
+
+    users.push({ username, password });
+    localStorage.setItem('registeredUsers', JSON.stringify(users));
+    alert("Registered successfully! Now login.");
+    window.location.href = "index.html";
+}
+
+function logout() {
+    localStorage.removeItem('connectedWallet');
+    window.location.href = "index.html";
+}
+
+function logoutAdmin() {
+    window.location.href = "index.html";
+}
+
+// ERC20 Minimal ABI
+const erc20Abi = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function transfer(address to, uint amount) returns (bool)"
+];
+
+// Connect MetaMask Wallet
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const walletAddress = accounts[0];
+            document.getElementById('userWalletAddress').innerText = walletAddress;
+            localStorage.setItem('connectedWallet', walletAddress);
+            console.log('Connected wallet:', walletAddress);
+        } catch (error) {
+            console.error('User denied wallet connection', error);
+            alert('Wallet connection failed.');
+        }
+    } else {
+        alert('MetaMask is not installed. Please install it to connect!');
+    }
+}
+
+// Auto load saved wallet address if connected
+window.addEventListener('load', () => {
+    const savedWallet = localStorage.getItem('connectedWallet');
+    if (savedWallet) {
+        document.getElementById('userWalletAddress').innerText = savedWallet;
+    }
+});
+
+// Add listener for account change
+if (window.ethereum) {
+    window.ethereum.on('accountsChanged', function (accounts) {
+        if (accounts.length > 0) {
+            document.getElementById('userWalletAddress').innerText = accounts[0];
+            localStorage.setItem('connectedWallet', accounts[0]);
+        } else {
+            document.getElementById('userWalletAddress').innerText = 'Not connected';
+            localStorage.removeItem('connectedWallet');
+        }
+    });
+}
