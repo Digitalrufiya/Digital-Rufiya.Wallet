@@ -275,6 +275,18 @@ window.addEventListener('load', () => {
   const saved = localStorage.getItem('connectedWallet');
   if (saved) document.getElementById('userWalletAddress').innerText = saved;
 });
+// Admin login check
+checkAdminSession();
+
+// Auto logout timer
+startInactivityMonitor();
+
+// Populate data
+renderUserTable();
+renderTxLogs();
+
+// Export feature
+document.getElementById('exportCSV').addEventListener('click', downloadCSV);
 
 if (window.ethereum) {
   window.ethereum.on('accountsChanged', (accounts) => {
