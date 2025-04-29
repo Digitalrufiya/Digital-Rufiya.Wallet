@@ -1,20 +1,134 @@
-<!-- index.html (Login Page) -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login - DRF Wallet</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script src="app.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register / Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      width: 300px;
+    }
+    h2 {
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .toggle {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .toggle a {
+      color: #007bff;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <h2>Login</h2>
-  <input type="text" id="loginUsername" placeholder="Username">
-  <input type="password" id="loginPassword" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <p>New user? <a href="register.html">Register here</a></p>
+  <div class="container">
+    <h2 id="formTitle">Register</h2>
+    <input type="email" id="registerUsername" placeholder="Email" required />
+    <input type="password" id="registerPassword" placeholder="Password" required />
+    <button onclick="register()">Register</button>
+
+    <div class="toggle">
+      Already have an account? <a onclick="toggleForm()">Login</a>
+    </div>
+  </div>
+
+  <script>
+    const formTitle = document.getElementById("formTitle");
+    const emailInput = document.getElementById("registerUsername");
+    const passwordInput = document.getElementById("registerPassword");
+    const button = document.querySelector("button");
+    let isRegistering = true;
+
+    function toggleForm() {
+      isRegistering = !isRegistering;
+      formTitle.textContent = isRegistering ? "Register" : "Login";
+      button.textContent = isRegistering ? "Register" : "Login";
+      document.querySelector(".toggle").innerHTML = isRegistering
+        ? 'Already have an account? <a onclick="toggleForm()">Login</a>'
+        : 'Don\'t have an account? <a onclick="toggleForm()">Register</a>';
+    }
+
+    async function sha256(str) {
+      const msgBuffer = new TextEncoder().encode(str);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function register() {
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        alert("Email and Password required.");
+        return;
+      }
+
+      const hashedPassword = await sha256(password);
+
+      if (isRegistering) {
+        if (localStorage.getItem(email)) {
+          alert("User already exists.");
+          return;
+        }
+        localStorage.setItem(email, hashedPassword);
+        alert("Registered successfully.");
+        toggleForm();
+      } else {
+        const storedHash = localStorage.getItem(email);
+        if (!storedHash) {
+          alert("User not found.");
+          return;
+        }
+        if (storedHash === hashedPassword) {
+          alert("Login successful.");
+          // Redirect or continue session
+        } else {
+          alert("Incorrect password.");
+        }
+      }
+
+      // Clear input fields
+      passwordInput.value = "";
+    }
+  </script>
 </body>
 </html>
+
 
 async function register() {
   const email = document.getElementById('registerUsername').value.trim().toLowerCase();
