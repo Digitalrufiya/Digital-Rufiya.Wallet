@@ -104,4 +104,59 @@ function startStaking() {
   const amount = parseFloat(document.getElementById('amount').value);
 
   if (!txid || isNaN(amount) || amount < 20) {
-    alert("Please enter a valid Transaction ID and minimum 20 USDC to start staking
+    alert("Please enter a valid Transaction ID and minimum 20 USDC to start staking.");
+    return;
+  }
+
+  staking = {
+    txid,
+    amount,
+    startDate: new Date(),
+    endDate: new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000),
+    rewardPerDay: amount * 20 * 0.05, // 5% daily reward
+  };
+
+  document.getElementById('stakedAmount').innerText = amount.toFixed(2);
+  document.getElementById('stakingSection').style.display = 'block';
+  addToHistory(txid, amount);
+  startCountdown();
+}
+
+function addToHistory(txid, amount) {
+  const historyList = document.getElementById('historyList');
+  const entry = document.createElement('div');
+  entry.innerHTML = `<p>TxID: ${txid}<br>Amount: ${amount.toFixed(2)} USDC</p>`;
+  historyList.appendChild(entry);
+}
+
+function startCountdown() {
+  const countdown = document.getElementById('countdown');
+  const rewardedDRF = document.getElementById('rewardedDRF');
+
+  const timer = setInterval(() => {
+    const now = new Date();
+    const distance = staking.endDate - now;
+
+    if (distance < 0) {
+      clearInterval(timer);
+      countdown.innerText = "Staking Completed!";
+      rewardedDRF.innerText = (staking.amount * 20 * 1.5).toFixed(2); // total 150% DRF (30 days * 5% daily)
+      return;
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    countdown.innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+
+    // Live update of rewarded DRF
+    const daysPassed = 30 - (distance / (1000 * 60 * 60 * 24));
+    rewardedDRF.innerText = (staking.amount * 20 * 0.05 * daysPassed).toFixed(2);
+  }, 1000);
+}
+</script>
+
+</body>
+</html>
