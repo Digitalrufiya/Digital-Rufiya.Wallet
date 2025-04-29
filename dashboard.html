@@ -2,123 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Dashboard</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f0f2f5;
-    }
-    header {
-      background-color: #ffffff;
-      padding: 1rem 2rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .brand {
-      font-weight: bold;
-      font-size: 1.2rem;
-      color: #333;
-    }
-    nav a {
-      margin-left: 20px;
-      text-decoration: none;
-      color: #444;
-      font-weight: 500;
-    }
-    nav a:hover {
-      color: #000;
-    }
-    .container {
-      padding: 2rem;
-    }
-    .card-grid {
-      display: grid;
-      gap: 1.5rem;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      margin-top: 1rem;
-    }
-    .card {
-      background: #ffffff;
-      padding: 1.5rem;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      transition: 0.3s ease;
-    }
-    .card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .card h3 {
-      margin: 0 0 10px;
-      font-size: 1.1rem;
-      color: #222;
-    }
-    .card p {
-      margin: 0;
-      color: #555;
-    }
-    footer {
-      margin-top: 2rem;
-      padding: 1rem;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #aaa;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
 </head>
 <body>
-
   <header>
-    <div class="brand">🪙 DRF Wallet</div>
+    <h1>🚀 DRF Dashboard</h1>
     <nav>
-      <a href="dashboard.html">Dashboard</a>
       <a href="wallet.html">Wallet</a>
       <a href="staking.html">Staking</a>
+      <a href="withdraw.html">Withdraw</a>
       <a href="swap.html">Swap</a>
       <a href="token sale.html">Token Sale</a>
+      <a href="#" onclick="logout()">Logout</a>
     </nav>
   </header>
 
-  <div class="container">
-    <h2>Welcome to your DRF Dashboard</h2>
-    <p>Quick access to all your crypto activities and portfolio.</p>
+  <main>
+    <section class="card">
+      <h2>👛 Wallet Overview</h2>
+      <p><strong>Wallet Address:</strong> <span id="walletAddress">Connecting...</span></p>
+      <p><strong>BNB Balance:</strong> <span id="bnbBalance">--</span></p>
+    </section>
 
-    <div class="card-grid">
-      <div class="card">
-        <h3>Total Balance</h3>
-        <p>Loading BNB/DRF...</p>
+    <section class="card">
+      <h2>📊 Token Balances</h2>
+      <div id="tokenBalances">
+        <p>Loading token balances...</p>
       </div>
-      <div class="card">
-        <h3>Wallet Address</h3>
-        <p id="userWalletAddress">Connect Wallet</p>
+    </section>
+
+    <section class="card">
+      <h2>📈 Recent Activity</h2>
+      <div id="transactionArea">
+        <p>No recent activity.</p>
       </div>
-      <div class="card">
-        <h3>Recent Activity</h3>
-        <p>Staking, Withdrawals & More</p>
-      </div>
-      <div class="card">
-        <h3>Token Sale</h3>
-        <p>Buy DRF tokens easily</p>
-      </div>
-    </div>
-  </div>
+      <button onclick="openHistory()">Load History</button>
+    </section>
+  </main>
 
   <footer>
-    &copy; 2025 Digital Rudiya Financial — All rights reserved.
+    <p>&copy; 2025 Digital Rudiya Financial Revolution</p>
   </footer>
 
   <script src="app.js"></script>
   <script>
-    window.addEventListener('load', () => {
-      const wallet = localStorage.getItem('connectedWallet');
-      if (wallet) {
-        document.getElementById('userWalletAddress').innerText = wallet;
-      }
-    });
+    connectWallet();
+    fetchTokenBalances();
   </script>
 </body>
 </html>
