@@ -16,20 +16,30 @@
 </body>
 </html>
 
-<!-- register.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Register - DRF Wallet</title>
-  <script src="app.js" defer></script>
-</head>
-<body>
-  <h2>Register</h2>
-  <input type="text" id="registerUsername" placeholder="Username">
-  <input type="password" id="registerPassword" placeholder="Password">
-  <button onclick="register()">Register</button>
-</body>
-</html>
+async function register() {
+  const email = document.getElementById('registerUsername').value.trim().toLowerCase();
+  const password = document.getElementById('registerPassword').value;
+
+  // Simple email format check
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    alert("Please enter a valid email address.");
+    return;
+  }
+
+  // Prevent duplicate registration
+  if (users.find(u => u.email === email)) {
+    alert("This email is already registered!");
+    return;
+  }
+
+  // Hash and store
+  const passwordHash = await hashSHA256(email + password);
+  users.push({ email, passwordHash });
+  localStorage.setItem('registeredUsers', JSON.stringify(users));
+  alert("Registered successfully! Please login.");
+  window.location.href = "index.html";
+}
 
 <!-- wallet.html -->
 <!DOCTYPE html>
