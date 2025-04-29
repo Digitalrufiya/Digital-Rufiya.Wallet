@@ -15,7 +15,7 @@
     .form-group {
       margin-bottom: 15px;
     }
-    input, select, button {
+    input, button {
       padding: 10px;
       width: 100%;
       margin-top: 5px;
@@ -39,31 +39,84 @@
   <form id="stakingForm">
     <div class="form-group">
       <label>Your Wallet Address</label>
-      <input type="text" name="wallet" required>
+      <input type="text" id="walletAddress" required>
     </div>
     <div class="form-group">
       <label>USDC Paid Amount (min $25)</label>
-      <input type="number" name="amount" min="25" required>
+      <input type="number" id="stakeAmount" min="25" required>
+    </div>
+    <div class="form-group">
+      <label>Upload Document (optional)</label>
+      <input type="file" id="fileUpload">
     </div>
     <button type="submit">Submit Staking Request</button>
   </form>
 
   <script>
-    document.getElementById('stakingForm').addEventListener('submit', function(e) {
+    document.getElementById('stakingForm').addEventListener('submit', async function(e) {
       e.preventDefault();
-      const wallet = e.target.wallet.value;
-      const amount = e.target.amount.value;
-      const content = `Wallet Address: ${wallet}\nUSDC Amount: ${amount}\nDate: ${new Date().toLocaleString()}`;
-      const blob = new Blob([content], { type: 'text/plain' });
+      const wallet = document.getElementById('walletAddress').value.trim();
+      const amount = document.getElementById('stakeAmount').value.trim();
+      const fileInput = document.getElementById('fileUpload');
+      const file = fileInput.files[0];
+      const timestamp = new Date().toLocaleString();
+
+      // Create a local .txt file for user
+      const txtContent = `Wallet Address: ${wallet}\nUSDC Amount: ${amount}\nDate: ${timestamp}`;
+      const blob = new Blob([txtContent], { type: 'text/plain' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `staking_request_${wallet}.txt`;
       a.click();
-      alert('Request saved. Send $25 to the above USDC address to begin staking.');
+
+      // Build payload
+      const uploadData = {
+        stakingDetails: {
+          walletAddress: wallet,
+          stakeAmount: amount,
+          timestamp: timestamp
+        }
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async function (event) {
+          const base64 = event.target.result.split(',')[1];
+          uploadData.file = {
+            fileName: file.name,
+            fileBase64: base64,
+            mimeType: file.type
+          };
+          await sendToServer(uploadData);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        await sendToServer(uploadData);
+      }
     });
+
+    async function sendToServer(data) {
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec", {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+
+        const result = await response.text();
+        alert("Staking request sent successfully. Admin will be notified.");
+      } catch (err) {
+        console.error(err);
+        alert("Submission failed. Please try again.");
+      }
+    }
   </script>
 </body>
 </html>
+
+
 <!-- staking.html -->
 <!DOCTYPE html>
 <html>
