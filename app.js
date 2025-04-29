@@ -56,8 +56,13 @@
 </head>
 <body>
   <div class="container">
-    <h2 id="formTitle">Register</h2>
-    <input type="email" id="registerUsername" placeholder="Email" required />
+    <form id="registerForm">
+  <input type="email" id="email" required />
+  <input type="text" id="wallet" required />
+  <button type="submit">Register</button>
+</form>
+
+mail" id="registerUsername" placeholder="Email" required />
     <input type="password" id="registerPassword" placeholder="Password" required />
     <button onclick="register()">Register</button>
 
@@ -898,3 +903,53 @@ if (window.ethereum) {
     }
   });
 }
+
+// Global Variables
+const scriptURL = 'https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec';
+const registerForm = document.getElementById('registerForm');
+
+// Register function
+async function register(event) {
+  event.preventDefault();
+
+  const emailInput = document.getElementById('email');
+  const walletInput = document.getElementById('wallet');
+  const email = emailInput.value.trim();
+  const wallet = walletInput.value.trim();
+
+  if (!email || !wallet) {
+    alert('Please enter both email and wallet address.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('action', 'register');
+  formData.append('email', email);
+  formData.append('wallet', wallet);
+
+  try {
+    const response = await fetch(scriptURL, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.text();
+
+    if (response.ok) {
+      alert('Registration successful!');
+      registerForm.reset();
+    } else {
+      alert('Registration failed: ' + result);
+    }
+  } catch (error) {
+    console.error('Error during registration:', error);
+    alert('Error submitting form. Please try again.');
+  }
+}
+
+// Attach event listener
+if (registerForm) {
+  registerForm.addEventListener('submit', register);
+}
+
+
