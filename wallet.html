@@ -1,58 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Wallet - DRF Wallet</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet</title>
   <style>
-    .loading {
-      margin-top: 10px;
-      display: none;
-      color: #1fc8db;
-      font-weight: bold;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f6f8;
     }
-    .error-message {
-      margin-top: 10px;
-      color: red;
-      display: none;
+    header {
+      background-color: #fff;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    nav a {
+      margin-left: 20px;
+      text-decoration: none;
+      color: #444;
+    }
+    nav a:hover {
+      color: #000;
+    }
+    .container {
+      padding: 2rem;
+    }
+    .section {
+      margin-bottom: 2rem;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 5px;
+      background-color: #1976d2;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover {
+      background-color: #125ea4;
+    }
+    #transactionArea {
+      margin-top: 1rem;
     }
   </style>
 </head>
-<body class="wallet-page">
+<body>
+
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" class="wallet-logo" alt="DRF Wallet">
-    <h1>DRF Wallet</h1>
-    <button id="logoutBtn" onclick="logout()">Logout</button>
+    <div class="brand">🪙 DRF Wallet</div>
+    <nav>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="staking.html">Staking</a>
+      <a href="swap.html">Swap</a>
+      <a href="token sale.html">Token Sale</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </nav>
   </header>
 
-  <div id="walletConnected" class="wallet-info">
-    <p><strong>Connected Wallet:</strong> <span id="userWalletAddress">Not connected</span></p>
-    <p><strong>BNB Balance:</strong> <span id="bnbBalance">0 BNB</span></p>
-    <p><strong>DRF Balance:</strong> <span id="drfBalance">0 DRF</span></p>
-    <p><strong>USDT Balance:</strong> <span id="usdtBalance">0 USDT</span></p>
-    <p><strong>USDC Balance:</strong> <span id="usdcBalance">0 USDC</span></p>
-
-    <button onclick="connectWallet()">Connect Wallet</button>
-
-    <div class="wallet-actions">
-      <button onclick="openSend()">Send</button>
-      <button onclick="openReceive()">Receive</button>
-      <button onclick="goToSwap()">Swap</button>
-      <button onclick="openHistory()">Transactions</button>
+  <div class="container">
+    <div class="section">
+      <h2>Your Wallet</h2>
+      <p><strong>Connected Wallet:</strong> <span id="userWalletAddress">Not connected</span></p>
+      <p><strong>Balance:</strong> <span id="userBalance">-</span></p>
+      <button onclick="connectWallet()">🔌 Connect Wallet</button>
     </div>
 
-    <div id="transactionArea"></div>
+    <div class="section">
+      <h3>Send BNB</h3>
+      <button onclick="openSend()">📤 Send</button>
+    </div>
 
-    <div id="loadingMessage" class="loading">Loading wallet details...</div>
-    <div id="errorMessage" class="error-message">Something went wrong. Try again!</div>
+    <div class="section">
+      <h3>Receive</h3>
+      <button onclick="openReceive()">📥 Receive</button>
+      <div id="transactionArea"></div>
+    </div>
+
+    <div class="section">
+      <h3>Transaction History</h3>
+      <button onclick="openHistory()">📜 View History</button>
+    </div>
+
+    <div class="section">
+      <h3>Your Token Balances</h3>
+      <div id="tokenBalances">Loading...</div>
+    </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <script src="app.js"></script>
   <script>
-    function goToSwap() {
-      window.location.href = "swap.html"; // Redirect to swap page
-    }
+    window.addEventListener('load', () => {
+      fetchTokenBalances();
+    });
   </script>
 </body>
 </html>
