@@ -133,3 +133,56 @@
   </script>
 </body>
 </html>
+
+<script>
+document.getElementById('stakingForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const wallet = document.getElementById('walletAddress').value.trim();
+  const amount = document.getElementById('stakeAmount').value.trim();
+  const fileInput = document.getElementById('fileUpload');
+  const file = fileInput.files[0];
+
+  const uploadData = {
+    stakingDetails: {
+      walletAddress: wallet,
+      stakeAmount: amount
+    }
+  };
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+      const base64 = e.target.result.split(',')[1];
+      uploadData.file = {
+        fileName: file.name,
+        fileBase64: base64,
+        mimeType: file.type
+      };
+
+      await sendToDrive(uploadData);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    await sendToDrive(uploadData);
+  }
+});
+
+async function sendToDrive(data) {
+  try {
+    const response = await fetch("https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec", {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    const result = await response.text();
+    alert("Submission successful: " + result);
+  } catch (err) {
+    console.error(err);
+    alert("Submission failed.");
+  }
+}
+</script>
+
