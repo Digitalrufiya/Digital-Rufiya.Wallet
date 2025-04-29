@@ -196,3 +196,30 @@ async function sendToDrive(data) {
 }
 </script>
 
+function doPost(e) {
+  var wallet = e.parameter.wallet;
+  var amount = e.parameter.amount;
+  var date = e.parameter.date;
+
+  // Format the message
+  var message = "New DRF Staking Request:\n\n" +
+                "Wallet: " + wallet + "\n" +
+                "Amount: " + amount + " USDC\n" +
+                "Date: " + date;
+
+  // 1. Send email to admin
+  MailApp.sendEmail({
+    to: "youradmin@email.com", // <-- REPLACE with your email
+    subject: "New DRF Staking Request",
+    body: message
+  });
+
+  // 2. Save to Google Drive (optional, creates a text file)
+  var folder = DriveApp.getRootFolder(); // Or use DriveApp.getFolderById("your-folder-id")
+  var filename = "staking_" + wallet + "_" + new Date().getTime() + ".txt";
+  folder.createFile(filename, message);
+
+  return ContentService.createTextOutput("Staking request received.");
+}
+
+
