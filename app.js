@@ -97,18 +97,24 @@ async function openHistory() {
     });
 }
 
-function login() {
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
+async function login() {
+  const email = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const hash = await hashSHA256(email + password);
 
-    if (username === adminCredentials.username && password === adminCredentials.password) {
-        window.location.href = "admin.html";
-    } else if (users.find(u => u.username === username && u.password === password)) {
-        window.location.href = "index.html";
-    } else {
-        alert("Invalid credentials");
-    }
+  if (hash === ADMIN_HASH) {
+    window.location.href = 'admin.html';
+    return;
+  }
+
+  const matchedUser = users.find(u => u.email === email && u.passwordHash === hash);
+  if (matchedUser) {
+    window.location.href = 'wallet.html';
+  } else {
+    alert("Invalid email or password.");
+  }
 }
+
 
 function register() {
     const username = document.getElementById('registerUsername').value;
