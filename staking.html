@@ -2,163 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Digital Rufiya Staking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stake DRF - Digital Rufiya</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <style>
-        body {
-            background-color: #0d1117;
-            color: #c9d1d9;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            background: #161b22;
-            padding: 10px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .marquee {
-            white-space: nowrap;
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-
-        .marquee span {
-            display: inline-block;
-            padding-left: 100%;
-            animation: marquee 15s linear infinite;
-            font-size: 18px;
-            color: #58a6ff;
-        }
-
-        @keyframes marquee {
-            0%   { transform: translate(0, 0); }
-            100% { transform: translate(-100%, 0); }
-        }
-
-        .container {
-            padding: 20px;
-            max-width: 600px;
-            margin: auto;
-            background: #161b22;
-            margin-top: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px #0d1117;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #58a6ff;
-        }
-
-        .staking-info {
-            margin-bottom: 20px;
-            background: #21262d;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        button {
-            background-color: #238636;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 10px;
-            display: block;
-            width: 100%;
-        }
-
-        button:hover {
-            background-color: #2ea043;
-        }
-
-        .countdown, .history {
-            background: #21262d;
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-        }
-
-        .wallet-address {
-            word-break: break-all;
-            color: #8b949e;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+        .title { font-size: 24px; margin-bottom: 10px; text-align: center; }
+        .info { font-size: 14px; color: #555; margin-bottom: 20px; }
+        input, button { width: 100%; padding: 10px; margin: 10px 0; }
+        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 20px; }
     </style>
 </head>
-
 <body>
-
-<header>
-    <div class="marquee">
-        <span>Digital Rudiya Financial Revolution ✨ Digital Rudiya Financial Revolution ✨ Digital Rudiya Financial Revolution</span>
-    </div>
-</header>
-
-<div class="container">
-    <h1>Welcome to Digital Rufiya Revolution</h1>
-
-    <div class="staking-info">
-        <p><strong>➤ Current Reward:</strong> 5% Daily</p>
-        <p><strong>➤ Pay $25 USDC to Start</strong></p>
-        <p><strong>➤ Minimum Stake Duration:</strong> 30 Days (no cancel option)</p>
-        <p><strong>➤ USDC Payment Address:</strong></p>
-        <p class="wallet-address">0x88253D87990EdD1E647c3B6eD21F57fb061a3040</p>
-    </div>
-
-    <button onclick="connectWallet()">Connect Wallet</button>
-
-    <div class="countdown">
-        <h3>Countdown to Complete 30 Days:</h3>
-        <div id="timer">00 Days : 00 Hours : 00 Minutes : 00 Seconds</div>
-    </div>
-
-    <div class="history">
-        <h3>Your Staking History:</h3>
-        <div id="staking-history">
-            No staking yet.
+    <div class="container">
+        <div class="title">Stake DRF Tokens</div>
+        <div class="info">
+            Welcome to the Digital Rufiya Financial Revolution.<br>
+            Minimum Investment: $20 USDC = 400 DRF<br>
+            DRF Rate: 1 USDC = 20 DRF<br>
+            Daily Reward: +5% DRF<br>
+            Minimum Stake Duration: 30 Days<br>
+            Pay to: <strong>0x88253D87990EdD1E647c3B6eD21F57fb061a3040</strong><br>
+            Note: Must use same wallet to access staking.
         </div>
+        
+        <form action="backend/submit_stake.php" method="POST">
+            <input type="text" name="wallet_address" id="wallet" readonly placeholder="Wallet Address will auto-fill" required>
+            <input type="number" name="usdc_amount" placeholder="Enter Amount in USDC" required min="20">
+            <input type="text" name="tx_hash" placeholder="Enter Payment Transaction Hash" required>
+            <button type="submit">Submit Staking Request</button>
+        </form>
+
+        <div class="footer">By staking, you agree to lock your funds for 30 days. No early withdrawals allowed.</div>
     </div>
 
-</div>
-
-<script>
-    function connectWallet() {
-        alert("Wallet Connect Feature Coming Soon!");
-    }
-
-    // Countdown Timer Script
-    let startDate = new Date();
-    let endDate = new Date();
-    endDate.setDate(startDate.getDate() + 30);
-
-    function updateCountdown() {
-        let now = new Date();
-        let diff = endDate - now;
-
-        if (diff <= 0) {
-            document.getElementById("timer").innerHTML = "Staking Completed!";
-            return;
+    <script>
+        async function getWallet() {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    document.getElementById('wallet').value = accounts[0];
+                } catch (error) {
+                    alert('Wallet connection failed.');
+                }
+            } else {
+                alert('Please install MetaMask or another wallet.');
+            }
         }
-
-        let days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        let hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-        let minutes = Math.floor((diff / (1000 * 60)) % 60);
-        let seconds = Math.floor((diff / 1000) % 60);
-
-        document.getElementById("timer").innerHTML =
-            days + " Days : " + hours + " Hours : " + minutes + " Minutes : " + seconds + " Seconds";
-    }
-
-    setInterval(updateCountdown, 1000);
-</script>
-
+        window.onload = getWallet;
+    </script>
 </body>
 </html>
