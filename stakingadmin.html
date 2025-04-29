@@ -2,77 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Staking Admin Panel</title>
-  <link rel="stylesheet" href="style.css">
-  <script>
-    // Session timeout (30 mins = 1800000 ms)
-    let logoutTimer;
-    function resetTimer() {
-      clearTimeout(logoutTimer);
-      logoutTimer = setTimeout(() => {
-        alert("Session expired. Please login again.");
-        window.location.href = "logout.php";
-      }, 1800000);
+  <title>Admin Panel - DRF Staking</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #eef2f7;
+      padding: 20px;
     }
-    window.onload = resetTimer;
-    document.onmousemove = resetTimer;
-    document.onkeypress = resetTimer;
-  </script>
+    h2 {
+      margin-bottom: 10px;
+    }
+    .info {
+      background: #d0ebff;
+      padding: 10px;
+      border-left: 4px solid #1c7ed6;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Admin Panel - Manual Staking & Withdrawal</h2>
-  
-  <!-- Login Form (handled by admin_login.php) -->
-  <div id="login-section">
-    <form action="admin_login.php" method="POST">
-      <label>Email</label>
-      <input type="email" name="email" required>
-      <label>Password</label>
-      <input type="password" name="password" required>
-      <button type="submit">Login</button>
-    </form>
+  <h2>DRF Staking Admin Panel</h2>
+  <div class="info">
+    View manually downloaded staking and withdrawal request files here.<br>
+    Please verify wallet addresses and amounts before sending DRF.
   </div>
 
-  <!-- Dashboard shown only after login -->
-  <?php
-    session_start();
-    include 'auth_check.php'; // Handles session auth
-    if (isset($_SESSION['admin_logged_in'])) {
-  ?>
-  <div id="dashboard">
-    <h3>Pending Staking Requests</h3>
-    <?php
-      include 'db.php';
-      $result = mysqli_query($conn, "SELECT * FROM staking_requests WHERE status='pending'");
-      while ($row = mysqli_fetch_assoc($result)) {
-        echo "<div class='request'>
-          <p><strong>Wallet:</strong> {$row['wallet_address']}</p>
-          <p><strong>Amount:</strong> {$row['amount']} DRF</p>
-          <form method='POST' action='approve_stake.php'>
-            <input type='hidden' name='id' value='{$row['id']}'>
-            <button type='submit'>Approve</button>
-          </form>
-        </div>";
-      }
-    ?>
+  <p><strong>Download requests from users:</strong></p>
+  <ul>
+    <li>Staking requests: Check downloaded `.txt` files named <code>staking_request_*.txt</code></li>
+    <li>Withdraw requests: Check downloaded `.txt` files named <code>withdraw_request_*.txt</code></li>
+  </ul>
 
-    <h3>Pending Withdrawals</h3>
-    <?php
-      $withdrawals = mysqli_query($conn, "SELECT * FROM withdrawal_requests WHERE status='pending'");
-      while ($wd = mysqli_fetch_assoc($withdrawals)) {
-        echo "<div class='request'>
-          <p><strong>Wallet:</strong> {$wd['wallet_address']}</p>
-          <p><strong>Amount:</strong> {$wd['amount']} DRF</p>
-          <form method='POST' action='approve_withdraw.php'>
-            <input type='hidden' name='id' value='{$wd['id']}'>
-            <button type='submit'>Mark as Sent</button>
-          </form>
-        </div>";
-      }
-    ?>
-    
-    <a href="logout.php">Logout</a>
-  </div>
-  <?php } ?>
+  <p>You can upload requests to Google Drive manually for easier tracking.</p>
 </body>
 </html>
