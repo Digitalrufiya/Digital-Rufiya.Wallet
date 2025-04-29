@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login - DRF Wallet</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <style>
     .error-message {
       color: red;
@@ -17,25 +17,76 @@
       color: #1fc8db;
       font-weight: bold;
     }
+    .login-page {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #0f2027; /* fallback for old browsers */
+      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .form-container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+    .form-container .logo {
+      width: 100px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+    }
+    .form-container input {
+      width: 100%;
+      padding: 12px 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .form-container button {
+      width: 100%;
+      padding: 12px;
+      background: #1fc8db;
+      color: #fff;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .form-container button:hover {
+      background: #17a2b8;
+    }
+    .form-container a {
+      color: #1fc8db;
+      text-decoration: none;
+    }
+    .form-container a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body class="login-page">
   <div class="form-container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet" class="logo">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet" class="logo" />
     <h1>Login</h1>
-    
-    <input type="text" id="loginUsername" placeholder="Username">
-    <input type="password" id="loginPassword" placeholder="Password">
-    
+
+    <input type="text" id="loginUsername" placeholder="Username" />
+    <input type="password" id="loginPassword" placeholder="Password" />
     <button onclick="handleLogin()">Login</button>
-    
+
     <p>Don't have an account? <a href="register.html">Register</a></p>
 
     <div class="loading" id="loadingMessage">Logging in...</div>
     <div class="error-message" id="errorMessage">Invalid username or password!</div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="auth.js"></script>
   <script>
     function handleLogin() {
       const username = document.getElementById('loginUsername').value.trim();
@@ -53,10 +104,14 @@
 
       loadingMessage.style.display = 'block';
 
-      // Simulate a short delay for login (like calling a server)
       setTimeout(() => {
-        login(username, password); // Call your real login function from app.js
+        const success = login(username, password); // Defined in auth.js
         loadingMessage.style.display = 'none';
+
+        if (!success) {
+          errorMessage.textContent = "Invalid username or password!";
+          errorMessage.style.display = 'block';
+        }
       }, 800);
     }
   </script>
