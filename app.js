@@ -464,3 +464,96 @@ if (window.ethereum) {
     }
   });
 }
+
+// Improved and structured app.js for DRF DApp
+
+// Utility: Fetch wrapper with error handling
+async function fetchData(url, options = {}) {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch error:", error);
+    return null;
+  }
+}
+
+// Wallet connection (placeholder for MetaMask integration)
+async function connectWallet() {
+  if (window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const walletAddress = accounts[0];
+      sessionStorage.setItem("walletAddress", walletAddress);
+      document.getElementById("wallet-display").textContent = walletAddress;
+    } catch (err) {
+      console.error("User denied wallet access:", err);
+    }
+  } else {
+    alert("MetaMask is not installed.");
+  }
+}
+
+// Load wallet on page load
+window.addEventListener("DOMContentLoaded", () => {
+  const walletAddress = sessionStorage.getItem("walletAddress");
+  if (walletAddress) {
+    const el = document.getElementById("wallet-display");
+    if (el) el.textContent = walletAddress;
+  }
+});
+
+// Admin session timeout
+function setupAdminSessionTimeout(timeoutMinutes = 30) {
+  let timer;
+  function resetTimer() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      alert("Session expired. Logging out.");
+      sessionStorage.clear();
+      window.location.href = "admin.html";
+    }, timeoutMinutes * 60000);
+  }
+
+  window.addEventListener("mousemove", resetTimer);
+  window.addEventListener("keypress", resetTimer);
+  resetTimer();
+}
+
+// Device and IP logging
+async function logAdminLogin(email) {
+  const ip = await fetchData('https://api.ipify.org?format=json');
+  const device = navigator.userAgent;
+  const timestamp = new Date().toISOString();
+  const log = { email, ip: ip?.ip || 'Unknown', device, timestamp };
+  console.log("Admin login:", log);
+  // Save to storage or backend if needed
+  localStorage.setItem("adminLoginLog", JSON.stringify(log));
+}
+
+// CSV export utility
+function exportToCSV(dataArray, filename = "logs.csv") {
+  const csv = dataArray.map(row => Object.values(row).join(",")).join("\n");
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// Example: usage of exportToCSV on a button click
+const exportBtn = document.getElementById("export-logs");
+if (exportBtn) {
+  exportBtn.addEventListener("click", () => {
+    const rawLog = localStorage.getItem("adminLoginLog");
+    if (!rawLog) return alert("No logs to export.");
+    const logData = [JSON.parse(rawLog)];
+    exportToCSV(logData);
+  });
+}
+
+// Other app logic can be modularized below as needed
+
