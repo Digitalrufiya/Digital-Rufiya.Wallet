@@ -1,172 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Digital Rufiya (DrF) Token Sale</title>
-
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
-  <!-- jQuery (optional if needed) -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-  <!-- WalletConnect / Token Sale Config -->
-  <script>
-    const projectId = '9332014bbcedde12a87a2deb0e57c147'; // WalletConnect Project ID
-    const metadata = {
-      name: 'Digital Rufiya (DrF)',
-      description: 'Digital Rufiya (DrF) Token Sale',
-      url: 'https://web3modal.com',
-      icons: ['https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg']
-    };
-    const ca = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7'; // Token Sale Contract Address
-    const net = 56; // BNB Smart Chain ID
-  </script>
-
-  <!-- Token Sale Script -->
-  <script type="module" src="https://dappbuilder.org/ext/assets/tokensaleuiv1.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Token Sale</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    .sale-container {
+      max-width: 500px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .sale-container h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .sale-container input {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    .sale-container button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .sale-container button:hover {
+      background: #0056b3;
+    }
+    .sale-note {
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: 1rem;
+      color: #777;
+    }
+  </style>
 </head>
-
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="#">
-        <img src="https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg" alt="DrF" height="40" class="me-2">
-        <span class="fw-bold">Token Sale</span>
-      </a>
-      <div class="d-flex">
-        <a class="btn btn-primary" href="#buy">Buy Tokens</a>
-        <w3m-button class="ms-3"></w3m-button>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Alerts -->
-  <div id="loadmain" class="alert alert-primary text-center" role="alert" style="display: none;">
-    <span class="spinner-grow spinner-grow-sm"></span> Loading token sale data...
+  <div class="sale-container">
+    <h2>Buy DRF Tokens</h2>
+    <p><strong>Rate:</strong> 1 BNB = 10,000 DRF</p>
+    <input type="number" id="bnbAmount" placeholder="Enter BNB amount" />
+    <button onclick="buyTokens()">Buy Now</button>
+    <div id="purchaseStatus" class="sale-note"></div>
   </div>
 
-  <div id="supply" class="alert alert-danger text-center" role="alert" style="display: none;">
-    Please supply tokens to the token sale contract.
-  </div>
+  <script>
+    async function buyTokens() {
+      const bnbAmount = document.getElementById('bnbAmount').value;
+      if (!bnbAmount || bnbAmount <= 0) {
+        alert("Please enter a valid BNB amount.");
+        return;
+      }
 
-  <div id="wrongnetmain" class="alert alert-warning text-center" role="alert" style="display: none;">
-    Please switch to BNB Smart Chain <button id="switch" class="btn btn-sm btn-primary ms-2">Switch</button>
-  </div>
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
 
-  <!-- Main Content -->
-  <section class="container my-5">
-    <div class="row g-5 align-items-center">
-      <!-- Project Info -->
-      <div class="col-lg-6 text-center">
-        <img src="https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg" class="img-fluid mb-3" alt="DrF" style="max-height: 200px;">
-        <h1 class="fw-bold">Digital Rufiya (DrF)</h1>
-        <p class="lead">Maldives First Decentralized Digital Coin</p>
+          const tx = await signer.sendTransaction({
+            to: "0x88253D87990EdD1E647c3B6eD21F57fb061a3040", // DRF system wallet
+            value: ethers.utils.parseEther(bnbAmount)
+          });
 
-        <p class="text-break">
-          <span id="address">0x7788a60dbC85AB46767F413EC7d51F149AA1bec6</span>
-          <i id="copy" class="bi bi-clipboard text-primary" style="cursor: pointer;" title="Copy"></i>
-          <a href="https://bscscan.com/token/0x7788a60dbC85AB46767F413EC7d51F149AA1bec6" target="_blank">
-            <i class="bi bi-box-arrow-up-right"></i>
-          </a>
-        </p>
-
-        <!-- Social Links -->
-        <div class="d-flex justify-content-center gap-3">
-          <a href="https://drfcoin.blogspot.com/?m=1" target="_blank" class="text-dark"><i class="bi bi-globe" style="font-size: 1.5rem;"></i></a>
-          <a href="https://t.me/digitalRufiyaa" target="_blank" class="text-dark"><i class="bi bi-telegram" style="font-size: 1.5rem;"></i></a>
-        </div>
-      </div>
-
-      <!-- Token Sale Details -->
-      <div class="col-lg-6">
-        <h2 class="mb-4 text-center">Token Sale Info</h2>
-
-        <div class="text-center mb-3">
-          <h4>1 USDC = 15.42 DrF</h4>
-          <p>Instant token delivery after purchase.</p>
-        </div>
-
-        <div class="mb-3 text-center">
-          <small>Token Sale Contract Address:</small><br>
-          <span id="address2" class="fw-bold">0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7</span>
-          <i id="copy2" class="bi bi-clipboard text-primary" style="cursor: pointer;" title="Copy"></i>
-          <a href="https://bscscan.com/address/0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7" target="_blank">
-            <i class="bi bi-box-arrow-up-right"></i>
-          </a>
-        </div>
-
-        <div class="text-danger text-center mb-4">
-          Do not send funds manually. Always use the official UI to buy!
-        </div>
-
-        <!-- Buy Tokens -->
-        <div id="buy" class="text-center">
-          <label for="amount" class="form-label">Investment Amount:</label>
-          <div class="input-group mb-3">
-            <input type="number" min="0" step="0.1" id="amount" class="form-control text-center" placeholder="Enter USDC amount">
-            <span class="input-group-text">USDC</span>
-          </div>
-          <div class="form-text mb-3">You will receive: <span id="qty">...</span> DrF</div>
-
-          <div class="d-grid gap-2">
-            <button id="buybtn" class="btn btn-success">Buy Tokens</button>
-            <button id="approvebtn" class="btn btn-warning" style="display:none;">Approve</button>
-          </div>
-
-          <div id="wrongnetbuy" class="alert alert-warning mt-3" role="alert" style="display: none;">
-            Please switch to BNB Smart Chain
-          </div>
-        </div>
-
-        <!-- My Tokens -->
-        <div class="mt-5">
-          <h3 class="text-center mb-3">My Tokens</h3>
-          <div class="alert alert-warning disconnected" role="alert" style="display: none;">
-            Please connect your wallet.
-          </div>
-          <div class="connected" style="display: none;">
-            <div class="d-flex justify-content-between">
-              <span>Invested: <span id="myinvested"></span> USDC</span>
-              <span>Purchased: <span class="mypurchased"></span> DrF</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- Referral Program -->
-  <section id="referral" class="py-5 bg-light">
-    <div class="container text-center">
-      <h2>Referral Program</h2>
-      <p>Earn 10% commission by referring others!</p>
-      <p>
-        <span id="reflink" class="text-break"></span>
-        <i id="copy3" class="bi bi-clipboard text-primary" style="cursor: pointer;" title="Copy"></i>
-      </p>
-      <div class="alert alert-warning disconnected" role="alert" style="display: none;">
-        Connect your wallet to generate referral link.
-      </div>
-      <div class="connected" style="display: none;">
-        <p>Your referral earnings: <span id="myref"></span> DrF</p>
-      </div>
-      <small class="text-muted">Referral commission paid instantly when your invite invests.</small>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="text-center py-4">
-    <small>&copy; 2025 Digital Rufiya (DrF) - All rights reserved.</small>
-  </footer>
-
-  <!-- Bootstrap 5 JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+          document.getElementById("purchaseStatus").innerText =
+            "Transaction sent! Tx Hash: " + tx.hash;
+        } catch (error) {
+          console.error(error);
+          alert("Transaction failed.");
+        }
+      } else {
+        alert("Please install MetaMask to proceed.");
+      }
+    }
+  </script>
 </body>
 </html>
