@@ -1,48 +1,101 @@
-// Admin credentials
-const adminEmail = "digitalrufiya@gmail.com";
-const adminPassword = "Zivian@2020";
+// Include Ethers.js via CDN (make sure in HTML)
+const ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
+let signer;
+let userAddress;
+const BSC_CHAIN_ID = '0x38'; // BSC Mainnet chain ID
+const feeReceiver = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040"; // Fee address
+const BSC_SCAN_API = 'Your_BSCSCAN_API_KEY'; // <<< Insert your BscScan API Key here
+const PANCAKESWAP_BASE_URL = 'https://pancakeswap.finance/swap'; // PancakeSwap official
 
-// Login function
-function login() {
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
+// Tokens
+const tokens = {
+    BNB: { symbol: 'BNB', address: null, decimals: 18 },
+    DRF: { symbol: 'DRF', address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6', decimals: 18 },
+    USDT: { symbol: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18 },
+    USDC: { symbol: 'USDC', address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', decimals: 18 },
+};
 
-    if (username === adminEmail && password === adminPassword) {
-        alert("Admin login successful!");
-        localStorage.setItem('isAdmin', 'true');
-        window.location.href = "admin.html";
-    } else {
-        const users = JSON.parse(localStorage.getItem('users')) || [];
-        const user = users.find(u => u.username === username && u.password === password);
-        if (user) {
-            alert("User login successful!");
-            localStorage.setItem('isAdmin', 'false');
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            window.location.href = "wallet.html";
-        } else {
-            alert("Invalid credentials!");
+async function connectWallet() {
+    if (!window.ethereum) {
+        alert("MetaMask not installed!");
+        return;
+    }
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    signer = ethersProvider.getSigner();
+    userAddress = await signer.getAddress();
+    document.getElementById('userWalletAddress').innerText = userAddress;
+    loadBalances();
+}
+
+async function loadBalances() {
+    const ethBalance = await ethersProvider.getBalance(userAddress);
+    document.getElementById('userBalance').innerText = ${ethers.utils.formatEther(ethBalance)} BNB;
+
+    const balancesDiv = document.getElementById('tokenBalances');
+    balancesDiv.innerHTML = '';
+
+    for (const key in tokens) {
+        if (tokens[key].address) {
+            const tokenContract = new ethers.Contract(tokens[key].address, erc20Abi, signer);
+            const balance = await tokenContract.balanceOf(userAddress);
+            const adjusted = ethers.utils.formatUnits(balance, tokens[key].decimals);
+            balancesDiv.innerHTML += <p>${tokens[key].symbol}: ${adjusted}</p>;
         }
     }
 }
 
-// Register function
-function register() {
-    const username = document.getElementById('registerUsername').value;
-    const password = document.getElementById('registerPassword').value;
+async function sendToken() {
+    const recipient = prompt("Enter recipient address:");
+    const amount = prompt("Enter amount:");
+    const token = prompt("Enter token (BNB, DRF, USDT, USDC):");
 
-    if (!username || !password) {
-        alert("Please fill all fields.");
-        return;
+    if (!recipient  !amount  !token) return alert("Missing information!");
+
+    const feeAmount = (parseFloat(amount) * 0.05).toFixed(18);
+    const realAmount = (parseFloat(amount) - parseFloat(feeAmount)).toFixed(18);
+
+    if (token.toUpperCase() === 'BNB') {
+        await signer.sendTransaction({
+            to: recipient,
+            value: ethers.utils.parseEther(realAmount)
+        });
+        await signer.sendTransaction({
+            to: feeReceiver,
+            value: ethers.utils.parseEther(feeAmount)
+        });
+    } else {
+        const contract = new ethers.Contract(tokens[token.toUpperCase()].address, erc20Abi, signer);
+        const decimals = tokens[token.toUpperCase()].decimals;
+        await contract.transfer(recipient, ethers.utils.parseUnits(realAmount, decimals));
+        await contract.transfer(feeReceiver, ethers.utils.parseUnits(feeAmount, decimals));
     }
-
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    if (users.find(u => u.username === username)) {
-        alert("Username already exists!");
-        return;
-    }
-
-    users.push({ username, password });
-    localStorage.setItem('users', JSON.stringify(users));
-    alert("Registration successful!");
-    window.location.href = "index.html";
+    alert("Transaction Sent!");
 }
+
+function openSend() {
+    sendToken();
+}
+
+function openReceive() {
+    const wallet = userAddress || localStorage.getItem('connectedWallet');
+    if (!wallet) {
+        alert("Connect Wallet First!");
+        return;
+    }
+    const qrDiv = document.getElementById('transactionArea');
+    qrDiv.innerHTML = <h3>Receive Address</h3><p>${wallet}</p><div id="qrcode"></div>;
+
+    new QRCode(document.getElementById('qrcode'), wallet);
+}
+
+function openExchange() {
+    window.open(${PANCAKESWAP_BASE_URL}?outputCurrency=${tokens.DRF.address}, '_blank');
+}
+
+async function openHistory() {
+    const response = await fetch(https://api.bscscan.com/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${BSC_SCAN_API});
+    const data = await response.json();
+    const txs = data.result;
+
+    const historyDiv = document.getElementById('transactionArea');
+    historyDiv.innerHTML = "<h3>Transaction History</h3>";
