@@ -5,24 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" type="image/png" />
   <style>
-    .error-message {
-      color: red;
-      margin-top: 10px;
-      display: none;
-    }
-    .loading {
-      margin-top: 10px;
-      display: none;
-      color: #1fc8db;
-      font-weight: bold;
-    }
-    .login-page {
+    body.login-page {
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      background: #0f2027; /* fallback for old browsers */
+      margin: 0;
       background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
       font-family: 'Segoe UI', sans-serif;
     }
@@ -40,22 +30,21 @@
       margin-bottom: 15px;
       border-radius: 10px;
     }
-    .form-container input {
-      width: 100%;
-      padding: 12px 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
+    .form-container input,
     .form-container button {
       width: 100%;
       padding: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+    .form-container input {
+      border: 1px solid #ccc;
+    }
+    .form-container button {
       background: #1fc8db;
       color: #fff;
-      font-size: 16px;
       border: none;
-      border-radius: 8px;
       cursor: pointer;
       transition: background 0.3s ease;
     }
@@ -69,50 +58,144 @@
     .form-container a:hover {
       text-decoration: underline;
     }
+    .error-message,
+    .loading,
+    .lockout-message {
+      display: none;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .error-message { color: red; }
+    .loading { color: #1fc8db; font-weight: bold; }
+    .lockout-message { color: orange; }
+    .toggle-password {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #555;
+      margin: -8px 0 10px;
+    }
+    .toggle-password input[type="checkbox"] {
+      margin-right: 6px;
+    }
   </style>
 </head>
 <body class="login-page">
   <div class="form-container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet" class="logo" />
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Wallet" class="logo" />
     <h1>Login</h1>
 
-    <input type="text" id="loginUsername" placeholder="Username" />
-    <input type="password" id="loginPassword" placeholder="Password" />
-    <button onclick="handleLogin()">Login</button>
+    <form onsubmit="handleLogin(event)">
+      <input type="text" id="loginUsername" placeholder="Username" required />
+      <input type="password" id="loginPassword" placeholder="Password" required />
+
+      <div class="toggle-password">
+        <input type="checkbox" id="showPassword" onclick="togglePassword()"> Show Password
+      </div>
+
+      <button type="submit">Login</button>
+    </form>
 
     <p>Don't have an account? <a href="register.html">Register</a></p>
 
     <div class="loading" id="loadingMessage">Logging in...</div>
-    <div class="error-message" id="errorMessage">Invalid username or password!</div>
+    <div class="error-message" id="errorMessage"></div>
+    <div class="lockout-message" id="lockoutMessage"></div>
   </div>
 
-  <script src="auth.js"></script>
   <script>
-    function handleLogin() {
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+    const STORAGE_KEY = 'drf_login';
+
+    const showPasswordCheckbox = document.getElementById("showPassword");
+    const errorMessage = document.getElementById("errorMessage");
+    const loadingMessage = document.getElementById("loadingMessage");
+    const lockoutMessage = document.getElementById("lockoutMessage");
+
+    function togglePassword() {
+      const pwd = document.getElementById("loginPassword");
+      pwd.type = pwd.type === "password" ? "text" : "password";
+    }
+
+    function getLoginData() {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      return {
+        attempts: data.attempts || 0,
+        lockedUntil: data.lockedUntil || 0,
+      };
+    }
+
+    function updateLoginData(attempts, lockedUntil = 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ attempts, lockedUntil }));
+    }
+
+    function resetLoginData() {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
       const username = document.getElementById('loginUsername').value.trim();
       const password = document.getElementById('loginPassword').value.trim();
-      const errorMessage = document.getElementById('errorMessage');
-      const loadingMessage = document.getElementById('loadingMessage');
+
+      const now = Date.now();
+      const { attempts, lockedUntil } = getLoginData();
 
       errorMessage.style.display = 'none';
+      lockoutMessage.style.display = 'none';
+
+      if (lockedUntil && now < lockedUntil) {
+        const waitTime = Math.ceil((lockedUntil - now) / 1000);
+        lockoutMessage.textContent = `Too many failed attempts. Try again in ${waitTime} seconds.`;
+        lockoutMessage.style.display = 'block';
+        return;
+      }
 
       if (!username || !password) {
-        errorMessage.textContent = "Please enter both username and password.";
+        errorMessage.textContent = "Both fields are required.";
         errorMessage.style.display = 'block';
         return;
       }
 
       loadingMessage.style.display = 'block';
 
-      setTimeout(() => {
-        const success = login(username, password); // Defined in auth.js
+      // TODO: Replace this with your real Google Apps Script URL
+      const scriptURL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
+      fetch(scriptURL, {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data => {
         loadingMessage.style.display = 'none';
 
-        if (!success) {
-          errorMessage.textContent = "Invalid username or password!";
+        if (data.success) {
+          resetLoginData();
+          window.location.href = "dashboard.html";
+        } else {
+          const newAttempts = attempts + 1;
+          errorMessage.textContent = "Invalid username or password.";
           errorMessage.style.display = 'block';
+
+          if (newAttempts >= MAX_ATTEMPTS) {
+            const lockoutTime = now + LOCKOUT_DURATION_MS;
+            updateLoginData(newAttempts, lockoutTime);
+            lockoutMessage.textContent = "Account locked due to multiple failed attempts. Try again in 5 minutes.";
+            lockoutMessage.style.display = 'block';
+          } else {
+            updateLoginData(newAttempts);
+          }
         }
-      }, 800);
+      })
+      .catch(err => {
+        loadingMessage.style.display = 'none';
+        errorMessage.textContent = "Login error. Please check your connection.";
+        errorMessage.style.display = 'block';
+        console.error("Login failed:", err);
+      });
     }
   </script>
 </body>
