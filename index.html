@@ -200,3 +200,66 @@
   </script>
 </body>
 </html>
+// auth.js
+
+const AUTH_CONFIG = {
+  MAX_ATTEMPTS: 5,
+  LOCKOUT_TIME_MS: 5 * 60 * 1000, // 5 minutes
+  SCRIPT_URL: "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+};
+
+let authState = {
+  attempts: 0,
+  lockedUntil: null
+};
+
+export function isLockedOut() {
+  const now = Date.now();
+  return authState.lockedUntil && now < authState.lockedUntil;
+}
+
+export function getLockoutTimeRemaining() {
+  return Math.ceil((authState.lockedUntil - Date.now()) / 1000);
+}
+
+export async function loginWithBackend(username, password) {
+  if (!username || !password) {
+    return { success: false, message: "Please enter both username and password." };
+  }
+
+  if (isLockedOut()) {
+    return {
+      success: false,
+      message: `Too many failed attempts. Try again in ${getLockoutTimeRemaining()} seconds.`
+    };
+  }
+
+  try {
+    const response = await fetch(AUTH_CONFIG.SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      authState.attempts = 0;
+      return { success: true };
+    } else {
+      authState.attempts++;
+      if (authState.attempts >= AUTH_CONFIG.MAX_ATTEMPTS) {
+        authState.lockedUntil = Date.now() + AUTH_CONFIG.LOCKOUT_TIME_MS;
+        return {
+          success: false,
+          message: "Too many failed attempts. Try again in 5 minutes."
+        };
+      }
+      return { success: false, message: "Invalid username or password!" };
+    }
+
+  } catch (error) {
+    console.error("Auth error:", error);
+    return { success: false, message: "Network error. Please try again later." };
+  }
+}
