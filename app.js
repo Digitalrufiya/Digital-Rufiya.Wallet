@@ -557,3 +557,35 @@ if (exportBtn) {
 
 // Other app logic can be modularized below as needed
 
+async function uploadToDrive() {
+    const fileInput = document.getElementById('uploadFile');
+    const file = fileInput.files[0];
+    if (!file) {
+        alert("Please select a file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+        const base64 = e.target.result.split(',')[1];
+        const uploadData = {
+            contents: {
+                fileName: file.name,
+                fileBase64: base64,
+                mimeType: file.type
+            }
+        };
+
+        const response = await fetch("https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec", {
+            method: "POST",
+            body: JSON.stringify(uploadData),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        const result = await response.text();
+        alert("Server response: " + result);
+    };
+    reader.readAsDataURL(file);
+}
