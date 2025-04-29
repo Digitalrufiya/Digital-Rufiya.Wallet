@@ -1,57 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stake DRF - Digital Rufiya</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-        .title { font-size: 24px; margin-bottom: 10px; text-align: center; }
-        .info { font-size: 14px; color: #555; margin-bottom: 20px; }
-        input, button { width: 100%; padding: 10px; margin: 10px 0; }
-        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 20px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Stake DRF Tokens</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f6f9;
+    }
+    h2 {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    input, select, button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    .notice {
+      background: #e0f7fa;
+      padding: 10px;
+      border-left: 4px solid #00acc1;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="title">Stake DRF Tokens</div>
-        <div class="info">
-            Welcome to the Digital Rufiya Financial Revolution.<br>
-            Minimum Investment: $20 USDC = 400 DRF<br>
-            DRF Rate: 1 USDC = 20 DRF<br>
-            Daily Reward: +5% DRF<br>
-            Minimum Stake Duration: 30 Days<br>
-            Pay to: <strong>0x88253D87990EdD1E647c3B6eD21F57fb061a3040</strong><br>
-            Note: Must use same wallet to access staking.
-        </div>
-        
-        <form action="backend/submit_stake.php" method="POST">
-            <input type="text" name="wallet_address" id="wallet" readonly placeholder="Wallet Address will auto-fill" required>
-            <input type="number" name="usdc_amount" placeholder="Enter Amount in USDC" required min="20">
-            <input type="text" name="tx_hash" placeholder="Enter Payment Transaction Hash" required>
-            <button type="submit">Submit Staking Request</button>
-        </form>
+  <h2>Stake Your DRF Tokens</h2>
+  <div class="notice">
+    Minimum 30-day lock-in. 5% reward per day. Start staking by paying $25 USDC to address:
+    <b>0x88253D87990EdD1E647c3B6eD21F57fb061a3040</b>
+  </div>
 
-        <div class="footer">By staking, you agree to lock your funds for 30 days. No early withdrawals allowed.</div>
+  <form id="stakingForm">
+    <div class="form-group">
+      <label>Your Wallet Address</label>
+      <input type="text" name="wallet" required>
     </div>
+    <div class="form-group">
+      <label>USDC Paid Amount (min $25)</label>
+      <input type="number" name="amount" min="25" required>
+    </div>
+    <button type="submit">Submit Staking Request</button>
+  </form>
 
-    <script>
-        async function getWallet() {
-            if (window.ethereum) {
-                try {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    document.getElementById('wallet').value = accounts[0];
-                } catch (error) {
-                    alert('Wallet connection failed.');
-                }
-            } else {
-                alert('Please install MetaMask or another wallet.');
-            }
-        }
-        window.onload = getWallet;
-    </script>
+  <script>
+    document.getElementById('stakingForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const wallet = e.target.wallet.value;
+      const amount = e.target.amount.value;
+      const content = `Wallet Address: ${wallet}\nUSDC Amount: ${amount}\nDate: ${new Date().toLocaleString()}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `staking_request_${wallet}.txt`;
+      a.click();
+      alert('Request saved. Send $25 to the above USDC address to begin staking.');
+    });
+  </script>
 </body>
 </html>
