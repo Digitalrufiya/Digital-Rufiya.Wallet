@@ -1,131 +1,117 @@
-// script.js
+const tokenContracts = {
+  DRF: { address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6', decimals: 18 },
+  USDC: { address: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', decimals: 18 },
+  USDT: { address: '0x55d398326f99059ff775485246999027b3197955', decimals: 18 }
+};
 
 let web3;
-let currentAccount = null;
-const DRF_ADDRESS = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6';
-const USDC_ADDRESS = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
-const USDT_ADDRESS = '0x55d398326f99059ff775485246999027b3197955';
-const FEE_RECEIVER = DRF_ADDRESS; // 5% fee goes here
+let account;
 
 async function connectWallet() {
   if (window.ethereum) {
     web3 = new Web3(window.ethereum);
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    account = (await web3.eth.getAccounts())[0];
+    document.getElementById('walletAddress').innerText = account;
+    document.getElementById('connectWallet').style.display = 'none';
+    document.getElementById('disconnectWallet').style.display = 'inline-block';
+    checkNetwork();
+    loadBalances();
+    loadTransactions();
+  } else {
+    alert('Please install MetaMask or any Web3 wallet.');
+  }
+}
+
+function disconnectWallet() {
+  account = null;
+  document.getElementById('walletAddress').innerText = 'Not connected';
+  document.getElementById('connectWallet').style.display = 'inline-block';
+  document.getElementById('disconnectWallet').style.display = 'none';
+}
+
+async function checkNetwork() {
+  const chainId = await web3.eth.getChainId();
+  if (chainId !== 56) {
     try {
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      currentAccount = accounts[0];
-      document.getElementById('walletAddress').textContent = currentAccount;
-      document.getElementById('connectButton').classList.add('hidden');
-      document.getElementById('disconnectButton').classList.remove('hidden');
-      document.getElementById('walletInfo').classList.remove('hidden');
-      document.getElementById('receiveSection').classList.remove('hidden');
-      document.getElementById('sendSection').classList.remove('hidden');
-      document.getElementById('historySection').classList.remove('hidden');
-      await addBSCNetwork();
-      await fetchBalances();
-      await loadTxHistory();
-    } catch (error) {
-      alert('Connection denied');
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x38',
+          chainName: 'BSC Mainnet',
+          nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+          rpcUrls: ['https://bsc-dataseed.binance.org/'],
+          blockExplorerUrls: ['https://bscscan.com']
+        }]
+      });
+    } catch (err) {
+      alert('Switch to BSC network failed');
     }
   } else {
-    alert('Web3 wallet not found!');
+    document.getElementById('networkStatus').innerText = 'Network: BSC';
   }
 }
 
-async function disconnectWallet() {
-  currentAccount = null;
-  document.getElementById('walletInfo').classList.add('hidden');
-  document.getElementById('receiveSection').classList.add('hidden');
-  document.getElementById('sendSection').classList.add('hidden');
-  document.getElementById('historySection').classList.add('hidden');
-  document.getElementById('connectButton').classList.remove('hidden');
-  document.getElementById('disconnectButton').classList.add('hidden');
-}
-
-document.getElementById('connectButton').onclick = connectWallet;
-document.getElementById('disconnectButton').onclick = disconnectWallet;
-
-async function addBSCNetwork() {
-  try {
-    await ethereum.request({
-      method: 'wallet_addEthereumChain',
-      params: [{
-        chainId: '0x38',
-        chainName: 'Binance Smart Chain',
-        nativeCurrency: {
-          name: 'BNB',
-          symbol: 'BNB',
-          decimals: 18
-        },
-        rpcUrls: ['https://bsc-dataseed.binance.org/'],
-        blockExplorerUrls: ['https://bscscan.com/']
-      }]
-    });
-  } catch (err) {
-    console.error('BSC Add Error:', err);
+async function loadBalances() {
+  for (let token in tokenContracts) {
+    const contract = new web3.eth.Contract([
+      { constant: true, name: "balanceOf", type: "function", inputs: [{ name: "_owner", type: "address" }], outputs: [{ name: "balance", type: "uint256" }] }
+    ], tokenContracts[token].address);
+    const balance = await contract.methods.balanceOf(account).call();
+    document.getElementById(token.toLowerCase() + 'Balance').innerText = (balance / 10 ** tokenContracts[token].decimals).toFixed(4);
   }
 }
 
-async function fetchBalances() {
-  const erc20Abi = ["function balanceOf(address) view returns (uint)","function decimals() view returns (uint8)"];
-  const format = async (addr) => {
-    const contract = new web3.eth.Contract(erc20Abi, addr);
-    const balance = await contract.methods.balanceOf(currentAccount).call();
-    const decimals = await contract.methods.decimals().call();
-    return (balance / (10 ** decimals)).toFixed(4);
-  };
-  document.getElementById('drfBalance').textContent = `DRF: ${await format(DRF_ADDRESS)}`;
-  document.getElementById('usdcBalance').textContent = `USDC: ${await format(USDC_ADDRESS)}`;
-  document.getElementById('usdtBalance').textContent = `USDT: ${await format(USDT_ADDRESS)}`;
+document.getElementById('connectWallet').onclick = connectWallet;
+document.getElementById('disconnectWallet').onclick = disconnectWallet;
+
+document.getElementById('receiveToken').onchange = updateQR;
+function updateQR() {
+  const token = document.getElementById('receiveToken').value;
+  const text = `${account}\n${token}\n${tokenContracts[token].address}`;
+  QRCode.toCanvas(document.getElementById('qrDisplay'), text);
+  document.getElementById('displayedAddress').innerHTML = `
+    <b>${account}</b> 
+    <br><a href="https://bscscan.com/address/${account}" target="_blank">View on BscScan</a>
+  `;
 }
 
-function generateReceive(token) {
-  const qr = document.getElementById('qrContainer');
-  qr.innerHTML = '';
-  const canvas = document.createElement('canvas');
-  new QRCode(canvas, `${currentAccount} (${token})`);
-  qr.appendChild(canvas);
-  const addressEl = document.createElement('p');
-  addressEl.innerHTML = `<strong>Address:</strong> ${currentAccount} <a href='https://bscscan.com/address/${currentAccount}' target='_blank'>(View on BscScan)</a>`;
-  qr.appendChild(addressEl);
-}
+document.getElementById('sendButton').onclick = async function () {
+  const token = document.getElementById('sendToken').value;
+  const to = document.getElementById('sendTo').value;
+  const amount = parseFloat(document.getElementById('sendAmount').value);
+  const fee = amount * 0.05;
+  const netAmount = amount - fee;
 
-document.getElementById('sendForm').onsubmit = async (e) => {
-  e.preventDefault();
-  const token = document.getElementById('tokenToSend').value;
-  const to = document.getElementById('recipient').value;
-  const amt = parseFloat(document.getElementById('amount').value);
+  const contract = new web3.eth.Contract([
+    { constant: false, name: "transfer", type: "function", inputs: [{ name: "_to", type: "address" }, { name: "_value", type: "uint256" }], outputs: [{ name: "", type: "bool" }] }
+  ], tokenContracts[token].address);
 
-  const erc20Abi = ["function transfer(address to, uint256 value) public returns (bool)","function decimals() view returns (uint8)"];
-  const tokenMap = { DRF: DRF_ADDRESS, USDC: USDC_ADDRESS, USDT: USDT_ADDRESS };
-  const contract = new web3.eth.Contract(erc20Abi, tokenMap[token]);
-  const decimals = await contract.methods.decimals().call();
-  const totalAmount = web3.utils.toBN((amt * 10 ** decimals).toString());
-  const feeAmount = totalAmount.mul(web3.utils.toBN(5)).div(web3.utils.toBN(100));
-  const sendAmount = totalAmount.sub(feeAmount);
+  const value = web3.utils.toBN(netAmount * 10 ** tokenContracts[token].decimals);
+  const feeValue = web3.utils.toBN(fee * 10 ** tokenContracts[token].decimals);
 
-  try {
-    await contract.methods.transfer(to, sendAmount).send({ from: currentAccount });
-    await contract.methods.transfer(FEE_RECEIVER, feeAmount).send({ from: currentAccount });
-    alert('Transfer Successful');
-    fetchBalances();
-    loadTxHistory();
-  } catch (err) {
-    alert('Transaction failed');
-  }
+  await contract.methods.transfer(to, value).send({ from: account });
+  await contract.methods.transfer('0x7788a60dbC85AB46767F413EC7d51F149AA1bec6', feeValue).send({ from: account });
+
+  alert('Transfer complete with 5% fee.');
+  loadBalances();
+  loadTransactions();
 };
 
-async function loadTxHistory() {
-  const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${currentAccount}&sort=desc&apikey=YourApiKeyToken`;
-  const res = await fetch(url);
-  const data = await res.json();
-  const txList = data.result.slice(0, 20);
-  const container = document.getElementById('txHistory');
-  container.innerHTML = '';
-  txList.forEach(tx => {
-    const li = document.createElement('li');
-    const type = tx.from.toLowerCase() === currentAccount.toLowerCase() ? 'Sent' : 'Received';
-    const amt = (parseFloat(tx.value) / (10 ** tx.tokenDecimal)).toFixed(4);
-    li.innerHTML = `${tx.tokenSymbol}: ${type} ${amt} <br> ${new Date(tx.timeStamp * 1000).toLocaleString()} <br><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">View on BscScan</a>`;
-    container.appendChild(li);
-  });
+async function loadTransactions() {
+  const response = await fetch(`https://api.bscscan.com/api?module=account&action=tokentx&address=${account}&page=1&offset=20&sort=desc&apikey=YourApiKeyToken`);
+  const data = await response.json();
+  const list = document.getElementById('transactionList');
+  list.innerHTML = '';
+  if (data.result) {
+    data.result.forEach(tx => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <b>${tx.tokenSymbol}</b> - ${tx.value / 10 ** tx.tokenDecimal} ${tx.to.toLowerCase() === account.toLowerCase() ? 'received' : 'sent'}
+        <br>${new Date(tx.timeStamp * 1000).toLocaleString()}
+        <br><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">View</a>
+      `;
+      list.appendChild(li);
+    });
+  }
 }
