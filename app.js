@@ -1,3 +1,4 @@
+<script src="app.js"></script>
 
 
 // === CONFIG ===
