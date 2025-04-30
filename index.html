@@ -3,37 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet - BSC</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.5/dist/index.js"></script>
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226"/>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/web3modal"></script>
+  <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>DRF Wallet (BSC)</h1>
-    <button id="connectButton">Connect Wallet</button>
-
-    <div id="walletInfo" style="display:none;">
-      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
-      <p><strong>BNB Balance:</strong> <span id="bnbBalance"></span></p>
-      <p><strong>DRF Balance:</strong> <span id="drfBalance"></span></p>
-
-      <button onclick="addDRFToken()">Add DRF to MetaMask</button>
-
-      <h3>Send BNB/DRF</h3>
-      <input type="text" id="sendTo" placeholder="Recipient address" />
-      <input type="text" id="sendAmount" placeholder="Amount" />
-      <select id="sendToken">
-        <option value="BNB">BNB</option>
-        <option value="DRF">DRF</option>
-      </select>
-      <button onclick="sendTokens()">Send</button>
-
-      <h3>Transaction History</h3>
-      <div id="txHistory">Loading...</div>
+  <header>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" class="logo" alt="DRF Wallet Logo"/>
+    <div class="right-controls">
+      <button id="connectButton">Connect Wallet</button>
+      <button id="disconnectButton" style="display:none;">Disconnect</button>
     </div>
-  </div>
+  </header>
+
+  <main>
+    <div class="wallet-info">
+      <p><strong>Address:</strong> <span id="userAddress">Not connected</span></p>
+      <p><strong>BNB Balance:</strong> <span id="bnbBalance">-</span> BNB</p>
+      <p><strong>DRF Balance:</strong> <span id="drfBalance">-</span> DRF</p>
+      <p><strong>Gas Price:</strong> <span id="gasPrice">-</span></p>
+    </div>
+
+    <div class="qr-section">
+      <h3>Receive DRF</h3>
+      <div id="qrCode"></div>
+      <button onclick="downloadQRCode()">Download QR</button>
+    </div>
+
+    <div class="swap-section">
+      <h3>Swap (UI Only)</h3>
+      <input type="number" id="swapAmount" placeholder="Amount" />
+      <select id="swapDirection">
+        <option value="BNB→DRF">BNB → DRF</option>
+        <option value="DRF→BNB">DRF → BNB</option>
+      </select>
+      <button onclick="handleSwap()">Swap</button>
+    </div>
+
+    <div class="tx-history">
+      <h3>Transactions (Manual Entry)</h3>
+      <ul id="txList">
+        <li>0x123...abc sent 10 DRF</li>
+        <li>0x456...def received 5 BNB</li>
+      </ul>
+      <button onclick="downloadCSV()">Download CSV</button>
+    </div>
+  </main>
 
   <script src="app.js"></script>
 </body>
