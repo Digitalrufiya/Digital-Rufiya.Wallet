@@ -6,38 +6,46 @@
   <title>DRF Web3 Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <!-- Web3 & Wallet Connect Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/web3modal"></script>
+  <!-- Toastify for toast alerts -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
   <script defer src="script.js"></script>
 </head>
 <body>
-  <header>
+  <header class="header">
     <div class="header-container">
       <img src="logo.png" alt="DRF Wallet Logo" class="logo" />
-      <button id="connectWalletBtn" class="connect-button">Connect Wallet</button>
+      <button id="connectWallet" class="connect-button">Connect Wallet</button>
     </div>
   </header>
 
   <main class="main-container">
+    <!-- Token Balances -->
     <section class="balances">
-      <h2>Your Token Balances</h2>
+      <h2 class="section-title">Your Token Balances</h2>
       <ul>
         <li>DRF: <span id="drfBalance">0</span></li>
         <li>USDC: <span id="usdcBalance">0</span></li>
         <li>USDT: <span id="usdtBalance">0</span></li>
       </ul>
+      <div id="gasFeeDisplay" class="gas-fee">Gas Price: -- Gwei</div>
     </section>
 
+    <!-- Receive Section -->
     <section class="receive">
-      <h2>Receive Tokens</h2>
-      <div class="token-receive" id="receiveContainer">
-        <!-- QR and copy buttons inserted dynamically -->
+      <h2 class="section-title">Receive Tokens</h2>
+      <div id="receiveContainer" class="token-receive">
+        <!-- QR Code, Address, Copy & BscScan link get generated here -->
       </div>
     </section>
 
+    <!-- Send Section -->
     <section class="send">
-      <h2>Send Tokens</h2>
+      <h2 class="section-title">Send Tokens</h2>
       <form id="sendForm">
         <select id="sendToken">
           <option value="DRF">DRF</option>
@@ -45,13 +53,17 @@
           <option value="USDT">USDT</option>
         </select>
         <input type="text" id="recipient" placeholder="Recipient address" required />
-        <input type="number" id="amount" placeholder="Amount" required />
+        <div class="amount-container">
+          <input type="number" id="amount" placeholder="Amount" required step="any" />
+          <button type="button" id="maxSendBtn" class="max-btn">MAX</button>
+        </div>
         <button type="submit">Send</button>
       </form>
     </section>
 
+    <!-- Swap Section -->
     <section class="swap">
-      <h2>Swap Tokens</h2>
+      <h2 class="section-title">Swap Tokens</h2>
       <form id="swapForm">
         <select id="swapFrom">
           <option value="DRF">DRF</option>
@@ -63,22 +75,28 @@
           <option value="USDC">USDC</option>
           <option value="USDT">USDT</option>
         </select>
-        <input type="number" id="swapAmount" placeholder="Amount" required />
+        <div class="amount-container">
+          <input type="number" id="swapAmount" placeholder="Amount" required step="any" />
+          <button type="button" id="maxSwapBtn" class="max-btn">MAX</button>
+        </div>
         <button type="submit">Swap</button>
       </form>
       <p class="fee-info">Note: 5% fee in DRF will be applied to all swaps</p>
     </section>
 
+    <!-- Transaction History -->
     <section class="history">
-      <h2>Transaction History</h2>
-      <ul id="transactionHistory">
-        <!-- Filled by script.js -->
+      <h2 class="section-title">Transaction History</h2>
+      <ul id="transactionHistory" class="transaction-list">
+        <!-- Transaction items will be inserted dynamically -->
       </ul>
     </section>
   </main>
 
+  <!-- Toast Container (Toastify uses its own container) -->
+  
   <footer>
-    <p>&copy; 2025 DRF Wallet. Powered by BSC & Web3.</p>
+    <p>&copy; 2025 DRF Wallet. Powered by BSC &amp; Web3.</p>
   </footer>
 </body>
 </html>
