@@ -5,70 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
-  <script src="https://unpkg.com/web3modal"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/web3modal@1.9.10/dist/index.js"></script>
 </head>
 <body>
-  <header>
-    <img src="f86fff33-18b3-41ce-af4d-aea20dfc2c31.png" alt="DRF Logo" id="logo">
-    <button class="connect-button" id="connectButton">Connect Wallet</button>
+  <header class="wallet-header">
+    <img src="logo.png" alt="DRF Logo" class="wallet-logo" />
+    <button id="connectWallet" class="connect-btn">Connect Wallet</button>
   </header>
 
-  <main>
-    <section class="balances">
+  <main class="wallet-main">
+    <section class="balance-section">
       <h2>Your Balances</h2>
-      <p>DRF: <span id="drfBalance">0</span></p>
-      <p>USDC: <span id="usdcBalance">0</span></p>
-      <p>USDT: <span id="usdtBalance">0</span></p>
+      <div id="balances">
+        <p>DRF: <span id="drfBalance">0</span></p>
+        <p>USDC: <span id="usdcBalance">0</span></p>
+        <p>USDT: <span id="usdtBalance">0</span></p>
+      </div>
     </section>
 
-    <section class="receive">
-      <h2>Receive</h2>
-      <div id="qrCodes"></div>
+    <section class="receive-section">
+      <h3>Receive</h3>
+      <div class="qr-container" id="qrContainer"></div>
     </section>
 
-    <section class="send">
-      <h2>Send</h2>
+    <section class="send-section">
+      <h3>Send Tokens</h3>
       <form id="sendForm">
-        <label for="token">Token:</label>
-        <select id="token">
+        <select id="sendToken">
           <option value="DRF">DRF</option>
           <option value="USDC">USDC</option>
           <option value="USDT">USDT</option>
         </select>
-        <label for="recipient">Recipient Address:</label>
-        <input type="text" id="recipient" required />
-        <label for="amount">Amount:</label>
-        <input type="number" id="amount" required />
+        <input type="text" id="recipient" placeholder="Recipient Address" required />
+        <input type="number" id="amount" placeholder="Amount" required />
         <button type="submit">Send</button>
       </form>
-      <div id="sendStatus"></div>
+      <p class="fee-note">5% DRF fee will be applied</p>
     </section>
 
-    <section class="swap">
-      <h2>Swap Tokens</h2>
-      <p>Manual UI (5% DRF fee applied visually only)</p>
+    <section class="swap-section">
+      <h3>Swap Tokens</h3>
       <form id="swapForm">
-        <label for="fromToken">From:</label>
-        <select id="fromToken">
+        <select id="swapFrom">
+          <option value="DRF">DRF</option>
           <option value="USDC">USDC</option>
           <option value="USDT">USDT</option>
         </select>
-        <label for="toToken">To:</label>
-        <select id="toToken">
+        <select id="swapTo">
           <option value="DRF">DRF</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
         </select>
-        <label for="swapAmount">Amount:</label>
-        <input type="number" id="swapAmount" required />
+        <input type="number" id="swapAmount" placeholder="Amount to Swap" required />
         <button type="submit">Swap</button>
       </form>
-      <div id="swapStatus"></div>
+      <p class="fee-note">5% DRF fee will be deducted (logic only)</p>
     </section>
 
-    <section class="history">
-      <h2>Transaction History (Last 20)</h2>
-      <ul id="transactionList"></ul>
+    <section class="history-section">
+      <h3>Transaction History</h3>
+      <ul id="txHistory"></ul>
     </section>
   </main>
 
