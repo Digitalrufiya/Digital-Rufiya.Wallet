@@ -1,4 +1,5 @@
 
+
 // === CONFIG ===
 const ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
 const BSC_CHAIN_ID = '0x38';
@@ -263,3 +264,73 @@ function setupDashboardActions() {
   document.getElementById('btn-receive')?.addEventListener('click', openReceive);
   document.getElementById('btn-swap')?.addEventListener('click', openExchange);
 }
+
+
+
+// === ADDITIONAL IMPROVEMENTS & SECURITY ===
+
+// -- Validate wallet addresses before transfer --
+function isValidAddress(address) {
+  try {
+    return ethers.utils.isAddress(address);
+  } catch {
+    return false;
+  }
+}
+
+// -- Secure admin session with expiration (30 mins) --
+function setupAdminSessionTimeout(minutes = 30) {
+  let timer;
+  function resetTimer() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      alert("Admin session expired.");
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.href = "index.html";
+    }, minutes * 60000);
+  }
+  window.addEventListener("mousemove", resetTimer);
+  window.addEventListener("keydown", resetTimer);
+  resetTimer();
+}
+
+// -- Update sendToken to use validation and error handling --
+async function sendToken() {
+  // Replace these prompts with proper modal inputs in the UI
+  const recipient = prompt("Enter recipient address:");
+  const amount = prompt("Enter amount:");
+  const token = prompt("Enter token (BNB, DRF, USDT, USDC):").toUpperCase();
+  
+  if (!recipient || !amount || !token || !tokens[token]) return alert("Invalid input");
+  if (!isValidAddress(recipient)) return alert("Invalid recipient address");
+
+  const fee = (parseFloat(amount) * 0.06).toFixed(tokens[token].decimals);
+  const sendAmt = (parseFloat(amount) - parseFloat(fee)).toFixed(tokens[token].decimals);
+
+  try {
+    if (token === 'BNB') {
+      await signer.sendTransaction({ to: recipient, value: ethers.utils.parseEther(sendAmt) });
+      await signer.sendTransaction({ to: feeReceiver, value: ethers.utils.parseEther(fee) });
+    } else {
+      const c = new ethers.Contract(tokens[token].address, erc20Abi, signer);
+      await c.transfer(recipient, ethers.utils.parseUnits(sendAmt, tokens[token].decimals));
+      await c.transfer(feeReceiver, ethers.utils.parseUnits(fee, tokens[token].decimals));
+    }
+    notify("Transaction sent!", "success");
+  } catch (error) {
+    console.error("Transaction failed:", error);
+    notify("Transaction failed. Check console.", "danger");
+  }
+}
+
+// -- Setup session timer when admin logs in --
+if (sessionStorage.getItem("adminLoggedIn")) {
+  setupAdminSessionTimeout();
+}
+
+// === FUTURE ENHANCEMENTS (TO CONSIDER) ===
+// - Add modals for send/receive forms
+// - Integrate live token price API (CoinGecko or Binance)
+// - Add email/SMS notifications (using a backend API or service like Twilio)
+// - Implement audit log export to CSV
+// - Add dark mode toggle for user experience
