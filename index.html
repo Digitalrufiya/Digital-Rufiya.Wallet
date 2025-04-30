@@ -1,73 +1,68 @@
+<!-- DRF Wallet DApp with PancakeSwap Integration (index.html) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRF Wallet</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code.min.js"></script>
 </head>
 <body>
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo" />
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet Logo" class="logo">
     <h1>DRF Wallet</h1>
     <button id="connectBtn">Connect Wallet</button>
     <button id="disconnectBtn" style="display:none;">Disconnect</button>
   </header>
 
   <main>
-    <section id="walletInfo" class="card hidden">
-      <h2>Wallet Info</h2>
-      <p><strong>Address:</strong> <span id="walletAddress"></span> <button id="copyAddress">📋</button></p>
-      <a href="#" id="bscScanLink" target="_blank">View on BscScan</a>
+    <section id="wallet-section">
+      <h2>Your Wallet</h2>
+      <p>Address: <span id="walletAddress"></span> <a id="bscscanLink" target="_blank">🔍</a></p>
+      <div id="balances">
+        <p>DRF: <span id="drfBalance"></span></p>
+        <p>USDC: <span id="usdcBalance"></span></p>
+        <p>USDT: <span id="usdtBalance"></span></p>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Balances</h2>
-      <ul>
-        <li><strong>DRF:</strong> <span id="drfBalance">0</span></li>
-        <li><strong>USDC:</strong> <span id="usdcBalance">0</span></li>
-        <li><strong>USDT:</strong> <span id="usdtBalance">0</span></li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>Receive</h2>
-      <select id="tokenSelector">
+    <section id="swap-section">
+      <h2>Swap</h2>
+      <select id="fromToken">
         <option value="DRF">DRF</option>
         <option value="USDC">USDC</option>
         <option value="USDT">USDT</option>
       </select>
-      <div id="qrWrapper">
-        <canvas id="qrCanvas"></canvas>
-        <p id="qrWalletAddress"></p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Send</h2>
-      <label for="sendToken">Token:</label>
-      <select id="sendToken">
+      <select id="toToken">
         <option value="DRF">DRF</option>
         <option value="USDC">USDC</option>
         <option value="USDT">USDT</option>
-      </select><br />
-      <label for="recipient">Recipient:</label>
-      <input type="text" id="recipient" placeholder="0x..." /><br />
-      <label for="amount">Amount:</label>
-      <input type="number" id="amount" /><br />
-      <button id="sendBtn">Send with 5% Fee</button>
+      </select>
+      <input type="number" id="swapAmount" placeholder="Amount">
+      <button id="swapBtn">Swap Now</button>
+      <p class="fee-note">*5% DRF fee applied per transaction</p>
     </section>
 
-    <section class="card">
-      <h2>Last 20 Transactions</h2>
+    <section id="qr-section">
+      <h2>Receive</h2>
+      <select id="qrToken">
+        <option value="DRF">DRF</option>
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select>
+      <div id="qrCode"></div>
+      <p>Wallet Address: <span id="qrWalletAddress"></span></p>
+    </section>
+
+    <section id="history-section">
+      <h2>Recent Transactions</h2>
       <ul id="txHistory"></ul>
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
-  <script src="script.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
