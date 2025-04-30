@@ -1,9 +1,12 @@
-import WalletConnectProvider from "@walletconnect/web3-provider";
-import Web3Modal from "web3modal";
+// script.js - Full Final Version for DRF Wallet
 
-const DRF_ADDRESS = "0xYourDRFTokenAddress";
-const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-const USDT_ADDRESS = "0x55d398326f99059ff775485246999027b3197955";
+import Web3Modal from "https://cdn.skypack.dev/web3modal";
+import WalletConnectProvider from "https://cdn.skypack.dev/@walletconnect/web3-provider";
+
+let web3Modal;
+let provider;
+let web3;
+let selectedAccount;
 
 const BSC_PARAMS = {
   chainId: "0x38",
@@ -13,150 +16,140 @@ const BSC_PARAMS = {
   blockExplorerUrls: ["https://bscscan.com"]
 };
 
-let web3Modal, provider, signer, userAddress;
-const tokenContracts = {};
-const TOKEN_ABI = [
-  "function balanceOf(address) view returns (uint)",
+const DRF_CONTRACT = "0xYourDRFTokenAddress";
+const USDC_CONTRACT = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+const USDT_CONTRACT = "0x55d398326f99059ff775485246999027b3197955";
+const OWNER_ADDRESS = "0xYourOwnerWallet"; // Fee collector
+
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
   "function decimals() view returns (uint8)",
-  "function transfer(address, uint256) returns (bool)"
+  "function name() view returns (string)",
+  "function symbol() view returns (string)"
 ];
 
-async function init() {
-  web3Modal = new Web3Modal({
-    cacheProvider: true,
-    providerOptions: {
-      walletconnect: {
-        package: WalletConnectProvider,
-        options: { rpc: { 56: "https://bsc-dataseed.binance.org/" } }
+window.onload = async () => {
+  init();
+  document.getElementById("connectWallet").addEventListener("click", connectWallet);
+  document.getElementById("sendTokenBtn").addEventListener("click", sendToken);
+};
+
+function init() {
+  const providerOptions = {
+    walletconnect: {
+      package: WalletConnectProvider,
+      options: {
+        rpc: {
+          56: "https://bsc-dataseed.binance.org/"
+        }
       }
     }
+  };
+  web3Modal = new Web3Modal({
+    cacheProvider: false,
+    providerOptions
   });
-
-  if (web3Modal.cachedProvider) await connectWallet();
-
-  document.getElementById("connectButton").onclick = connectWallet;
-  document.getElementById("sendBtn").onclick = sendToken;
-  document.getElementById("token").onchange = generateQRCode;
-  document.getElementById("refreshHistory").onclick = getTransactionHistory;
-  document.getElementById("swapBtn").onclick = simulateSwap;
 }
 
 async function connectWallet() {
-  const instance = await web3Modal.connect();
-  provider = new ethers.providers.Web3Provider(instance);
-  signer = provider.getSigner();
-  userAddress = await signer.getAddress();
+  try {
+    provider = await web3Modal.connect();
+    web3 = new ethers.providers.Web3Provider(provider);
+    const accounts = await web3.listAccounts();
+    selectedAccount = accounts[0];
 
-  await switchToBSC();
-  initTokenContracts();
-  displayWalletInfo();
+    document.getElementById("walletAddress").innerText = selectedAccount;
+
+    await switchToBSC();
+    loadBalances();
+    loadTransactionHistory();
+  } catch (error) {
+    console.error("Wallet connection failed", error);
+  }
 }
 
 async function switchToBSC() {
-  const network = await provider.getNetwork();
-  if (network.chainId !== 56) {
-    try {
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: BSC_PARAMS.chainId }]
+    });
+  } catch (switchError) {
+    if (switchError.code === 4902) {
       await window.ethereum.request({
         method: "wallet_addEthereumChain",
         params: [BSC_PARAMS]
       });
-    } catch (e) {
-      alert("Please switch to BSC manually.");
     }
   }
 }
 
-function initTokenContracts() {
-  tokenContracts["DRF"] = new ethers.Contract(DRF_ADDRESS, TOKEN_ABI, signer);
-  tokenContracts["USDC"] = new ethers.Contract(USDC_ADDRESS, TOKEN_ABI, signer);
-  tokenContracts["USDT"] = new ethers.Contract(USDT_ADDRESS, TOKEN_ABI, signer);
-}
+async function loadBalances() {
+  const providerEthers = new ethers.providers.Web3Provider(provider);
 
-async function displayWalletInfo() {
-  document.getElementById("walletAddress").textContent = userAddress;
-  generateQRCode();
+  const drf = new ethers.Contract(DRF_CONTRACT, ERC20_ABI, providerEthers);
+  const usdc = new ethers.Contract(USDC_CONTRACT, ERC20_ABI, providerEthers);
+  const usdt = new ethers.Contract(USDT_CONTRACT, ERC20_ABI, providerEthers);
 
-  for (const [symbol, contract] of Object.entries(tokenContracts)) {
-    const decimals = await contract.decimals();
-    const balance = await contract.balanceOf(userAddress);
-    document.getElementById(`balance${symbol}`).textContent =
-      `${ethers.utils.formatUnits(balance, decimals)} ${symbol}`;
-  }
+  const drfBal = await drf.balanceOf(selectedAccount);
+  const usdcBal = await usdc.balanceOf(selectedAccount);
+  const usdtBal = await usdt.balanceOf(selectedAccount);
 
-  getTransactionHistory();
-}
-
-function generateQRCode() {
-  const token = document.getElementById("token").value;
-  const qrContainer = document.getElementById("qrCode");
-  qrContainer.innerHTML = "";
-  new QRCode(qrContainer, { text: userAddress, width: 150, height: 150 });
-  document.getElementById("displayAddress").textContent = userAddress;
-  document.getElementById("bscLink").href = `https://bscscan.com/address/${userAddress}`;
+  document.getElementById("drfBalance").innerText = ethers.utils.formatUnits(drfBal, 18);
+  document.getElementById("usdcBalance").innerText = ethers.utils.formatUnits(usdcBal, 18);
+  document.getElementById("usdtBalance").innerText = ethers.utils.formatUnits(usdtBal, 18);
 }
 
 async function sendToken() {
   const token = document.getElementById("sendToken").value;
-  const to = document.getElementById("sendTo").value.trim();
-  const amount = document.getElementById("sendAmount").value.trim();
+  const amount = document.getElementById("sendAmount").value;
+  const to = document.getElementById("sendTo").value;
 
-  if (!to || !amount) return showStatus("Fill all fields.", true);
+  let tokenAddress;
+  if (token === "DRF") tokenAddress = DRF_CONTRACT;
+  if (token === "USDC") tokenAddress = USDC_CONTRACT;
+  if (token === "USDT") tokenAddress = USDT_CONTRACT;
 
-  const contract = tokenContracts[token];
+  const signer = web3.getSigner();
+  const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+
   const decimals = await contract.decimals();
-  const sendAmount = ethers.utils.parseUnits(amount, decimals);
+  let amountInWei = ethers.utils.parseUnits(amount, decimals);
 
-  try {
-    if (token !== "DRF") {
-      const drfFee = sendAmount.mul(5).div(100);
-      const drf = tokenContracts["DRF"];
-      await (await drf.transfer(DRF_ADDRESS, drfFee)).wait();
-    }
-
-    const tx = await contract.transfer(to, sendAmount);
-    await tx.wait();
-    showStatus(`Sent ${amount} ${token} successfully.`);
-    displayWalletInfo();
-  } catch (err) {
-    showStatus(`Error: ${err.message}`, true);
+  if (token === "DRF") {
+    const fee = amountInWei.mul(5).div(100);
+    const remaining = amountInWei.sub(fee);
+    await contract.transfer(to, remaining);
+    await contract.transfer(OWNER_ADDRESS, fee);
+  } else {
+    await contract.transfer(to, amountInWei);
   }
+
+  alert("Transaction sent.");
+  loadBalances();
 }
 
-function showStatus(message, error = false) {
-  const el = document.getElementById("sendStatus");
-  el.textContent = message;
-  el.style.color = error ? "red" : "limegreen";
-}
-
-async function getTransactionHistory() {
+async function loadTransactionHistory() {
   const API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
-  const res = await fetch(`https://api.bscscan.com/api?module=account&action=tokentx&address=${userAddress}&sort=desc&apikey=${API_KEY}`);
-  const data = await res.json();
-  const list = data.result.slice(0, 20);
-  const history = document.getElementById("historyList");
-  history.innerHTML = "";
+  const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${selectedAccount}&sort=desc&apikey=${API_KEY}`;
 
-  list.forEach(tx => {
-    const type = tx.from.toLowerCase() === userAddress.toLowerCase() ? "Sent" : "Received";
-    const amount = ethers.utils.formatUnits(tx.value, tx.tokenDecimal);
-    const time = new Date(tx.timeStamp * 1000).toLocaleString();
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${type}</strong> ${amount} ${tx.tokenSymbol} — ${time} 
-    <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">[BscScan]</a>`;
-    history.appendChild(li);
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const list = document.getElementById("transactionList");
+  list.innerHTML = "";
+
+  data.result.slice(0, 20).forEach(tx => {
+    const type = tx.from.toLowerCase() === selectedAccount.toLowerCase() ? "Sent" : "Received";
+    const row = `
+      <div class="transaction-item">
+        <span>${tx.tokenSymbol}</span>
+        <span>${ethers.utils.formatUnits(tx.value, tx.tokenDecimal)}</span>
+        <span>${type}</span>
+        <span>${new Date(tx.timeStamp * 1000).toLocaleString()}</span>
+        <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">View</a>
+      </div>`;
+    list.innerHTML += row;
   });
 }
-
-function simulateSwap() {
-  const fromToken = document.getElementById("swapFrom").value;
-  const toToken = document.getElementById("swapTo").value;
-  const amount = document.getElementById("swapAmount").value;
-
-  const fee = amount * 0.05;
-  const netAmount = amount - fee;
-
-  document.getElementById("swapResult").innerText = 
-    `Swapping ${amount} ${fromToken} to ${netAmount.toFixed(4)} ${toToken} (5% DRF fee applied)`;
-}
-
-window.addEventListener("load", init);
