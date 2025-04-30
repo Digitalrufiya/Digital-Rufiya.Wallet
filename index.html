@@ -3,53 +3,71 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Wallet - Web3 Ready</title>
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
+  <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
 </head>
 <body>
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Wallet Logo" class="logo" />
-    <button id="connectButton">Connect Wallet</button>
-    <button id="disconnectButton" style="display: none;">Disconnect</button>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo" />
+    <h1>DRF Wallet</h1>
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="disconnectBtn" style="display:none;">Disconnect</button>
   </header>
 
   <main>
-    <section id="walletInfo" style="display: none;">
-      <h2>Your Wallet</h2>
-      <p>Address: <span id="walletAddress"></span> <a id="bscScanLink" target="_blank">🔗</a></p>
-      <p>Network: <span id="networkName"></span></p>
+    <section id="walletInfo" class="card hidden">
+      <h2>Wallet Info</h2>
+      <p><strong>Address:</strong> <span id="walletAddress"></span> <button id="copyAddress">📋</button></p>
+      <a href="#" id="bscScanLink" target="_blank">View on BscScan</a>
+    </section>
 
-      <h3>Token Balances</h3>
+    <section class="card">
+      <h2>Balances</h2>
       <ul>
-        <li>DRF: <span id="drfBalance">0</span></li>
-        <li>USDT: <span id="usdtBalance">0</span></li>
-        <li>USDC: <span id="usdcBalance">0</span></li>
+        <li><strong>DRF:</strong> <span id="drfBalance">0</span></li>
+        <li><strong>USDC:</strong> <span id="usdcBalance">0</span></li>
+        <li><strong>USDT:</strong> <span id="usdtBalance">0</span></li>
       </ul>
+    </section>
 
-      <div id="receiveSection">
-        <h3>Receive Tokens</h3>
-        <select id="tokenSelect">
-          <option value="DRF">DRF</option>
-          <option value="USDT">USDT</option>
-          <option value="USDC">USDC</option>
-        </select>
-        <div id="qrContainer">
-          <canvas id="qrCode"></canvas>
-          <p id="qrAddress"></p>
-        </div>
+    <section class="card">
+      <h2>Receive</h2>
+      <select id="tokenSelector">
+        <option value="DRF">DRF</option>
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select>
+      <div id="qrWrapper">
+        <canvas id="qrCanvas"></canvas>
+        <p id="qrWalletAddress"></p>
       </div>
+    </section>
 
-      <div id="transactionHistory">
-        <h3>Transaction History (Last 20)</h3>
-        <ul id="txList"></ul>
-      </div>
+    <section class="card">
+      <h2>Send</h2>
+      <label for="sendToken">Token:</label>
+      <select id="sendToken">
+        <option value="DRF">DRF</option>
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select><br />
+      <label for="recipient">Recipient:</label>
+      <input type="text" id="recipient" placeholder="0x..." /><br />
+      <label for="amount">Amount:</label>
+      <input type="number" id="amount" /><br />
+      <button id="sendBtn">Send with 5% Fee</button>
+    </section>
+
+    <section class="card">
+      <h2>Last 20 Transactions</h2>
+      <ul id="txHistory"></ul>
     </section>
   </main>
 
-  <script type="module" src="script.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/web3modal"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
