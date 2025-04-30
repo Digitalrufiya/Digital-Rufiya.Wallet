@@ -4,91 +4,89 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Wallet</title>
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.12/dist/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 </head>
 <body>
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo">
     <h1>DRF Wallet</h1>
     <button id="connectBtn">Connect Wallet</button>
-    <button id="disconnectBtn" style="display: none;">Disconnect</button>
+    <p id="walletAddress">Not Connected</p>
   </header>
 
-  <main>
-    <section id="walletInfo" class="card hidden">
-      <h2>Wallet Info</h2>
-      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
-      <p><strong>Network:</strong> <span id="networkName"></span></p>
-    </section>
+  <section id="balances">
+    <h2>Token Balances</h2>
+    <ul>
+      <li><strong>DRF:</strong> <span id="balance-DRF">-</span></li>
+      <li><strong>USDC:</strong> <span id="balance-USDC">-</span></li>
+      <li><strong>USDT:</strong> <span id="balance-USDT">-</span></li>
+    </ul>
+  </section>
 
-    <section class="card">
-      <h2>Token Balances</h2>
-      <ul id="balances">
-        <li>DRF: <span id="drfBalance">0</span></li>
-        <li>USDC: <span id="usdcBalance">0</span></li>
-        <li>USDT: <span id="usdtBalance">0</span></li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>Receive</h2>
-      <select id="receiveToken">
+  <section id="receive">
+    <h2>Receive Tokens</h2>
+    <label>Select Token:
+      <select id="tokenSelect">
         <option value="DRF">DRF</option>
         <option value="USDC">USDC</option>
         <option value="USDT">USDT</option>
       </select>
-      <div id="qrCode"></div>
-      <p><strong>Address:</strong> <span id="receiveAddress"></span></p>
-      <button id="copyAddressBtn">Copy Address</button>
-      <a id="bscScanLink" href="#" target="_blank">View on BscScan</a>
-    </section>
+    </label>
+    <div id="qrCode"></div>
+    <p><strong>Address:</strong> <span id="receiveAddress">-</span></p>
+    <p><a href="#" id="scanLink" target="_blank">View on BscScan</a></p>
+  </section>
 
-    <section class="card">
-      <h2>Send</h2>
+  <section id="send">
+    <h2>Send Tokens</h2>
+    <label>Token:
       <select id="sendToken">
         <option value="DRF">DRF</option>
         <option value="USDC">USDC</option>
         <option value="USDT">USDT</option>
       </select>
-      <input type="text" id="sendTo" placeholder="Recipient address" />
-      <input type="number" id="sendAmount" placeholder="Amount" />
-      <button id="sendBtn">Send</button>
-      <p class="info">5% DRF fee is applied to each transaction.</p>
-    </section>
+    </label>
+    <label>To Address:
+      <input type="text" id="sendTo" placeholder="0x..." />
+    </label>
+    <label>Amount:
+      <input type="number" id="sendAmount" step="0.01" />
+    </label>
+    <p><small>* 5% fee will be charged in DRF</small></p>
+    <button id="sendBtn">Send</button>
+  </section>
 
-    <section class="card">
-      <h2>Swap Tokens</h2>
-      <select id="swapFrom">
-        <option value="DRF">DRF</option>
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
+  <section id="swap">
+    <h2>Swap Tokens (Manual UI)</h2>
+    <p>Manual UI only — logic ready for PancakeSwap Router</p>
+    <label>From:
+      <select>
+        <option>DRF</option>
+        <option>USDC</option>
+        <option>USDT</option>
       </select>
-      <select id="swapTo">
-        <option value="DRF">DRF</option>
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
+    </label>
+    <label>To:
+      <select>
+        <option>DRF</option>
+        <option>USDC</option>
+        <option>USDT</option>
       </select>
-      <input type="number" id="swapAmount" placeholder="Amount to swap" />
-      <button id="swapBtn">Swap</button>
-      <p class="info">Swaps are powered by PancakeSwap. 5% DRF fee applies.</p>
-    </section>
+    </label>
+    <label>Amount:
+      <input type="number" step="0.01"/>
+    </label>
+    <p><small>* 5% DRF fee will be deducted</small></p>
+    <button disabled>Swap (Coming Soon)</button>
+  </section>
 
-    <section class="card">
-      <h2>Transaction History</h2>
-      <ul id="txnHistory">
-        <li>Loading...</li>
-      </ul>
-    </section>
-  </main>
+  <section id="history">
+    <h2>Last 20 Transactions</h2>
+    <ul id="txList">
+      <li>Loading...</li>
+    </ul>
+  </section>
 
-  <footer>
-    <p>&copy; 2025 DRF Wallet — Built on BSC</p>
-  </footer>
-
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
