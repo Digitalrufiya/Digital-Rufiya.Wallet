@@ -2,58 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet DApp</title>
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Web3 Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3modal"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo">
-    <button id="connectButton">Connect Wallet</button>
+    <div class="header-container">
+      <img src="logo.png" alt="DRF Wallet Logo" class="logo" />
+      <button id="connectWalletBtn" class="connect-button">Connect Wallet</button>
+    </div>
   </header>
 
-  <main>
-    <section id="walletInfo" class="hidden">
-      <h2>Your Wallet</h2>
-      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
-      <p><strong>Network:</strong> <span id="networkStatus"></span></p>
-
-      <h3>Token Balances</h3>
+  <main class="main-container">
+    <section class="balances">
+      <h2>Your Token Balances</h2>
       <ul>
         <li>DRF: <span id="drfBalance">0</span></li>
         <li>USDC: <span id="usdcBalance">0</span></li>
         <li>USDT: <span id="usdtBalance">0</span></li>
       </ul>
+    </section>
 
-      <div class="qr-section">
-        <h3>Receive Tokens</h3>
-        <select id="tokenSelect">
-          <option value="DRF">DRF</option>
-          <option value="USDC">USDC</option>
-          <option value="USDT">USDT</option>
-        </select>
-        <canvas id="qrCode"></canvas>
-        <p id="displayAddress"></p>
-        <button onclick="copyAddress()">Copy</button>
-        <a href="#" target="_blank" id="bscScanLink">View on BscScan</a>
+    <section class="receive">
+      <h2>Receive Tokens</h2>
+      <div class="token-receive" id="receiveContainer">
+        <!-- QR and copy buttons inserted dynamically -->
       </div>
+    </section>
 
-      <div class="send-section">
-        <h3>Send Tokens</h3>
+    <section class="send">
+      <h2>Send Tokens</h2>
+      <form id="sendForm">
         <select id="sendToken">
           <option value="DRF">DRF</option>
           <option value="USDC">USDC</option>
           <option value="USDT">USDT</option>
         </select>
-        <input type="text" id="recipient" placeholder="Recipient address">
-        <input type="number" id="amount" placeholder="Amount">
-        <button onclick="sendToken()">Send</button>
-        <p id="sendStatus"></p>
-      </div>
+        <input type="text" id="recipient" placeholder="Recipient address" required />
+        <input type="number" id="amount" placeholder="Amount" required />
+        <button type="submit">Send</button>
+      </form>
+    </section>
 
-      <div class="swap-section">
-        <h3>Swap Tokens (UI Only)</h3>
+    <section class="swap">
+      <h2>Swap Tokens</h2>
+      <form id="swapForm">
         <select id="swapFrom">
           <option value="DRF">DRF</option>
           <option value="USDC">USDC</option>
@@ -64,22 +63,22 @@
           <option value="USDC">USDC</option>
           <option value="USDT">USDT</option>
         </select>
-        <input type="number" id="swapAmount" placeholder="Amount to swap">
-        <button onclick="performSwap()">Swap</button>
-        <p>5% DRF fee applies.</p>
-      </div>
+        <input type="number" id="swapAmount" placeholder="Amount" required />
+        <button type="submit">Swap</button>
+      </form>
+      <p class="fee-info">Note: 5% fee in DRF will be applied to all swaps</p>
+    </section>
 
-      <div class="history-section">
-        <h3>Transaction History (Last 20)</h3>
-        <ul id="txHistory"></ul>
-      </div>
+    <section class="history">
+      <h2>Transaction History</h2>
+      <ul id="transactionHistory">
+        <!-- Filled by script.js -->
+      </ul>
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/web3modal"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script src="script.js"></script>
+  <footer>
+    <p>&copy; 2025 DRF Wallet. Powered by BSC & Web3.</p>
+  </footer>
 </body>
 </html>
