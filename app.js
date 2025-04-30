@@ -7,6 +7,10 @@ async function connectWallet() {
       const wallet = accounts[0];
       document.getElementById('connectedWallet').innerText = `Connected: ${wallet}`;
       document.getElementById('walletAddress').value = wallet;
+
+      // Automatically fetch data after connection
+      fetchWalletData();
+
     } catch (error) {
       alert("Wallet connection failed.");
       console.error(error);
@@ -16,15 +20,6 @@ async function connectWallet() {
   }
 }
 
-async function fetchWalletData() {
-  const address = document.getElementById("walletAddress").value.trim();
-  if (!address) return alert("Please enter or connect a wallet address");
-
-  document.getElementById("walletInfo").style.display = "block";
-  document.getElementById("bnbBalance").innerText = "Loading...";
-  document.getElementById("tokenTable").innerHTML = "";
-
-  try {
     // Get BNB balance
     const bnbUrl = `https://api.bscscan.com/api?module=account&action=balance&address=${address}&apikey=${API_KEY}`;
     const bnbRes = await fetch(bnbUrl);
