@@ -1,5 +1,4 @@
 
-
 const ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
 let signer;
 let userAddress;
@@ -33,7 +32,6 @@ async function connectWallet() {
     userAddress = await signer.getAddress();
     localStorage.setItem('connectedWallet', userAddress);
     document.getElementById('wallet-display').textContent = userAddress;
-    loadBalances();
   } catch (err) {
     console.error("Wallet connect failed", err);
   }
@@ -76,8 +74,10 @@ async function login() {
   }
 }
 
-async function registerUser(email, password) {
-  email = email.trim().toLowerCase();
+async function handleRegister(event) {
+  event.preventDefault();
+  const email = document.getElementById('registerEmail').value.trim().toLowerCase();
+  const password = document.getElementById('registerPassword').value;
   if (users.find(u => u.email === email)) {
     alert("Email already registered!");
     return;
@@ -85,7 +85,7 @@ async function registerUser(email, password) {
   const hashedPass = await hashSHA256(email + password);
   users.push({ email, passwordHash: hashedPass });
   localStorage.setItem('registeredUsers', JSON.stringify(users));
-  alert("Registration successful. You can now log in.");
+  alert("Registration successful! You can now login.");
   window.location.href = "index.html";
 }
 
@@ -96,25 +96,7 @@ function logout() {
   window.location.href = 'index.html';
 }
 
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('connectedWallet');
-  if (saved && document.getElementById('wallet-display'))
-    document.getElementById('wallet-display').textContent = saved;
-});
-
-if (window.ethereum) {
-  window.ethereum.on('accountsChanged', (accounts) => {
-    if (accounts.length > 0) {
-      localStorage.setItem('connectedWallet', accounts[0]);
-      document.getElementById('wallet-display').textContent = accounts[0];
-    } else {
-      localStorage.removeItem('connectedWallet');
-      document.getElementById('wallet-display').textContent = 'Not connected';
-    }
-  });
-}
-
 window.connectWallet = connectWallet;
 window.login = login;
-window.registerUser = registerUser;
+window.handleRegister = handleRegister;
 window.logout = logout;
