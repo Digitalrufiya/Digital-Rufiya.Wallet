@@ -1,35 +1,17 @@
 // app.js
+
 let web3;
-let web3Modal;
 let provider;
 let selectedAccount;
-
-const DRF_TOKEN_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-const DRF_TOKEN_ABI = [
-  {"constant":true,"inputs":[{"name":"account","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},
-  {"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[],"type":"function"}
+let qrCode;
+const DRF_CONTRACT = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+const DRF_ABI = [
+  { "constant": true, "inputs": [{ "name": "owner", "type": "address" }], "name": "balanceOf", "outputs": [{ "name": "balance", "type": "uint256" }], "type": "function" }
 ];
 
-async function init() {
-  const providerOptions = {
-    walletconnect: {
-      package: window.WalletConnectProvider.default,
-      options: {
-        rpc: {
-          56: "https://bsc-dataseed.binance.org/"
-        },
-        chainId: 56
-      }
-    }
-  };
-
-  web3Modal = new window.Web3Modal.default({
-    cacheProvider: false,
-    providerOptions
-  });
-
-  document.getElementById("connectButton").addEventListener("click", connectWallet);
-}
+const web3Modal = new Web3Modal.default({
+  cacheProvider: true
+});
 
 async function connectWallet() {
   provider = await web3Modal.connect();
@@ -37,83 +19,92 @@ async function connectWallet() {
 
   const accounts = await web3.eth.getAccounts();
   selectedAccount = accounts[0];
-  document.getElementById("walletInfo").style.display = "block";
-  document.getElementById("walletAddress").textContent = selectedAccount;
+  document.getElementById("userAddress").textContent = selectedAccount;
 
-  await checkNetwork();
-  await showBalances();
-  await loadTxHistory();
+  provider.on("accountsChanged", connectWallet);
 
-  provider.on("accountsChanged", () => window.location.reload());
-  provider.on("chainChanged", () => window.location.reload());
+  await switchToBSC();
+  showDisconnectButton();
+  await loadBalances();
+  generateQRCode(selectedAccount);
+  trackGas();
 }
 
-async function checkNetwork() {
-  const chainId = await web3.eth.getChainId();
-  if (chainId !== 56) {
-    alert("Please connect to Binance Smart Chain Mainnet.");
-  }
+function showDisconnectButton() {
+  document.getElementById("connectButton").style.display = "none";
+  document.getElementById("disconnectButton").style.display = "inline-block";
 }
 
-async function showBalances() {
-  const bnb = await web3.eth.getBalance(selectedAccount);
-  document.getElementById("bnbBalance").textContent = web3.utils.fromWei(bnb, 'ether');
-
-  const drfContract = new web3.eth.Contract(DRF_TOKEN_ABI, DRF_TOKEN_ADDRESS);
-  const drf = await drfContract.methods.balanceOf(selectedAccount).call();
-  document.getElementById("drfBalance").textContent = web3.utils.fromWei(drf, 'ether');
+function disconnectWallet() {
+  web3Modal.clearCachedProvider();
+  window.location.reload();
 }
 
-async function sendTokens() {
-  const to = document.getElementById("sendTo").value;
-  const amount = web3.utils.toWei(document.getElementById("sendAmount").value, 'ether');
-  const token = document.getElementById("sendToken").value;
-
-  if (token === "BNB") {
-    await web3.eth.sendTransaction({ from: selectedAccount, to, value: amount });
-  } else {
-    const contract = new web3.eth.Contract(DRF_TOKEN_ABI, DRF_TOKEN_ADDRESS);
-    await contract.methods.transfer(to, amount).send({ from: selectedAccount });
-  }
-  alert("Transaction sent!");
-}
-
-async function addDRFToken() {
+async function switchToBSC() {
+  const bscParams = {
+    chainId: "0x38",
+    chainName: "BSC Mainnet",
+    nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+    rpcUrls: ["https://bsc-dataseed.binance.org/"],
+    blockExplorerUrls: ["https://bscscan.com"]
+  };
   try {
-    await window.ethereum.request({
-      method: 'wallet_watchAsset',
-      params: {
-        type: 'ERC20',
-        options: {
-          address: DRF_TOKEN_ADDRESS,
-          symbol: 'DRF',
-          decimals: 18,
-          image: 'https://digitalrufiya.github.io/Digital-Rufiya.Wallet/logo.png',
-        },
-      },
-    });
-  } catch (e) {
-    console.error(e);
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x38" }] });
+  } catch (err) {
+    if (err.code === 4902) {
+      await window.ethereum.request({ method: "wallet_addEthereumChain", params: [bscParams] });
+    }
   }
 }
 
-async function loadTxHistory() {
-  const API_KEY = "YourBscScanAPIKey"; // Replace this with your actual key
-  const url = `https://api.bscscan.com/api?module=account&action=txlist&address=${selectedAccount}&sort=desc&apikey=${API_KEY}`;
-  const res = await fetch(url);
-  const data = await res.json();
+async function loadBalances() {
+  const bnb = await web3.eth.getBalance(selectedAccount);
+  document.getElementById("bnbBalance").textContent = web3.utils.fromWei(bnb, "ether");
 
-  const txs = data.result.slice(0, 5);
-  const container = document.getElementById("txHistory");
-  container.innerHTML = "";
-
-  txs.forEach(tx => {
-    const el = document.createElement("div");
-    el.innerHTML = `
-      <p><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0, 15)}...</a> | ${web3.utils.fromWei(tx.value)} BNB</p>
-    `;
-    container.appendChild(el);
-  });
+  const drf = new web3.eth.Contract(DRF_ABI, DRF_CONTRACT);
+  const drfBal = await drf.methods.balanceOf(selectedAccount).call();
+  document.getElementById("drfBalance").textContent = web3.utils.fromWei(drfBal, "ether");
 }
 
-init();
+async function trackGas() {
+  const price = await web3.eth.getGasPrice();
+  document.getElementById("gasPrice").textContent = web3.utils.fromWei(price, 'gwei') + " Gwei";
+}
+
+function generateQRCode(address) {
+  qrCode = new QRCodeStyling({
+    width: 200,
+    height: 200,
+    data: address,
+    image: "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg",
+    dotsOptions: { color: "#000", type: "rounded" },
+    backgroundOptions: { color: "#fff" }
+  });
+  qrCode.append(document.getElementById("qrCode"));
+}
+
+function downloadQRCode() {
+  qrCode.download({ name: "drf-wallet", extension: "png" });
+}
+
+function handleSwap() {
+  const amount = document.getElementById("swapAmount").value;
+  const direction = document.getElementById("swapDirection").value;
+  alert("Swap initiated (UI only): " + direction + " - Amount: " + amount);
+  // Swap contract integration goes here
+}
+
+function downloadCSV() {
+  const txList = document.getElementById("txList").innerText.split("\n");
+  const blob = new Blob(["Transactions\n" + txList.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "transactions.csv";
+  a.click();
+}
+
+document.getElementById("connectButton").onclick = connectWallet;
+document.getElementById("disconnectButton").onclick = disconnectWallet;
+
+if (web3Modal.cachedProvider) connectWallet();
