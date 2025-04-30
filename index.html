@@ -2,78 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226">
-  <script defer src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code.min.js"></script>
-  <script defer src="script.js"></script>
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
 </head>
-<body class="digital-wallet">
-  <header class="wallet-header">
-    <div class="logo-area">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo">
-      <h1>DRF Wallet</h1>
-    </div>
-    <div class="wallet-actions">
-      <button id="connectBtn">Connect Wallet</button>
-      <button id="disconnectBtn" class="hidden">Disconnect</button>
-    </div>
+<body>
+  <header>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo" />
+    <button id="connectWallet">Connect Wallet</button>
+    <button id="disconnectWallet" style="display:none;">Disconnect</button>
   </header>
 
-  <main class="wallet-main">
+  <main>
     <section class="wallet-info">
-      <h2>Connected Wallet:</h2>
+      <h2>Your Wallet</h2>
       <p id="walletAddress">Not connected</p>
-      <p id="networkStatus"></p>
-    </section>
-
-    <section class="token-section">
-      <div class="token-card" id="drf">
-        <h3>DRF</h3>
-        <p>Balance: <span id="drfBalance">--</span></p>
-        <div class="qr-container" id="qr-drf"></div>
-        <p id="drfAddress" class="wallet-display"></p>
-      </div>
-      <div class="token-card" id="usdt">
-        <h3>USDT</h3>
-        <p>Balance: <span id="usdtBalance">--</span></p>
-        <div class="qr-container" id="qr-usdt"></div>
-        <p id="usdtAddress" class="wallet-display"></p>
-      </div>
-      <div class="token-card" id="usdc">
-        <h3>USDC</h3>
-        <p>Balance: <span id="usdcBalance">--</span></p>
-        <div class="qr-container" id="qr-usdc"></div>
-        <p id="usdcAddress" class="wallet-display"></p>
+      <p id="networkStatus">Network: Not connected</p>
+      <div class="balances">
+        <p>DRF: <span id="drfBalance">-</span></p>
+        <p>USDC: <span id="usdcBalance">-</span></p>
+        <p>USDT: <span id="usdtBalance">-</span></p>
       </div>
     </section>
 
-    <section class="wallet-actions-panel">
-      <button id="sendTokenBtn">Send</button>
-      <button id="swapTokenBtn">Swap</button>
+    <section class="actions">
+      <h2>Receive</h2>
+      <select id="receiveToken">
+        <option value="DRF">DRF</option>
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select>
+      <div id="qrDisplay"></div>
+      <p id="displayedAddress"></p>
     </section>
 
-    <section class="transaction-history">
-      <h3>Recent Transactions (Last 20)</h3>
-      <div id="transactionList"></div>
+    <section class="actions">
+      <h2>Send</h2>
+      <select id="sendToken">
+        <option value="DRF">DRF</option>
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select>
+      <input type="text" id="sendTo" placeholder="Recipient Address" />
+      <input type="number" id="sendAmount" placeholder="Amount" />
+      <button id="sendButton">Send (5% fee)</button>
+    </section>
+
+    <section class="transactions">
+      <h2>Recent Transactions</h2>
+      <ul id="transactionList"></ul>
     </section>
   </main>
 
-  <div id="modal" class="modal hidden">
-    <div class="modal-content">
-      <span class="close-button">&times;</span>
-      <h2>Transaction Summary</h2>
-      <p id="modalToken"></p>
-      <p id="modalAmount"></p>
-      <p>5% Fee (DRF): <span id="modalFee"></span></p>
-      <button id="confirmSend">Confirm</button>
-    </div>
-  </div>
-
-  <footer class="wallet-footer">
-    <p>&copy; 2025 DRF Wallet. Powered by BSC.</p>
-  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
