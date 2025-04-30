@@ -1,225 +1,69 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Stake DRF Tokens</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f4f6f9;
-    }
-    h2 {
-      color: #333;
-    }
-    input, button {
-      padding: 10px;
-      width: 100%;
-      margin-top: 10px;
-      box-sizing: border-box;
-    }
-    #responseMsg {
-      margin-top: 20px;
-      font-weight: bold;
-      color: green;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f9; }
+    input, button { padding: 10px; width: 100%; margin-top: 10px; }
+    #responseMsg { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
   <h2>Stake DRF Tokens</h2>
-
   <form id="stakingForm">
-    <label>DRF Wallet Address:</label>
-    <input type="text" id="wallet" name="wallet" required>
-
-    <label>Amount to Stake (USDC):</label>
-    <input type="number" id="amount" name="amount" min="25" required>
-
+    <input type="text" id="walletAddress" placeholder="DRF Wallet Address" required>
+    <input type="number" id="stakeAmount" placeholder="Amount to Stake (USDC)" min="25" required>
+    <input type="file" id="fileUpload">
     <button type="submit">Submit Staking</button>
   </form>
-
   <p id="responseMsg"></p>
 
   <script>
-    document.getElementById("stakingForm").addEventListener("submit", function (e) {
+    document.getElementById('stakingForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      const wallet = document.getElementById('walletAddress').value.trim();
+      const amount = document.getElementById('stakeAmount').value.trim();
+      const fileInput = document.getElementById('fileUpload');
+      const file = fileInput.files[0];
 
-      const wallet = document.getElementById("wallet").value.trim();
-      const amount = document.getElementById("amount").value;
-      const date = new Date().toLocaleString();
+      const data = {
+        stakingDetails: { walletAddress: wallet, stakeAmount: amount }
+      };
 
-      const scriptURL = "https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec";
-
-      fetch(scriptURL, {
-        method: "POST",
-        body: new URLSearchParams({
-          wallet: wallet,
-          amount: amount,
-          date: date
-        })
-      })
-      .then(response => response.text())
-      .then(result => {
-        document.getElementById("responseMsg").innerText = "Staking request sent successfully!";
-        document.getElementById("stakingForm").reset();
-      })
-      .catch(error => {
-        document.getElementById("responseMsg").innerText = "Error submitting request.";
-        console.error("Error!", error.message);
-      });
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+          const base64 = e.target.result.split(',')[1];
+          data.file = {
+            fileName: file.name,
+            fileBase64: base64,
+            mimeType: file.type
+          };
+          await sendToScript(data);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        await sendToScript(data);
+      }
     });
+
+    async function sendToScript(payload) {
+      const endpoint = "https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec";
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" }
+        });
+        const result = await response.text();
+        document.getElementById('responseMsg').innerText = "✅ Submitted: " + result;
+        document.getElementById('stakingForm').reset();
+      } catch (err) {
+        document.getElementById('responseMsg').innerText = "❌ Submission failed.";
+        console.error(err);
+      }
+    }
   </script>
 </body>
 </html>
-
-
-<!-- staking.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Stake DRF</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h2>Stake DRF Tokens</h2>
-  <form id="stakingForm">
-    <label>DRF Wallet Address:</label>
-    <input type="text" id="walletAddress" required><br>
-
-    <label>Amount to Stake:</label>
-    <input type="number" id="stakeAmount" required><br>
-
-    <label>Upload Document (optional):</label>
-    <input type="file" id="fileUpload"><br><br>
-
-    <button type="submit">Submit Staking</button>
-  </form>
-
-  <script>
-    document.getElementById('stakingForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      uploadToDrive();
-    });
-
-    async function uploadToDrive() {
-      const fileInput = document.getElementById('fileUpload');
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("No file uploaded. Proceeding without file.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        const base64 = e.target.result.split(',')[1];
-        const uploadData = {
-          contents: {
-            fileName: file.name,
-            fileBase64: base64,
-            mimeType: file.type
-          }
-        };
-
-        try {
-          const response = await fetch("https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec", {
-            method: "POST",
-            body: JSON.stringify(uploadData),
-            headers: {
-              "Content-Type": "application/json"
-            }
-          });
-
-          const result = await response.text();
-          alert("Upload successful: " + result);
-        } catch (err) {
-          console.error(err);
-          alert("Upload failed.");
-        }
-      };
-    
-  reader.readAsDataURL(file);
-    }
-  </script>
-</body>
-</html>
-
-<script>
-document.getElementById('stakingForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const wallet = document.getElementById('walletAddress').value.trim();
-  const amount = document.getElementById('stakeAmount').value.trim();
-  const fileInput = document.getElementById('fileUpload');
-  const file = fileInput.files[0];
-
-  const uploadData = {
-    stakingDetails: {
-      walletAddress: wallet,
-      stakeAmount: amount
-    }
-  };
-
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = async function (e) {
-      const base64 = e.target.result.split(',')[1];
-      uploadData.file = {
-        fileName: file.name,
-        fileBase64: base64,
-        mimeType: file.type
-      };
-
-      await sendToDrive(uploadData);
-    };
-    reader.readAsDataURL(file);
-  } else {
-    await sendToDrive(uploadData);
-  }
-});
-
-async function sendToDrive(data) {
-  try {
-    const response = await fetch("https://script.google.com/macros/s/AKfycby9XhmGdvUimYCNDeBUC3SO7_WleuoWS03t-CdGllWvkE4Fyje2MzU-RjHYXwQV9cJJ/exec", {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
-
-    const result = await response.text();
-    alert("Submission successful: " + result);
-  } catch (err) {
-    console.error(err);
-    alert("Submission failed.");
-  }
-}
-</script>
-
-function doPost(e) {
-  var wallet = e.parameter.wallet;
-  var amount = e.parameter.amount;
-  var date = e.parameter.date;
-
-  // Format the message
-  var message = "New DRF Staking Request:\n\n" +
-                "Wallet: " + wallet + "\n" +
-                "Amount: " + amount + " USDC\n" +
-                "Date: " + date;
-
-  // 1. Send email to admin
-  MailApp.sendEmail({
-    to: "youradmin@email.com", // <-- REPLACE with your email
-    subject: "New DRF Staking Request",
-    body: message
-  });
-
-  // 2. Save to Google Drive (optional, creates a text file)
-  var folder = DriveApp.getRootFolder(); // Or use DriveApp.getFolderById("your-folder-id")
-  var filename = "staking_" + wallet + "_" + new Date().getTime() + ".txt";
-  folder.createFile(filename, message);
-
-  return ContentService.createTextOutput("Staking request received.");
-}
-
-
