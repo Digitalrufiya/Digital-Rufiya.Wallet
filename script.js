@@ -1,73 +1,58 @@
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import Web3Modal from "web3modal";
 
-const BSC_PARAMS = {
-  chainId: "0x38",
-  chainName: "Binance Smart Chain",
-  nativeCurrency: {
-    name: "BNB",
-    symbol: "BNB",
-    decimals: 18
-  },
-  rpcUrls: ["https://bsc-dataseed.binance.org/"],
-  blockExplorerUrls: ["https://bscscan.com"]
-};
-
 const DRF_ADDRESS = "0xYourDRFTokenAddress";
 const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
 const USDT_ADDRESS = "0x55d398326f99059ff775485246999027b3197955";
 
+const BSC_PARAMS = {
+  chainId: "0x38",
+  chainName: "Binance Smart Chain",
+  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+  rpcUrls: ["https://bsc-dataseed.binance.org/"],
+  blockExplorerUrls: ["https://bscscan.com"]
+};
+
+let web3Modal, provider, signer, userAddress;
+const tokenContracts = {};
 const TOKEN_ABI = [
-  "function balanceOf(address owner) view returns (uint)",
-  "function transfer(address to, uint amount) returns (bool)",
-  "function decimals() view returns (uint8)"
+  "function balanceOf(address) view returns (uint)",
+  "function decimals() view returns (uint8)",
+  "function transfer(address, uint256) returns (bool)"
 ];
 
-let provider, web3Modal, signer, address, web3;
-
 async function init() {
-  const providerOptions = {
-    walletconnect: {
-      package: WalletConnectProvider,
-      options: {
-        rpc: {
-          56: "https://bsc-dataseed.binance.org/"
-        },
-        network: "binance"
+  web3Modal = new Web3Modal({
+    cacheProvider: true,
+    providerOptions: {
+      walletconnect: {
+        package: WalletConnectProvider,
+        options: { rpc: { 56: "https://bsc-dataseed.binance.org/" } }
       }
     }
-  };
-
-  web3Modal = new Web3Modal({
-    network: "binance",
-    cacheProvider: true,
-    providerOptions
   });
 
-  if (web3Modal.cachedProvider) {
-    connectWallet();
-  }
+  if (web3Modal.cachedProvider) await connectWallet();
 
-  document.getElementById("connectButton").addEventListener("click", connectWallet);
-  document.getElementById("sendBtn").addEventListener("click", sendToken);
-  document.getElementById("token").addEventListener("change", displayReceiveAddress);
-  document.getElementById("refreshHistory").addEventListener("click", getTransactionHistory);
+  document.getElementById("connectButton").onclick = connectWallet;
+  document.getElementById("sendBtn").onclick = sendToken;
+  document.getElementById("token").onchange = generateQRCode;
+  document.getElementById("refreshHistory").onclick = getTransactionHistory;
+  document.getElementById("swapBtn").onclick = simulateSwap;
 }
 
 async function connectWallet() {
   const instance = await web3Modal.connect();
   provider = new ethers.providers.Web3Provider(instance);
   signer = provider.getSigner();
-  address = await signer.getAddress();
+  userAddress = await signer.getAddress();
 
-  await checkNetwork();
-  document.getElementById("walletAddress").textContent = address;
-  displayReceiveAddress();
-  showBalances();
-  getTransactionHistory();
+  await switchToBSC();
+  initTokenContracts();
+  displayWalletInfo();
 }
 
-async function checkNetwork() {
+async function switchToBSC() {
   const network = await provider.getNetwork();
   if (network.chainId !== 56) {
     try {
@@ -76,102 +61,102 @@ async function checkNetwork() {
         params: [BSC_PARAMS]
       });
     } catch (e) {
-      alert("Please switch to Binance Smart Chain.");
+      alert("Please switch to BSC manually.");
     }
   }
 }
 
-async function showBalances() {
-  const tokens = {
-    DRF: new ethers.Contract(DRF_ADDRESS, TOKEN_ABI, provider),
-    USDC: new ethers.Contract(USDC_ADDRESS, TOKEN_ABI, provider),
-    USDT: new ethers.Contract(USDT_ADDRESS, TOKEN_ABI, provider)
-  };
+function initTokenContracts() {
+  tokenContracts["DRF"] = new ethers.Contract(DRF_ADDRESS, TOKEN_ABI, signer);
+  tokenContracts["USDC"] = new ethers.Contract(USDC_ADDRESS, TOKEN_ABI, signer);
+  tokenContracts["USDT"] = new ethers.Contract(USDT_ADDRESS, TOKEN_ABI, signer);
+}
 
-  for (const [symbol, contract] of Object.entries(tokens)) {
+async function displayWalletInfo() {
+  document.getElementById("walletAddress").textContent = userAddress;
+  generateQRCode();
+
+  for (const [symbol, contract] of Object.entries(tokenContracts)) {
     const decimals = await contract.decimals();
-    const balance = await contract.balanceOf(address);
+    const balance = await contract.balanceOf(userAddress);
     document.getElementById(`balance${symbol}`).textContent =
       `${ethers.utils.formatUnits(balance, decimals)} ${symbol}`;
   }
+
+  getTransactionHistory();
 }
 
-function displayReceiveAddress() {
+function generateQRCode() {
   const token = document.getElementById("token").value;
-  document.getElementById("displayAddress").textContent = address;
-  const qr = new QRCode(document.getElementById("qrCode"), {
-    text: `${address}-${token}`,
-    width: 150,
-    height: 150
-  });
-  document.getElementById("bscLink").href = `https://bscscan.com/address/${address}`;
+  const qrContainer = document.getElementById("qrCode");
+  qrContainer.innerHTML = "";
+  new QRCode(qrContainer, { text: userAddress, width: 150, height: 150 });
+  document.getElementById("displayAddress").textContent = userAddress;
+  document.getElementById("bscLink").href = `https://bscscan.com/address/${userAddress}`;
 }
 
 async function sendToken() {
   const token = document.getElementById("sendToken").value;
-  const to = document.getElementById("sendTo").value;
-  const amount = document.getElementById("sendAmount").value;
-  const contracts = {
-    DRF: DRF_ADDRESS,
-    USDC: USDC_ADDRESS,
-    USDT: USDT_ADDRESS
-  };
+  const to = document.getElementById("sendTo").value.trim();
+  const amount = document.getElementById("sendAmount").value.trim();
 
-  const tokenContract = new ethers.Contract(contracts[token], TOKEN_ABI, signer);
-  const decimals = await tokenContract.decimals();
-  let sendAmount = ethers.utils.parseUnits(amount, decimals);
+  if (!to || !amount) return showStatus("Fill all fields.", true);
 
-  if (token !== "DRF") {
-    // Deduct 5% DRF fee
-    const drfContract = new ethers.Contract(DRF_ADDRESS, TOKEN_ABI, signer);
-    const feeAmount = sendAmount.mul(5).div(100);
-    try {
-      const tx1 = await drfContract.transfer(DRF_ADDRESS, feeAmount);
-      await tx1.wait();
-    } catch (err) {
-      return showStatus("DRF fee transfer failed.", true);
-    }
-  }
+  const contract = tokenContracts[token];
+  const decimals = await contract.decimals();
+  const sendAmount = ethers.utils.parseUnits(amount, decimals);
 
   try {
-    const tx = await tokenContract.transfer(to, sendAmount);
+    if (token !== "DRF") {
+      const drfFee = sendAmount.mul(5).div(100);
+      const drf = tokenContracts["DRF"];
+      await (await drf.transfer(DRF_ADDRESS, drfFee)).wait();
+    }
+
+    const tx = await contract.transfer(to, sendAmount);
     await tx.wait();
     showStatus(`Sent ${amount} ${token} successfully.`);
-    showBalances();
+    displayWalletInfo();
   } catch (err) {
-    showStatus(`Transaction failed: ${err.message}`, true);
+    showStatus(`Error: ${err.message}`, true);
   }
 }
 
 function showStatus(message, error = false) {
   const el = document.getElementById("sendStatus");
   el.textContent = message;
-  el.style.color = error ? "red" : "lime";
+  el.style.color = error ? "red" : "limegreen";
 }
 
 async function getTransactionHistory() {
   const API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
-  const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
-
-  const res = await fetch(url);
+  const res = await fetch(`https://api.bscscan.com/api?module=account&action=tokentx&address=${userAddress}&sort=desc&apikey=${API_KEY}`);
   const data = await res.json();
   const list = data.result.slice(0, 20);
   const history = document.getElementById("historyList");
   history.innerHTML = "";
 
   list.forEach(tx => {
-    const token = tx.tokenSymbol;
+    const type = tx.from.toLowerCase() === userAddress.toLowerCase() ? "Sent" : "Received";
     const amount = ethers.utils.formatUnits(tx.value, tx.tokenDecimal);
-    const type = tx.from.toLowerCase() === address.toLowerCase() ? "Sent" : "Received";
     const time = new Date(tx.timeStamp * 1000).toLocaleString();
-    const link = `https://bscscan.com/tx/${tx.hash}`;
-
-    const item = document.createElement("li");
-    item.innerHTML = `
-      <strong>${type}</strong> ${amount} ${token} — ${time} 
-      [<a href="${link}" target="_blank">View</a>]`;
-    history.appendChild(item);
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${type}</strong> ${amount} ${tx.tokenSymbol} — ${time} 
+    <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">[BscScan]</a>`;
+    history.appendChild(li);
   });
+}
+
+function simulateSwap() {
+  const fromToken = document.getElementById("swapFrom").value;
+  const toToken = document.getElementById("swapTo").value;
+  const amount = document.getElementById("swapAmount").value;
+
+  const fee = amount * 0.05;
+  const netAmount = amount - fee;
+
+  document.getElementById("swapResult").innerText = 
+    `Swapping ${amount} ${fromToken} to ${netAmount.toFixed(4)} ${toToken} (5% DRF fee applied)`;
 }
 
 window.addEventListener("load", init);
