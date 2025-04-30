@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,108 +5,27 @@
   <title>DRF Wallet DApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #111;
-      color: #fff;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-      background-color: #000;
-    }
-    header img {
-      height: 60px;
-      border-radius: 50%;
-    }
-    #connectButton {
-      padding: 12px 24px;
-      background-color: #00cc66;
-      border: none;
-      border-radius: 10px;
-      font-weight: bold;
-      color: #fff;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    #connectButton:hover {
-      background-color: #00aa55;
-    }
-    main {
-      padding: 20px;
-    }
-    h2 {
-      margin-top: 0;
-    }
-    .balance {
-      font-size: 18px;
-      margin: 10px 0;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Ethers -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <!-- Toastify -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
   <header>
-    <img src="https://digitalrufiya.github.io/Digital-Rufiya.Wallet/logo.png" alt="DRF Logo">
-    <button id="connectButton" onclick="connectWallet()">Connect Wallet</button>
+    <img src="logo.png" alt="DRF Logo" class="logo" />
+    <button id="connectWallet" class="connect-button" onclick="connectWallet()">Connect Wallet</button>
   </header>
-
   <main>
     <h2>Your Balances</h2>
     <div class="balance">DRF: <span id="drfBalance">0</span></div>
     <div class="balance">USDC: <span id="usdcBalance">0</span></div>
     <div class="balance">USDT: <span id="usdtBalance">0</span></div>
   </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script>
-    const provider = window.ethereum ? new ethers.providers.Web3Provider(window.ethereum) : null;
-
-    const tokens = {
-      DRF: {
-        address: "0xYourDRFContractAddress",
-        decimals: 18
-      },
-      USDC: {
-        address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", // BSC USDC
-        decimals: 18
-      },
-      USDT: {
-        address: "0x55d398326f99059ff775485246999027b3197955", // BSC USDT
-        decimals: 18
-      }
-    };
-
-    async function connectWallet() {
-      if (!window.ethereum) {
-        alert("Please install MetaMask or a Web3 wallet.");
-        return;
-      }
-
-      try {
-        await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        document.getElementById("connectButton").innerText = address.slice(0, 6) + "..." + address.slice(-4);
-        fetchBalances(address);
-      } catch (err) {
-        console.error("Wallet connection failed", err);
-      }
-    }
-
-    async function fetchBalances(address) {
-      for (const [name, token] of Object.entries(tokens)) {
-        const contract = new ethers.Contract(token.address, [
-          "function balanceOf(address owner) view returns (uint256)"
-        ], provider);
-        const balance = await contract.balanceOf(address);
-        const formatted = ethers.utils.formatUnits(balance, token.decimals);
-        document.getElementById(name.toLowerCase() + "Balance").innerText = parseFloat(formatted).toFixed(4);
-      }
-    }
-  </script>
+  <footer>
+    <p>&copy; 2025 DRF Wallet. Powered by BSC &amp; Web3.</p>
+  </footer>
 </body>
 </html>
