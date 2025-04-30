@@ -6,64 +6,69 @@
   <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/web3modal@1.9.5/dist/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/web3modal"></script>
 </head>
 <body>
   <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo" />
-    <button id="connectBtn">Connect Wallet</button>
+    <img src="f86fff33-18b3-41ce-af4d-aea20dfc2c31.png" alt="DRF Logo" id="logo">
+    <button class="connect-button" id="connectButton">Connect Wallet</button>
   </header>
 
   <main>
-    <section id="balances">
+    <section class="balances">
       <h2>Your Balances</h2>
-      <div class="token" id="drfBalance">DRF: 0</div>
-      <div class="token" id="usdcBalance">USDC: 0</div>
-      <div class="token" id="usdtBalance">USDT: 0</div>
+      <p>DRF: <span id="drfBalance">0</span></p>
+      <p>USDC: <span id="usdcBalance">0</span></p>
+      <p>USDT: <span id="usdtBalance">0</span></p>
     </section>
 
-    <section id="receive">
+    <section class="receive">
       <h2>Receive</h2>
-      <div class="qr-wrapper" id="qrContainer"></div>
-      <input type="text" id="walletAddress" readonly />
-      <button onclick="copyAddress()">Copy</button>
-      <a id="bscLink" href="#" target="_blank">View on BscScan</a>
+      <div id="qrCodes"></div>
     </section>
 
-    <section id="send">
+    <section class="send">
       <h2>Send</h2>
-      <select id="sendToken">
-        <option value="DRF">DRF</option>
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
-      </select>
-      <input type="text" id="sendTo" placeholder="Recipient Address" />
-      <input type="number" id="sendAmount" placeholder="Amount" />
-      <button onclick="sendToken()">Send</button>
+      <form id="sendForm">
+        <label for="token">Token:</label>
+        <select id="token">
+          <option value="DRF">DRF</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
+        <label for="recipient">Recipient Address:</label>
+        <input type="text" id="recipient" required />
+        <label for="amount">Amount:</label>
+        <input type="number" id="amount" required />
+        <button type="submit">Send</button>
+      </form>
+      <div id="sendStatus"></div>
     </section>
 
-    <section id="swap">
-      <h2>Swap</h2>
-      <p><em>Manual UI (5% DRF fee logic applies)</em></p>
-      <select id="swapFrom">
-        <option value="DRF">DRF</option>
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
-      </select>
-      <select id="swapTo">
-        <option value="USDC">USDC</option>
-        <option value="USDT">USDT</option>
-        <option value="DRF">DRF</option>
-      </select>
-      <input type="number" id="swapAmount" placeholder="Amount to swap" />
-      <button onclick="swapTokens()">Swap</button>
+    <section class="swap">
+      <h2>Swap Tokens</h2>
+      <p>Manual UI (5% DRF fee applied visually only)</p>
+      <form id="swapForm">
+        <label for="fromToken">From:</label>
+        <select id="fromToken">
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
+        <label for="toToken">To:</label>
+        <select id="toToken">
+          <option value="DRF">DRF</option>
+        </select>
+        <label for="swapAmount">Amount:</label>
+        <input type="number" id="swapAmount" required />
+        <button type="submit">Swap</button>
+      </form>
+      <div id="swapStatus"></div>
     </section>
 
-    <section id="transactions">
-      <h2>Last 20 Transactions</h2>
-      <div id="txList"></div>
+    <section class="history">
+      <h2>Transaction History (Last 20)</h2>
+      <ul id="transactionList"></ul>
     </section>
   </main>
 
