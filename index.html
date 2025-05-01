@@ -1,79 +1,64 @@
-// app.js – DRF Wallet Final Integrated Version
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Web3 Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
+  <meta name="theme-color" content="#00b894" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo" />
+    <h1>DRF Web3 Wallet</h1>
 
-const DRF = {
-  address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
-  symbol: "DRF"
-};
-const USDC = {
-  address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-  symbol: "USDC"
-};
-const USDT = {
-  address: "0x55d398326f99059ff775485246999027b3197955",
-  symbol: "USDT"
-};
+    <button id="connectButton">Connect Wallet</button>
+    <p id="walletStatus">Not Connected</p>
 
-const TOKEN_ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function decimals() view returns (uint8)"
-];
+    <section id="walletInfo" style="display: none;">
+      <h2>Your Balances</h2>
+      <ul class="balances">
+        <li>DRF: <span id="drfBalance">0</span></li>
+        <li>USDC: <span id="usdcBalance">0</span></li>
+        <li>USDT: <span id="usdtBalance">0</span></li>
+      </ul>
 
-let provider, signer, userAddress;
+      <div class="qr-section">
+        <h3>Receive</h3>
 
-async function connectWallet() {
-  try {
-    if (!window.ethereum) throw new Error("Web3 wallet not found.");
+        <label for="tokenSelect">Select Token:</label>
+        <select id="tokenSelect">
+          <option value="DRF">DRF</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
 
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    userAddress = await signer.getAddress();
+        <div id="qrcode"></div>
+        <p class="address" id="walletAddress">Your wallet address will appear here</p>
+        <button onclick="copyAddressToClipboard()">Copy Address</button>
+        <a id="bscScanLink" href="#" target="_blank">View on BscScan</a>
 
-    document.getElementById("walletStatus").innerText = "Connected";
-    document.getElementById("walletAddress").innerText = userAddress;
-    document.getElementById("walletInfo").style.display = "block";
-    document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
+        <p id="tokenContract"></p>
+        <button id="addToMetaMask">Add Token to MetaMask</button>
+      </div>
 
-    generateQRCode(userAddress);
-    loadBalances();
-  } catch (err) {
-    alert("Wallet connection failed: " + err.message);
-  }
-}
+      <div class="actions">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="send.html">Send</a>
+        <a href="swap.html">Swap</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="tokensale.html">Token Sale</a>
+      </div>
+    </section>
 
-async function loadBalances() {
-  await loadTokenBalance(DRF, "drfBalance");
-  await loadTokenBalance(USDC, "usdcBalance");
-  await loadTokenBalance(USDT, "usdtBalance");
-}
-
-async function loadTokenBalance(token, elementId) {
-  const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
-  const decimals = await contract.decimals();
-  const balance = await contract.balanceOf(userAddress);
-  const formatted = ethers.utils.formatUnits(balance, decimals);
-  document.getElementById(elementId).innerText = parseFloat(formatted).toFixed(4);
-}
-
-function generateQRCode(address) {
-  const qrContainer = document.getElementById("qrcode");
-  qrContainer.innerHTML = "";
-  QRCode.toCanvas(address, { width: 180 }, (err, canvas) => {
-    if (!err) qrContainer.appendChild(canvas);
-  });
-}
-
-function copyAddressToClipboard() {
-  navigator.clipboard.writeText(userAddress).then(() => {
-    alert("Wallet address copied to clipboard.");
-  });
-}
-
-document.getElementById("connectButton").addEventListener("click", connectWallet);
-
-// Auto-connect if permission already granted
-if (window.ethereum && window.ethereum.selectedAddress) {
-  connectWallet();
-} else {
-  document.getElementById("walletStatus").innerText = "Not Connected";
-} 
+    <footer>
+      <p>&copy; 2025 DRF Wallet — Powered by Binance Smart Chain</p>
+    </footer>
+  </div>
+</body>
+</html>
