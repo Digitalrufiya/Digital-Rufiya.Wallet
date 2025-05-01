@@ -5,60 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Web3 Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-</head>
-
   <link rel="manifest" href="manifest.json" />
-<script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js");
-  }
-</script>
-
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
+  <meta name="theme-color" content="#00b894" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
 <body>
-  <header>
-    <img src="logo.png" alt="DRF Logo" height="40" style="vertical-align: middle;" />
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo" />
     <h1>DRF Web3 Wallet</h1>
-    <p id="wallet-status">Connect your wallet to get started</p>
+
     <button id="connectButton">Connect Wallet</button>
-  </header>
+    <p id="walletStatus">Not Connected</p>
 
-  <main>
-    <p id="wallet-address">Not Connected</p>
-  </main>
+    <section id="walletInfo" style="display: none;">
+      <h2>Your Balances</h2>
+      <ul class="balances">
+        <li>DRF: <span id="drfBalance">0</span></li>
+        <li>USDC: <span id="usdcBalance">0</span></li>
+        <li>USDT: <span id="usdtBalance">0</span></li>
+      </ul>
 
-  <footer>
-    <p>&copy; 2025 DRF Wallet — Powered by Binance Smart Chain.</p>
-  </footer>
+      <div class="qr-section">
+        <h3>Receive</h3>
+        <div id="qrcode"></div>
+        <p class="address" id="walletAddress">Your wallet address will appear here</p>
+        <button onclick="copyAddressToClipboard()">Copy Address</button>
+        <a id="bscScanLink" href="#" target="_blank">View on BscScan</a>
+      </div>
 
-  <script>
-    const connectButton = document.getElementById('connectButton');
-    const walletStatus = document.getElementById('wallet-status');
-    const walletAddress = document.getElementById('wallet-address');
+      <div class="actions">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="send.html">Send</a>
+        <a href="swap.html">Swap</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="tokensale.html">Token Sale</a>
+      </div>
+    </section>
 
-    async function connectWallet() {
-      try {
-        if (!window.ethereum) {
-          alert('MetaMask or Web3 wallet not found. Please install MetaMask.');
-          console.error('window.ethereum is not available');
-          return;
-        }
-
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-
-        walletStatus.textContent = "Wallet connected";
-        walletAddress.textContent = address;
-        console.log("Connected address:", address);
-      } catch (err) {
-        console.error("Connection failed:", err);
-        alert('Failed to connect wallet. See console for error.');
-      }
-    }
-
-    connectButton.addEventListener('click', connectWallet);
-  </script>
+    <footer>
+      <p>&copy; 2025 DRF Wallet — Powered by Binance Smart Chain</p>
+    </footer>
+  </div>
 </body>
 </html>
