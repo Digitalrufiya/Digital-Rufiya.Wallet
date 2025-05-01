@@ -1,56 +1,56 @@
 <!DOCTYPE html>
-
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet Debug</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Web3 Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo" />
-    <h1>DRF Wallet – Debug Mode</h1>
-    <button onclick="connectWallet()" class="btn">Connect Wallet</button>
-    <p id="walletAddress" class="address">Status: Not connected</p>
-    <pre id="log" style="background:#eee; padding:10px; font-size:14px; overflow:auto;"></pre>
+  <header>
+    <img src="logo.png" alt="DRF Logo" height="40" style="vertical-align: middle;" />
+    <h1>DRF Web3 Wallet</h1>
+    <p id="wallet-status">Connect your wallet to get started</p>
+    <button id="connectButton">Connect Wallet</button>
+  </header>
 
-    <div class="links">
-      <a href="wallet.html">Wallet Dashboard</a>
-      <a href="swap.html">Swap</a>
-    </div>
-  </div>
+  <main>
+    <p id="wallet-address">Not Connected</p>
+  </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <footer>
+    <p>&copy; 2025 DRF Wallet — Powered by Binance Smart Chain.</p>
+  </footer>
+
   <script>
-    const log = (msg) => {
-      const el = document.getElementById("log");
-      el.textContent += msg + "\n";
-      console.log(msg);
-    };
+    const connectButton = document.getElementById('connectButton');
+    const walletStatus = document.getElementById('wallet-status');
+    const walletAddress = document.getElementById('wallet-address');
 
     async function connectWallet() {
-      if (typeof window.ethereum !== "undefined") {
-        log("MetaMask is detected.");
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          const signer = provider.getSigner();
-          const address = await signer.getAddress();
-          document.getElementById("walletAddress").innerText = "Connected: " + address;
-          log("Wallet connected: " + address);
-        } catch (err) {
-          log("Error connecting wallet: " + err.message);
-          alert("Connection failed.");
+      try {
+        if (!window.ethereum) {
+          alert('MetaMask or Web3 wallet not found. Please install MetaMask.');
+          console.error('window.ethereum is not available');
+          return;
         }
-      } else {
-        log("MetaMask not detected.");
-        alert("Please open this site in MetaMask browser.");
+
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const address = await signer.getAddress();
+
+        walletStatus.textContent = "Wallet connected";
+        walletAddress.textContent = address;
+        console.log("Connected address:", address);
+      } catch (err) {
+        console.error("Connection failed:", err);
+        alert('Failed to connect wallet. See console for error.');
       }
     }
+
+    connectButton.addEventListener('click', connectWallet);
   </script>
 </body>
 </html>
