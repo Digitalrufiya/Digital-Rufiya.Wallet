@@ -1,40 +1,87 @@
 <!DOCTYPE html>
-
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet – Transactions</title>
+  <title>Transaction History - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Your Transactions</h1>
-    <p id="walletAddress">Loading...</p>
-    <a id="bscScanLink" href="#" target="_blank">View on BscScan</a>
+    <h1>Transaction History</h1>
+    <p id="walletStatus">Connecting...</p>
+    <select id="tokenSelect" onchange="loadTransactions()">
+      <option value="DRF">DRF</option>
+      <option value="USDC">USDC</option>
+      <option value="USDT">USDT</option>
+    </select>
 
-    <div class="actions">
-      <a href="wallet.html">Back to Wallet</a>
-    </div>
+    <div id="txList" style="margin-top: 20px;"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="dashboard.html" class="tab-item"><img src="icons/dashboard.svg" alt="Dashboard">Dashboard</a>
+    <a href="send.html" class="tab-item"><img src="icons/send.svg" alt="Send">Send</a>
+    <a href="swap.html" class="tab-item"><img src="icons/swap.svg" alt="Swap">Swap</a>
+    <a href="transactions.html" class="tab-item"><img src="icons/tx.svg" alt="Tx">Transactions</a>
+    <a href="tokensale.html" class="tab-item"><img src="icons/token.svg" alt="Token">Token Sale</a>
   </div>
 
   <script>
-    async function loadWallet() {
-      if (window.ethereum) {
-        const web3 = new Web3(window.ethereum);
-        const accounts = await web3.eth.requestAccounts();
-        const wallet = accounts[0];
-        document.getElementById("walletAddress").innerText = "Wallet: " + wallet;
-        document.getElementById("bscScanLink").href = `https://bscscan.com/tokenholdings?a=${wallet}`;
-      } else {
-        alert("Please install MetaMask.");
+    const apiKey = 'Your-BscScan-API-Key'; // G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8
+    const tokenContracts = {
+      DRF: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
+      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      USDT: "0x55d398326f99059ff775485246999027b3197955"
+    };
+
+    let walletAddress = "";
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("MetaMask required.");
+        return;
       }
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      walletAddress = await signer.getAddress();
+      document.getElementById("walletStatus").innerText = "Connected: " + walletAddress;
+      loadTransactions();
     }
 
-    loadWallet();
+    async function loadTransactions() {
+      const token = document.getElementById("tokenSelect").value;
+      const contract = tokenContracts[token];
+      const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${contract}&address=${walletAddress}&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const txs = data.result;
+      const list = document.getElementById("txList");
+      list.innerHTML = "";
+
+      if (txs.length === 0) {
+        list.innerHTML = "<p>No transactions found.</p>";
+        return;
+      }
+
+      txs.forEach(tx => {
+        const div = document.createElement("div");
+        div.style.marginBottom = "10px";
+        div.innerHTML = `
+          <p><strong>${tx.tokenSymbol}</strong> | ${tx.value / 10**tx.tokenDecimal} tokens</p>
+          <p>From: ${tx.from.slice(0, 8)}... To: ${tx.to.slice(0, 8)}...</p>
+          <p><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">View on BscScan</a></p>
+          <hr />
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    connectWallet();
   </script>
 </body>
 </html>
