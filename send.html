@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Send Tokens</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Send Tokens (5% Fee)</h1>
+    <label>Token</label>
+    <select id="tokenSelect">
+      <option value="DRF">DRF</option>
+      <option value="USDC">USDC</option>
+      <option value="USDT">USDT</option>
+    </select>
+
+    <input type="text" id="recipient" placeholder="Recipient address" />
+    <input type="number" id="amount" placeholder="Amount to send" />
+
+    <button onclick="sendToken()">Send with Fee</button>
+    <p id="status"></p>
+
+    <div class="actions">
+      <a href="wallet.html">Back to Wallet</a>
+    </div>
+  </div>
+
+  <script>
+    const tokens = {
+      DRF: { address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6" },
+      USDC: { address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" },
+      USDT: { address: "0x55d398326f99059ff775485246999027b3197955" }
+    };
+
+    const ABI = [
+      "function transferFrom(address from, address to, uint amount) returns (bool)",
+      "function transfer(address to, uint amount) returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint)"
+    ];
+
+    const FEE_WALLET = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+
+    async function sendToken() {
+      if (!window.ethereum) return alert("Please install MetaMask");
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      const sender = await signer.getAddress();
+
+      const tokenKey = document.getElementById("tokenSelect").value;
+      const recipient = document.getElementById("recipient").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value.trim());
+      const token = new ethers.Contract(tokens[tokenKey].address, ABI, signer);
+
+      const decimals = await token.decimals();
+      const rawAmount = ethers.utils.parseUnits(amount.toString(), decimals);
+      const fee = rawAmount.mul(5).div(100);
+      const sendAmount = rawAmount.sub(fee);
+
+      const tx1 = await token.transfer(recipient, sendAmount);
+      const tx2 = await token.transfer(FEE_WALLET, fee);
+
+      document.getElementById("status").innerText = "Transaction sent. TX1: " + tx1.hash + ", TX2: " + tx2.hash;
+    }
+  </script>
+</body>
+</html>
