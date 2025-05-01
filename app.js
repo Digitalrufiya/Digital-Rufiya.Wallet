@@ -1,24 +1,16 @@
-// Final app.js for DRF Wallet (fixed & improved)
+// app.js – DRF Wallet Final Integrated Version
 
-const TOKENS = {
-  DRF: {
-    address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
-    symbol: "DRF",
-    decimals: 18,
-    image: "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"
-  },
-  USDC: {
-    address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-    symbol: "USDC",
-    decimals: 18,
-    image: ""
-  },
-  USDT: {
-    address: "0x55d398326f99059ff775485246999027b3197955",
-    symbol: "USDT",
-    decimals: 18,
-    image: ""
-  }
+const DRF = {
+  address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
+  symbol: "DRF"
+};
+const USDC = {
+  address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+  symbol: "USDC"
+};
+const USDT = {
+  address: "0x55d398326f99059ff775485246999027b3197955",
+  symbol: "USDT"
 };
 
 const TOKEN_ABI = [
@@ -42,7 +34,6 @@ async function connectWallet() {
     document.getElementById("walletInfo").style.display = "block";
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
 
-    updateTokenInfo();
     generateQRCode(userAddress);
     loadBalances();
   } catch (err) {
@@ -51,17 +42,17 @@ async function connectWallet() {
 }
 
 async function loadBalances() {
-  for (const key in TOKENS) {
-    await loadTokenBalance(TOKENS[key], `${key.toLowerCase()}Balance`);
-  }
+  await loadTokenBalance(DRF, "drfBalance");
+  await loadTokenBalance(USDC, "usdcBalance");
+  await loadTokenBalance(USDT, "usdtBalance");
 }
 
 async function loadTokenBalance(token, elementId) {
   const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
+  const decimals = await contract.decimals();
   const balance = await contract.balanceOf(userAddress);
-  const formatted = ethers.utils.formatUnits(balance, token.decimals);
-  const el = document.getElementById(elementId);
-  if (el) el.innerText = parseFloat(formatted).toFixed(4);
+  const formatted = ethers.utils.formatUnits(balance, decimals);
+  document.getElementById(elementId).innerText = parseFloat(formatted).toFixed(4);
 }
 
 function generateQRCode(address) {
@@ -78,48 +69,11 @@ function copyAddressToClipboard() {
   });
 }
 
-function updateTokenInfo() {
-  const selectedSymbol = tokenSelect.value;
-  const token = TOKENS[selectedSymbol];
-  contractDisplay.innerText = `Token Contract: ${token.address}`;
-  generateQRCode(userAddress);
-}
-
-// Setup event listeners after DOM is loaded
-const tokenSelect = document.getElementById("tokenSelect");
-const contractDisplay = document.getElementById("tokenContract");
-const addToMetaMask = document.getElementById("addToMetaMask");
-
-if (tokenSelect) {
-  tokenSelect.addEventListener("change", updateTokenInfo);
-}
-
-if (addToMetaMask) {
-  addToMetaMask.addEventListener("click", async () => {
-    const selected = TOKENS[tokenSelect.value];
-    try {
-      await window.ethereum.request({
-        method: "wallet_watchAsset",
-        params: {
-          type: "ERC20",
-          options: {
-            address: selected.address,
-            symbol: selected.symbol,
-            decimals: selected.decimals,
-            image: selected.image || undefined
-          }
-        }
-      });
-    } catch (error) {
-      alert("Failed to add token to MetaMask.");
-    }
-  });
-}
-
 document.getElementById("connectButton").addEventListener("click", connectWallet);
 
+// Auto-connect if permission already granted
 if (window.ethereum && window.ethereum.selectedAddress) {
   connectWallet();
 } else {
   document.getElementById("walletStatus").innerText = "Not Connected";
-}
+} 
