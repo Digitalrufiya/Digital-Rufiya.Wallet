@@ -1,36 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg">
-
-  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet</title>
-  <link rel="stylesheet" href="style.css"/>
+  <title>DRF Wallet Debug</title>
+  <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" />
 </head>
 <body>
   <div class="container">
     <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo" />
-    <h1>Welcome to DRF Wallet</h1>
+    <h1>DRF Wallet – Debug Mode</h1>
     <button onclick="connectWallet()" class="btn">Connect Wallet</button>
-    <p id="walletAddress" class="address"></p>
+    <p id="walletAddress" class="address">Status: Not connected</p>
+    <pre id="log" style="background:#eee; padding:10px; font-size:14px; overflow:auto;"></pre>
+
     <div class="links">
       <a href="wallet.html">Wallet Dashboard</a>
       <a href="swap.html">Swap</a>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script>
+    const log = (msg) => {
+      const el = document.getElementById("log");
+      el.textContent += msg + "\n";
+      console.log(msg);
+    };
+
     async function connectWallet() {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        document.getElementById("walletAddress").innerText = "Connected: " + accounts[0];
-        localStorage.setItem("connectedWallet", accounts[0]);
+      if (typeof window.ethereum !== "undefined") {
+        log("MetaMask is detected.");
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          const signer = provider.getSigner();
+          const address = await signer.getAddress();
+          document.getElementById("walletAddress").innerText = "Connected: " + address;
+          log("Wallet connected: " + address);
+        } catch (err) {
+          log("Error connecting wallet: " + err.message);
+          alert("Connection failed.");
+        }
       } else {
-        alert("Please install MetaMask or use WalletConnect.");
+        log("MetaMask not detected.");
+        alert("Please open this site in MetaMask browser.");
       }
     }
   </script>
