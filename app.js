@@ -1,3 +1,7 @@
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+
+
 const DRF_TOKEN = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
 const USDC_TOKEN = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // BSC
 const USDT_TOKEN = "0x55d398326f99059ff775485246999027b3197955"; // BSC
