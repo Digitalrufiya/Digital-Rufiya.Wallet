@@ -1,4 +1,4 @@
-// app.js – DRF Wallet Final Integrated Version with Receive Token Selector
+// Final app.js for DRF Wallet (fixed & improved)
 
 const TOKENS = {
   DRF: {
@@ -42,6 +42,7 @@ async function connectWallet() {
     document.getElementById("walletInfo").style.display = "block";
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
 
+    updateTokenInfo();
     generateQRCode(userAddress);
     loadBalances();
   } catch (err) {
@@ -50,16 +51,17 @@ async function connectWallet() {
 }
 
 async function loadBalances() {
-  await loadTokenBalance(TOKENS.DRF, "drfBalance");
-  await loadTokenBalance(TOKENS.USDC, "usdcBalance");
-  await loadTokenBalance(TOKENS.USDT, "usdtBalance");
+  for (const key in TOKENS) {
+    await loadTokenBalance(TOKENS[key], `${key.toLowerCase()}Balance`);
+  }
 }
 
 async function loadTokenBalance(token, elementId) {
   const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
   const balance = await contract.balanceOf(userAddress);
   const formatted = ethers.utils.formatUnits(balance, token.decimals);
-  document.getElementById(elementId).innerText = parseFloat(formatted).toFixed(4);
+  const el = document.getElementById(elementId);
+  if (el) el.innerText = parseFloat(formatted).toFixed(4);
 }
 
 function generateQRCode(address) {
@@ -76,17 +78,20 @@ function copyAddressToClipboard() {
   });
 }
 
-// Token selector + Add to MetaMask logic
+function updateTokenInfo() {
+  const selectedSymbol = tokenSelect.value;
+  const token = TOKENS[selectedSymbol];
+  contractDisplay.innerText = `Token Contract: ${token.address}`;
+  generateQRCode(userAddress);
+}
+
+// Setup event listeners after DOM is loaded
 const tokenSelect = document.getElementById("tokenSelect");
 const contractDisplay = document.getElementById("tokenContract");
 const addToMetaMask = document.getElementById("addToMetaMask");
 
 if (tokenSelect) {
-  tokenSelect.addEventListener("change", () => {
-    const selected = TOKENS[tokenSelect.value];
-    contractDisplay.innerText = `Token Contract: ${selected.address}`;
-    generateQRCode(userAddress); // still shows wallet address
-  });
+  tokenSelect.addEventListener("change", updateTokenInfo);
 }
 
 if (addToMetaMask) {
