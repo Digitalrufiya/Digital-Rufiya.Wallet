@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <img src="logo.png" alt="DRF Logo" style="max-width: 120px; margin: 20px auto; display: block;" />
+    <h1 style="text-align:center;">Welcome to DRF Wallet</h1>
+    <p style="text-align:center;">Powered by BSC Blockchain Network</p>
+
+    <div style="text-align: center; margin: 20px;">
+      <button onclick="createWallet()">Create New Wallet</button>
+      <button onclick="document.getElementById('importForm').style.display='block'">Import Wallet</button>
+    </div>
+
+    <div id="importForm" style="display:none; text-align: center; margin-bottom: 10px;">
+      <input type="text" id="importKey" placeholder="Enter private key" style="width: 90%; max-width: 300px;" />
+      <button onclick="importWallet()">Import</button>
+    </div>
+
+    <div id="walletSection" style="display: none; text-align:center;">
+      <h3>Your DRF Address</h3>
+      <p id="walletAddress">0x...</p>
+      <canvas id="qrCanvas" style="margin:10px auto;"></canvas>
+      <button onclick="copyAddress()">Copy Address</button><br><br>
+      <button onclick="forgetWallet()">Forget Wallet</button>
+    </div>
+
+    <p style="text-align:center; margin-top: 40px;">AI Powered by ChatGPT Technology</p>
+    <footer style="text-align:center; margin-top: 40px; font-size: 13px;">
+      © 2025 DRF Wallet | Powered by BSC Blockchain Network + AI Technology
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <script>
+    let currentWallet;
+
+    function createWallet() {
+      const wallet = ethers.Wallet.createRandom();
+      currentWallet = wallet;
+      localStorage.setItem("drf_wallet", wallet.privateKey);
+      showWallet(wallet.address);
+    }
+
+    function importWallet() {
+      try {
+        const key = document.getElementById("importKey").value.trim();
+        const wallet = new ethers.Wallet(key);
+        currentWallet = wallet;
+        localStorage.setItem("drf_wallet", wallet.privateKey);
+        showWallet(wallet.address);
+      } catch (e) {
+        alert("Invalid private key");
+      }
+    }
+
+    function showWallet(address) {
+      document.getElementById("walletSection").style.display = "block";
+      document.getElementById("walletAddress").innerText = address;
+      const qr = new QRious({
+        element: document.getElementById("qrCanvas"),
+        value: address,
+        size: 200
+      });
+    }
+
+    function copyAddress() {
+      navigator.clipboard.writeText(currentWallet.address);
+      alert("Address copied!");
+    }
+
+    function forgetWallet() {
+      localStorage.removeItem("drf_wallet");
+      location.reload();
+    }
+
+    // Auto load wallet
+    window.onload = () => {
+      const savedKey = localStorage.getItem("drf_wallet");
+      if (savedKey) {
+        try {
+          const wallet = new ethers.Wallet(savedKey);
+          currentWallet = wallet;
+          showWallet(wallet.address);
+        } catch {}
+      }
+    }
+  </script>
+</body>
+</html>
