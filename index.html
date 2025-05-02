@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body style="text-align: center; font-family: Arial, sans-serif; background: #f0fcf9;">
+
+  <div class="container">
+    <img src="drf-logo.png" alt="DRF Logo" style="width: 120px; margin-top: 20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Powered by BSC Blockchain Network</p>
+
+    <button onclick="connectWallet()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Connect Wallet</button>
+    <button onclick="addDRFToken()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Add DRF Token</button>
+
+    <p id="walletAddress" style="margin-top: 20px; font-weight: bold;"></p>
+
+    <div style="margin-top: 40px; font-size: 14px; color: #555;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" width="20" style="vertical-align: middle;" />
+      AI Powered by ChatGPT Technology
+    </div>
+  </div>
+
+  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
+    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
+    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
+    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
+    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
+    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
+  </div>
+
+  <script>
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          const address = accounts[0];
+          document.getElementById('walletAddress').innerText = 'Connected: ' + address.slice(0, 6) + '...' + address.slice(-4);
+        } catch (error) {
+          alert("Connection failed");
+        }
+      } else {
+        alert("MetaMask not found");
+      }
+    }
+
+    async function addDRFToken() {
+      try {
+        await ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: '0x7788a60dbC85AB46767F413EC7d51F149AA1c3a6',
+              symbol: 'DRF',
+              decimals: 18,
+              image: location.origin + '/drf-logo.png',
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Token add failed", error);
+      }
+    }
+  </script>
+</body>
+</html>
