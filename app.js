@@ -1,115 +1,114 @@
-const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-const USDT_ADDRESS = "0x55d398326f99059ff775485246999027b3197955";
-const BSC_RPC = "https://bsc-dataseed.binance.org/";
-const ABI = [
-  "function balanceOf(address owner) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-  "function symbol() view returns (string)"
+// DRF Wallet Integration with DRF, USDC, USDT support
+
+const TOKENS = {
+  DRF: {
+    address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
+    symbol: "DRF",
+    decimals: 18,
+    image: "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"
+  },
+  USDC: {
+    address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+    symbol: "USDC",
+    decimals: 18,
+    image: ""
+  },
+  USDT: {
+    address: "0x55d398326f99059ff775485246999027b3197955",
+    symbol: "USDT",
+    decimals: 18,
+    image: ""
+  }
+};
+
+const TOKEN_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)"
 ];
 
 let provider, signer, userAddress;
 
 async function connectWallet() {
-  if (typeof window.ethereum === "undefined") {
-    notify("MetaMask not found. Install it to continue.");
-    return;
-  }
-
   try {
+    if (!window.ethereum) throw new Error("Web3 wallet not found.");
     provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = provider.getSigner();
     userAddress = await signer.getAddress();
 
-    document.getElementById("walletAddress").textContent = userAddress;
-    document.getElementById("walletInfo").style.display = "block";
-    document.getElementById("walletStatus").textContent = "Connected";
+    document.getElementById("walletAddress").innerText = userAddress;
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
-    
-    notify("Wallet connected");
+    document.getElementById("connectButton").innerText = "Connected";
+
+    generateQRCode(userAddress);
+    document.getElementById("displayAddress").innerText = userAddress;
+
     loadBalances();
-    updateReceiveSection();
   } catch (err) {
-    console.error("Wallet connection failed", err);
-    notify("Connection failed");
+    alert("Wallet connection failed: " + err.message);
   }
 }
 
 async function loadBalances() {
-  const tokens = [
-    { name: "DRF", address: DRF_ADDRESS, elementId: "drfBalance" },
-    { name: "USDC", address: USDC_ADDRESS, elementId: "usdcBalance" },
-    { name: "USDT", address: USDT_ADDRESS, elementId: "usdtBalance" }
-  ];
-
-  for (const token of tokens) {
-    try {
-      const contract = new ethers.Contract(token.address, ABI, provider);
-      const balance = await contract.balanceOf(userAddress);
-      const decimals = await contract.decimals();
-      const formatted = ethers.utils.formatUnits(balance, decimals);
-      document.getElementById(token.elementId).textContent = `${formatted} ${token.name}`;
-    } catch (err) {
-      document.getElementById(token.elementId).textContent = "-";
-    }
-  }
+  await loadTokenBalance(TOKENS.DRF, "drfBalance");
+  await loadTokenBalance(TOKENS.USDC, "usdcBalance");
+  await loadTokenBalance(TOKENS.USDT, "usdtBalance");
 }
 
-function updateReceiveSection() {
-  const tokenSelect = document.getElementById("tokenSelect");
-  const contractLabel = document.getElementById("tokenContract");
-  const qrDiv = document.getElementById("qrcode");
-  const addBtn = document.getElementById("addToMetaMask");
+async function loadTokenBalance(token, elementId) {
+  const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
+  const balance = await contract.balanceOf(userAddress);
+  const formatted = ethers.utils.formatUnits(balance, token.decimals);
+  document.getElementById(elementId).innerText = parseFloat(formatted).toFixed(4);
+}
 
-  if (!tokenSelect || !contractLabel || !qrDiv || !addBtn) return;
+function generateQRCode(address) {
+  const qrContainer = document.getElementById("qrcode");
+  qrContainer.innerHTML = "";
+  QRCode.toCanvas(address, { width: 180 }, (err, canvas) => {
+    if (!err) qrContainer.appendChild(canvas);
+  });
+}
 
-  function update() {
-    const selected = tokenSelect.value;
-    let contract;
-    switch (selected) {
-      case "DRF":
-        contract = DRF_ADDRESS;
-        break;
-      case "USDC":
-        contract = USDC_ADDRESS;
-        break;
-      case "USDT":
-        contract = USDT_ADDRESS;
-        break;
-    }
+function copyAddressToClipboard() {
+  navigator.clipboard.writeText(userAddress).then(() => {
+    alert("Wallet address copied.");
+  });
+}
 
-    contractLabel.textContent = contract;
+// Handle Token Selection
+const tokenSelect = document.getElementById("tokenSelect");
+const addToMetaMask = document.getElementById("addToMetaMask");
+if (tokenSelect && addToMetaMask) {
+  tokenSelect.addEventListener("change", () => {
+    const selected = TOKENS[tokenSelect.value];
+    document.getElementById("displayAddress").innerText = userAddress;
+    generateQRCode(userAddress);
+  });
 
-    // QR
-    qrDiv.innerHTML = "";
-    new QRCode(qrDiv, {
-      text: userAddress,
-      width: 120,
-      height: 120
-    });
-
-    // Add to MetaMask
-    addBtn.onclick = async () => {
-      try {
-        await window.ethereum.request({
-          method: "wallet_watchAsset",
-          params: {
-            type: "ERC20",
-            options: {
-              address: contract,
-              symbol: selected,
-              decimals: 18
-            }
+  addToMetaMask.addEventListener("click", async () => {
+    const selected = TOKENS[tokenSelect.value];
+    try {
+      await window.ethereum.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: selected.address,
+            symbol: selected.symbol,
+            decimals: selected.decimals,
+            image: selected.image
           }
-        });
-        notify(`${selected} added to MetaMask`);
-      } catch {
-        notify("Failed to add token");
-      }
-    };
-  }
+        }
+      });
+    } catch (error) {
+      alert("MetaMask add token failed");
+    }
+  });
+}
 
-  tokenSelect.onchange = update;
-  update();
+document.getElementById("connectButton").addEventListener("click", connectWallet);
+
+if (window.ethereum && window.ethereum.selectedAddress) {
+  connectWallet();
 }
