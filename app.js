@@ -136,3 +136,6 @@ const connectBtn = document.getElementById("connectButton");
 if (connectBtn) {
   connectBtn.addEventListener("click", connectWallet);
 }
+tokenSelect.value = "DRF"; // default selection
+generateQRCode(userAddress);
+updateReceiveAmount();
