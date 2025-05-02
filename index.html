@@ -1,86 +1,83 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Wallet</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script defer src="app.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0fdfc;
-      margin: 0;
-      padding: 0;
-      text-align: center;
-    }
-    .receive-section {
-      padding: 20px;
-    }
-    .receive-section h2 {
-      margin-top: 0;
-      font-size: 28px;
-    }
-    .qr-container {
-      margin: 20px 0;
-    }
-    .wallet-address {
-      word-break: break-all;
-      margin: 10px 20px;
-      font-size: 16px;
-      padding: 10px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .actions {
-      margin: 15px 0;
-    }
-    .actions button {
-      margin: 0 10px;
-      padding: 10px 16px;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .actions button:hover {
-      background-color: #0056b3;
-    }
-    .token-balance {
-      font-size: 18px;
-      font-weight: bold;
-      margin-top: 20px;
-    }
-  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Welcome to DRF Wallet</h1>
+    <p id="walletStatus">Not connected</p>
 
-  <div class="receive-section">
-    <h2>Receive</h2>
-    <label for="tokenSelect">Select Token:</label>
-    <select id="tokenSelect">
-      <option value="DRF">DRF</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-    </select>
+    <button id="connectButton" onclick="connectWallet()">Connect Wallet</button>
 
-    <div class="qr-container">
-      <canvas id="qrCode"></canvas>
-    </div>
+    <div id="walletInfo" style="display:none;">
+      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
+      <p><a id="bscScanLink" href="#" target="_blank">View on BscScan</a></p>
 
-    <div class="token-balance" id="receivingAmount">Receiving Amount: Loading...</div>
+      <div>
+        <h3>Token Balances</h3>
+        <p>DRF: <span id="drfBalance">-</span></p>
+        <p>USDC: <span id="usdcBalance">-</span></p>
+        <p>USDT: <span id="usdtBalance">-</span></p>
+      </div>
 
-    <div class="wallet-address" id="walletAddress">0x...</div>
-
-    <div class="actions">
-      <button onclick="copyAddress()">Copy Address</button>
-      <button onclick="addTokenToMetaMask()">Add Token to MetaMask</button>
+      <div>
+        <h3>Receive Tokens</h3>
+        <select id="tokenSelect">
+          <option value="DRF">DRF</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
+        <p><strong>Contract:</strong> <span id="tokenContract">-</span></p>
+        <div id="qrcode"></div>
+        <button id="addToMetaMask">Add to MetaMask</button>
+      </div>
     </div>
   </div>
 
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <a href="dashboard.html" class="tab-item"><img src="icons/dashboard.svg" alt="Dashboard">Dashboard</a>
+    <a href="send.html" class="tab-item"><img src="icons/send.svg" alt="Send">Send</a>
+    <a href="swap.html" class="tab-item"><img src="icons/swap.svg" alt="Swap">Swap</a>
+    <a href="transactions.html" class="tab-item"><img src="icons/tx.svg" alt="Tx">Transactions</a>
+    <a href="tokensale.html" class="tab-item"><img src="icons/token.svg" alt="Token">Token Sale</a>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notifier" style="position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#28a745;color:white;padding:10px 20px;border-radius:8px;display:none;font-size:14px;z-index:1000;"></div>
+
+  <!-- App Logic -->
+  <script src="app.js"></script>
+
+  <script>
+    function notify(msg) {
+      const note = document.getElementById("notifier");
+      note.innerText = msg;
+      note.style.display = "block";
+      setTimeout(() => {
+        note.style.display = "none";
+      }, 3000);
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker registered"))
+        .catch(err => console.error("SW registration failed", err));
+    }
+  </script>
 </body>
 </html>
+
+<div class="bottom-nav">
+  <a href="dashboard.html" class="tab-item"><img src="icon/dashboard.png" alt="Dashboard"><span>Dashboard</span></a>
+  <a href="send.html" class="tab-item"><img src="icon/send.png" alt="Send"><span>Send</span></a>
+  <a href="swap.html" class="tab-item"><img src="icon/swap.png" alt="Swap"><span>Swap</span></a>
+  <a href="transactions.html" class="tab-item"><img src="icon/transactions.png" alt="Transactions"><span>Transactions</span></a>
+  <a href="tokensale.html" class="tab-item"><img src="icon/token.png" alt="Token Sale"><span>Token</span></a>
+</div>
