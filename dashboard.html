@@ -2,122 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>DRF Wallet Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
-<body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
-
-  <div style="display:flex; justify-content: space-between; align-items: center;">
+<body style="font-family:Arial;background:#f4f9fb;padding:20px;text-align:center;">
+  <header style="display:flex;justify-content:space-between;align-items:center;">
     <h2>My Assets</h2>
-    <a href="settings.html" style="text-decoration:none; font-size:14px;">Settings ⚙️</a>
+    <a href="settings.html" style="font-size:14px;text-decoration:none;">⚙️ Settings</a>
+  </header>
+  <p id="walletAddress" style="font-weight:bold;"></p>
+  <button onclick="logout()" style="margin-bottom:20px;">Logout</button>
+  <div style="max-width:400px;margin:auto;padding:20px;background:#fff;border-radius:10px;">
+    <h3>Balances</h3>
+    <p>BNB: <span id="bnbBalance">0</span> (<small id="bnbPrice">—</small> USD)</p>
+    <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
+    <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
+    <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
   </div>
+  <h3>Receive Tokens</h3>
+  <div id="receiveSection" style="max-width:400px;margin: auto;"></div>
 
-  <p id="walletAddress" style="font-weight: bold;"></p>
+<script>
+const BSC_RPC = "https://bsc-dataseed.binance.org/";
+const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
+const tokens = {
+  BNB: {symbol:"BNB", decimals:18},
+  DRF: {address:"0x7788a60dbC85AB46767F413EC7d51F149AA1bec6", symbol:"DRF", decimals:18},
+  USDC:{address:"0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", symbol:"USDC", decimals:18},
+  USDT:{address:"0x55d398326f99059fF775485246999027B3197955", symbol:"USDT", decimals:18}
+};
 
-  <div style="margin-top:20px;">
-    <div><strong>BNB:</strong> <span id="bnbBalance">Loading...</span></div>
-    <div><strong>DRF:</strong> <span id="drfBalance">Loading...</span></div>
-    <div><strong>USDC:</strong> <span id="usdcBalance">Loading...</span></div>
-    <div><strong>USDT:</strong> <span id="usdtBalance">Loading...</span></div>
-  </div>
+async function loadDashboard(){
+  // get encrypted and unlock once per session
+  let walletJson = sessionStorage.getItem("drf_wallet_json");
+  let wallet;
+  if(walletJson){
+    const pw = sessionStorage.getItem("drf_wallet_pw");
+    wallet = await ethers.Wallet.fromEncryptedJson(walletJson, pw);
+  } else {
+    const enc = localStorage.getItem("drf_encrypted_wallet");
+    if(!enc) return location.href="index.html";
+    const pw = prompt("Enter password:");
+    wallet = await ethers.Wallet.fromEncryptedJson(enc, pw);
+    sessionStorage.setItem("drf_wallet_json", enc);
+    sessionStorage.setItem("drf_wallet_pw", pw);
+  }
+  const addr = wallet.address;
+  document.getElementById("walletAddress").innerText = "Address: "+addr;
 
-  <h3 style="margin-top: 30px;">Receive Tokens</h3>
-  <div id="receiveSection"></div>
+  // fetch balances
+  const bnbBal = await provider.getBalance(addr);
+  document.getElementById("bnbBalance").innerText = ethers.utils.formatEther(bnbBal);
+  await Promise.all(Object.values(tokens).filter(t=>t.address).map(async t=>{
+    const c = new ethers.Contract(t.address,
+      ["function balanceOf(address) view returns(uint)"],
+      provider);
+    const raw = await c.balanceOf(addr);
+    document.getElementById(t.symbol.toLowerCase()+"Balance").innerText =
+      parseFloat(ethers.utils.formatUnits(raw, t.decimals)).toFixed(4);
+  }));
 
-  <script>
-    const tokenList = [
-      {
-        name: "DRF",
-        address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
-        decimals: 18,
-        elementId: "drfBalance"
-      },
-      {
-        name: "USDC",
-        address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-        decimals: 18,
-        elementId: "usdcBalance"
-      },
-      {
-        name: "USDT",
-        address: "0x55d398326f99059fF775485246999027B3197955",
-        decimals: 18,
-        elementId: "usdtBalance"
-      }
-    ];
+  // fetch USD prices from Coingecko
+  const ids = {BNB:"binancecoin",DRF:"digital-rufiyaa-token",USDC:"usd-coin",USDT:"tether"};
+  const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids="+
+    Object.values(ids).join(",")+"&vs_currencies=usd");
+  const prices = await res.json();
+  Object.entries(ids).forEach(sym=>{
+    document.getElementById(sym[0].toLowerCase()+"Price").innerText =
+      "$"+(prices[sym[1]].usd||0).toFixed(4);
+  });
 
-    async function loadDashboard() {
-      const encrypted = localStorage.getItem("drf_encrypted_wallet");
-      if (!encrypted) return location.href = "index.html";
+  // receive section
+  const rx = document.getElementById("receiveSection");
+  rx.innerHTML="";
+  ["BNB","DRF","USDC","USDT"].forEach(sym=>{
+    const div = document.createElement("div");
+    div.style.margin="10px 0";
+    div.innerHTML=`
+      <strong>Receive ${sym}:</strong><br>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${addr}" /><br>
+      <input type="text" value="${addr}" readonly style="width:90%;" onclick="this.select()" /><br>
+      <a href="https://bscscan.com/address/${addr}" target="_blank">View on BscScan</a>
+      <hr/>
+    `;
+    rx.appendChild(div);
+  });
+}
 
-      const password = prompt("Enter your password to unlock wallet:");
-      try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-        const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-        const connectedWallet = wallet.connect(provider);
+function logout(){
+  localStorage.removeItem("drf_encrypted_wallet");
+  sessionStorage.clear();
+  location.href="index.html";
+}
 
-        document.getElementById("walletAddress").innerText = "Address: " + wallet.address;
-
-        // Show BNB
-        const bnb = await provider.getBalance(wallet.address);
-        document.getElementById("bnbBalance").innerText = ethers.utils.formatEther(bnb) + " BNB";
-
-        // Show token balances
-        for (let token of tokenList) {
-          const contract = new ethers.Contract(token.address, [
-            "function balanceOf(address) view returns (uint)",
-            "function decimals() view returns (uint8)"
-          ], provider);
-          const raw = await contract.balanceOf(wallet.address);
-          const value = ethers.utils.formatUnits(raw, token.decimals);
-          document.getElementById(token.elementId).innerText = parseFloat(value).toFixed(4) + " " + token.name;
-        }
-
-        showReceiveSection(wallet.address);
-
-      } catch (err) {
-        alert("Failed to unlock wallet. Redirecting...");
-        location.href = "index.html";
-      }
-    }
-
-    function showReceiveSection(address) {
-      const section = document.getElementById("receiveSection");
-      const tokens = ["BNB", "DRF", "USDC", "USDT"];
-      tokens.forEach(token => {
-        const div = document.createElement("div");
-        div.style.margin = "10px 0";
-        div.innerHTML = `
-          <strong>${token} Wallet:</strong><br>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${address}" alt="${token} QR"><br>
-          <input type="text" value="${address}" style="width: 80%;" readonly onclick="this.select()" />
-          <a href="https://bscscan.com/address/${address}" target="_blank">View on BscScan</a>
-          <hr/>
-        `;
-        section.appendChild(div);
-      });
-    }
-
-    loadDashboard();
-  </script>
+window.addEventListener("DOMContentLoaded", loadDashboard);
+</script>
 </body>
 </html>
-<div class="footer">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT Logo" />
-      AI Powered by ChatGPT Technology
-    </div>
-  </div>
-
-</body>
-</html>
-
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <a href="dashboard.html" class="tab-item"><img src="icons/dashboard.svg" alt="Dashboard">Dashboard</a>
-    <a href="send.html" class="tab-item"><img src="icons/send.svg" alt="Send">Send</a>
-    <a href="swap.html" class="tab-item"><img src="icons/swap.svg" alt="Swap">Swap</a>
-    <a href="transactions.html" class="tab-item"><img src="icons/tx.svg" alt="Tx">Transactions</a>
-    <a href="tokensale.html" class="tab-item"><img src="icons/token.svg" alt="Token">Token Sale</a>
-  </div>
