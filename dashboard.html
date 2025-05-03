@@ -15,20 +15,37 @@
   </header>
 
   <div>
-    <h3>Total Portfolio Value: <span id="totalValue">Loading...</span> USD</h3>
+    <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
     <p id="walletAddress" style="font-weight: bold;"></p>
   </div>
 
   <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
     <h3>Balances</h3>
-    <p>BNB: <span id="bnbBalance">0</span> (<small id="bnbPrice">—</small> USD)</p>
-    <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
-    <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
-    <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
+    <div>
+      <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
+      <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
+      <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
+    </div>
+    <h3>Token Logos</h3>
+    <div>
+      <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png" alt="USDC Logo" width="30" />
+      <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" alt="USDT Logo" width="30" />
+      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" width="30" />
+    </div>
   </div>
 
   <h3 style="margin-top: 30px;">Receive Tokens</h3>
   <div id="receiveSection"></div>
+
+  <!-- Sell DRF -->
+  <div style="margin-top: 30px;">
+    <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
+  </div>
+
+  <!-- Affiliate -->
+  <div style="margin-top: 20px;">
+    <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
+  </div>
 
   <!-- FOOTER -->
   <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
@@ -39,12 +56,16 @@
     <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
   </div>
 
+  <!-- Footer text -->
+  <footer style="text-align: center; margin-top: 30px;">
+    <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
+  </footer>
+
 <script>
   const BSC_RPC = "https://bsc-dataseed.binance.org/";
   const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
 
   const tokens = {
-    BNB: {symbol: "BNB", decimals: 18},
     DRF: {address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6", symbol: "DRF", decimals: 18},
     USDC: {address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", symbol: "USDC", decimals: 18},
     USDT: {address: "0x55d398326f99059fF775485246999027B3197955", symbol: "USDT", decimals: 18}
@@ -60,31 +81,21 @@
 
     document.getElementById("walletAddress").innerText = "Wallet: " + addr;
 
-    // Total value of all assets
+    // Fetch balances
     let totalValue = 0;
-
-    // Fetch BNB balance
-    const bnbBal = await provider.getBalance(addr);
-    const bnbFormatted = ethers.utils.formatEther(bnbBal);
-    totalValue += parseFloat(bnbFormatted); // Add to total value
-    document.getElementById("bnbBalance").innerText = bnbFormatted;
-    document.getElementById("bnbPrice").innerText = await getPrice("binancecoin");
-
-    // Fetch token balances
     for (let token in tokens) {
-      if (tokens[token].address) {
-        const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
-        const balance = await contract.balanceOf(addr);
-        const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
-        document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
+      const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
+      const balance = await contract.balanceOf(addr);
+      const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
+      document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
 
-        // Fetch token price
-        document.getElementById(`${token.toLowerCase()}Price`).innerText = await getPrice(tokens[token].symbol);
-        totalValue += parseFloat(formattedBalance) * await getPrice(tokens[token].symbol);
-      }
+      // Fetch price
+      const price = await getPrice(tokens[token].symbol);
+      document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
+      totalValue += parseFloat(formattedBalance) * (price || 0);
     }
 
-    // Set total value
+    // Display total value
     document.getElementById("totalValue").innerText = totalValue.toFixed(2);
 
     // Show receive section
@@ -114,13 +125,19 @@
     });
   }
 
-  function logout() {
-    localStorage.removeItem("drf_encrypted_wallet");
-    sessionStorage.clear();
-    location.href = "index.html";
+  // Sell DRF to Mainnet
+  function sellDRF() {
+    alert("Sell 15.42 DRF = $1 to mainnet wallet. (Payment will be received on Mainnet)");
+  }
+
+  // Affiliate link generation (simplified)
+  function shareAffiliateLink() {
+    const affiliateLink = "https://your-dapp-link.com?ref=USER_ID";
+    prompt("Share this affiliate link to boost your wallet!", affiliateLink);
   }
 
   window.addEventListener("DOMContentLoaded", loadDashboard);
 </script>
+
 </body>
 </html>
