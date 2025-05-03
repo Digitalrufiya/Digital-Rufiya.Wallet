@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,10 +14,14 @@
     <h1>Welcome to DRF Wallet</h1>
     <p>Powered by BSC Blockchain Network</p>
 
-    <button onclick="connectWallet()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Connect Wallet</button>
-    <button onclick="addDRFToken()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Add DRF Token</button>
+    <button onclick="createWallet()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Create Wallet</button>
+    <button onclick="signInWithSecretPhrase()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Sign In with Secret Phrase</button>
 
-    <p id="walletAddress" style="margin-top: 20px; font-weight: bold;"></p>
+    <div id="walletDetails" style="display: none; margin-top: 20px;">
+      <p id="walletAddress" style="font-weight: bold;"></p>
+      <p id="walletMnemonic"></p>
+      <button onclick="viewSecretPhrase()">View Secret Phrase</button>
+    </div>
 
     <div style="margin-top: 40px; font-size: 14px; color: #555;">
       <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" width="20" style="vertical-align: middle;" />
@@ -35,38 +38,45 @@
   </div>
 
   <script>
-    async function connectWallet() {
-      if (window.ethereum) {
-        try {
-          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-          const address = accounts[0];
-          document.getElementById('walletAddress').innerText = 'Connected: ' + address.slice(0, 6) + '...' + address.slice(-4);
-        } catch (error) {
-          alert("Connection failed");
-        }
+    let userWallet = null;
+
+    // Function to create a new wallet
+    async function createWallet() {
+      const wallet = ethers.Wallet.createRandom();
+      userWallet = wallet;
+      document.getElementById('walletAddress').innerText = 'Wallet Address: ' + wallet.address;
+      document.getElementById('walletMnemonic').innerText = 'Secret Phrase: ' + wallet.mnemonic.phrase;
+      document.getElementById('walletDetails').style.display = 'block';
+      localStorage.setItem('walletAddress', wallet.address);
+      localStorage.setItem('walletPrivateKey', wallet.privateKey);
+      localStorage.setItem('walletMnemonic', wallet.mnemonic.phrase);
+      window.location.href = 'dashboard.html'; // Redirect to the dashboard
+    }
+
+    // Function to sign in using the secret phrase
+    function signInWithSecretPhrase() {
+      const secretPhrase = prompt("Enter your secret phrase (12 words):");
+      if (secretPhrase) {
+        const wallet = ethers.Wallet.fromMnemonic(secretPhrase);
+        userWallet = wallet;
+        document.getElementById('walletAddress').innerText = 'Wallet Address: ' + wallet.address;
+        document.getElementById('walletMnemonic').innerText = 'Secret Phrase: ' + wallet.mnemonic.phrase;
+        document.getElementById('walletDetails').style.display = 'block';
+        localStorage.setItem('walletAddress', wallet.address);
+        localStorage.setItem('walletPrivateKey', wallet.privateKey);
+        localStorage.setItem('walletMnemonic', wallet.mnemonic.phrase);
+        window.location.href = 'dashboard.html'; // Redirect to the dashboard
       } else {
-        alert("MetaMask not found");
+        alert("Please enter a valid secret phrase.");
       }
     }
 
-    async function addDRFToken() {
-      try {
-        await ethereum.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC20',
-            options: {
-              address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6',
-              symbol: 'DRF',
-              decimals: 18,
-              image: 'https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg',
-            },
-          },
-        });
-      } catch (error) {
-        console.error("Token add failed", error);
-      }
+    // Function to view secret phrase
+    function viewSecretPhrase() {
+      alert("Secret Phrase: " + userWallet.mnemonic.phrase);
     }
+
   </script>
+
 </body>
 </html>
