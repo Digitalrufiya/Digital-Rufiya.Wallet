@@ -1,61 +1,70 @@
-<!-- Inside <body> -->
-<div class="container">
-  <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width: 120px; margin-top: 20px;" />
-  <h1>Welcome to DRF Wallet</h1>
-  <p>Powered by BSC Blockchain Network</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
 
-  <button onclick="createWallet()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Create Wallet</button>
-  <button onclick="showSignInModal()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Sign In with Secret Phrase</button>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Secure, Private, Decentralized</p>
 
-  <p id="walletAddress" style="margin-top: 20px; font-weight: bold;"></p>
-</div>
+    <!-- BUTTONS -->
+    <button onclick="createAccount()">Create Account</button>
+    <button onclick="login()">Login</button>
+    <button onclick="recoverAccount()">Recover Account</button>
 
-<!-- Settings Icon -->
-<div onclick="showSettings()" style="position: absolute; top: 10px; left: 10px; cursor: pointer;">
-  <img src="icon/settings.png" alt="Settings" width="28">
-</div>
+    <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
+  </div>
 
-<!-- Modals for phrase and settings will be added -->
+  <script>
+    async function createAccount() {
+      const password = prompt("Set a password to encrypt your wallet:");
+      if (!password) return alert("Password is required.");
 
-<!-- Script -->
-<script>
-  let wallet;
+      const wallet = ethers.Wallet.createRandom();
+      const encryptedJson = await wallet.encrypt(password);
+      localStorage.setItem("drf_encrypted_wallet", encryptedJson);
 
-  function createWallet() {
-    wallet = ethers.Wallet.createRandom();
-    localStorage.setItem("drf_wallet", JSON.stringify({
-      address: wallet.address,
-      privateKey: wallet.privateKey,
-      phrase: wallet.mnemonic.phrase
-    }));
-    document.getElementById('walletAddress').innerText = "Wallet Created: " + wallet.address;
-    window.location.href = 'dashboard.html';
-  }
-
-  function showSignInModal() {
-    const phrase = prompt("Enter your 12-word secret phrase:");
-    if (!phrase) return;
-
-    try {
-      wallet = ethers.Wallet.fromMnemonic(phrase);
-      localStorage.setItem("drf_wallet", JSON.stringify({
-        address: wallet.address,
-        privateKey: wallet.privateKey,
-        phrase: wallet.mnemonic.phrase
-      }));
-      document.getElementById('walletAddress').innerText = "Signed in: " + wallet.address;
-      window.location.href = 'dashboard.html';
-    } catch (e) {
-      alert("Invalid phrase!");
+      alert("Account created! Your secret phrase:\n\n" + wallet.mnemonic.phrase + "\n\nSave it securely.");
+      window.location.href = "dashboard.html";
     }
-  }
 
-  function showSettings() {
-    const stored = JSON.parse(localStorage.getItem("drf_wallet"));
-    if (stored) {
-      alert("Your Secret Phrase:\n" + stored.phrase + "\n\n(Keep it safe and never share it.)");
-    } else {
-      alert("No wallet found.");
+    async function login() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
+
+      const password = prompt("Enter your password to unlock wallet:");
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        alert("Login successful!");
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        alert("Incorrect password or corrupted wallet.");
+      }
     }
-  }
-</script>
+
+    async function recoverAccount() {
+      const phrase = prompt("Enter your 12-word secret phrase:");
+      if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
+      const password = prompt("Set a password to encrypt recovered wallet:");
+      if (!password) return alert("Password is required.");
+
+      try {
+        const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
+        const encryptedJson = await wallet.encrypt(password);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        alert("Wallet recovered and encrypted successfully!");
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        alert("Recovery failed. Invalid phrase.");
+      }
+    }
+  </script>
+</body>
+</html>
