@@ -6,15 +6,41 @@
   <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+    #loadingOverlay img {
+      width: 100px;
+      height: 100px;
+      animation: spin 2s linear infinite;
+      margin-bottom: 20px;
+    }
+    #loadingOverlay p {
+      color: white;
+      font-size: 18px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
 
   <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <img src="drf-logo.png" alt="DRF Logo" id="mainLogo" style="width:100px; margin-top:20px;" />
     <h1>Welcome to DRF Wallet</h1>
     <p>Secure, Private, Decentralized</p>
 
-    <!-- BUTTONS -->
     <button onclick="createAccount()">Create Account</button>
     <button onclick="login()">Login</button>
     <button onclick="recoverAccount()">Recover Account</button>
@@ -22,39 +48,30 @@
     <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
   </div>
 
-  <!-- LOADER OVERLAY -->
-  <div id="loaderOverlay" class="loader-overlay" style="display:none;">
-    <div class="loader">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/drf-ai-logo-loader.gif" alt="Loading..." />
-      <p id="loaderMessage">Loading...</p>
-    </div>
+  <div id="loadingOverlay">
+    <img src="drf-logo.png" alt="Loading" />
+    <p id="loadingText">Please wait...</p>
   </div>
 
   <script>
-    function showLoader(message) {
-      document.getElementById('loaderMessage').innerText = message;
-      document.getElementById('loaderOverlay').style.display = 'flex';
-    }
-
-    function hideLoader() {
-      document.getElementById('loaderOverlay').style.display = 'none';
+    function showLoading(message) {
+      document.getElementById("loadingText").innerText = message;
+      document.getElementById("loadingOverlay").style.display = "flex";
     }
 
     async function createAccount() {
       const password = prompt("Set a password to encrypt your wallet:");
       if (!password) return alert("Password is required.");
+      showLoading("Creating your account... Please wait");
 
-      showLoader("Creating your account…");
+      setTimeout(async () => {
+        const wallet = ethers.Wallet.createRandom();
+        const encryptedJson = await wallet.encrypt(password);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
 
-      const wallet = ethers.Wallet.createRandom();
-      const encryptedJson = await wallet.encrypt(password);
-      localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-
-      setTimeout(() => {
-        hideLoader();
         alert("Account created! Your secret phrase:\n\n" + wallet.mnemonic.phrase + "\n\nSave it securely.");
         window.location.href = "dashboard.html";
-      }, 2000);
+      }, 1000);
     }
 
     async function login() {
@@ -62,46 +79,39 @@
       if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
 
       const password = prompt("Enter your password to unlock wallet:");
-      if (!password) return;
+      showLoading("Logging in... Please wait");
 
-      showLoader("Logging in… Please wait.");
-
-      try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        setTimeout(() => {
-          hideLoader();
+      setTimeout(async () => {
+        try {
+          const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
           alert("Login successful!");
           window.location.href = "dashboard.html";
-        }, 2000);
-      } catch (err) {
-        hideLoader();
-        alert("Incorrect password or corrupted wallet.");
-      }
+        } catch (err) {
+          document.getElementById("loadingOverlay").style.display = "none";
+          alert("Incorrect password or corrupted wallet.");
+        }
+      }, 1000);
     }
 
     async function recoverAccount() {
       const phrase = prompt("Enter your 12-word secret phrase:");
       if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
-
       const password = prompt("Set a password to encrypt recovered wallet:");
       if (!password) return alert("Password is required.");
+      showLoading("Recovering your wallet... Please wait");
 
-      showLoader("Recovering your wallet…");
-
-      try {
-        const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
-        const encryptedJson = await wallet.encrypt(password);
-        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-
-        setTimeout(() => {
-          hideLoader();
-          alert("Wallet recovered and encrypted successfully!");
+      setTimeout(async () => {
+        try {
+          const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
+          const encryptedJson = await wallet.encrypt(password);
+          localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+          alert("Wallet recovered successfully!");
           window.location.href = "dashboard.html";
-        }, 2000);
-      } catch (err) {
-        hideLoader();
-        alert("Recovery failed. Invalid phrase.");
-      }
+        } catch (err) {
+          document.getElementById("loadingOverlay").style.display = "none";
+          alert("Recovery failed. Invalid phrase.");
+        }
+      }, 1000);
     }
   </script>
 </body>
