@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body style="text-align: center; font-family: Arial, sans-serif; background: #f0fcf9;">
+
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width: 120px; margin-top: 20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Powered by BSC Blockchain Network</p>
+
+    <button onclick="createWallet()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Create Wallet</button>
+    <button onclick="signInWithSecretPhrase()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">Sign In with Secret Phrase</button>
+
+    <div id="walletDetails" style="display: none; margin-top: 20px;">
+      <p id="walletAddress" style="font-weight: bold;"></p>
+      <p id="walletMnemonic"></p>
+      <button onclick="viewSecretPhrase()">View Secret Phrase</button>
+    </div>
+
+    <div style="margin-top: 40px; font-size: 14px; color: #555;">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" width="20" style="vertical-align: middle;" />
+      AI Powered by ChatGPT Technology
+    </div>
+  </div>
+
+  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
+    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
+    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
+    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
+    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
+    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
+  </div>
+
+  <script>
+    let userWallet = null;
+
+    // Function to create a new wallet
+    async function createWallet() {
+      const wallet = ethers.Wallet.createRandom();
+      userWallet = wallet;
+      document.getElementById('walletAddress').innerText = 'Wallet Address: ' + wallet.address;
+      document.getElementById('walletMnemonic').innerText = 'Secret Phrase: ' + wallet.mnemonic.phrase;
+      document.getElementById('walletDetails').style.display = 'block';
+      localStorage.setItem('walletAddress', wallet.address);
+      localStorage.setItem('walletPrivateKey', wallet.privateKey);
+      localStorage.setItem('walletMnemonic', wallet.mnemonic.phrase);
+      window.location.href = 'dashboard.html'; // Redirect to the dashboard
+    }
+
+    // Function to sign in using the secret phrase
+    function signInWithSecretPhrase() {
+      const secretPhrase = prompt("Enter your secret phrase (12 words):");
+      if (secretPhrase) {
+        const wallet = ethers.Wallet.fromMnemonic(secretPhrase);
+        userWallet = wallet;
+        document.getElementById('walletAddress').innerText = 'Wallet Address: ' + wallet.address;
+        document.getElementById('walletMnemonic').innerText = 'Secret Phrase: ' + wallet.mnemonic.phrase;
+        document.getElementById('walletDetails').style.display = 'block';
+        localStorage.setItem('walletAddress', wallet.address);
+        localStorage.setItem('walletPrivateKey', wallet.privateKey);
+        localStorage.setItem('walletMnemonic', wallet.mnemonic.phrase);
+        window.location.href = 'dashboard.html'; // Redirect to the dashboard
+      } else {
+        alert("Please enter a valid secret phrase.");
+      }
+    }
+
+    // Function to view secret phrase
+    function viewSecretPhrase() {
+      alert("Secret Phrase: " + userWallet.mnemonic.phrase);
+    }
+
+  </script>
+
+</body>
+</html>
