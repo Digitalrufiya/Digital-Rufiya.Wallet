@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wallet Settings</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body style="font-family: Arial; background: #f4f9fb; text-align: center; padding: 20px;">
+
+  <h2>Wallet Settings</h2>
+  <p id="walletAddr" style="font-weight:bold;"></p>
+
+  <button onclick="showSecretPhrase()">Show Secret Phrase</button>
+  <p id="mnemonic" style="margin-top: 10px; color: green;"></p>
+  <button onclick="copyText('mnemonic')">Copy Secret Phrase</button>
+
+  <br><br>
+
+  <button onclick="exportPrivateKey()">Export Private Key</button>
+  <p id="privateKey" style="margin-top: 10px; color: red;"></p>
+  <button onclick="copyText('privateKey')">Copy Private Key</button>
+  <div id="qrCode" style="margin-top: 10px;"></div>
+
+  <br><br>
+
+  <button onclick="exportAsTxt()">Export Wallet as .txt</button>
+  <button onclick="downloadEncryptedWallet()">Download Encrypted Backup</button>
+
+  <br><br>
+
+  <button onclick="resetWallet()" style="margin-top: 30px; color: white; background: red;">Reset Wallet</button>
+  <br><br>
+  <a href="dashboard.html">← Back to Dashboard</a>
+
+  <script>
+    async function loadWallet() {
+      const encrypted = localStorage.getItem("drf_encrypted_wallet");
+      if (!encrypted) return alert("No wallet found. Redirecting..."), location.href = "index.html";
+
+      const password = prompt("Enter password to access settings:");
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
+        window.currentWallet = wallet;
+        window.walletPassword = password;
+        window.encryptedWallet = encrypted;
+        document.getElementById("walletAddr").innerText = "Wallet: " + wallet.address;
+      } catch (e) {
+        alert("Wrong password!");
+        location.href = "index.html";
+      }
+    }
+
+    async function showSecretPhrase() {
+      if (!window.walletPassword || !window.currentWallet) return alert("Not unlocked!");
+      const mnemonic = ethers.utils.HDNode.fromMnemonic(window.currentWallet.mnemonic).phrase;
+      document.getElementById("mnemonic").innerText = mnemonic;
+    }
+
+    async function exportPrivateKey() {
+      if (!window.walletPassword || !window.currentWallet) return alert("Not unlocked!");
+      const pk = window.currentWallet.privateKey;
+      document.getElementById("privateKey").innerText = pk;
+      generateQRCode(pk);
+    }
+
+    function copyText(id) {
+      const text = document.getElementById(id).innerText;
+      if (!text) return alert("Nothing to copy.");
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
+    }
+
+    function generateQRCode(text) {
+      const qrCodeDiv = document.getElementById("qrCode");
+      qrCodeDiv.innerHTML = ""; // clear previous
+      QRCode.toCanvas(document.createElement("canvas"), text, { width: 150 }, (err, canvas) => {
+        if (!err) qrCodeDiv.appendChild(canvas);
+      });
+    }
+
+    function exportAsTxt() {
+      if (!window.currentWallet) return alert("Wallet not loaded.");
+      const data = `Wallet Address: ${window.currentWallet.address}\nSecret Phrase: ${ethers.utils.HDNode.fromMnemonic(window.currentWallet.mnemonic).phrase}\nPrivate Key: ${window.currentWallet.privateKey}`;
+      const blob = new Blob([data], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "drf_wallet_backup.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function downloadEncryptedWallet() {
+      if (!window.encryptedWallet) return alert("Encrypted wallet not available.");
+      const blob = new Blob([window.encryptedWallet], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "drf_encrypted_backup.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function resetWallet() {
+      if (confirm("Are you sure you want to delete this wallet from device?")) {
+        localStorage.removeItem("drf_encrypted_wallet");
+        alert("Wallet removed.");
+        location.href = "index.html";
+      }
+    }
+
+    loadWallet();
+  </script>
+</body>
+</html>
