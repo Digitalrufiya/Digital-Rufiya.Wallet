@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Admin Panel</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+</head>
+<body style="font-family: Arial; text-align: center; background: #f8f8f8; padding: 20px;">
+
+  <h2>🔒 DRF Admin Login</h2>
+  <p>Please connect your admin wallet to proceed.</p>
+  
+  <button onclick="connectWallet()" style="padding: 10px 20px; font-size: 16px;">Connect Admin Wallet</button>
+
+  <p id="status" style="margin-top: 20px; font-weight: bold; color: green;"></p>
+
+  <script>
+    const adminAddress = "0xYourAdminWalletAddressHere"; // Replace this
+
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert("MetaMask or wallet not found.");
+        return;
+      }
+
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const user = accounts[0];
+
+      if (user.toLowerCase() === adminAddress.toLowerCase()) {
+        document.getElementById('status').innerText = "✅ Admin verified. Redirecting...";
+        setTimeout(() => {
+          window.location.href = "stakingadmin.html"; // Or any admin page
+        }, 1500);
+      } else {
+        document.getElementById('status').innerText = "❌ Not authorized.";
+      }
+    }
+  </script>
+
+</body>
+</html>
