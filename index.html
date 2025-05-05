@@ -53,7 +53,16 @@
       const encryptedJson = await wallet.encrypt(password);
       localStorage.setItem("drf_encrypted_wallet", encryptedJson);
 
-      alert("Account created! Your secret phrase:\n\n" + wallet.mnemonic.phrase + "\n\nSave it securely.");
+      const secretPhrase = wallet.mnemonic.phrase;
+      alert("Account created! Your secret phrase:\n\n" + secretPhrase + "\n\nSave it securely. We will never ask for your secret phrase!");
+
+      // Offer user the option to download their secret phrase
+      const downloadLink = document.createElement('a');
+      downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(secretPhrase);
+      downloadLink.download = "drf_wallet_secret_phrase.txt";
+      downloadLink.textContent = "Download Secret Phrase";
+      document.body.appendChild(downloadLink);
+
       setTimeout(() => window.location.href = "dashboard.html", 2000);
     }
 
