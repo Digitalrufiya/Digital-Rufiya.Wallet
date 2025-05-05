@@ -3,125 +3,137 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Wallet Settings</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>DRF Wallet Settings</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
-<body style="font-family: Arial; background: #f4f9fb; text-align: center; padding: 20px;">
+<body>
+  <div class="container">
+    <h2>DRF Wallet Settings</h2>
+    <p id="loadingMsg" style="color: gray;">🔄 Loading wallet, please wait...</p>
+    <p id="walletAddr"></p>
+    
+    <hr>
 
-  <h2>Wallet Settings</h2>
-  <p id="walletAddr" style="font-weight:bold;"></p>
+    <button onclick="promptPassword('showSecretPhrase')">Show Secret Phrase</button>
+    <p id="mnemonic" style="word-break: break-all;"></p>
+    <button onclick="copyText('mnemonic')">Copy Secret Phrase</button>
 
-  <button onclick="promptPassword('showSecretPhrase')">Show Secret Phrase</button>
-  <p id="mnemonic" style="margin-top: 10px; color: green;"></p>
-  <button onclick="copyText('mnemonic')">Copy Secret Phrase</button>
+    <hr>
 
-  <br><br>
+    <button onclick="promptPassword('exportPrivateKey')">Show Private Key</button>
+    <p id="privateKey" style="word-break: break-all;"></p>
+    <button onclick="copyText('privateKey')">Copy Private Key</button>
+    <div id="qrCode"></div>
 
-  <button onclick="promptPassword('exportPrivateKey')">Export Private Key</button>
-  <p id="privateKey" style="margin-top: 10px; color: red;"></p>
-  <button onclick="copyText('privateKey')">Copy Private Key</button>
-  <div id="qrCode" style="margin-top: 10px;"></div>
+    <hr>
 
-  <br><br>
+    <button onclick="promptPassword('exportAsTxt')">Export as Text File</button>
+    <button onclick="promptPassword('downloadEncryptedWallet')">Download Encrypted Wallet (JSON)</button>
 
-  <button onclick="promptPassword('exportAsTxt')">Export Wallet as .txt</button>
-  <button onclick="promptPassword('downloadEncryptedWallet')">Download Encrypted Backup</button>
+    <hr>
 
-  <br><br>
-
-  <button onclick="resetWallet()" style="margin-top: 30px; color: white; background: red;">Reset Wallet</button>
-  <br><br>
-  <a href="dashboard.html">← Back to Dashboard</a>
-
-  <div id="securityInfo" style="margin-top: 20px; color: blue; font-size: 0.9em;">
-    <p>⚠️ Please make sure to securely store your secret phrase and private key. Losing these means losing access to your wallet forever!</p>
-    <p>🔒 Backup suggestions: Use encrypted storage or offline backup methods (e.g., USB drive or hardware wallet). Never share your private key or secret phrase with anyone!</p>
+    <button onclick="resetWallet()" style="background-color: red; color: white;">Delete Wallet from Device</button>
   </div>
-
-  <div id="loadingMessage" style="display:none; margin-top: 20px; color: #0baf9a; font-size: 1.1em;">Loading your wallet. Please wait...</div>
 
   <script>
     let currentWallet;
     let walletPassword;
     let encryptedWallet;
 
-    // Load wallet from localStorage and prompt for password
+    const disableButtons = () => {
+      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
+    };
+
+    const enableButtons = () => {
+      document.querySelectorAll("button").forEach(btn => btn.disabled = false);
+    };
+
+    disableButtons(); // prevent actions before wallet loads
+
     async function loadWallet() {
-      document.getElementById('loadingMessage').style.display = 'block';  // Show loading message
       const encrypted = localStorage.getItem("drf_encrypted_wallet");
-      if (!encrypted) return alert("No wallet found. Redirecting..."), location.href = "index.html";
+      if (!encrypted) {
+        alert("No wallet found. Redirecting...");
+        location.href = "index.html";
+        return;
+      }
 
       const password = prompt("Enter password to access settings:");
+      if (!password) {
+        alert("Password is required.");
+        location.href = "index.html";
+        return;
+      }
+
       try {
         const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-        window.currentWallet = wallet;
-        window.walletPassword = password;
-        window.encryptedWallet = encrypted;
+        currentWallet = wallet;
+        walletPassword = password;
+        encryptedWallet = encrypted;
         document.getElementById("walletAddr").innerText = "Wallet: " + wallet.address;
-        document.getElementById('loadingMessage').style.display = 'none';  // Hide loading message after wallet is loaded
-      } catch (e) {
+        document.getElementById("loadingMsg")?.remove();
+        enableButtons();
+      } catch (err) {
         alert("Wrong password!");
         location.href = "index.html";
       }
     }
 
-    // Prompt user for password before revealing sensitive information
     function promptPassword(action) {
-      const password = prompt("Enter your password to proceed:");
-      if (!password) return alert("Password is required.");
+      if (!currentWallet) {
+        alert("Please wait, wallet is still loading.");
+        return;
+      }
 
-      try {
-        if (action === 'showSecretPhrase') {
-          showSecretPhrase(password);
-        } else if (action === 'exportPrivateKey') {
-          exportPrivateKey(password);
-        } else if (action === 'exportAsTxt') {
-          exportAsTxt(password);
-        } else if (action === 'downloadEncryptedWallet') {
-          downloadEncryptedWallet(password);
-        }
-      } catch (e) {
-        alert("Wrong password!");
+      const password = prompt("Enter your password to proceed:");
+      if (!password || password !== walletPassword) {
+        alert("Incorrect password!");
+        return;
+      }
+
+      if (action === 'showSecretPhrase') {
+        showSecretPhrase();
+      } else if (action === 'exportPrivateKey') {
+        exportPrivateKey();
+      } else if (action === 'exportAsTxt') {
+        exportAsTxt();
+      } else if (action === 'downloadEncryptedWallet') {
+        downloadEncryptedWallet();
       }
     }
 
-    // Show Secret Phrase (Mnemonic)
-    async function showSecretPhrase(password) {
-      if (!window.currentWallet || password !== window.walletPassword) return alert("Incorrect password or wallet not unlocked!");
-      const mnemonic = ethers.utils.HDNode.fromMnemonic(window.currentWallet.mnemonic).phrase;
+    function showSecretPhrase() {
+      if (!currentWallet) return alert("Wallet not unlocked!");
+      const mnemonic = currentWallet.mnemonic?.phrase || "Unavailable";
       document.getElementById("mnemonic").innerText = mnemonic;
     }
 
-    // Export Private Key
-    async function exportPrivateKey(password) {
-      if (!window.currentWallet || password !== window.walletPassword) return alert("Incorrect password or wallet not unlocked!");
-      const pk = window.currentWallet.privateKey;
+    function exportPrivateKey() {
+      if (!currentWallet) return alert("Wallet not unlocked!");
+      const pk = currentWallet.privateKey;
       document.getElementById("privateKey").innerText = pk;
       generateQRCode(pk);
     }
 
-    // Copy Text (Secret Phrase or Private Key)
+    function generateQRCode(text) {
+      const qrCodeDiv = document.getElementById("qrCode");
+      qrCodeDiv.innerHTML = "";
+      QRCode.toCanvas(document.createElement("canvas"), text, { width: 150 }, (err, canvas) => {
+        if (!err) qrCodeDiv.appendChild(canvas);
+      });
+    }
+
     function copyText(id) {
       const text = document.getElementById(id).innerText;
       if (!text) return alert("Nothing to copy.");
       navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
     }
 
-    // Generate QR Code for the private key
-    function generateQRCode(text) {
-      const qrCodeDiv = document.getElementById("qrCode");
-      qrCodeDiv.innerHTML = ""; // clear previous
-      QRCode.toCanvas(document.createElement("canvas"), text, { width: 150 }, (err, canvas) => {
-        if (!err) qrCodeDiv.appendChild(canvas);
-      });
-    }
-
-    // Export Wallet as .txt file
-    function exportAsTxt(password) {
-      if (!window.currentWallet || password !== window.walletPassword) return alert("Incorrect password or wallet not unlocked!");
-      const data = `Wallet Address: ${window.currentWallet.address}\nSecret Phrase: ${ethers.utils.HDNode.fromMnemonic(window.currentWallet.mnemonic).phrase}\nPrivate Key: ${window.currentWallet.privateKey}`;
+    function exportAsTxt() {
+      const phrase = currentWallet.mnemonic?.phrase || "Unavailable";
+      const data = `Wallet Address: ${currentWallet.address}\nSecret Phrase: ${phrase}\nPrivate Key: ${currentWallet.privateKey}`;
       const blob = new Blob([data], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -132,10 +144,8 @@
       document.body.removeChild(a);
     }
 
-    // Download Encrypted Wallet Backup
-    function downloadEncryptedWallet(password) {
-      if (!window.encryptedWallet || password !== window.walletPassword) return alert("Incorrect password or wallet not unlocked!");
-      const blob = new Blob([window.encryptedWallet], { type: "application/json" });
+    function downloadEncryptedWallet() {
+      const blob = new Blob([encryptedWallet], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -145,7 +155,6 @@
       document.body.removeChild(a);
     }
 
-    // Reset Wallet (Delete from localStorage)
     function resetWallet() {
       if (confirm("Are you sure you want to delete this wallet from device?")) {
         localStorage.removeItem("drf_encrypted_wallet");
@@ -154,7 +163,7 @@
       }
     }
 
-    // Load the wallet when the page is ready
+    // Load wallet on page load
     loadWallet();
   </script>
 </body>
