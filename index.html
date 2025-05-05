@@ -1,143 +1,97 @@
 <!DOCTYPE html>
+
 <html lang="en">
+<meta charset="UTF-8" />
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>DRF Wallet Dashboard</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
-<body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
+<body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
 
-  <header style="display: flex; justify-content: space-between; align-items: center; position: relative;">
-    <h2 style="font-size: 24px; font-weight: bold;">My Assets</h2>
-    <div style="font-size: 14px; color: #007bff; text-align: center; animation: rotation 5s linear infinite;">Digital Rufiya Wallet - Financial Revolution Powered by BSC Blockchain Network</div>
-    <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
-  </header>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Secure, Private, Decentralized</p>
 
-  <div>
-    <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
-    <p id="walletAddress" style="font-weight: bold;"></p>
+    <!-- BUTTONS -->
+    <button onclick="createAccount()">Create Account</button>
+    <button onclick="login()">Login</button>
+    <button onclick="recoverAccount()">Recover Account</button>
+
+    <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
   </div>
 
-  <!-- Wallet Recovery Section -->
-  <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
-    <h3>Wallet Recovery / Regeneration</h3>
-    <button onclick="recoverWallet()" style="padding: 10px 20px; background-color: #007bff; color: white;">Recover Wallet</button>
-    <button onclick="regenerateWallet()" style="padding: 10px 20px; background-color: #28a745; color: white;">Regenerate New Wallet</button>
-    <div id="mnemonicOutput" style="margin-top: 15px; display: none;">
-      <h4>Your Secret Phrase (Mnemonic):</h4>
-      <p id="mnemonicPhrase"></p>
-      <button onclick="copyMnemonic()">📋 Copy</button>
-    </div>
-  </div>
-
-  <!-- Request Deposit Section -->
-  <h3 style="margin-top: 30px;">Request Deposit</h3>
-  <div style="max-width: 400px; background: #fff; padding: 20px; border-radius: 10px;">
-    <label for="tokenSelect">Choose Token:</label>
-    <select id="tokenSelect" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="DRF">DRF</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-    </select>
-
-    <label for="amountInput">Enter Amount:</label>
-    <input type="number" id="amountInput" placeholder="e.g. 50" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-
-    <button onclick="generateDepositLink()" style="padding: 10px 20px; background-color: #007bff; color: white;">Generate Deposit Link</button>
-
-    <div id="depositOutput" style="margin-top: 15px; display: none;">
-      <p><strong>Link:</strong> <span id="depositLink"></span></p>
-      <button onclick="copyDepositLink()">📋 Copy</button>
-      <div id="qrCode" style="margin-top: 10px;"></div>
-    </div>
-  </div>
-
-  <!-- Sell DRF -->
-  <div style="margin-top: 30px;">
-    <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
-  </div>
-
-  <!-- FOOTER -->
-  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
-    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
-    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
-    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
-    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
-    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
-  </div>
-
-  <!-- Footer text -->
-  <footer style="text-align: center; margin-top: 30px;">
-    <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
-  </footer>
-
-<script>
-  const BSC_RPC = "https://bsc-dataseed.binance.org/";
-  const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
-
-  let currentWallet = null;  // Store the current wallet instance
-
-  // Function to recover the wallet
-  async function recoverWallet() {
-    const mnemonic = prompt("Enter your secret phrase (Mnemonic) to recover your wallet:");
-    if (!mnemonic) {
-      alert("Please enter a valid secret phrase.");
-      return;
+  <script>
+    // Display a loading message while waiting for actions
+    function showLoading(message) {
+      const container = document.querySelector('.container');
+      container.innerHTML = `
+        <h2>${message}</h2>
+        <img src="https://example.com/loading.gif" alt="Loading...">
+      `;
     }
-    
-    try {
-      currentWallet = ethers.Wallet.fromMnemonic(mnemonic);
-      displayWalletInfo(currentWallet);
-    } catch (e) {
-      alert("Invalid secret phrase.");
+
+    // Function to create a new account
+    async function createAccount() {
+      const password = prompt("Set a password to encrypt your wallet:");
+      if (!password) return alert("Password is required.");
+
+      showLoading("Creating your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
+
+      const wallet = ethers.Wallet.createRandom();
+      const encryptedJson = await wallet.encrypt(password);
+      localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+
+      alert("Account created! Your secret phrase:\n\n" + wallet.mnemonic.phrase + "\n\nSave it securely.");
+      setTimeout(() => window.location.href = "dashboard.html", 2000);
     }
-  }
 
-  // Function to regenerate a new wallet
-  async function regenerateWallet() {
-    currentWallet = ethers.Wallet.createRandom();
-    const mnemonic = currentWallet.mnemonic.phrase;
-    document.getElementById("mnemonicPhrase").innerText = mnemonic;
-    document.getElementById("mnemonicOutput").style.display = "block";
-    alert("A new wallet has been generated. Make sure to save your secret phrase.");
-  }
+    // Function to log in with an existing account
+    async function login() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
 
-  // Display wallet info after recovery or generation
-  function displayWalletInfo(wallet) {
-    document.getElementById("walletAddress").innerText = "Wallet: " + wallet.address;
-    loadDashboard(wallet);
-  }
+      const password = prompt("Enter your password to unlock wallet:");
+      showLoading("Logging in to your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
 
-  // Function to copy the mnemonic to clipboard
-  function copyMnemonic() {
-    const mnemonic = document.getElementById("mnemonicPhrase").innerText;
-    navigator.clipboard.writeText(mnemonic).then(() => {
-      alert("Mnemonic copied to clipboard!");
-    });
-  }
-
-  // Existing loadDashboard function with wallet passed as argument
-  async function loadDashboard(wallet) {
-    const addr = wallet.address;
-    let totalValue = 0;
-    for (let token in tokens) {
-      const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
-      const balance = await contract.balanceOf(addr);
-      const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
-      document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
-
-      const price = await getPrice(tokens[token].symbol);
-      document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
-      totalValue += parseFloat(formattedBalance) * (price || 0);
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        alert("Login successful!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
+      } catch (err) {
+        alert("Incorrect password or corrupted wallet.");
+        location.reload();
+      }
     }
-    document.getElementById("totalValue").innerText = totalValue.toFixed(2);
-    showReceiveSection(addr);
-  }
 
-  // Existing getPrice, showReceiveSection, and other functions
-</script>
+    // Function to recover an account using the 12-word mnemonic phrase
+    async function recoverAccount() {
+      const phrase = prompt("Enter your 12-word secret phrase:");
+      if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
+      const password = prompt("Set a password to encrypt recovered wallet:");
+      if (!password) return alert("Password is required.");
+
+      showLoading("Recovering your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
+
+      try {
+        const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
+        const encryptedJson = await wallet.encrypt(password);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        alert("Wallet recovered and encrypted successfully!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
+      } catch (err) {
+        alert("Recovery failed. Invalid phrase.");
+        location.reload();
+      }
+    }
+  </script>
 
 </body>
 </html>
