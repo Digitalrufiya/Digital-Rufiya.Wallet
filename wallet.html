@@ -40,6 +40,8 @@
     <p>🔒 Backup suggestions: Use encrypted storage or offline backup methods (e.g., USB drive or hardware wallet). Never share your private key or secret phrase with anyone!</p>
   </div>
 
+  <div id="loadingMessage" style="display:none; margin-top: 20px; color: #0baf9a; font-size: 1.1em;">Loading your wallet. Please wait...</div>
+
   <script>
     let currentWallet;
     let walletPassword;
@@ -47,6 +49,7 @@
 
     // Load wallet from localStorage and prompt for password
     async function loadWallet() {
+      document.getElementById('loadingMessage').style.display = 'block';  // Show loading message
       const encrypted = localStorage.getItem("drf_encrypted_wallet");
       if (!encrypted) return alert("No wallet found. Redirecting..."), location.href = "index.html";
 
@@ -57,6 +60,7 @@
         window.walletPassword = password;
         window.encryptedWallet = encrypted;
         document.getElementById("walletAddr").innerText = "Wallet: " + wallet.address;
+        document.getElementById('loadingMessage').style.display = 'none';  // Hide loading message after wallet is loaded
       } catch (e) {
         alert("Wrong password!");
         location.href = "index.html";
