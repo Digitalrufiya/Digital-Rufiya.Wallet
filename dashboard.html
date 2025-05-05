@@ -106,7 +106,7 @@
       // Fetch balances
       let totalValue = 0;
       for (let token in tokens) {
-        const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
+        const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint256)"], provider);
         const balance = await contract.balanceOf(addr);
         const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
         document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
@@ -153,7 +153,10 @@
     }
 
     function shareAffiliateLink() {
-      const affiliateLink = "https://your-dapp-link.com?ref=USER_ID";
+      const encrypted = sessionStorage.getItem("drf_wallet_json") || localStorage.getItem("drf_encrypted_wallet");
+      if (!encrypted) return alert("Wallet not connected");
+      const address = JSON.parse(atob(encrypted.split('.')[1] || ""))?.address || "user";
+      const affiliateLink = `https://your-dapp-link.com?ref=${address}`;
       prompt("Share this affiliate link to boost your wallet!", affiliateLink);
     }
 
