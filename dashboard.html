@@ -103,9 +103,9 @@
 
       document.getElementById("walletAddress").innerText = "Wallet: " + addr;
 
-      // Fetch balances
       let totalValue = 0;
-      for (let token in tokens) {
+      // Parallelizing token balance and price fetch
+      const balancePromises = Object.keys(tokens).map(async (token) => {
         const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint256)"], provider);
         const balance = await contract.balanceOf(addr);
         const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
@@ -114,10 +114,15 @@
         const price = await getPrice(tokens[token].symbol);
         document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
         totalValue += parseFloat(formattedBalance) * (price || 0);
-      }
+      });
+
+      // Wait for all balance and price fetch to finish
+      await Promise.all(balancePromises);
 
       document.getElementById("totalValue").innerText = totalValue.toFixed(2);
+
       showReceiveSection(addr);
+      hideLoader();  // Hide loader once dashboard is fully loaded
     }
 
     async function getPrice(tokenSymbol) {
@@ -167,7 +172,7 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       await loadDashboard();
-      setTimeout(hideLoader, 300);
+      setTimeout(hideLoader, 300);  // Hide the loader after the dashboard loads
     });
   </script>
 
