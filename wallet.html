@@ -3,122 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My DRF Wallet</title>
-  <style>
-    body {
-      background-color: #0f2027;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-
-    .wallet-container {
-      background-color: #1e2a38;
-      padding: 30px;
-      border-radius: 10px;
-      text-align: center;
-      width: 90%;
-      max-width: 500px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-
-    h2 {
-      margin-bottom: 20px;
-    }
-
-    button {
-      padding: 12px 20px;
-      margin: 10px 5px;
-      background-color: #00c9a7;
-      border: none;
-      color: white;
-      font-size: 16px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .key-box {
-      margin-top: 20px;
-      background: #2c3e50;
-      padding: 15px;
-      border-radius: 8px;
-      display: none;
-    }
-
-    .loading {
-      margin-top: 10px;
-      color: #ffd700;
-      font-size: 14px;
-    }
-  </style>
+  <title>DRF Wallet Keys</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
-<body>
+<body style="font-family:sans-serif; text-align:center; background:#f0fcf9;">
 
-  <div class="wallet-container">
-    <h2>DRF Wallet Keys</h2>
+  <h2 style="margin-top:30px;">🔐 DRF Wallet - Key Vault</h2>
 
-    <button onclick="showKeys()">Show Keys</button>
+  <p>For security, please enter your password to view your keys.</p>
+  <input type="password" id="walletPassword" placeholder="Enter your password" style="padding:8px; width:250px;"/>
+  <br><br>
+  <button onclick="unlockWallet()">Unlock Wallet</button>
+
+  <div id="actions" style="display:none; margin-top:30px;">
+    <button onclick="showSecretPhrase()">Show Secret Phrase</button>
+    <button onclick="showPrivateKey()">Show Private Key</button>
     <button onclick="downloadKeys()">Download Keys</button>
-
-    <div id="loading" class="loading" style="display: none;">Loading keys...</div>
-
-    <div class="key-box" id="key-box">
-      <p><strong>Secret Phrase:</strong> <span id="secret"></span></p>
-      <p><strong>Private Key:</strong> <span id="privateKey"></span></p>
-    </div>
+    <p id="output" style="margin-top:20px; word-break:break-word;"></p>
   </div>
 
   <script>
-    const keyBox = document.getElementById("key-box");
-    const secretSpan = document.getElementById("secret");
-    const privateKeySpan = document.getElementById("privateKey");
-    const loading = document.getElementById("loading");
+    let decryptedWallet = null;
 
-    const walletData = JSON.parse(localStorage.getItem("drf_wallet"));
+    async function unlockWallet() {
+      const encrypted = localStorage.getItem("drf_encrypted_wallet");
+      if (!encrypted) return alert("No wallet found. Please create one from index.html.");
 
-    function showKeys() {
-      if (!walletData) {
-        alert("No wallet found. Please create a wallet first.");
-        return;
+      const password = document.getElementById("walletPassword").value;
+      if (!password) return alert("Please enter a password.");
+
+      try {
+        decryptedWallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
+        document.getElementById("actions").style.display = "block";
+        alert("Wallet unlocked.");
+      } catch (err) {
+        alert("Invalid password or corrupted wallet.");
       }
+    }
 
-      loading.style.display = "block";
-      keyBox.style.display = "none";
+    function showSecretPhrase() {
+      if (!decryptedWallet?.mnemonic?.phrase) {
+        return alert("Mnemonic not available for this wallet.");
+      }
+      document.getElementById("output").innerText = "Secret Phrase:\n" + decryptedWallet.mnemonic.phrase;
+    }
 
-      setTimeout(() => {
-        loading.style.display = "none";
-        secretSpan.textContent = walletData?.mnemonic || "N/A";
-        privateKeySpan.textContent = walletData?.privateKey || "N/A";
-        keyBox.style.display = "block";
-      }, 1500);
+    function showPrivateKey() {
+      document.getElementById("output").innerText = "Private Key:\n" + decryptedWallet.privateKey;
     }
 
     function downloadKeys() {
-      if (!walletData) {
-        alert("No wallet found to download.");
-        return;
-      }
+      if (!decryptedWallet) return alert("Unlock the wallet first.");
+      const content = `
+DRF Wallet Keys
+---------------
+Address: ${decryptedWallet.address}
 
-      const data = `
-Secret Phrase: ${walletData.mnemonic}
-Private Key: ${walletData.privateKey}
+Secret Phrase: ${decryptedWallet.mnemonic?.phrase || "N/A"}
+Private Key: ${decryptedWallet.privateKey}
       `;
-
-      const blob = new Blob([data], { type: "text/plain" });
+      const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      a.download = "drf_wallet_keys.txt";
+      a.download = 'drf_wallet_keys.txt';
       a.click();
-
-      URL.revokeObjectURL(url);
     }
   </script>
-
 </body>
 </html>
