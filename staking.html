@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stake DRF | Digital Rufiya</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f2027;
+      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: #1e2a38;
+      padding: 25px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #00c9a7;
+      color: white;
+      cursor: pointer;
+    }
+    .message {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Stake Your DRF</h2>
+    <input type="text" id="wallet" placeholder="Enter your DRF wallet address" required />
+    <input type="number" id="amount" placeholder="Amount to Stake" required />
+    <button onclick="generateRequest()">Submit Stake Request</button>
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    function generateRequest() {
+      const wallet = document.getElementById("wallet").value.trim();
+      const amount = document.getElementById("amount").value.trim();
+      const message = document.getElementById("message");
+
+      if (!wallet || !amount) {
+        message.style.color = "#f66";
+        message.textContent = "Please fill in both fields.";
+        return;
+      }
+
+      const data = `Wallet Address: ${wallet}\nAmount: ${amount} DRF\nDate: ${new Date().toLocaleString()}`;
+      const blob = new Blob([data], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `staking_request_${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      message.style.color = "#0f0";
+      message.textContent = "Request file downloaded. Send it to admin manually.";
+    }
+  </script>
+</body>
+</html>
