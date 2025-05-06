@@ -2,142 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard - DRF</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-</head>
-<body style="font-family: Arial; background: #f4f9fb; text-align: center; padding: 20px;">
-
-  <!-- Login Form (Initially Displayed) -->
-  <div id="loginSection">
-    <h2>Admin Login</h2>
-    <label for="username">Username:</label><br>
-    <input type="text" id="username" placeholder="Enter Username"><br><br>
-    
-    <label for="password">Password:</label><br>
-    <input type="password" id="password" placeholder="Enter Password"><br><br>
-    
-    <button onclick="login()">Login</button>
-    <p id="loginError" style="color: red; display: none;">Invalid Username or Password</p>
-  </div>
-
-  <!-- Admin Dashboard (Initially Hidden) -->
-  <div id="adminSection" style="display: none;">
-    <h2>Admin Dashboard</h2>
-    <div id="walletSection">
-      <h3>Connected Wallet: <span id="walletAddr">Not Connected</span></h3>
-      <button onclick="connectWallet()">Connect Wallet</button>
-      <br><br>
-
-      <p id="drfBalance"></p>
-      <button onclick="fetchBalance()">Get DRF Balance</button>
-      <br><br>
-
-      <input type="text" id="sendAddress" placeholder="Recipient Address" />
-      <input type="number" id="sendAmount" placeholder="Amount to Send" />
-      <button onclick="sendDRF()">Send DRF Token</button>
-      <br><br>
-    </div>
-
-    <div id="transactionHistory" style="margin-top: 40px;">
-      <h3>Transaction History</h3>
-      <div id="transactionList"></div>
-    </div>
-  </div>
-
-  <script>
-    let currentWallet;
-    let provider;
-    let contract;
-
-    const correctUsername = "Fayaa91000@2020"; // Updated Username
-    const correctPassword = "Zivi@2020@"; // Updated Password
-    const contractAddress = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6'; // Your DRF contract address
-    const abi = [
-      "function balanceOf(address owner) view returns (uint256)",
-      "function transfer(address recipient, uint256 amount) public returns (bool)",
-      "event Transfer(address indexed from, address indexed to, uint256 value)"
-    ];
-
-    // Handle login
-    function login() {
-      const username = document.getElementById("username").value;
-      const password = document.getElementById("password").value;
-
-      if (username === correctUsername && password === correctPassword) {
-        // Hide login form, show admin section
-        document.getElementById("loginSection").style.display = "none";
-        document.getElementById("adminSection").style.display = "block";
-      } else {
-        document.getElementById("loginError").style.display = "block";
-      }
+  <title>DRF Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f7f9;
+      margin: 0;
+      padding: 20px;
     }
 
-    // Connect wallet using private key
-    async function connectWallet() {
-      const privateKey = prompt("Enter your private key");
-      if (!privateKey) return alert("No private key entered!");
-
-      provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-      const wallet = new ethers.Wallet(privateKey, provider);
-      currentWallet = wallet;
-
-      const walletAddress = await wallet.getAddress();
-      document.getElementById("walletAddr").innerText = walletAddress;
-      contract = new ethers.Contract(contractAddress, abi, wallet);
-
-      // Listen to Transfer events
-      contract.on("Transfer", (from, to, value, event) => {
-        displayTransaction(from, to, value);
-      });
-
-      fetchBalance();
+    .login-box, .admin-panel {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
-    // Fetch the DRF token balance
-    async function fetchBalance() {
-      if (!currentWallet) return alert("Wallet not connected!");
-      const balance = await contract.balanceOf(await currentWallet.getAddress());
-      const formattedBalance = ethers.utils.formatUnits(balance, 18); // Assuming 18 decimals
-      document.getElementById("drfBalance").innerText = `Your DRF Balance: ${formattedBalance} DRF`;
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 16px;
     }
 
-    // Send DRF token to another address
-    async function sendDRF() {
-      const recipient = document.getElementById("sendAddress").value;
-      const amount = document.getElementById("sendAmount").value;
-
-      if (!ethers.utils.isAddress(recipient)) {
-        return alert("Invalid recipient address.");
-      }
-
-      if (isNaN(amount) || amount <= 0) {
-        return alert("Invalid amount.");
-      }
-
-      const formattedAmount = ethers.utils.parseUnits(amount, 18);
-
-      try {
-        const tx = await contract.transfer(recipient, formattedAmount);
-        console.log('Transaction sent:', tx.hash);
-        alert("Transaction sent. Hash: " + tx.hash);
-      } catch (error) {
-        console.error("Error sending transaction:", error);
-        alert("Transaction failed.");
-      }
+    button {
+      background-color: #0077ff;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
 
-    // Display transaction in transaction history
-    function displayTransaction(from, to, value) {
-      const transactionList = document.getElementById("transactionList");
-      const formattedValue = ethers.utils.formatUnits(value, 18);
-      const transactionDiv = document.createElement("div");
-      transactionDiv.innerText = `Transfer of ${formattedValue} DRF from ${from} to ${to}`;
-      transactionList.appendChild(transactionDiv);
+    button:hover {
+      background-color: #005ccc;
     }
 
-  </script>
+    .hidden { display: none; }
 
-</body>
-</html>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      border
+      
