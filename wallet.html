@@ -2,108 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wallet | Digital Rufiya</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My DRF Wallet</title>
   <style>
     body {
+      background-color: #0f2027;
+      color: #fff;
       font-family: Arial, sans-serif;
-      background: #0f2027;
-      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
-      color: white;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
     }
-    .wallet-box {
-      background: #1e2a38;
+
+    .wallet-container {
+      background-color: #1e2a38;
       padding: 30px;
       border-radius: 10px;
-      width: 90%;
-      max-width: 450px;
       text-align: center;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
-    .button {
-      padding: 12px;
-      margin: 10px 0;
-      border: none;
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px 5px;
       background-color: #00c9a7;
+      border: none;
       color: white;
       font-size: 16px;
       border-radius: 5px;
       cursor: pointer;
     }
-    .keys-container {
+
+    .key-box {
       margin-top: 20px;
-      font-size: 14px;
-      color: #ffd700;
-    }
-    .hidden {
+      background: #2c3e50;
+      padding: 15px;
+      border-radius: 8px;
       display: none;
+    }
+
+    .loading {
+      margin-top: 10px;
+      color: #ffd700;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <div class="wallet-box">
-    <h2>Digital Rufiya Wallet</h2>
 
-    <button class="button" onclick="createWallet()">Create New Wallet</button>
-    <button class="button" onclick="showKeys()">Show Keys</button>
-    <button class="button hidden" id="downloadKeysBtn" onclick="downloadKeys()">Download Keys</button>
+  <div class="wallet-container">
+    <h2>DRF Wallet Keys</h2>
 
-    <div class="keys-container hidden" id="keys-container">
-      <h3>Secret Phrase (Mnemonic)</h3>
-      <p id="mnemonic"></p>
-      <h3>Private Key</h3>
-      <p id="privateKey"></p>
+    <button onclick="showKeys()">Show Keys</button>
+    <button onclick="downloadKeys()">Download Keys</button>
+
+    <div id="loading" class="loading" style="display: none;">Loading keys...</div>
+
+    <div class="key-box" id="key-box">
+      <p><strong>Secret Phrase:</strong> <span id="secret"></span></p>
+      <p><strong>Private Key:</strong> <span id="privateKey"></span></p>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethereumjs-wallet@0.6.0/dist/ethereumjs-wallet.bundle.min.js"></script>
-
   <script>
-    let wallet;
-    
-    // Function to create a new wallet
-    function createWallet() {
-      wallet = ethereumjsWallet.default.generate();
-      const mnemonic = wallet.getMnemonic();
-      const privateKey = wallet.getPrivateKeyString();
+    const keyBox = document.getElementById("key-box");
+    const secretSpan = document.getElementById("secret");
+    const privateKeySpan = document.getElementById("privateKey");
+    const loading = document.getElementById("loading");
 
-      // Save wallet keys for future use
-      localStorage.setItem('mnemonic', mnemonic);
-      localStorage.setItem('privateKey', privateKey);
+    const walletData = JSON.parse(localStorage.getItem("drf_wallet"));
 
-      // Enable the "Show Keys" button
-      document.querySelector('.hidden').classList.remove('hidden');
-    }
-
-    // Function to show the keys (mnemonic and private key)
     function showKeys() {
-      const mnemonic = localStorage.getItem('mnemonic');
-      const privateKey = localStorage.getItem('privateKey');
-      
-      // Display the keys
-      document.getElementById('mnemonic').textContent = mnemonic;
-      document.getElementById('privateKey').textContent = privateKey;
+      if (!walletData) {
+        alert("No wallet found. Please create a wallet first.");
+        return;
+      }
 
-      // Show the download button
-      document.getElementById('downloadKeysBtn').classList.remove('hidden');
+      loading.style.display = "block";
+      keyBox.style.display = "none";
+
+      setTimeout(() => {
+        loading.style.display = "none";
+        secretSpan.textContent = walletData?.mnemonic || "N/A";
+        privateKeySpan.textContent = walletData?.privateKey || "N/A";
+        keyBox.style.display = "block";
+      }, 1500);
     }
 
-    // Function to download keys (mnemonic and private key)
     function downloadKeys() {
-      const mnemonic = localStorage.getItem('mnemonic');
-      const privateKey = localStorage.getItem('privateKey');
-      const data = `Mnemonic: ${mnemonic}\nPrivate Key: ${privateKey}`;
-      const blob = new Blob([data], { type: 'text/plain' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'wallet_keys.txt';
-      link.click();
+      if (!walletData) {
+        alert("No wallet found to download.");
+        return;
+      }
+
+      const data = `
+Secret Phrase: ${walletData.mnemonic}
+Private Key: ${walletData.privateKey}
+      `;
+
+      const blob = new Blob([data], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "drf_wallet_keys.txt";
+      a.click();
+
+      URL.revokeObjectURL(url);
     }
   </script>
+
 </body>
 </html>
