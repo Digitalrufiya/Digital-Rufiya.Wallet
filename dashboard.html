@@ -110,21 +110,31 @@
   }
 
   function showReceiveSection(address) {
-    const section = document.getElementById("receiveSection");
-    const tokens = ["BNB", "DRF", "USDC", "USDT"];
-    tokens.forEach(token => {
-      const div = document.createElement("div");
-      div.style.margin = "10px 0";
-      div.innerHTML = `
-        <strong>Receive ${token}:</strong><br>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${address}" /><br>
-        <input type="text" value="${address}" readonly style="width:90%;" onclick="this.select()" /><br>
-        <a href="https://bscscan.com/address/${address}" target="_blank">View on BscScan</a>
-        <hr/>
-      `;
-      section.appendChild(div);
-    });
-  }
+  const section = document.getElementById("receiveSection");
+  const tokens = ["BNB", "DRF", "USDC", "USDT"];
+  tokens.forEach(token => {
+    const div = document.createElement("div");
+    div.style.margin = "10px 0";
+    div.innerHTML = `
+      <strong>Receive ${token}:</strong><br>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${address}" /><br>
+      <input id="address-${token}" type="text" value="${address}" readonly style="width:90%;" onclick="this.select()" /><br>
+      <button onclick="copyToClipboard('${token}')" style="margin-top: 5px;">Copy Address</button><br>
+      <a href="https://bscscan.com/address/${address}" target="_blank">View on BscScan</a>
+      <hr/>
+    `;
+    section.appendChild(div);
+  });
+}
+
+function copyToClipboard(token) {
+  const input = document.getElementById(`address-${token}`);
+  input.select();
+  input.setSelectionRange(0, 99999); // Mobile support
+  document.execCommand("copy");
+  alert(`${token} address copied to clipboard`);
+}
+
 
   // Sell DRF to Mainnet
   function sellDRF() {
