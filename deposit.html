@@ -7,7 +7,6 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #0f2027;
       background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
       color: white;
       display: flex;
@@ -29,6 +28,14 @@
       margin: 15px 0;
       font-size: 18px;
       color: #ffd700;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
     }
     button {
       width: 100%;
@@ -55,62 +62,87 @@
 <body>
   <div class="deposit-box">
     <h2>Digital Rufiya Wallet - Deposit</h2>
+    <input type="text" id="wallet-input" placeholder="Enter your BSC Wallet Address" />
+    <button onclick="saveWalletAddress()">Load Wallet</button>
+
     <div class="balance" id="balance">
-      <p>USDC Balance: <span id="usdc-balance">Loading...</span> USDC</p>
-      <p>USDT Balance: <span id="usdt-balance">Loading...</span> USDT</p>
-      <p>DRF Balance: <span id="drf-balance">Loading...</span> DRF</p>
+      <p>Please enter your wallet address above.</p>
     </div>
+
     <button onclick="generateDeposit('USDC')">Deposit USDC</button>
     <button onclick="generateDeposit('USDT')">Deposit USDT</button>
     <button onclick="generateDeposit('DRF')">Deposit DRF</button>
+
     <div class="qr-container" id="qr-container"></div>
     <div class="message" id="message"></div>
   </div>
 
   <script>
-    const apiKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
-    const walletAddress = localStorage.getItem("userWallet");
+    const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const usdtAddress = "0x55d398326f99059fF775485246999027B3197955";
+    const drfAddress = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const bscscanAPIKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
 
-    const tokens = {
-      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-      USDT: "0x55d398326f99059ff775485246999027b3197955",
-      DRF:  "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"
-    };
+    const walletInput = document.getElementById("wallet-input");
+    const savedWallet = localStorage.getItem("userWallet");
 
-    function getTokenBalance(tokenSymbol, tokenAddress) {
-      fetch(`https://api.bscscan.com/api?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${walletAddress}&tag=latest&apikey=${apiKey}`)
-        .then(res => res.json())
-        .then(data => {
-          let raw = data.result;
-          let decimals = 18;
-          let formatted = parseFloat(raw) / Math.pow(10, decimals);
-          document.getElementById(`${tokenSymbol.toLowerCase()}-balance`).textContent = formatted.toFixed(4);
-        })
-        .catch(err => {
-          document.getElementById(`${tokenSymbol.toLowerCase()}-balance`).textContent = "Error";
-        });
+    if (savedWallet) {
+      walletInput.value = savedWallet;
+      fetchBalances(savedWallet);
     }
 
-    function loadAllBalances() {
-      if (!walletAddress) {
-        alert("Wallet address not found in localStorage!");
-        return;
+    function saveWalletAddress() {
+      const address = walletInput.value.trim();
+      if (address.length === 42 && address.startsWith("0x")) {
+        localStorage.setItem("userWallet", address);
+        fetchBalances(address);
+      } else {
+        alert("Invalid BSC wallet address");
       }
-      getTokenBalance("USDC", tokens.USDC);
-      getTokenBalance("USDT", tokens.USDT);
-      getTokenBalance("DRF", tokens.DRF);
+    }
+
+    async function fetchBalances(wallet) {
+      document.getElementById("balance").innerHTML = "Loading...";
+      try {
+        const [usdc, usdt, drf] = await Promise.all([
+          getTokenBalance(wallet, usdcAddress),
+          getTokenBalance(wallet, usdtAddress),
+          getTokenBalance(wallet, drfAddress),
+        ]);
+
+        document.getElementById("balance").innerHTML = `
+          <p>USDC Balance: <span id="usdc-balance">${usdc}</span> USDC</p>
+          <p>USDT Balance: <span id="usdt-balance">${usdt}</span> USDT</p>
+          <p>DRF Balance: <span id="drf-balance">${drf}</span> DRF</p>
+        `;
+      } catch (e) {
+        document.getElementById("balance").innerHTML = "Error loading balances.";
+      }
+    }
+
+    async function getTokenBalance(address, tokenAddress) {
+      const url = `https://api.bscscan.com/api?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${address}&tag=latest&apikey=${bscscanAPIKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const decimals = 18;
+      return (parseFloat(data.result) / (10 ** decimals)).toFixed(4);
     }
 
     function generateDeposit(token) {
       const qrContainer = document.getElementById('qr-container');
       const message = document.getElementById('message');
+      const walletAddress = localStorage.getItem("userWallet");
+
+      if (!walletAddress) {
+        message.textContent = "Please enter your wallet address first.";
+        message.style.color = "#f00";
+        return;
+      }
 
       message.textContent = `Deposit ${token} to wallet address: ${walletAddress}`;
-      qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${walletAddress}&size=200x200" alt="QR Code" />`;
       message.style.color = "#0f0";
+      qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${walletAddress}&size=200x200" alt="QR Code" />`;
     }
-
-    loadAllBalances();
   </script>
 </body>
 </html>
