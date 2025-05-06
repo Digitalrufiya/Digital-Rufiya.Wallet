@@ -1,170 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet Settings</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Rufiya Wallet</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f2027;
+      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .wallet-box {
+      background: #1e2a38;
+      padding: 20px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      margin-top: 20px;
+    }
+    textarea, input, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      background-color: #00c9a7;
+      color: white;
+      cursor: pointer;
+    }
+    .balance-section {
+      margin-top: 20px;
+    }
+    .balance-section p {
+      font-size: 18px;
+      margin: 5px 0;
+    }
+    .qr-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>DRF Wallet Settings</h2>
-    <p id="loadingMsg" style="color: gray;">🔄 Loading wallet, please wait...</p>
-    <p id="walletAddr"></p>
-    
-    <hr>
+  <h1>Digital Rufiya Standalone Wallet</h1>
 
-    <button onclick="promptPassword('showSecretPhrase')">Show Secret Phrase</button>
-    <p id="mnemonic" style="word-break: break-all;"></p>
-    <button onclick="copyText('mnemonic')">Copy Secret Phrase</button>
+  <div class="wallet-box" id="wallet-actions">
+    <button onclick="generateWallet()">Create New Wallet</button>
+    <input type="text" id="mnemonic-import" placeholder="Enter 12-word mnemonic or private key" />
+    <button onclick="importWallet()">Import Wallet</button>
+  </div>
 
-    <hr>
-
-    <button onclick="promptPassword('exportPrivateKey')">Show Private Key</button>
-    <p id="privateKey" style="word-break: break-all;"></p>
-    <button onclick="copyText('privateKey')">Copy Private Key</button>
-    <div id="qrCode"></div>
-
-    <hr>
-
-    <button onclick="promptPassword('exportAsTxt')">Export as Text File</button>
-    <button onclick="promptPassword('downloadEncryptedWallet')">Download Encrypted Wallet (JSON)</button>
-
-    <hr>
-
-    <button onclick="resetWallet()" style="background-color: red; color: white;">Delete Wallet from Device</button>
+  <div class="wallet-box" id="wallet-interface" style="display:none;">
+    <p><strong>Wallet Address:</strong> <span id="wallet-address"></span></p>
+    <div class="balance-section">
+      <p>DRF Balance: <span id="drf-balance">Loading...</span></p>
+      <p>USDC Balance: <span id="usdc-balance">Loading...</span></p>
+      <p>USDT Balance: <span id="usdt-balance">Loading...</span></p>
+    </div>
+    <div class="qr-container">
+      <img id="qr-code" src="" width="200" height="200" />
+    </div>
   </div>
 
   <script>
-    let currentWallet;
-    let walletPassword;
-    let encryptedWallet;
+    const apiKey = 'G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8';
+    const drfToken = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6';
+    const usdcToken = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
+    const usdtToken = '0x55d398326f99059ff775485246999027b3197955';
 
-    const disableButtons = () => {
-      document.querySelectorAll("button").forEach(btn => btn.disabled = true);
-    };
+    let provider = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
+    let wallet;
 
-    const enableButtons = () => {
-      document.querySelectorAll("button").forEach(btn => btn.disabled = false);
-    };
+    function generateWallet() {
+      wallet = ethers.Wallet.createRandom();
+      localStorage.setItem('mnemonic', wallet.mnemonic.phrase);
+      showWallet(wallet);
+    }
 
-    disableButtons(); // prevent actions before wallet loads
-
-    async function loadWallet() {
-      const encrypted = localStorage.getItem("drf_encrypted_wallet");
-      if (!encrypted) {
-        alert("No wallet found. Redirecting...");
-        location.href = "index.html";
-        return;
-      }
-
-      const password = prompt("Enter password to access settings:");
-      if (!password) {
-        alert("Password is required.");
-        location.href = "index.html";
-        return;
-      }
-
+    function importWallet() {
+      const input = document.getElementById('mnemonic-import').value.trim();
       try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-        currentWallet = wallet;
-        walletPassword = password;
-        encryptedWallet = encrypted;
-        document.getElementById("walletAddr").innerText = "Wallet: " + wallet.address;
-        document.getElementById("loadingMsg")?.remove();
-        enableButtons();
+        if (input.split(' ').length === 12) {
+          wallet = ethers.Wallet.fromMnemonic(input);
+        } else {
+          wallet = new ethers.Wallet(input);
+        }
+        localStorage.setItem('mnemonic', wallet.mnemonic?.phrase || input);
+        showWallet(wallet);
       } catch (err) {
-        alert("Wrong password!");
-        location.href = "index.html";
+        alert('Invalid mnemonic or private key');
       }
     }
 
-    function promptPassword(action) {
-      if (!currentWallet) {
-        alert("Please wait, wallet is still loading.");
-        return;
-      }
+    async function showWallet(walletObj) {
+      document.getElementById('wallet-actions').style.display = 'none';
+      document.getElementById('wallet-interface').style.display = 'block';
 
-      const password = prompt("Enter your password to proceed:");
-      if (!password || password !== walletPassword) {
-        alert("Incorrect password!");
-        return;
-      }
+      wallet = walletObj.connect(provider);
+      document.getElementById('wallet-address').textContent = wallet.address;
 
-      if (action === 'showSecretPhrase') {
-        showSecretPhrase();
-      } else if (action === 'exportPrivateKey') {
-        exportPrivateKey();
-      } else if (action === 'exportAsTxt') {
-        exportAsTxt();
-      } else if (action === 'downloadEncryptedWallet') {
-        downloadEncryptedWallet();
-      }
+      // Generate QR
+      document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?data=${wallet.address}&size=200x200`;
+
+      // Fetch balances
+      await fetchTokenBalance(drfToken, 'drf-balance');
+      await fetchTokenBalance(usdcToken, 'usdc-balance');
+      await fetchTokenBalance(usdtToken, 'usdt-balance');
     }
 
-    function showSecretPhrase() {
-      if (!currentWallet) return alert("Wallet not unlocked!");
-      const mnemonic = currentWallet.mnemonic?.phrase || "Unavailable";
-      document.getElementById("mnemonic").innerText = mnemonic;
-    }
-
-    function exportPrivateKey() {
-      if (!currentWallet) return alert("Wallet not unlocked!");
-      const pk = currentWallet.privateKey;
-      document.getElementById("privateKey").innerText = pk;
-      generateQRCode(pk);
-    }
-
-    function generateQRCode(text) {
-      const qrCodeDiv = document.getElementById("qrCode");
-      qrCodeDiv.innerHTML = "";
-      QRCode.toCanvas(document.createElement("canvas"), text, { width: 150 }, (err, canvas) => {
-        if (!err) qrCodeDiv.appendChild(canvas);
-      });
-    }
-
-    function copyText(id) {
-      const text = document.getElementById(id).innerText;
-      if (!text) return alert("Nothing to copy.");
-      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
-    }
-
-    function exportAsTxt() {
-      const phrase = currentWallet.mnemonic?.phrase || "Unavailable";
-      const data = `Wallet Address: ${currentWallet.address}\nSecret Phrase: ${phrase}\nPrivate Key: ${currentWallet.privateKey}`;
-      const blob = new Blob([data], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "drf_wallet_backup.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    function downloadEncryptedWallet() {
-      const blob = new Blob([encryptedWallet], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "drf_encrypted_backup.json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    function resetWallet() {
-      if (confirm("Are you sure you want to delete this wallet from device?")) {
-        localStorage.removeItem("drf_encrypted_wallet");
-        alert("Wallet removed.");
-        location.href = "index.html";
+    async function fetchTokenBalance(contractAddress, displayId) {
+      const url = `https://api.bscscan.com/api?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${wallet.address}&tag=latest&apikey=${apiKey}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === "1") {
+          const balance = ethers.utils.formatUnits(data.result, 18);
+          document.getElementById(displayId).textContent = parseFloat(balance).toFixed(4);
+        } else {
+          document.getElementById(displayId).textContent = 'Error';
+        }
+      } catch (err) {
+        document.getElementById(displayId).textContent = 'Failed';
       }
     }
 
-    // Load wallet on page load
-    loadWallet();
+    // Auto-load if wallet exists
+    window.onload = () => {
+      const saved = localStorage.getItem('mnemonic');
+      if (saved) {
+        try {
+          if (saved.split(' ').length === 12) {
+            wallet = ethers.Wallet.fromMnemonic(saved);
+          } else {
+            wallet = new ethers.Wallet(saved);
+          }
+          showWallet(wallet);
+        } catch (e) {
+          console.warn('Stored wallet load failed');
+        }
+      }
+    }
   </script>
 </body>
 </html>
