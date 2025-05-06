@@ -56,9 +56,9 @@
   <div class="deposit-box">
     <h2>Digital Rufiya Wallet - Deposit</h2>
     <div class="balance" id="balance">
-      <p>USDC Balance: <span id="usdc-balance">0</span> USDC</p>
-      <p>USDT Balance: <span id="usdt-balance">0</span> USDT</p>
-      <p>DRF Balance: <span id="drf-balance">0</span> DRF</p>
+      <p>USDC Balance: <span id="usdc-balance">Loading...</span> USDC</p>
+      <p>USDT Balance: <span id="usdt-balance">Loading...</span> USDT</p>
+      <p>DRF Balance: <span id="drf-balance">Loading...</span> DRF</p>
     </div>
     <button onclick="generateDeposit('USDC')">Deposit USDC</button>
     <button onclick="generateDeposit('USDT')">Deposit USDT</button>
@@ -68,36 +68,49 @@
   </div>
 
   <script>
-    // Example wallet balances (Replace with live data from blockchain)
-    let walletData = {
-      USDC: 500,
-      USDT: 300,
-      DRF: 1000
+    const apiKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
+    const walletAddress = localStorage.getItem("userWallet");
+
+    const tokens = {
+      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      USDT: "0x55d398326f99059ff775485246999027b3197955",
+      DRF:  "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"
     };
 
-    document.getElementById('usdc-balance').textContent = walletData.USDC;
-    document.getElementById('usdt-balance').textContent = walletData.USDT;
-    document.getElementById('drf-balance').textContent = walletData.DRF;
+    function getTokenBalance(tokenSymbol, tokenAddress) {
+      fetch(`https://api.bscscan.com/api?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${walletAddress}&tag=latest&apikey=${apiKey}`)
+        .then(res => res.json())
+        .then(data => {
+          let raw = data.result;
+          let decimals = 18;
+          let formatted = parseFloat(raw) / Math.pow(10, decimals);
+          document.getElementById(`${tokenSymbol.toLowerCase()}-balance`).textContent = formatted.toFixed(4);
+        })
+        .catch(err => {
+          document.getElementById(`${tokenSymbol.toLowerCase()}-balance`).textContent = "Error";
+        });
+    }
 
-    // Function to generate Deposit QR Code for different tokens
+    function loadAllBalances() {
+      if (!walletAddress) {
+        alert("Wallet address not found in localStorage!");
+        return;
+      }
+      getTokenBalance("USDC", tokens.USDC);
+      getTokenBalance("USDT", tokens.USDT);
+      getTokenBalance("DRF", tokens.DRF);
+    }
+
     function generateDeposit(token) {
       const qrContainer = document.getElementById('qr-container');
       const message = document.getElementById('message');
-      const walletAddress = "0xYourWalletAddressHere"; // Replace with the actual wallet address
 
-      if (token === "USDC") {
-        message.textContent = `Deposit USDC to wallet address: ${walletAddress}`;
-      } else if (token === "USDT") {
-        message.textContent = `Deposit USDT to wallet address: ${walletAddress}`;
-      } else if (token === "DRF") {
-        message.textContent = `Deposit DRF to wallet address: ${walletAddress}`;
-      }
-
-      // Generate QR Code for the token deposit address (you can use a library like `qrcode.js` to generate QR codes)
+      message.textContent = `Deposit ${token} to wallet address: ${walletAddress}`;
       qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${walletAddress}&size=200x200" alt="QR Code" />`;
-
-      message.style.color = "#0f0"; // Green message for QR code generation
+      message.style.color = "#0f0";
     }
+
+    loadAllBalances();
   </script>
 </body>
 </html>
