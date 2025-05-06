@@ -17,183 +17,90 @@
       height: 100vh;
       margin: 0;
     }
-    .dashboard-container {
+    .login-box {
       background: #1e2a38;
       padding: 30px;
       border-radius: 10px;
       width: 90%;
-      max-width: 1000px;
+      max-width: 400px;
       box-shadow: 0 0 15px rgba(0,0,0,0.4);
-    }
-    h2 {
       text-align: center;
-      color: #fff;
     }
-    .section {
-      margin-bottom: 20px;
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
     }
-    .button {
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
       background: #00c9a7;
       color: white;
-      padding: 10px 20px;
+      font-size: 16px;
       border-radius: 5px;
       cursor: pointer;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    th {
-      background-color: #333;
-    }
     .message {
-      margin-top: 20px;
+      margin-top: 10px;
       font-size: 14px;
       color: #ffd700;
+    }
+    .loader {
+      margin: 10px auto;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #00c9a7;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
     }
   </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <h2>Admin Dashboard</h2>
-
-    <!-- User Management Section -->
-    <div class="section">
-      <h3>User List</h3>
-      <table id="userList">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Wallet Balance</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Dynamic user data will be inserted here -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Withdrawal Requests Section -->
-    <div class="section">
-      <h3>Withdrawal Requests</h3>
-      <table id="withdrawalRequests">
-        <thead>
-          <tr>
-            <th>Amount</th>
-            <th>Wallet Address</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Dynamic withdrawal requests data will be inserted here -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Staking Requests Section -->
-    <div class="section">
-      <h3>Staking Requests</h3>
-      <table id="stakingRequests">
-        <thead>
-          <tr>
-            <th>Amount</th>
-            <th>Approval Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Dynamic staking requests data will be inserted here -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Export Option -->
-    <div class="section">
-      <button class="button" onclick="exportCSV()">Export as CSV</button>
-    </div>
-
-    <!-- Notifications Section -->
+  <div class="login-box">
+    <h2>Admin Panel Login</h2>
+    <input type="email" id="email" placeholder="Enter admin email" required />
+    <input type="password" id="password" placeholder="Enter password" required />
+    <button onclick="login()">Login</button>
+    <div class="loader" id="loader"></div>
     <div class="message" id="message"></div>
   </div>
 
   <script>
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbxzvBXN1BZJvvImtonPlHOsO4EfloI_f4RgsYoxEX4bb91i_FsiFXZ8UwZQ3piFX1-e/exec";
+    function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const loader = document.getElementById("loader");
+      const message = document.getElementById("message");
 
-    // Fetching user data
-    function fetchUserData() {
-      fetch(webAppUrl)
-        .then(response => response.json())
-        .then(data => {
-          const userList = document.getElementById("userList").getElementsByTagName("tbody")[0];
-          data.users.forEach(user => {
-            const row = userList.insertRow();
-            row.innerHTML = `<td>${user.name}</td><td>${user.balance}</td>`;
-          });
-        })
-        .catch(error => console.error('Error fetching user data:', error));
+      loader.style.display = "block";
+      message.textContent = "";
+
+      setTimeout(() => {
+        loader.style.display = "none";
+
+        if (email === "digitalrufiya@gmail.com" && password === "Zivian@2020") {
+          message.style.color = "#0f0";
+          message.textContent = "Login successful! Redirecting...";
+          setTimeout(() => {
+            window.location.href = "admin-dashboard.html";
+          }, 1000);
+        } else {
+          message.style.color = "#f66";
+          message.textContent = "Invalid email or password.";
+        }
+      }, 2000);
     }
-
-    // Fetching withdrawal requests
-    function fetchWithdrawalRequests() {
-      fetch(webAppUrl)
-        .then(response => response.json())
-        .then(data => {
-          const withdrawalList = document.getElementById("withdrawalRequests").getElementsByTagName("tbody")[0];
-          data.withdrawals.forEach(request => {
-            const row = withdrawalList.insertRow();
-            row.innerHTML = `<td>${request.amount}</td><td>${request.wallet}</td><td>${request.status}</td>`;
-          });
-        })
-        .catch(error => console.error('Error fetching withdrawal requests:', error));
-    }
-
-    // Fetching staking requests
-    function fetchStakingRequests() {
-      fetch(webAppUrl)
-        .then(response => response.json())
-        .then(data => {
-          const stakingList = document.getElementById("stakingRequests").getElementsByTagName("tbody")[0];
-          data.staking.forEach(request => {
-            const row = stakingList.insertRow();
-            row.innerHTML = `<td>${request.amount}</td><td>${request.status}</td>`;
-          });
-        })
-        .catch(error => console.error('Error fetching staking requests:', error));
-    }
-
-    // Exporting data as CSV
-    function exportCSV() {
-      const data = [
-        ["User", "Wallet Balance"],
-        ["John Doe", "1000 DRF"], // Example
-        ["Jane Smith", "500 DRF"], // Example
-        // Add other data rows here
-      ];
-
-      let csvContent = "data:text/csv;charset=utf-8,";
-      data.forEach(row => {
-        csvContent += row.join(",") + "\n";
-      });
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "data.csv");
-      document.body.appendChild(link);
-      link.click();
-    }
-
-    // Initial fetch calls on page load
-    window.onload = function() {
-      fetchUserData();
-      fetchWithdrawalRequests();
-      fetchStakingRequests();
-    };
   </script>
 </body>
 </html>
