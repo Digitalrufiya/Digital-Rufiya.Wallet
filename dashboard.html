@@ -1,163 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>DRF Wallet Admin Dashboard</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> <!-- Include axios -->
 </head>
-<body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
+<body style="font-family:sans-serif;background:#f0fcf9; text-align:center; padding:20px;">
 
-  <header style="display: flex; justify-content: space-between; align-items: center; position: relative;">
-    <h2 style="font-size: 24px; font-weight: bold;">Admin Dashboard</h2>
-    <div style="font-size: 14px; color: #007bff; text-align: center; animation: rotation 5s linear infinite;">Digital Rufiya Wallet - Financial Revolution Powered by BSC Blockchain Network</div>
-    <a href="wallet.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
-  </header>
+  <h1>DRF Wallet Dashboard</h1>
+  <p id="walletAddress" style="font-weight:bold;"></p>
 
-  <div>
-    <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
-    <p id="walletAddress" style="font-weight: bold;"></p>
-  </div>
-
-  <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
-    <h3>Balances</h3>
-    <div>
-      <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
-      <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
-      <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
-    </div>
-    <h3>Token Logos</h3>
-    <div>
-      <img src="https://ik.imagekit.io/ttbbg9ocv/download%20(1).png?updatedAt=1746299785429" alt="USDC Logo" width="30" />
-      <img src="https://ik.imagekit.io/ttbbg9ocv/images%20(1).png?updatedAt=1746299762762" alt="USDT Logo" width="30" />
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" width="30" />
-    </div>
-  </div>
-
-  <h3 style="margin-top: 30px;">Receive Tokens</h3>
-  <div id="receiveSection"></div>
-
-  <!-- Request Deposit Section -->
-  <h3 style="margin-top: 30px;">Request Deposit</h3>
-  <div style="max-width: 400px; background: #fff; padding: 20px; border-radius: 10px;">
-    <label for="tokenSelect">Choose Token:</label>
-    <select id="tokenSelect" style="width: 100%; padding: 8px; margin-bottom: 10px;">
-      <option value="DRF">DRF</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-    </select>
-
-    <label for="amountInput">Enter Amount:</label>
-    <input type="number" id="amountInput" placeholder="e.g. 50" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-
-    <button onclick="generateDepositLink()" style="padding: 10px 20px; background-color: #007bff; color: white;">Generate Deposit Link</button>
-
-    <div id="depositOutput" style="margin-top: 15px; display: none;">
-      <p><strong>Link:</strong> <span id="depositLink"></span></p>
-      <button onclick="copyDepositLink()">📋 Copy</button>
-      <div id="qrCode" style="margin-top: 10px;"></div>
-    </div>
-  </div>
-
-  <!-- Deposit Button -->
-  <div style="margin-top: 30px; text-align: center;">
-    <button onclick="window.location.href='deposit.html';" style="padding: 10px 20px; background-color: #007bff; color: white;">Go to Deposit Page</button>
-  </div>
-
-  <!-- Sell DRF -->
   <div style="margin-top: 30px;">
-    <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
+    <p>BNB Balance: <span id="bnbBalance">Loading...</span></p>
+    <p>DRF Balance: <span id="drfBalance">Loading...</span></p>
+    <p>USDC Balance: <span id="usdcBalance">Loading...</span></p>
+    <p>USDT Balance: <span id="usdtBalance">Loading...</span></p>
   </div>
 
-  <!-- Affiliate -->
-  <div style="margin-top: 20px;">
-    <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
-  </div>
-
-  <!-- Chat with AI Button -->
-  <div style="margin-top: 30px; text-align: center;">
-    <button onclick="openChatWithAI()" style="padding: 10px 20px; background-color: #f39c12; color: white;">Chat with AI for Help</button>
-  </div>
-
-  <!-- FOOTER -->
-  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
-    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
-    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
-    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
-    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
-    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
-  </div>
-
-  <!-- Footer text -->
-  <footer style="text-align: center; margin-top: 30px;">
-    <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
-  </footer>
-
-<script>
-  const BSC_RPC = "https://bsc-dataseed.binance.org/";
-  const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
-
-  const tokens = {
-    DRF: {address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6", symbol: "DRF", decimals: 18},
-    USDC: {address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", symbol: "USDC", decimals: 18},
-    USDT: {address: "0x55d398326f99059fF775485246999027B3197955", symbol: "USDT", decimals: 18}
-  };
-
-  // Open Chat with AI
-  function openChatWithAI() {
-    const apiKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8"; // Your API key
-    const endpoint = "https://api.openai.com/v1/chat/completions";
-
-    axios.post(endpoint, {
-      model: "gpt-4",
-      messages: [
-        {"role": "user", "content": "write a haiku about ai"}
-      ]
-    }, {
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      }
-    }).then(response => {
-      alert("AI Response: " + response.data.choices[0].message.content);
-    }).catch(error => {
-      console.error("Error talking to AI:", error);
-      alert("Sorry, something went wrong.");
-    });
-  }
-
-  async function loadDashboard() {
-    const encrypted = sessionStorage.getItem("drf_wallet_json") || localStorage.getItem("drf_encrypted_wallet");
-    if (!encrypted) return location.href = "index.html";
-
-    const password = sessionStorage.getItem("drf_wallet_pw");
-    const wallet = ethers.Wallet.fromEncryptedJsonSync(encrypted, password);
-    const address = wallet.address;
-    const balance = await provider.getBalance(address);
-    document.getElementById("walletAddress").innerText = `Wallet Address: ${address}`;
-    document.getElementById("totalValue").innerText = ethers.utils.formatEther(balance);
+  <script>
+    const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
     
-    // Handle Balances
-    for (const token in tokens) {
-      const tokenInfo = tokens[token];
-      const tokenContract = new ethers.Contract(tokenInfo.address, [
-        "function balanceOf(address) view returns (uint)",
-        "function decimals() view returns (uint8)"
-      ], provider);
-      
-      const tokenBalance = await tokenContract.balanceOf(address);
-      const formattedBalance = ethers.utils.formatUnits(tokenBalance, tokenInfo.decimals);
-      document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
-      
-      // Fetch token price (assuming you have an API to get this)
-      document.getElementById(`${token.toLowerCase()}Price`).innerText = "—"; // Placeholder for token price
+    const DRF_TOKEN = {
+      address: "0xYourDRFContractAddress",
+      decimals: 18
+    };
+    const USDC_TOKEN = {
+      address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      decimals: 18
+    };
+    const USDT_TOKEN = {
+      address: "0x55d398326f99059fF775485246999027B3197955",
+      decimals: 18
+    };
+
+    async function loadWalletAndBalances() {
+      const encryptedJson = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedJson) return alert("Wallet not found. Please login.");
+
+      const password = prompt("Enter your password to unlock wallet:");
+      if (!password) return;
+
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedJson, password);
+        const connectedWallet = wallet.connect(provider);
+
+        // Display wallet address
+        document.getElementById("walletAddress").textContent = "Wallet: " + wallet.address;
+
+        // Load native BNB balance
+        const bnb = await provider.getBalance(wallet.address);
+        document.getElementById("bnbBalance").textContent = ethers.utils.formatEther(bnb) + " BNB";
+
+        // Load token balances
+        await loadTokenBalance(DRF_TOKEN, "drfBalance", connectedWallet);
+        await loadTokenBalance(USDC_TOKEN, "usdcBalance", connectedWallet);
+        await loadTokenBalance(USDT_TOKEN, "usdtBalance", connectedWallet);
+
+      } catch (err) {
+        alert("Failed to decrypt wallet. Incorrect password or corrupted wallet.");
+        console.error(err);
+      }
     }
-  }
 
-  loadDashboard();
-</script>
+    async function loadTokenBalance(token, elementId, wallet) {
+      const abi = ["function balanceOf(address) view returns (uint256)"];
+      const contract = new ethers.Contract(token.address, abi, wallet);
+      const balance = await contract.balanceOf(wallet.address);
+      const formatted = ethers.utils.formatUnits(balance, token.decimals);
+      document.getElementById(elementId).textContent = formatted;
+    }
 
+    window.onload = loadWalletAndBalances;
+  </script>
 </body>
 </html>
