@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Deposit | Digital Rufiya</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f2027;
+      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .deposit-box {
+      background: #1e2a38;
+      padding: 30px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 450px;
+      text-align: center;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    }
+    .balance {
+      margin: 15px 0;
+      font-size: 18px;
+      color: #ffd700;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      background-color: #00c9a7;
+      color: white;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .qr-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .message {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <div class="deposit-box">
+    <h2>Digital Rufiya Wallet - Deposit</h2>
+    <div class="balance" id="balance">
+      <p>USDC Balance: <span id="usdc-balance">0</span> USDC</p>
+      <p>USDT Balance: <span id="usdt-balance">0</span> USDT</p>
+      <p>DRF Balance: <span id="drf-balance">0</span> DRF</p>
+    </div>
+    <button onclick="generateDeposit('USDC')">Deposit USDC</button>
+    <button onclick="generateDeposit('USDT')">Deposit USDT</button>
+    <button onclick="generateDeposit('DRF')">Deposit DRF</button>
+    <div class="qr-container" id="qr-container"></div>
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    // Example wallet balances (Replace with live data from blockchain)
+    let walletData = {
+      USDC: 500,
+      USDT: 300,
+      DRF: 1000
+    };
+
+    document.getElementById('usdc-balance').textContent = walletData.USDC;
+    document.getElementById('usdt-balance').textContent = walletData.USDT;
+    document.getElementById('drf-balance').textContent = walletData.DRF;
+
+    // Function to generate Deposit QR Code for different tokens
+    function generateDeposit(token) {
+      const qrContainer = document.getElementById('qr-container');
+      const message = document.getElementById('message');
+      const walletAddress = "0xYourWalletAddressHere"; // Replace with the actual wallet address
+
+      if (token === "USDC") {
+        message.textContent = `Deposit USDC to wallet address: ${walletAddress}`;
+      } else if (token === "USDT") {
+        message.textContent = `Deposit USDT to wallet address: ${walletAddress}`;
+      } else if (token === "DRF") {
+        message.textContent = `Deposit DRF to wallet address: ${walletAddress}`;
+      }
+
+      // Generate QR Code for the token deposit address (you can use a library like `qrcode.js` to generate QR codes)
+      qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${walletAddress}&size=200x200" alt="QR Code" />`;
+
+      message.style.color = "#0f0"; // Green message for QR code generation
+    }
+  </script>
+</body>
+</html>
