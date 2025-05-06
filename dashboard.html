@@ -2,77 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom, #00b5cc, #013a63);
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 50px;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .wallet-card {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .balance-card {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+      font-size: 24px;
+    }
+
+    .logo {
+      width: 50px;
+      margin-right: 15px;
+    }
+
+    .balance {
+      font-size: 28px;
+      font-weight: bold;
+      color: #fffb00;
+    }
+
+    .loader {
+      margin-top: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0baf9a;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .background-effects {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://www.transparenttextures.com/patterns/black-tile.png');
+      z-index: -1;
+      animation: moveBackground 10s infinite linear;
+    }
+
+    @keyframes moveBackground {
+      0% { background-position: 0 0; }
+      100% { background-position: 100% 100%; }
+    }
+
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      background: #222;
+      padding: 20px;
+    }
+  </style>
 </head>
-<body style="font-family:sans-serif;background:#f0fcf9; text-align:center; padding:20px;">
 
-  <h1>DRF Wallet Dashboard</h1>
-  <p id="walletAddress" style="font-weight:bold;"></p>
+<body>
+  <div class="background-effects"></div>
 
-  <div style="margin-top: 30px;">
-    <p>BNB Balance: <span id="bnbBalance">Loading...</span></p>
-    <p>DRF Balance: <span id="drfBalance">Loading...</span></p>
-    <p>USDC Balance: <span id="usdcBalance">Loading...</span></p>
-    <p>USDT Balance: <span id="usdtBalance">Loading...</span></p>
+  <div class="container">
+    <h1>Welcome to DRF Wallet Dashboard</h1>
+
+    <!-- Wallet Information Cards -->
+    <div class="wallet-card">
+      <h2>Your Wallet Balances</h2>
+
+      <div id="loading" style="display: none;">
+        <div class="loader"></div>
+        <p>Loading balances...</p>
+      </div>
+
+      <div class="balance-card" id="drf-balance">
+        <img src="https://ik.imagekit.io/ttbbg9ocv/drf-logo.png" class="logo" alt="DRF Logo" />
+        <div class="balance">Loading...</div>
+      </div>
+
+      <div class="balance-card" id="usdt-balance">
+        <img src="https://ik.imagekit.io/ttbbg9ocv/usdt-logo.png" class="logo" alt="USDT Logo" />
+        <div class="balance">Loading...</div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      <p>© 2025 DRF Wallet — Powered by BSC Blockchain & AI Technology</p>
+    </div>
   </div>
 
   <script>
-    const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-    
-    const DRF_TOKEN = {
-      address: "0xYourDRFContractAddress",
-      decimals: 18
-    };
-    const USDC_TOKEN = {
-      address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-      decimals: 18
-    };
-    const USDT_TOKEN = {
-      address: "0x55d398326f99059fF775485246999027B3197955",
-      decimals: 18
-    };
-
-    async function loadWalletAndBalances() {
-      const encryptedJson = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedJson) return alert("Wallet not found. Please login.");
-
-      const password = prompt("Enter your password to unlock wallet:");
-      if (!password) return;
-
+    async function getBalance() {
+      // Show loading indicator
+      document.getElementById('loading').style.display = 'block';
+      
       try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedJson, password);
-        const connectedWallet = wallet.connect(provider);
+        // Fetch wallet from local storage
+        const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+        if (!encryptedWallet) throw new Error("Wallet not found. Please log in.");
 
-        // Display wallet address
-        document.getElementById("walletAddress").textContent = "Wallet: " + wallet.address;
+        // Assuming a connected wallet (for the sake of demonstration)
+        const password = prompt("Enter your password to unlock wallet:");
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
 
-        // Load native BNB balance
-        const bnb = await provider.getBalance(wallet.address);
-        document.getElementById("bnbBalance").textContent = ethers.utils.formatEther(bnb) + " BNB";
+        // Example: Get DRF and USDT balances (Replace with actual logic for your tokens)
+        const drfBalance = await getTokenBalance(wallet, 'drf_token_contract_address');  // Replace with actual address
+        const usdtBalance = await getTokenBalance(wallet, 'usdt_token_contract_address');  // Replace with actual address
 
-        // Load token balances
-        await loadTokenBalance(DRF_TOKEN, "drfBalance", connectedWallet);
-        await loadTokenBalance(USDC_TOKEN, "usdcBalance", connectedWallet);
-        await loadTokenBalance(USDT_TOKEN, "usdtBalance", connectedWallet);
+        // Update UI with balances
+        document.getElementById('drf-balance').getElementsByClassName('balance')[0].innerText = drfBalance + ' DRF';
+        document.getElementById('usdt-balance').getElementsByClassName('balance')[0].innerText = usdtBalance + ' USDT';
 
-      } catch (err) {
-        alert("Failed to decrypt wallet. Incorrect password or corrupted wallet.");
-        console.error(err);
+      } catch (error) {
+        alert(error.message);
+        location.reload();
+      } finally {
+        document.getElementById('loading').style.display = 'none';
       }
     }
 
-    async function loadTokenBalance(token, elementId, wallet) {
-      const abi = ["function balanceOf(address) view returns (uint256)"];
-      const contract = new ethers.Contract(token.address, abi, wallet);
-      const balance = await contract.balanceOf(wallet.address);
-      const formatted = ethers.utils.formatUnits(balance, token.decimals);
-      document.getElementById(elementId).textContent = formatted;
+    async function getTokenBalance(wallet, tokenAddress) {
+      const tokenContract = new ethers.Contract(tokenAddress, [
+        "function balanceOf(address) view returns (uint)"
+      ], wallet);
+      const balance = await tokenContract.balanceOf(wallet.address);
+      return ethers.utils.formatUnits(balance, 18);  // Assuming token has 18 decimals
     }
 
-    window.onload = loadWalletAndBalances;
+    // Call the getBalance function on page load
+    window.onload = getBalance;
   </script>
 </body>
 </html>
