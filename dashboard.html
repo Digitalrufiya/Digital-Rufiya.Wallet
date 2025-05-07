@@ -20,7 +20,6 @@
   <div>
     <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
     <p id="walletAddress" style="font-weight: bold;"></p>
-    <button onclick="scrollToReceive()" style="margin-top: 10px; padding: 10px 15px; background: #28a745; color: #fff; border: none; border-radius: 5px;">📥 Deposit (Receive)</button>
   </div>
 
   <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
@@ -38,17 +37,25 @@
     </div>
   </div>
 
-  <h3 style="margin-top: 30px;">Receive Tokens</h3>
-  <div id="receiveSection"></div>
+  <!-- Receive Button and Section -->
+  <div style="margin-top: 30px;">
+    <button onclick="toggleReceiveSection()" style="padding: 10px 20px; background-color: #ffc107; color: black;">
+      📥 Receive Tokens
+    </button>
+    <div id="receiveSection" style="display: none; margin-top: 15px;"></div>
+  </div>
 
+  <!-- Sell DRF -->
   <div style="margin-top: 30px;">
     <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
   </div>
 
+  <!-- Affiliate -->
   <div style="margin-top: 20px;">
-    <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #ffc107; color: black;">Earn by Promoting</button>
+    <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
   </div>
 
+  <!-- FOOTER NAV -->
   <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
     <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
     <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
@@ -57,7 +64,7 @@
     <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
   </div>
 
-  <footer style="text-align: center; margin-top: 40px;">
+  <footer style="text-align: center; margin-top: 30px;">
     <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
   </footer>
 
@@ -78,40 +85,46 @@
     const password = sessionStorage.getItem("drf_wallet_pw");
     const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
     const addr = wallet.address;
+    window.currentAddress = addr; // Save globally for receive section
 
     document.getElementById("walletAddress").innerText = "Wallet: " + addr;
 
     let totalValue = 0;
     for (let token in tokens) {
-      const {address, decimals, symbol} = tokens[token];
-      const contract = new ethers.Contract(address, ["function balanceOf(address) view returns(uint)"], provider);
+      const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
       const balance = await contract.balanceOf(addr);
-      const formatted = ethers.utils.formatUnits(balance, decimals);
+      const formatted = ethers.utils.formatUnits(balance, tokens[token].decimals);
       document.getElementById(`${token.toLowerCase()}Balance`).innerText = formatted;
 
-      const price = await getPrice(symbol);
+      const price = await getPrice(tokens[token].symbol);
       document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
       totalValue += parseFloat(formatted) * (price || 0);
     }
 
     document.getElementById("totalValue").innerText = totalValue.toFixed(2);
-    showReceiveSection(addr);
   }
 
   async function getPrice(tokenId) {
-    try {
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd`;
-      const response = await fetch(url);
-      const data = await response.json();
-      return data[tokenId] ? data[tokenId].usd : 0;
-    } catch {
-      return 0;
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd`);
+    const data = await res.json();
+    return data[tokenId] ? data[tokenId].usd : 0;
+  }
+
+  let receiveShown = false;
+  function toggleReceiveSection() {
+    const section = document.getElementById("receiveSection");
+    if (!receiveShown) {
+      showReceiveSection(window.currentAddress);
+      section.style.display = "block";
+    } else {
+      section.style.display = "none";
+      section.innerHTML = "";
     }
+    receiveShown = !receiveShown;
   }
 
   function showReceiveSection(address) {
     const section = document.getElementById("receiveSection");
-    section.innerHTML = ""; // Clear previous content
     const tokens = ["BNB", "DRF", "USDC", "USDT"];
     tokens.forEach(token => {
       const div = document.createElement("div");
@@ -134,10 +147,6 @@
     input.setSelectionRange(0, 99999);
     document.execCommand("copy");
     alert(`${token} address copied to clipboard`);
-  }
-
-  function scrollToReceive() {
-    document.getElementById("receiveSection").scrollIntoView({ behavior: 'smooth' });
   }
 
   function sellDRF() {
