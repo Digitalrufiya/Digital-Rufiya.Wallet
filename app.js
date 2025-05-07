@@ -39,11 +39,10 @@ async function connectWallet() {
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
     document.getElementById("connectButton").innerText = "Connected";
 
-    generateQRCode(userAddress);
-    loadBalances();
+   tokenSelect.value = "DRF"; // set default token
     updateReceiveAmount();
-  } catch (err) {
-    alert("Wallet connection failed: " + err.message);
+    updateReceiveAmount();
+  }
   }
 }
 
