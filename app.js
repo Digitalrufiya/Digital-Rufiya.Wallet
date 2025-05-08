@@ -68,11 +68,16 @@ async function getTokenBalance(tokenAddress) {
     console.log("No user address to fetch token balance.");
     return "0.00";  // Return 0 if no user address
   }
-  
+
   try {
     const contract = new ethers.Contract(tokenAddress, tokenABI, provider);
+    console.log(`Fetching balance for contract: ${tokenAddress}`); // Debugging token contract address
     const balance = await contract.balanceOf(userAddress);
+    console.log(`Raw balance for ${tokenAddress}:`, balance.toString());  // Debugging raw balance
+
     const decimals = await contract.decimals();
+    console.log(`Decimals for ${tokenAddress}:`, decimals); // Debugging decimals for token
+
     const formattedBalance = (balance / Math.pow(10, decimals)).toFixed(2);
     return formattedBalance;
   } catch (error) {
