@@ -1,31 +1,18 @@
-const TOKENS = {
-  DRF: {
-    address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
-    symbol: "DRF",
-    decimals: 18,
-    image: "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"
-  },
-  USDC: {
-    address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-    symbol: "USDC",
-    decimals: 18,
-    image: ""
-  },
-  USDT: {
-    address: "0x55d398326f99059ff775485246999027b3197955",
-    symbol: "USDT",
-    decimals: 18,
-    image: ""
-  }
-};
+let provider;
+let signer;
+let userAddress;
 
-const TOKEN_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function decimals() view returns (uint8)"
+const DRF_TOKEN_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"; // ✅ Your DRF Token
+const USDC_TOKEN_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // ✅ USDC on BSC
+const USDT_TOKEN_ADDRESS = "0x55d398326f99059ff775485246999027b3197955"; // ✅ USDT on BSC
+
+const tokenABI = [
+  "function balanceOf(address) view returns (uint)",
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)"
 ];
 
-let provider, signer, userAddress;
-
+// Connect wallet and load balances
 async function connectWallet() {
   try {
     if (!window.ethereum) throw new Error("Web3 wallet not found.");
@@ -39,102 +26,104 @@ async function connectWallet() {
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
     document.getElementById("connectButton").innerText = "Connected";
 
-   tokenSelect.value = "DRF"; // set default token
-    updateReceiveAmount();
-    updateReceiveAmount();
-  }
-  }
-}
-
-async function loadBalances() {
-  await loadTokenBalance(TOKENS.DRF, "drfBalance");
-  await loadTokenBalance(TOKENS.USDC, "usdcBalance");
-  await loadTokenBalance(TOKENS.USDT, "usdtBalance");
-}
-
-async function loadTokenBalance(token, elementId) {
-  try {
-    const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
-    const balance = await contract.balanceOf(userAddress);
-    const formatted = ethers.utils.formatUnits(balance, token.decimals);
-    document.getElementById(elementId).innerText = parseFloat(formatted).toFixed(4);
-  } catch {
-    if (document.getElementById(elementId)) {
-      document.getElementById(elementId).innerText = "0.0000";
-    }
-  }
-}
-
-function generateQRCode(address) {
-  const qrContainer = document.getElementById("qrcode");
-  if (!qrContainer) return;
-  qrContainer.innerHTML = "";
-  QRCode.toCanvas(address, { width: 180 }, (err, canvas) => {
-    if (!err) qrContainer.appendChild(canvas);
-  });
-}
-
-function copyAddressToClipboard() {
-  if (!userAddress) return;
-  navigator.clipboard.writeText(userAddress).then(() => {
-    alert("Wallet address copied.");
-  });
-}
-
-// Add token to MetaMask
-const addToMetaMask = document.getElementById("addToMetaMask");
-if (addToMetaMask) {
-  addToMetaMask.addEventListener("click", async () => {
-    const selected = document.getElementById("tokenSelect").value;
-    const token = TOKENS[selected];
-    try {
-      await window.ethereum.request({
-        method: "wallet_watchAsset",
-        params: {
-          type: "ERC20",
-          options: {
-            address: token.address,
-            symbol: token.symbol,
-            decimals: token.decimals,
-            image: token.image || ""
-          }
-        }
-      });
-    } catch (error) {
-      alert("Failed to add token: " + error.message);
-    }
-  });
-}
-
-// Update receiving amount when token changes
-const tokenSelect = document.getElementById("tokenSelect");
-if (tokenSelect) {
-  tokenSelect.addEventListener("change", () => {
+    tokenSelect.value = "DRF";
     generateQRCode(userAddress);
     updateReceiveAmount();
+    await loadBalances();
+    await loadTransactionHistory();
+  } catch (error) {
+    console.error("Error connecting wallet:", error);
+    alert("Failed to connect wallet.");
+  }
+}
+
+// Load token balances
+async function loadBalances() {
+  if (!provider || !userAddress) return;
+
+  try {
+    const bnbBalance = await provider.getBalance(userAddress);
+    document.getElementById("bnbBalance").innerText = ethers.utils.formatEther(bnbBalance);
+
+    const drfBalance = await getTokenBalance(DRF_TOKEN_ADDRESS);
+    document.getElementById("drfBalance").innerText = drfBalance;
+
+    const usdcBalance = await getTokenBalance(USDC_TOKEN_ADDRESS);
+    document.getElementById("usdcBalance").innerText = usdcBalance;
+
+    const usdtBalance = await getTokenBalance(USDT_TOKEN_ADDRESS);
+    document.getElementById("usdtBalance").innerText = usdtBalance;
+  } catch (error) {
+    console.error("Error loading balances:", error);
+  }
+}
+
+// Get balance of a specific token
+async function getTokenBalance(tokenAddress) {
+  try {
+    const contract = new ethers.Contract(tokenAddress, tokenABI, provider);
+    const balance = await contract.balanceOf(userAddress);
+    const decimals = await contract.decimals();
+    return (balance / Math.pow(10, decimals)).toFixed(2);
+  } catch (error) {
+    console.error(`Error fetching token balance: ${tokenAddress}`, error);
+    return "0.00";
+  }
+}
+
+// Generate QR code for receiving tokens
+function generateQRCode(address) {
+  const qr = new QRCode(document.getElementById("qrcode"), {
+    text: address,
+    width: 128,
+    height: 128,
   });
 }
 
-async function updateReceiveAmount() {
-  const selected = document.getElementById("tokenSelect").value;
-  const token = TOKENS[selected];
-  const contract = new ethers.Contract(token.address, TOKEN_ABI, provider);
-  const balance = await contract.balanceOf(userAddress);
-  const formatted = ethers.utils.formatUnits(balance, token.decimals);
-  document.getElementById("receiveAmount").innerText = `Receiving Amount: ${formatted}`;
+// Update receive amount display
+function updateReceiveAmount() {
+  const amount = document.getElementById("amountInput").value;
+  const selectedToken = document.getElementById("tokenSelect").value;
+  document.getElementById("receiveAmountDisplay").innerText = `${amount} ${selectedToken}`;
 }
 
-// Auto-connect if already connected
-window.addEventListener("load", () => {
-  if (window.ethereum && window.ethereum.selectedAddress) {
-    connectWallet();
+// Load recent token transactions using BscScan API
+async function loadTransactionHistory() {
+  if (!userAddress) return;
+
+  const apiKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8"; // ✅ Your BscScan API Key
+  const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const tbody = document.getElementById("txnTableBody");
+    if (data.status !== "1") {
+      tbody.innerHTML = "<tr><td colspan='5'>No transactions found</td></tr>";
+      return;
+    }
+
+    const txns = data.result;
+    tbody.innerHTML = "";
+
+    txns.forEach(tx => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0, 10)}...</a></td>
+        <td>${tx.method || "-"}</td>
+        <td>${(tx.value / Math.pow(10, tx.tokenDecimal)).toFixed(2)}</td>
+        <td>${tx.tokenSymbol}</td>
+        <td>${new Date(tx.timeStamp * 1000).toLocaleString()}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Failed to fetch transactions", err);
   }
-});
-
-const connectBtn = document.getElementById("connectButton");
-if (connectBtn) {
-  connectBtn.addEventListener("click", connectWallet);
 }
-tokenSelect.value = "DRF"; // default selection
-generateQRCode(userAddress);
-updateReceiveAmount();
+
+// Event listeners
+document.getElementById("connectButton").addEventListener("click", connectWallet);
+document.getElementById("amountInput").addEventListener("input", updateReceiveAmount);
+document.getElementById("tokenSelect").addEventListener("change", updateReceiveAmount);
