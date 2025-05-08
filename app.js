@@ -21,6 +21,7 @@ async function connectWallet() {
     signer = provider.getSigner();
     userAddress = await signer.getAddress();
 
+    console.log("User Address:", userAddress);  // Debugging the wallet address
     document.getElementById("walletAddress").innerText = userAddress;
     document.getElementById("walletDisplay").innerText = userAddress;
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
@@ -46,12 +47,15 @@ async function loadBalances() {
     document.getElementById("bnbBalance").innerText = ethers.utils.formatEther(bnbBalance);
 
     const drfBalance = await getTokenBalance(DRF_TOKEN_ADDRESS);
+    console.log("DRF Balance:", drfBalance);  // Debugging DRF balance
     document.getElementById("drfBalance").innerText = drfBalance;
 
     const usdcBalance = await getTokenBalance(USDC_TOKEN_ADDRESS);
+    console.log("USDC Balance:", usdcBalance);  // Debugging USDC balance
     document.getElementById("usdcBalance").innerText = usdcBalance;
 
     const usdtBalance = await getTokenBalance(USDT_TOKEN_ADDRESS);
+    console.log("USDT Balance:", usdtBalance);  // Debugging USDT balance
     document.getElementById("usdtBalance").innerText = usdtBalance;
   } catch (error) {
     console.error("Error loading balances:", error);
@@ -60,14 +64,20 @@ async function loadBalances() {
 
 // Get balance of a specific token
 async function getTokenBalance(tokenAddress) {
+  if (!userAddress) {
+    console.log("No user address to fetch token balance.");
+    return "0.00";  // Return 0 if no user address
+  }
+  
   try {
     const contract = new ethers.Contract(tokenAddress, tokenABI, provider);
     const balance = await contract.balanceOf(userAddress);
     const decimals = await contract.decimals();
-    return (balance / Math.pow(10, decimals)).toFixed(2);
+    const formattedBalance = (balance / Math.pow(10, decimals)).toFixed(2);
+    return formattedBalance;
   } catch (error) {
     console.error(`Error fetching token balance: ${tokenAddress}`, error);
-    return "0.00";
+    return "0.00";  // Return 0 on error
   }
 }
 
