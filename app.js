@@ -22,6 +22,13 @@ async function connectWallet() {
     userAddress = await signer.getAddress();
 
     console.log("User Address:", userAddress);  // Debugging the wallet address
+
+    if (!userAddress) {
+      alert("Failed to fetch wallet address.");
+      return;
+    }
+
+    // Display user address in UI
     document.getElementById("walletAddress").innerText = userAddress;
     document.getElementById("walletDisplay").innerText = userAddress;
     document.getElementById("bscScanLink").href = `https://bscscan.com/address/${userAddress}`;
