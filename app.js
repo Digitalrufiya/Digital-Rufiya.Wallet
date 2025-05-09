@@ -3,8 +3,8 @@ let signer;
 let userAddress;
 
 const DRF_TOKEN_ADDRESS = "   0x88253D87990EdD1E647c3B6eD21F57fb061a3040 " ; // ✅ Your DRF Token
-const USDC_TOKEN_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // ✅ USDC on BSC
-const USDT_TOKEN_ADDRESS = "0x55d398326f99059ff775485246999027b3197955"; // ✅ USDT on BSC
+const USDC_TOKEN_ADDRESS = " 0x88253D87990EdD1E647c3B6eD21F57fb061a3040 "; // ✅ USDC on BSC
+const USDT_TOKEN_ADDRESS = " 0x88253D87990EdD1E647c3B6eD21F57fb061a3040 "; // ✅ USDT on BSC
 
 const tokenABI = [
   "function balanceOf(address) view returns (uint)",
