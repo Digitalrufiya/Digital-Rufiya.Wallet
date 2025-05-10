@@ -2,111 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0fcf9;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      background: #fff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 0 10px #ccc;
-      max-width: 400px;
-      margin: 30px auto;
-    }
-    .address-box {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 8px;
-      word-break: break-all;
-      font-size: 14px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #0baf9a;
-      color: white;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #099e8a;
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script> <!-- QR Code library -->
 </head>
-<body>
+
+<body style="text-align:center; font-family:sans-serif; background:#f0fcf9;">
 
   <div class="container">
-    <h2>My DRF Wallet</h2>
-
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <h1>Welcome to Your DRF Wallet Dashboard</h1>
+    <p>Your Wallet Address: <span id="walletAddress"></span></p>
     <div>
-      <strong>Wallet Address:</strong>
-      <p id="walletAddress" class="address-box">Loading...</p>
-      <button onclick="copyAddress()">Copy Address</button>
+      <h3>QR Code</h3>
+      <div id="qrcode"></div> <!-- For displaying the QR Code -->
     </div>
+    <button onclick="sendTransaction()">Send DRF</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 
-    <div style="margin-top: 30px;">
-      <strong>Receive DRF / USDC / USDT:</strong>
-      <canvas id="qrcode" style="margin: 10px auto;"></canvas>
-    </div>
+  <div id="footer" style="margin-top: 50px; padding: 20px; font-size: 14px; background: #e6f5f1;">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="AI Logo" style="width: 40px; vertical-align: middle; margin-right: 10px;" />
+    © 2025 DRF Wallet — Powered by BSC Blockchain & AI Technology
   </div>
 
   <script>
+    // Ensure user stays logged in
+    if (!localStorage.getItem("drf_encrypted_wallet")) {
+      window.location.href = "index.html"; // Redirect if no wallet found
+    }
+
+    // Load wallet address from local storage after decryption
     async function loadWallet() {
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedWallet) {
-        alert("No wallet found. Redirecting to login.");
-        window.location.href = "index.html";
-        return;
-      }
-
+      const password = prompt("Enter your password to unlock wallet:");
+      
       try {
-        // Attempt decryption with cached password (if previously logged in)
-        const password = prompt("Enter your wallet password:");
         const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        const address = wallet.address;
-
-        document.getElementById("walletAddress").textContent = address;
-
-        // Generate QR code
-        QRCode.toCanvas(document.getElementById("qrcode"), address, function (error) {
-          if (error) {
-            console.error("Error generating QR code:", error);
-          }
-        });
-
-        // Save wallet address for reuse
-        localStorage.setItem("drf_wallet_address", address);
+        document.getElementById("walletAddress").textContent = wallet.address;  // Display wallet address
+        generateQRCode(wallet.address);  // Generate QR Code for wallet address
       } catch (err) {
         alert("Failed to decrypt wallet: " + err.message);
-        window.location.href = "index.html";
+        logout();  // Log out user if decryption fails
       }
     }
 
-    function copyAddress() {
-      const address = document.getElementById("walletAddress").textContent;
-      if (!address || address === "Loading...") {
-        alert("Wallet address not loaded yet.");
-        return;
-      }
-      navigator.clipboard.writeText(address).then(() => {
-        alert("Address copied to clipboard!");
-      }).catch(err => {
-        alert("Failed to copy address.");
+    // Generate a QR code for the wallet address
+    function generateQRCode(walletAddress) {
+      const qrCodeElement = document.getElementById('qrcode');
+      QRCode.toCanvas(qrCodeElement, walletAddress, function (error) {
+        if (error) console.error(error);
+        console.log('QR Code generated!');
       });
     }
 
-    window.onload = loadWallet;
+    // Log out the user
+    function logout() {
+      localStorage.removeItem("drf_encrypted_wallet");
+      window.location.href = "index.html"; // Redirect to index page
+    }
+
+    // Send DRF coins (dummy function)
+    function sendTransaction() {
+      alert("Send DRF functionality is under construction.");
+    }
+
+    // Load wallet on page load
+    loadWallet();
   </script>
 
 </body>
