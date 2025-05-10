@@ -80,28 +80,48 @@
 
   async function loadDashboard() {
     const encrypted = sessionStorage.getItem("drf_wallet_json") || localStorage.getItem("drf_encrypted_wallet");
-    if (!encrypted) return location.href = "index.html";
-
-    const password = sessionStorage.getItem("drf_wallet_pw");
-    const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-    const addr = wallet.address;
-    window.currentAddress = addr; // Save globally for receive section
-
-    document.getElementById("walletAddress").innerText = "Wallet: " + addr;
-
-    let totalValue = 0;
-    for (let token in tokens) {
-      const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
-      const balance = await contract.balanceOf(addr);
-      const formatted = ethers.utils.formatUnits(balance, tokens[token].decimals);
-      document.getElementById(`${token.toLowerCase()}Balance`).innerText = formatted;
-
-      const price = await getPrice(tokens[token].symbol);
-      document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
-      totalValue += parseFloat(formatted) * (price || 0);
+    if (!encrypted) {
+      console.error("No wallet found. Redirecting to index.");
+      return location.href = "index.html";
     }
 
-    document.getElementById("totalValue").innerText = totalValue.toFixed(2);
+    const password = sessionStorage.getItem("drf_wallet_pw");
+    if (!password) {
+      console.error("No password found.");
+      return;
+    }
+
+    try {
+      const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
+      const addr = wallet.address;
+
+      if (!addr) {
+        console.error("Wallet address is undefined.");
+        return;
+      }
+
+      window.currentAddress = addr; // Save globally for other sections
+
+      console.log("Wallet loaded successfully. Address:", addr);
+
+      document.getElementById("walletAddress").innerText = "Wallet: " + addr;
+
+      let totalValue = 0;
+      for (let token in tokens) {
+        const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
+        const balance = await contract.balanceOf(addr);
+        const formatted = ethers.utils.formatUnits(balance, tokens[token].decimals);
+        document.getElementById(`${token.toLowerCase()}Balance`).innerText = formatted;
+
+        const price = await getPrice(tokens[token].symbol);
+        document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
+        totalValue += parseFloat(formatted) * (price || 0);
+      }
+
+      document.getElementById("totalValue").innerText = totalValue.toFixed(2);
+    } catch (error) {
+      console.error("Error loading wallet:", error);
+    }
   }
 
   async function getPrice(tokenId) {
@@ -154,12 +174,11 @@
   }
 
   function shareAffiliateLink() {
-    const affiliateLink = "https://your-dapp-link.com?ref=USER_ID";
-    prompt("Share this affiliate link to boost your wallet!", affiliateLink);
+    const affiliateLink = `https://your-dapp.com?ref=${window.currentAddress}`;
+    alert(`Share this link to earn: ${affiliateLink}`);
   }
 
-  window.addEventListener("DOMContentLoaded", loadDashboard);
+  window.onload = loadDashboard;
 </script>
-
 </body>
 </html>
