@@ -51,14 +51,17 @@
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
 
         const secretPhrase = wallet.mnemonic.phrase;
-        const walletAddress = wallet.address;  // Get the wallet address
+        const walletAddress = wallet.address;
+
+        // Save wallet address for dashboard
+        localStorage.setItem("drf_wallet_address", walletAddress);
 
         alert("Account created! Your secret phrase:\n\n" + secretPhrase + "\n\nSave it securely.");
 
         // Show wallet address
         document.getElementById('walletAddress').textContent = "Your Wallet Address: " + walletAddress;
 
-        // Offer user the option to download their secret phrase
+        // Offer user to download secret phrase
         const downloadLink = document.createElement('a');
         downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(secretPhrase);
         downloadLink.download = "drf_wallet_secret_phrase.txt";
@@ -81,7 +84,11 @@
       showLoading("Logging in to your DRF Wallet... Please wait");
 
       try {
-        await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+
+        // Save address again in case it's missing
+        localStorage.setItem("drf_wallet_address", wallet.address);
+
         alert("Login successful!");
         window.location.href = "dashboard.html";
       } catch (err) {
@@ -102,6 +109,7 @@
         const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
         const encryptedJson = await wallet.encrypt(password);
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        localStorage.setItem("drf_wallet_address", wallet.address);
         alert("Wallet recovered successfully!");
         window.location.href = "dashboard.html";
       } catch (err) {
