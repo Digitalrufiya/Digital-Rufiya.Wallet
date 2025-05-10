@@ -4,58 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Wallet Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f0fcf9; text-align: center; padding: 20px; }
+    #walletAddress { word-break: break-all; color: #0baf9a; font-weight: bold; margin: 10px 0; }
+    button { padding: 10px 20px; margin: 10px; background: #0baf9a; border: none; color: white; cursor: pointer; }
+  </style>
 </head>
-<body style="text-align:center; font-family:sans-serif; background:#f0fcf9; padding:20px;">
-
+<body>
   <h1>DRF Wallet Dashboard</h1>
-  <p><strong>Your Wallet Address:</strong></p>
-  <p id="walletAddress" style="word-break:break-all; font-weight:bold; color:#0baf9a;"></p>
+
+  <p>Your Wallet Address:</p>
+  <p id="walletAddress">Loading...</p>
   <button onclick="copyAddress()">Copy Address</button>
 
-  <div style="margin-top:30px;">
-    <p><strong>QR Code:</strong></p>
+  <div style="margin-top: 30px;">
+    <p><strong>Receive QR Code:</strong></p>
     <canvas id="qrcodeCanvas"></canvas>
   </div>
 
   <script>
-    async function loadWallet() {
-      const encryptedJson = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedJson) {
-        alert("No wallet found. Please go to index.html to create or recover one.");
-        window.location.href = "index.html";
-        return;
-      }
+    const address = localStorage.getItem("drf_wallet_address");
 
-      const password = prompt("Enter your password to unlock wallet:");
-      try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedJson, password);
-        const address = wallet.address;
-        document.getElementById("walletAddress").innerText = address;
-
-        QRCode.toCanvas(document.getElementById('qrcodeCanvas'), address, { width: 200 }, function (error) {
-          if (error) console.error(error);
-        });
-
-        // Store plain address in localStorage for copy use
-        localStorage.setItem("drf_wallet_address", address);
-      } catch (e) {
-        alert("Failed to unlock wallet: " + e.message);
-        window.location.href = "index.html";
-      }
+    if (!address) {
+      alert("Wallet not found. Please create your wallet first.");
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("walletAddress").innerText = address;
+      QRCode.toCanvas(document.getElementById('qrcodeCanvas'), address, { width: 200 }, function (error) {
+        if (error) console.error("QR Code Error:", error);
+      });
     }
 
     function copyAddress() {
-      const address = localStorage.getItem("drf_wallet_address");
-      if (!address) return alert("No address to copy.");
-      navigator.clipboard.writeText(address)
-        .then(() => alert("Address copied to clipboard!"))
-        .catch(() => alert("Failed to copy."));
+      navigator.clipboard.writeText(address).then(() => {
+        alert("Address copied to clipboard!");
+      }).catch(() => {
+        alert("Copy failed.");
+      });
     }
-
-    loadWallet();
   </script>
 </body>
 </html>
