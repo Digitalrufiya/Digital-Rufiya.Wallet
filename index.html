@@ -22,7 +22,7 @@
     <button onclick="login()">Login</button>
     <button onclick="recoverAccount()">Recover Account</button>
 
-    <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
+    <p id="walletInfo" style="margin-top:20px; font-weight:bold;"></p>
   </div>
 
   <!-- Footer -->
@@ -32,6 +32,8 @@
   </div>
 
   <script>
+    const DRF_CONTRACT_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+
     function showLoading(message) {
       const container = document.querySelector('.container');
       container.innerHTML = `
@@ -47,7 +49,7 @@
       if (!password) return alert("Password is required.");
 
       showLoading("Creating your DRF Wallet... Please wait");
-      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const wallet = ethers.Wallet.createRandom();
       const encryptedJson = await wallet.encrypt(password);
@@ -56,12 +58,16 @@
       const secretPhrase = wallet.mnemonic.phrase;
       alert("Account created! Your secret phrase:\n\n" + secretPhrase + "\n\nSave it securely. We will never ask for your secret phrase!");
 
-      // Offer user the option to download their secret phrase
       const downloadLink = document.createElement('a');
       downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(secretPhrase);
       downloadLink.download = "drf_wallet_secret_phrase.txt";
       downloadLink.textContent = "Download Secret Phrase";
       document.body.appendChild(downloadLink);
+
+      document.getElementById("walletInfo").innerHTML = `
+        Wallet Address: ${wallet.address}<br>
+        DRF Contract: <a href="https://bscscan.com/token/${DRF_CONTRACT_ADDRESS}" target="_blank">${DRF_CONTRACT_ADDRESS}</a>
+      `;
 
       setTimeout(() => window.location.href = "dashboard.html", 2000);
     }
@@ -77,6 +83,10 @@
       try {
         const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
         alert("Login successful!");
+        document.getElementById("walletInfo").innerHTML = `
+          Wallet Address: ${wallet.address}<br>
+          DRF Contract: <a href="https://bscscan.com/token/${DRF_CONTRACT_ADDRESS}" target="_blank">${DRF_CONTRACT_ADDRESS}</a>
+        `;
         setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
         alert("Incorrect password or corrupted wallet.");
@@ -98,6 +108,10 @@
         const encryptedJson = await wallet.encrypt(password);
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
         alert("Wallet recovered and encrypted successfully!");
+        document.getElementById("walletInfo").innerHTML = `
+          Wallet Address: ${wallet.address}<br>
+          DRF Contract: <a href="https://bscscan.com/token/${DRF_CONTRACT_ADDRESS}" target="_blank">${DRF_CONTRACT_ADDRESS}</a>
+        `;
         setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
         alert("Recovery failed. Invalid phrase.");
