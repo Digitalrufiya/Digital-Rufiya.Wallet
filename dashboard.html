@@ -1,81 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-<meta charset="UTF-8" />
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Wallet - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
+<body style="font-family: Arial, sans-serif; background: #f0fcf9; margin: 0; padding: 20px; text-align:center;">
 
-<body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
+  <h1>DRF Wallet Dashboard</h1>
 
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
-    <h1>Welcome to DRF Wallet</h1>
-    <p>Secure, Private, Decentralized</p>
-
-    <!-- Wallet Information -->
-    <div>
-      <h2>Your Wallet</h2>
-      <p><strong>Wallet Address:</strong> <span id="walletAddress"></span></p>
-    </div>
-
-    <!-- QR Code for Receiving -->
-    <div>
-      <h3>Receive DRF Tokens</h3>
-      <p>Share your wallet address to receive DRF tokens:</p>
-      <div id="qrcode"></div>
-    </div>
-
-    <!-- Buttons for sending -->
-    <button onclick="sendTransaction()">Send DRF Tokens</button>
-
-    <p id="statusMessage"></p>
+  <div style="margin-top: 30px;">
+    <h3>Your Wallet Address</h3>
+    <p id="walletAddress" style="font-weight:bold; word-wrap: break-word; margin: 10px 0;"></p>
+    <button onclick="copyAddress()">Copy</button>
   </div>
 
-  <div id="footer" style="margin-top: 50px; padding: 20px; font-size: 14px; background: #e6f5f1;">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="AI Logo" style="width: 40px; vertical-align: middle; margin-right: 10px;" />
-    © 2025 DRF Wallet — Powered by BSC Blockchain & AI Technology
+  <div style="margin-top: 30px;">
+    <h3>Receive DRF</h3>
+    <div id="qrcode" style="margin: auto;"></div>
+    <p style="font-size: 14px;">Scan this QR to receive DRF tokens</p>
+  </div>
+
+  <div style="margin-top: 40px;">
+    <button onclick="logout()">Logout</button>
   </div>
 
   <script>
-    // Display wallet address and generate QR code
-    async function displayWallet() {
+    async function loadWallet() {
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
       if (!encryptedWallet) {
-        return alert("No wallet found. Please create or recover one.");
+        alert("No wallet found. Please login.");
+        window.location.href = "index.html";
+        return;
       }
 
-      const password = prompt("Enter your password to unlock wallet:");
+      const password = prompt("Enter your wallet password:");
       try {
         const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
         const address = wallet.address;
-
-        // Display wallet address
         document.getElementById("walletAddress").textContent = address;
 
-        // Generate QR code for receiving
-        new QRCode(document.getElementById("qrcode"), address);
-      } catch (err) {
-        alert("Failed to unlock wallet: " + err.message);
-        location.reload();
-      }
-    }
-
-    // Send Transaction (placeholder for future send functionality)
-    function sendTransaction() {
-      const address = document.getElementById("walletAddress").textContent;
-      alert("To send tokens, use your wallet address: " + address);
-      // Placeholder for actual sending functionality (token transfer via BSC network)
-    }
-
-    // Call displayWallet on page load
-    window.onload = displayWallet;
-  </script>
-
-</body>
-</html>
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById("qrcode"), address, {
+          width: 200
+        }, function (error)
