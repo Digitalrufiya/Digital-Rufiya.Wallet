@@ -51,7 +51,8 @@
       try {
         const wallet = ethers.Wallet.createRandom();
         const encryptedJson = await wallet.encrypt(password);
-        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);  // Store wallet to localStorage
+        console.log("Wallet created and stored in localStorage: ", encryptedJson); // Debug
 
         const walletAddress = wallet.address;  // Get the wallet address
         const walletAddressElement = document.getElementById("walletAddress");
@@ -82,6 +83,8 @@
     // Login with an existing wallet
     async function login() {
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      console.log("Retrieved encrypted wallet from localStorage:", encryptedWallet);  // Debug
+
       if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
 
       const password = prompt("Enter your password to unlock wallet:");
