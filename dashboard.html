@@ -3,46 +3,109 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <title>DRF Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f0fcf9; text-align: center; padding: 20px; }
-    #walletAddress { word-break: break-all; color: #0baf9a; font-weight: bold; margin: 10px 0; }
-    button { padding: 10px 20px; margin: 10px; background: #0baf9a; border: none; color: white; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0fcf9;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px #ccc;
+      max-width: 400px;
+      margin: 30px auto;
+    }
+    .address-box {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 8px;
+      word-break: break-all;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background-color: #0baf9a;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #099e8a;
+    }
   </style>
 </head>
 <body>
-  <h1>DRF Wallet Dashboard</h1>
 
-  <p>Your Wallet Address:</p>
-  <p id="walletAddress">Loading...</p>
-  <button onclick="copyAddress()">Copy Address</button>
+  <div class="container">
+    <h2>My DRF Wallet</h2>
 
-  <div style="margin-top: 30px;">
-    <p><strong>Receive QR Code:</strong></p>
-    <canvas id="qrcodeCanvas"></canvas>
+    <div>
+      <strong>Wallet Address:</strong>
+      <p id="walletAddress" class="address-box">Loading...</p>
+      <button onclick="copyAddress()">Copy Address</button>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <strong>Receive DRF / USDC / USDT:</strong>
+      <div id="qrcode" style="margin: 10px auto;"></div>
+    </div>
   </div>
 
   <script>
-    const address = localStorage.getItem("drf_wallet_address");
+    async function loadWallet() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) {
+        alert("No wallet found. Redirecting to login.");
+        window.location.href = "index.html";
+        return;
+      }
 
-    if (!address) {
-      alert("Wallet not found. Please create your wallet first.");
-      window.location.href = "index.html";
-    } else {
-      document.getElementById("walletAddress").innerText = address;
-      QRCode.toCanvas(document.getElementById('qrcodeCanvas'), address, { width: 200 }, function (error) {
-        if (error) console.error("QR Code Error:", error);
-      });
+      try {
+        // Attempt decryption with cached password (if previously logged in)
+        const password = prompt("Enter your wallet password:");
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        const address = wallet.address;
+
+        document.getElementById("walletAddress").textContent = address;
+
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById("qrcode"), address, function (error) {
+          if (error) console.error(error);
+        });
+
+        // Save wallet address for reuse
+        localStorage.setItem("drf_wallet_address", address);
+      } catch (err) {
+        alert("Failed to decrypt wallet: " + err.message);
+        window.location.href = "index.html";
+      }
     }
 
     function copyAddress() {
+      const address = document.getElementById("walletAddress").textContent;
+      if (!address || address === "Loading...") {
+        alert("Wallet address not loaded yet.");
+        return;
+      }
       navigator.clipboard.writeText(address).then(() => {
         alert("Address copied to clipboard!");
-      }).catch(() => {
-        alert("Copy failed.");
+      }).catch(err => {
+        alert("Failed to copy address.");
       });
     }
+
+    window.onload = loadWallet;
   </script>
+
 </body>
 </html>
