@@ -1,35 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+<meta charset="UTF-8" />
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Wallet</title>
+  <title>DRF Wallet - Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
 </head>
 
 <body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
 
   <div class="container">
-    <h1>Welcome to Your DRF Wallet</h1>
-    <p id="walletAddress" style="font-weight:bold;"></p>
-    <p>Your DRF Balance: <span id="drfBalance">Loading...</span></p>
-    
-    <!-- Send Feature -->
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Secure, Private, Decentralized</p>
+
+    <!-- Wallet Information -->
     <div>
-      <h3>Send DRF Token</h3>
-      <input type="text" id="recipientAddress" placeholder="Recipient Address" />
-      <input type="number" id="amountToSend" placeholder="Amount to Send" />
-      <button onclick="sendDRF()">Send</button>
+      <h2>Your Wallet</h2>
+      <p><strong>Wallet Address:</strong> <span id="walletAddress"></span></p>
     </div>
 
-    <!-- Receiving Feature -->
-    <div style="margin-top: 30px;">
-      <h3>Receive DRF Token</h3>
-      <p>Your Wallet Address:</p>
-      <p id="userWalletAddress" style="word-wrap: break-word; font-weight: bold;"></p>
-      <button onclick="copyWalletAddress()">Copy Wallet Address</button>
+    <!-- QR Code for Receiving -->
+    <div>
+      <h3>Receive DRF Tokens</h3>
+      <p>Share your wallet address to receive DRF tokens:</p>
+      <div id="qrcode"></div>
     </div>
+
+    <!-- Buttons for sending -->
+    <button onclick="sendTransaction()">Send DRF Tokens</button>
+
+    <p id="statusMessage"></p>
   </div>
 
   <div id="footer" style="margin-top: 50px; padding: 20px; font-size: 14px; background: #e6f5f1;">
@@ -38,76 +43,38 @@
   </div>
 
   <script>
-    const tokenAddress = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6';  // DRF Token Contract Address
-    const abi = [
-      "function balanceOf(address) view returns (uint256)",
-      "function transfer(address recipient, uint256 amount) public returns (bool)"
-    ];
-
-    const provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/"); // BSC RPC
-    let signer;
-    let tokenContract;
-
-    // Load Wallet from Local Storage
-    async function loadWallet() {
+    // Display wallet address and generate QR code
+    async function displayWallet() {
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
+      if (!encryptedWallet) {
+        return alert("No wallet found. Please create or recover one.");
+      }
 
       const password = prompt("Enter your password to unlock wallet:");
       try {
         const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        signer = wallet.connect(provider);
-        tokenContract = new ethers.Contract(tokenAddress, abi, signer);
-        document.getElementById('walletAddress').textContent = `Wallet Address: ${wallet.address}`;
-        document.getElementById('userWalletAddress').textContent = wallet.address;
-        getTokenBalance(wallet.address);
+        const address = wallet.address;
+
+        // Display wallet address
+        document.getElementById("walletAddress").textContent = address;
+
+        // Generate QR code for receiving
+        new QRCode(document.getElementById("qrcode"), address);
       } catch (err) {
-        alert("Incorrect password or corrupted wallet.");
+        alert("Failed to unlock wallet: " + err.message);
         location.reload();
       }
     }
 
-    // Fetch Token Balance
-    async function getTokenBalance(walletAddress) {
-      try {
-        const balance = await tokenContract.balanceOf(walletAddress);
-        const formattedBalance = ethers.utils.formatUnits(balance, 18);  // Assuming 18 decimals for DRF
-        document.getElementById('drfBalance').textContent = formattedBalance;
-      } catch (err) {
-        alert("Failed to fetch token balance.");
-      }
+    // Send Transaction (placeholder for future send functionality)
+    function sendTransaction() {
+      const address = document.getElementById("walletAddress").textContent;
+      alert("To send tokens, use your wallet address: " + address);
+      // Placeholder for actual sending functionality (token transfer via BSC network)
     }
 
-    // Send DRF Token
-    async function sendDRF() {
-      const recipient = document.getElementById('recipientAddress').value;
-      const amount = document.getElementById('amountToSend').value;
-      if (!ethers.utils.isAddress(recipient)) return alert("Invalid recipient address.");
-      if (isNaN(amount) || amount <= 0) return alert("Invalid amount.");
-
-      try {
-        const txResponse = await tokenContract.transfer(recipient, ethers.utils.parseUnits(amount, 18));
-        alert(`Transaction successful! Hash: ${txResponse.hash}`);
-        getTokenBalance(signer.address); // Refresh balance
-      } catch (err) {
-        alert(`Transaction failed: ${err.message}`);
-      }
-    }
-
-    // Copy Wallet Address to Clipboard
-    function copyWalletAddress() {
-      const walletAddress = document.getElementById('userWalletAddress').textContent;
-      navigator.clipboard.writeText(walletAddress)
-        .then(() => {
-          alert("Wallet address copied to clipboard!");
-        })
-        .catch((err) => {
-          alert("Failed to copy address: " + err);
-        });
-    }
-
-    // Load the wallet when the page loads
-    window.onload = loadWallet;
+    // Call displayWallet on page load
+    window.onload = displayWallet;
   </script>
 
 </body>
