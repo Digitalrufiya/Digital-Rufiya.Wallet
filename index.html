@@ -1,8 +1,5 @@
-
 <!DOCTYPE html>
 <html lang="en">
-<meta charset="UTF-8" />
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,9 +16,9 @@
     <p>Secure, Private, Decentralized</p>
 
     <!-- BUTTONS -->
-    <button onclick="createAccount()">Create Account</button>
-    <button onclick="login()">Login</button>
-    <button onclick="recoverAccount()">Recover Account</button>
+    <button id="createAccountButton">Create Account</button>
+    <button id="loginButton">Login</button>
+    <button id="recoverAccountButton">Recover Account</button>
 
     <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
   </div>
@@ -33,12 +30,10 @@
   </div>
 
   <script>
-    const DRF_CONTRACT = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-    const TOKENS = {
-      DRF: DRF_CONTRACT,
-      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",  // BSC USDC
-      USDT: "0x55d398326f99059fF775485246999027B3197955"   // BSC USDT
-    };
+    // Ensure buttons are clickable by attaching event listeners
+    document.getElementById("createAccountButton").addEventListener("click", createAccount);
+    document.getElementById("loginButton").addEventListener("click", login);
+    document.getElementById("recoverAccountButton").addEventListener("click", recoverAccount);
 
     function showLoading(message) {
       const container = document.querySelector('.container');
@@ -55,22 +50,21 @@
       if (!password) return alert("Password is required.");
 
       showLoading("Creating your DRF Wallet... Please wait");
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
 
       const wallet = ethers.Wallet.createRandom();
       const encryptedJson = await wallet.encrypt(password);
-      const mnemonic = wallet.mnemonic.phrase;
-
-      // Save all details to localStorage
       localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-      localStorage.setItem("drf_address", wallet.address);
-      localStorage.setItem("drf_mnemonic", mnemonic);
 
-      alert("Wallet created! Your secret phrase:
+      const secretPhrase = wallet.mnemonic.phrase;
+      alert("Account created! Your secret phrase:\n\n" + secretPhrase + "\n\nSave it securely. We will never ask for your secret phrase!");
 
-" + mnemonic + "
-
-Save this securely!");
+      // Offer user the option to download their secret phrase
+      const downloadLink = document.createElement('a');
+      downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(secretPhrase);
+      downloadLink.download = "drf_wallet_secret_phrase.txt";
+      downloadLink.textContent = "Download Secret Phrase";
+      document.body.appendChild(downloadLink);
 
       setTimeout(() => window.location.href = "dashboard.html", 2000);
     }
@@ -106,8 +100,6 @@ Save this securely!");
         const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
         const encryptedJson = await wallet.encrypt(password);
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-        localStorage.setItem("drf_address", wallet.address);
-        localStorage.setItem("drf_mnemonic", wallet.mnemonic.phrase);
         alert("Wallet recovered and encrypted successfully!");
         setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
