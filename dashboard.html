@@ -6,44 +6,56 @@
   <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
-<body style="font-family: Arial, sans-serif; background: #f0fcf9; margin: 0; padding: 20px; text-align:center;">
+<body style="text-align:center; font-family:sans-serif; background:#f0fcf9; padding:20px;">
 
   <h1>DRF Wallet Dashboard</h1>
+  <p><strong>Your Wallet Address:</strong></p>
+  <p id="walletAddress" style="word-break:break-all; font-weight:bold; color:#0baf9a;"></p>
+  <button onclick="copyAddress()">Copy Address</button>
 
-  <div style="margin-top: 30px;">
-    <h3>Your Wallet Address</h3>
-    <p id="walletAddress" style="font-weight:bold; word-wrap: break-word; margin: 10px 0;"></p>
-    <button onclick="copyAddress()">Copy</button>
-  </div>
-
-  <div style="margin-top: 30px;">
-    <h3>Receive DRF</h3>
-    <div id="qrcode" style="margin: auto;"></div>
-    <p style="font-size: 14px;">Scan this QR to receive DRF tokens</p>
-  </div>
-
-  <div style="margin-top: 40px;">
-    <button onclick="logout()">Logout</button>
+  <div style="margin-top:30px;">
+    <p><strong>QR Code:</strong></p>
+    <canvas id="qrcodeCanvas"></canvas>
   </div>
 
   <script>
     async function loadWallet() {
-      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedWallet) {
-        alert("No wallet found. Please login.");
+      const encryptedJson = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedJson) {
+        alert("No wallet found. Please go to index.html to create or recover one.");
         window.location.href = "index.html";
         return;
       }
 
-      const password = prompt("Enter your wallet password:");
+      const password = prompt("Enter your password to unlock wallet:");
       try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedJson, password);
         const address = wallet.address;
-        document.getElementById("walletAddress").textContent = address;
+        document.getElementById("walletAddress").innerText = address;
 
-        // Generate QR code
-        QRCode.toCanvas(document.getElementById("qrcode"), address, {
-          width: 200
-        }, function (error)
+        QRCode.toCanvas(document.getElementById('qrcodeCanvas'), address, { width: 200 }, function (error) {
+          if (error) console.error(error);
+        });
+
+        // Store plain address in localStorage for copy use
+        localStorage.setItem("drf_wallet_address", address);
+      } catch (e) {
+        alert("Failed to unlock wallet: " + e.message);
+        window.location.href = "index.html";
+      }
+    }
+
+    function copyAddress() {
+      const address = localStorage.getItem("drf_wallet_address");
+      if (!address) return alert("No address to copy.");
+      navigator.clipboard.writeText(address)
+        .then(() => alert("Address copied to clipboard!"))
+        .catch(() => alert("Failed to copy."));
+    }
+
+    loadWallet();
+  </script>
+</body>
+</html>
