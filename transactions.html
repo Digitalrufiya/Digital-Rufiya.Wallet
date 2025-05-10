@@ -1,48 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/><meta name="viewport"content="width=device-width,initial-scale=1"/>
+  <meta charset="UTF-8" />
   <title>DRF Wallet Transactions</title>
-  <link rel="stylesheet" href="style.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: sans-serif; background: #f8fdfa; margin: 20px; }
+    h1 { text-align: center; }
+    .tx-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .tx-table th, .tx-table td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    .status { font-weight: bold; }
+    .copy-btn { cursor: pointer; color: blue; }
+    .loading { text-align: center; padding: 20px; }
+  </style>
 </head>
-<body style="font-family:Arial;text-align:center;background:#f4f9fb;padding:20px;">
-  <h2>Transaction History</h2>
-  <p id="addr" style="font-weight:bold;"></p>
-  <div id="txList" style="max-width:600px;margin:auto;text-align:left;"></div>
-  <br/><a href="dashboard.html">← Back to Dashboard</a>
+<body>
 
-<script>
-// get your BscScan API key here:
-const API_KEY = "Your_BSCSCAN_API_KEY";
+  <h1>Transaction History</h1>
+  <div class="loading" id="loading">Loading transactions...</div>
+  <table class="tx-table" id="txTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Tx Hash</th>
+        <th>From</th>
+        <th>To</th>
+        <th>Amount (BNB)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="txBody"></tbody>
+  </table>
 
-async function loadTxs(){
-  const enc = sessionStorage.getItem("drf_wallet_json")||localStorage.getItem("drf_encrypted_wallet");
-  if(!enc) return location.href="index.html";
-  const pw = sessionStorage.getItem("drf_wallet_pw");
-  const wallet = await ethers.Wallet.fromEncryptedJson(enc,pw);
-  const addr = wallet.address;
-  document.getElementById("addr").innerText="Address: "+addr;
+  <script>
+    const API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
+    async function loadTransactions() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) return alert("No wallet found. Login first.");
 
-  const resp = await fetch(
-    `https://api.bscscan.com/api?module=account&action=txlist&address=${addr}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`
-  );
-  const data = await resp.json();
-  const list = document.getElementById("txList");
-  if(data.status!=="1"){ list.innerText="No transactions found."; return; }
-  data.result.slice(0,20).forEach(tx=>{
-    const row = document.createElement("div");
-    row.style.margin="8px 0";
-    row.innerHTML = `
-      <strong>${tx.isError==="0"?"✅":"❌"}</strong>
-      <a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.substr(0,20)}…</a>
-      <br/>Value: ${ethers.utils.formatEther(tx.value||"0")} BNB
-      <br/>Block: ${tx.blockNumber}
-      <hr/>
-    `;
-    list.appendChild(row);
-  });
-}
-loadTxs();
-</script>
+      const password = prompt("Enter password to unlock your wallet:");
+      document.getElementById("loading").innerText = "Unlocking wallet...";
+
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        const address = wallet.address;
+
+        document.getElementById("loading").innerText = "Fetching transaction history...";
+
+        const url = `https://api.bscscan.com/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${API_KEY}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status !== "1") throw new Error("No transactions found");
+
+        const txs = data.result.slice(0, 30); // show last 30
+        const tbody = document.getElementById("txBody");
+
+        txs.forEach(tx => {
+          const type = tx.from.toLowerCase() === address.toLowerCase() ? 'Sent' : 'Received';
+          const amount = ethers.utils.formatEther(tx.value);
+          const date = new Date(tx.timeStamp * 1000).toLocaleString();
+          const row = `
+            <tr>
+              <td>${date}</td>
+              <td><a href="https://bscscan.com/tx/${tx.hash}" target="_blank">${tx.hash.slice(0, 10)}...</a></td>
+              <td>${tx.from.slice(0, 8)}...</td>
+              <td>${tx.to.slice(0, 8)}...</td>
+              <td>${parseFloat(amount).toFixed(4)}</td>
+              <td class="status">${type}</td>
+            </tr>`;
+          tbody.innerHTML += row;
+        });
+
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("txTable").style.display = "table";
+
+      } catch (err) {
+        document.getElementById("loading").innerText = "Error: " + err.message;
+      }
+    }
+
+    loadTransactions();
+  </script>
+
 </body>
 </html>
