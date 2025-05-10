@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8" />
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+
+<body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
+
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" style="width:100px; margin-top:20px;" />
+    <h1>Welcome to DRF Wallet</h1>
+    <p>Secure, Private, Decentralized</p>
+
+    <!-- BUTTONS -->
+    <button onclick="createAccount()">Create Account</button>
+    <button onclick="login()">Login</button>
+    <button onclick="recoverAccount()">Recover Account</button>
+
+    <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
+  </div>
+
+  <!-- Footer -->
+  <div id="footer" style="margin-top: 50px; padding: 20px; font-size: 14px; background: #e6f5f1;">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="AI Logo" style="width: 40px; vertical-align: middle; margin-right: 10px;" />
+    © 2025 DRF Wallet — Powered by BSC Blockchain & AI Technology
+  </div>
+
+  <script>
+    const DRF_CONTRACT = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const TOKENS = {
+      DRF: DRF_CONTRACT,
+      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",  // BSC USDC
+      USDT: "0x55d398326f99059fF775485246999027B3197955"   // BSC USDT
+    };
+
+    function showLoading(message) {
+      const container = document.querySelector('.container');
+      container.innerHTML = `
+        <div style="margin-top: 100px;">
+          <div class="loader" style="margin:auto; border: 4px solid #f3f3f3; border-top: 4px solid #0baf9a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+          <p style="margin-top: 20px;">${message}</p>
+        </div>
+      `;
+    }
+
+    async function createAccount() {
+      const password = prompt("Set a password to encrypt your wallet:");
+      if (!password) return alert("Password is required.");
+
+      showLoading("Creating your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const wallet = ethers.Wallet.createRandom();
+      const encryptedJson = await wallet.encrypt(password);
+      const mnemonic = wallet.mnemonic.phrase;
+
+      // Save all details to localStorage
+      localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+      localStorage.setItem("drf_address", wallet.address);
+      localStorage.setItem("drf_mnemonic", mnemonic);
+
+      alert("Wallet created! Your secret phrase:
+
+" + mnemonic + "
+
+Save this securely!");
+
+      setTimeout(() => window.location.href = "dashboard.html", 2000);
+    }
+
+    async function login() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
+
+      const password = prompt("Enter your password to unlock wallet:");
+      showLoading("Logging in to your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        alert("Login successful!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
+      } catch (err) {
+        alert("Incorrect password or corrupted wallet.");
+        location.reload();
+      }
+    }
+
+    async function recoverAccount() {
+      const phrase = prompt("Enter your 12-word secret phrase:");
+      if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
+      const password = prompt("Set a password to encrypt recovered wallet:");
+      if (!password) return alert("Password is required.");
+
+      showLoading("Recovering your DRF Wallet... Please wait");
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      try {
+        const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
+        const encryptedJson = await wallet.encrypt(password);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        localStorage.setItem("drf_address", wallet.address);
+        localStorage.setItem("drf_mnemonic", wallet.mnemonic.phrase);
+        alert("Wallet recovered and encrypted successfully!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
+      } catch (err) {
+        alert("Recovery failed. Invalid phrase.");
+        location.reload();
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+
+</body>
+</html>
