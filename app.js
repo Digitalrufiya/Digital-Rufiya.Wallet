@@ -144,6 +144,50 @@ async function loadTransactionHistory() {
   }
 }
 
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script>
+let walletAddress = ""; // this should be set when user logs in or creates a wallet
+
+// Set wallet address (replace this with your actual wallet load logic)
+window.addEventListener("load", () => {
+  walletAddress = localStorage.getItem("walletAddress") || ""; // assuming you save it on login
+  document.getElementById("wallet-address-display").value = walletAddress;
+  updateReceiveDisplay();
+});
+
+function updateReceiveDisplay() {
+  const token = document.getElementById("token-select").value;
+  const qrContainer = document.getElementById("qr-container");
+
+  // Clear old QR
+  qrContainer.innerHTML = "";
+
+  if (!walletAddress) {
+    qrContainer.innerText = "No wallet connected.";
+    return;
+  }
+
+  // Show QR code of wallet address
+  new QRCode(qrContainer, {
+    text: walletAddress,
+    width: 200,
+    height: 200,
+  });
+
+  // Update BscScan link
+  document.getElementById("bscscan-link").href = `https://bscscan.com/address/${walletAddress}`;
+}
+
+function copyWalletAddress() {
+  const addressField = document.getElementById("wallet-address-display");
+  addressField.select();
+  document.execCommand("copy");
+  alert("Wallet address copied!");
+}
+</script>
+
+
 // === Event Listeners ===
 document.getElementById("connectButton").addEventListener("click", connectWallet);
 document.getElementById("tokenSelect").addEventListener("change", updateReceiveAmount);
