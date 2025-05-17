@@ -100,31 +100,25 @@
     document.getElementById("totalValue").innerText = totalValue.toFixed(2);
 
     // Show receive section
-    showReceiveSection(addr);
-  }
+<div id="receive-section" class="receive-tab">
+  <h2>Receive Tokens</h2>
+  
+  <select id="token-select" onchange="updateReceiveDisplay()">
+    <option value="DRF">DRF</option>
+    <option value="BNB">BNB</option>
+    <option value="USDT">USDT</option>
+    <option value="USDC">USDC</option>
+  </select>
 
-  async function getPrice(tokenId) {
-    const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd`);
-    const data = await response.json();
-    return data[tokenId] ? data[tokenId].usd : 0;
-  }
+  <div id="qr-container" style="margin-top: 20px;"></div>
 
-  function showReceiveSection(address) {
-    const section = document.getElementById("receiveSection");
-    const tokens = ["BNB", "DRF", "USDC", "USDT"];
-    tokens.forEach(token => {
-      const div = document.createElement("div");
-      div.style.margin = "10px 0";
-      div.innerHTML = `
-        <strong>Receive ${token}:</strong><br>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${address}" /><br>
-        <input type="text" value="${address}" readonly style="width:90%;" onclick="this.select()" /><br>
-        <a href="https://bscscan.com/address/${address}" target="_blank">View on BscScan</a>
-        <hr/>
-      `;
-      section.appendChild(div);
-    });
-  }
+  <p>Wallet Address:</p>
+  <input type="text" id="wallet-address-display" readonly style="width: 100%; padding: 10px;" />
+  
+  <button onclick="copyWalletAddress()">Copy Address</button>
+  <a id="bscscan-link" href="#" target="_blank" style="margin-left: 10px;">View on BscScan</a>
+</div>
+
 
   // Sell DRF to Mainnet
   function sellDRF() {
