@@ -1,16 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+  <!-- Dashboard Content -->
+  <div class="card-container">
+    <div class="card three-d-effect" id="drfCard">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" />
+      <h3>DigiTal Rufiya Wallet Binace smart chain Netwotrk</h3>
+      <p class="balance" id="drfBalance"> </p>
+    </div>
+
+  
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>DRF Wallet Pro Dashboard</title>
+  <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
-  <h2>DRF Wallet (Pro Version)</h2>
-  <div id="networkStatus" style="margin-bottom: 10px; color: green; font-weight: bold;">Connecting to BSC...</div>
+
+  <header style="display: flex; justify-content: space-between; align-items: center;">
+
+    <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
+  </header>
 
   <div>
     <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
@@ -19,100 +31,109 @@
 
   <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
     <h3>Balances</h3>
-    <p>BNB: <span id="bnbBalance">0</span> (<small id="bnbPrice">—</small> USD)</p>
-    <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">Price unavailable</small>)</p>
+    <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
     <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
     <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
   </div>
 
-  <script>
-    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
-    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-    const USDT_ADDRESS = "your_usdt_address_here";
-    const USDC_ADDRESS = "your_usdc_address_here";
+  <!-- 🪙 RECEIVE SECTION -->
+  <h3 style="margin-top: 30px;">🔐 Receive Tokens</h3>
+  <div id="receiveSection" style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
+    <label for="token-select">Select Token:</label>
+    <select id="token-select" onchange="updateReceiveDisplay()" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+      <option value="DRF">DRF</option>
+      <option value="BNB">BNB</option>
+      <option value="USDT">USDT</option>
+      <option value="USDC">USDC</option>
+    </select>
+
+    <div id="qr-container" style="margin: 20px auto; text-align: center;"></div>
+
+    <p>Wallet Address:</p>
+    <input type="text" id="wallet-address-display" readonly style="width: 100%; padding: 10px;" />
+    
+    <div style="margin-top: 10px;">
+      <button onclick="copyWalletAddress()" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 5px;">📋 Copy Address</button>
+      <a id="bscscan-link" href="#" target="_blank" style="margin-left: 15px; font-size: 14px;">🔗 View on BscScan</a>
+    </div>
+  </div>
+
+  <!-- Sell DRF -->
+  <div style="margin-top: 30px;">
+    <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
+  </div>
+
+  <!-- Affiliate -->
+  <div style="margin-top: 20px;">
+    <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
+  </div>
+
+  <!-- FOOTER NAV -->
+  <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
+    <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
+    <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
+    <a href="swap.html"><img src="icon/swap.png" alt="Swap" width="24" /><br>Swap</a>
+    <a href="transactions.html"><img src="icon/transactions.png" alt="Transactions" width="24" /><br>Transactions</a>
+    <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
+  </div>
+
+  <footer style="text-align: center; margin-top: 30px;">
+    <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
+  </footer>
+
+ <script>
+    const DRF_ADDRESS = "your_drf_token_address"; // Replace with actual DRF token contract address
+    const USDT_ADDRESS = "your_usdt_token_address"; // Replace with actual USDT token contract address
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/"; // BSC RPC URL for fetching balances
 
     let userWallet;
-    const provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
 
     async function initializeWallet() {
+      // Check if user is logged in
       if (!localStorage.getItem("isLoggedIn")) {
         alert("Please log in first.");
-        window.location.href = "index.html";
-        return;
+        return window.location.href = "index.html";
       }
 
+      // Fetch encrypted wallet from localStorage
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
       const password = prompt("Enter password to unlock wallet:");
 
       try {
         userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        userWallet = userWallet.connect(provider);
-        document.getElementById("walletAddress").textContent = userWallet.address;
-        fetchAllBalances();
+        document.getElementById("loading").style.display = "none";
+        fetchBalances();
       } catch (err) {
-        alert("Failed to decrypt wallet.");
+        alert("Failed to load wallet. Please try again.");
       }
     }
 
-    async function fetchAllBalances() {
-      try {
-        const [bnbBal, drfBal, usdcBal, usdtBal] = await Promise.all([
-          provider.getBalance(userWallet.address),
-          new ethers.Contract(DRF_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
-          new ethers.Contract(USDC_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
-          new ethers.Contract(USDT_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
-        ]);
+    async function fetchBalances() {
+      const provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
+      const drfToken = new ethers.Contract(DRF_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider);
+      const usdtToken = new ethers.Contract(USDT_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider);
 
-        const bnb = parseFloat(ethers.utils.formatEther(bnbBal));
-        const drf = parseFloat(ethers.utils.formatUnits(drfBal, 18));
-        const usdc = parseFloat(ethers.utils.formatUnits(usdcBal, 18));
-        const usdt = parseFloat(ethers.utils.formatUnits(usdtBal, 18));
+      const drfBalance = await drfToken.balanceOf(userWallet.address);
+      const usdtBalance = await usdtToken.balanceOf(userWallet.address);
 
-        document.getElementById("bnbBalance").textContent = bnb;
-        document.getElementById("drfBalance").textContent = drf;
-        document.getElementById("usdcBalance").textContent = usdc;
-        document.getElementById("usdtBalance").textContent = usdt;
+      // Convert to decimals (assuming 18 decimals for both tokens)
+      const drfFormattedBalance = ethers.utils.formatUnits(drfBalance, 18);
+      const usdtFormattedBalance = ethers.utils.formatUnits(usdtBalance, 18);
 
-        fetchTokenPrices(bnb, drf, usdc, usdt);
-      } catch (err) {
-        console.error("Balance fetch failed:", err);
-      }
-    }
-
-    async function fetchTokenPrices(bnb, drf, usdc, usdt) {
-      try {
-        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=binancecoin,tether,usd-coin&vs_currencies=usd");
-        const prices = await res.json();
-
-        const bnbPrice = prices.binancecoin.usd || 0;
-        const usdcPrice = prices["usd-coin"].usd || 0;
-        const usdtPrice = prices.tether.usd || 0;
-
-        document.getElementById("bnbPrice").textContent = `$${bnbPrice}`;
-        document.getElementById("usdcPrice").textContent = `$${usdcPrice}`;
-        document.getElementById("usdtPrice").textContent = `$${usdtPrice}`;
-
-        const totalValue = (bnb * bnbPrice) + (usdc * usdcPrice) + (usdt * usdtPrice);
-        document.getElementById("totalValue").textContent = totalValue.toFixed(2);
-      } catch (err) {
-        console.warn("Token price fetch failed.", err);
-      }
-    }
-
-    async function checkNetwork() {
-      const network = await provider.getNetwork();
-      if (network.chainId === 56) {
-        document.getElementById("networkStatus").textContent = "Connected to Binance Smart Chain";
-      } else {
-        document.getElementById("networkStatus").textContent = `Connected to wrong network (Chain ID: ${network.chainId})`;
-        document.getElementById("networkStatus").style.color = "red";
-      }
+      // Update UI with balances
+      document.getElementById("drfBalance").textContent = `${drfFormattedBalance} DRF`;
+      document.getElementById("usdtBalance").textContent = `${usdtFormattedBalance} USDT`;
     }
 
     window.onload = () => {
-      checkNetwork();
+      document.getElementById("loading").style.display = "block";
       initializeWallet();
     };
   </script>
 </body>
 </html>
+
+
+
+
+  
