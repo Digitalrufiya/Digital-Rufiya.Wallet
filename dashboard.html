@@ -6,12 +6,13 @@
   <title>DRF Wallet Dashboard</title>
   <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
 <body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
 
-  <header style="display: flex; justify-content: space-between; align-items: center; position: relative;">
+  <header style="display: flex; justify-content: space-between; align-items: center;">
     <h2 style="font-size: 24px; font-weight: bold;">My Assets</h2>
-    <div style="font-size: 14px; color: #007bff; text-align: center; animation: rotation 5s linear infinite;">Digital Rufiya Wallet - Financial Revolution Powered by BSC Blockchain Network</div>
+    <div style="font-size: 14px; color: #007bff; text-align: center;">Digital Rufiya Wallet - Powered by BSC</div>
     <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
   </header>
 
@@ -22,21 +23,32 @@
 
   <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
     <h3>Balances</h3>
-    <div>
-      <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
-      <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
-      <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
-    </div>
-    <h3>Token Logos</h3>
-    <div>
-      <img src="https://ik.imagekit.io/ttbbg9ocv/download%20(1).png?updatedAt=1746299785429" alt="USDC Logo" width="30" />
-      <img src="https://ik.imagekit.io/ttbbg9ocv/images%20(1).png?updatedAt=1746299762762" alt="USDT Logo" width="30" />
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" width="30" />
-    </div>
+    <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
+    <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
+    <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
   </div>
 
-  <h3 style="margin-top: 30px;">Receive Tokens</h3>
-  <div id="receiveSection"></div>
+  <!-- 🪙 RECEIVE SECTION -->
+  <h3 style="margin-top: 30px;">🔐 Receive Tokens</h3>
+  <div id="receiveSection" style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
+    <label for="token-select">Select Token:</label>
+    <select id="token-select" onchange="updateReceiveDisplay()" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+      <option value="DRF">DRF</option>
+      <option value="BNB">BNB</option>
+      <option value="USDT">USDT</option>
+      <option value="USDC">USDC</option>
+    </select>
+
+    <div id="qr-container" style="margin: 20px auto; text-align: center;"></div>
+
+    <p>Wallet Address:</p>
+    <input type="text" id="wallet-address-display" readonly style="width: 100%; padding: 10px;" />
+    
+    <div style="margin-top: 10px;">
+      <button onclick="copyWalletAddress()" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 5px;">📋 Copy Address</button>
+      <a id="bscscan-link" href="#" target="_blank" style="margin-left: 15px; font-size: 14px;">🔗 View on BscScan</a>
+    </div>
+  </div>
 
   <!-- Sell DRF -->
   <div style="margin-top: 30px;">
@@ -48,7 +60,7 @@
     <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
   </div>
 
-  <!-- FOOTER -->
+  <!-- FOOTER NAV -->
   <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
     <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
     <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
@@ -57,7 +69,6 @@
     <a href="tokensale.html"><img src="icon/token.png" alt="Token" width="24" /><br>Token</a>
   </div>
 
-  <!-- Footer text -->
   <footer style="text-align: center; margin-top: 30px;">
     <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
   </footer>
@@ -72,6 +83,8 @@
     USDT: {address: "0x55d398326f99059fF775485246999027B3197955", symbol: "USDT", decimals: 18}
   };
 
+  let currentWalletAddress = "";
+
   async function loadDashboard() {
     const encrypted = sessionStorage.getItem("drf_wallet_json") || localStorage.getItem("drf_encrypted_wallet");
     if (!encrypted) return location.href = "index.html";
@@ -79,10 +92,11 @@
     const password = sessionStorage.getItem("drf_wallet_pw");
     const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
     const addr = wallet.address;
+    currentWalletAddress = addr;
 
     document.getElementById("walletAddress").innerText = "Wallet: " + addr;
 
-    // Fetch balances
+    // Balances
     let totalValue = 0;
     for (let token in tokens) {
       const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
@@ -90,42 +104,43 @@
       const formattedBalance = ethers.utils.formatUnits(balance, tokens[token].decimals);
       document.getElementById(`${token.toLowerCase()}Balance`).innerText = formattedBalance;
 
-      // Fetch price
       const price = await getPrice(tokens[token].symbol);
       document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? "$" + price.toFixed(4) : "—";
       totalValue += parseFloat(formattedBalance) * (price || 0);
     }
 
-    // Display total value
     document.getElementById("totalValue").innerText = totalValue.toFixed(2);
+    updateReceiveDisplay();
+  }
 
-    // Show receive section
-<div id="receive-section" class="receive-tab">
-  <h2>Receive Tokens</h2>
-  
-  <select id="token-select" onchange="updateReceiveDisplay()">
-    <option value="DRF">DRF</option>
-    <option value="BNB">BNB</option>
-    <option value="USDT">USDT</option>
-    <option value="USDC">USDC</option>
-  </select>
+  function updateReceiveDisplay() {
+    const selectedToken = document.getElementById("token-select").value;
+    document.getElementById("wallet-address-display").value = currentWalletAddress;
+    document.getElementById("bscscan-link").href = `https://bscscan.com/address/${currentWalletAddress}`;
+    
+    QRCode.toDataURL(currentWalletAddress).then(url => {
+      document.getElementById("qr-container").innerHTML = `<img src="${url}" alt="QR Code" style="width: 180px;" />`;
+    });
+  }
 
-  <div id="qr-container" style="margin-top: 20px;"></div>
+  function copyWalletAddress() {
+    const copyText = document.getElementById("wallet-address-display");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // for mobile
+    document.execCommand("copy");
+    alert("Wallet address copied!");
+  }
 
-  <p>Wallet Address:</p>
-  <input type="text" id="wallet-address-display" readonly style="width: 100%; padding: 10px;" />
-  
-  <button onclick="copyWalletAddress()">Copy Address</button>
-  <a id="bscscan-link" href="#" target="_blank" style="margin-left: 10px;">View on BscScan</a>
-</div>
+  async function getPrice(symbol) {
+    // Mock prices or replace with API
+    const mockPrices = { DRF: 0.064, USDC: 1.0, USDT: 1.0 };
+    return mockPrices[symbol] || null;
+  }
 
-
-  // Sell DRF to Mainnet
   function sellDRF() {
     alert("Sell 15.42 DRF = $1 to mainnet wallet. (Payment will be received on Mainnet)");
   }
 
-  // Affiliate link generation (simplified)
   function shareAffiliateLink() {
     const affiliateLink = "https://your-dapp-link.com?ref=USER_ID";
     prompt("Share this affiliate link to boost your wallet!", affiliateLink);
@@ -133,6 +148,5 @@
 
   window.addEventListener("DOMContentLoaded", loadDashboard);
 </script>
-
 </body>
 </html>
