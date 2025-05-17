@@ -73,77 +73,54 @@
     <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
   </footer>
 
-<script>
-  const BSC_RPC = "https://bsc-dataseed.binance.org/";
-  const provider = new ethers.providers.JsonRpcProvider(BSC_RPC);
+ <script>
+    const DRF_ADDRESS = "your_drf_token_address"; // Replace with actual DRF token contract address
+    const USDT_ADDRESS = "your_usdt_token_address"; // Replace with actual USDT token contract address
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/"; // BSC RPC URL for fetching balances
 
-  const tokens = {
-    DRF: {address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6", symbol: "DRF", decimals: 18},
-    USDC: {address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", symbol: "USDC", decimals: 18},
-    USDT: {address: "0x55d398326f99059fF775485246999027B3197955", symbol: "USDT", decimals: 18}
-  };
+    let userWallet;
 
-  let currentWalletAddress = "";
-
-  async function loadDashboard() {
-    try {
-      const encrypted = sessionStorage.getItem("drf_wallet_json") || localStorage.getItem("drf_encrypted_wallet");
-      const password = sessionStorage.getItem("drf_wallet_pw");
-      if (!encrypted || !password) return location.href = "index.html";
-
-      const wallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-      currentWalletAddress = wallet.address;
-
-      // Show wallet address
-      document.getElementById("walletAddress").innerText = "Wallet: " + currentWalletAddress;
-      document.getElementById("wallet-address-display").value = currentWalletAddress;
-      document.getElementById("bscscan-link").href = "https://bscscan.com/address/" + currentWalletAddress;
-
-      // Generate QR
-      updateReceiveDisplay();
-
-      // Fetch balances and update
-      let totalValue = 0;
-      for (let token in tokens) {
-        const contract = new ethers.Contract(tokens[token].address, ["function balanceOf(address) view returns(uint)"], provider);
-        const balance = await contract.balanceOf(currentWalletAddress);
-        const formatted = ethers.utils.formatUnits(balance, tokens[token].decimals);
-        document.getElementById(`${token.toLowerCase()}Balance`).innerText = formatted;
-
-        const price = await getPrice(tokens[token].symbol);
-        document.getElementById(`${token.toLowerCase()}Price`).innerText = price ? `$${price.toFixed(4)}` : "—";
-        totalValue += parseFloat(formatted) * (price || 0);
+    async function initializeWallet() {
+      // Check if user is logged in
+      if (!localStorage.getItem("isLoggedIn")) {
+        alert("Please log in first.");
+        return window.location.href = "index.html";
       }
 
-      document.getElementById("totalValue").innerText = totalValue.toFixed(2);
-    } catch (e) {
-      alert("Failed to load wallet. Please log in again.");
-      location.href = "index.html";
+      // Fetch encrypted wallet from localStorage
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      const password = prompt("Enter password to unlock wallet:");
+
+      try {
+        userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        document.getElementById("loading").style.display = "none";
+        fetchBalances();
+      } catch (err) {
+        alert("Failed to load wallet. Please try again.");
+      }
     }
-  }
 
-  function updateReceiveDisplay() {
-    const qrContainer = document.getElementById("qr-container");
-    const token = document.getElementById("token-select").value;
-    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?data=${currentWalletAddress}&size=200x200" alt="QR Code" />`;
-  }
+    async function fetchBalances() {
+      const provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
+      const drfToken = new ethers.Contract(DRF_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider);
+      const usdtToken = new ethers.Contract(USDT_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider);
 
-  function copyWalletAddress() {
-    const addrField = document.getElementById("wallet-address-display");
-    addrField.select();
-    document.execCommand("copy");
-    alert("Wallet address copied!");
-  }
+      const drfBalance = await drfToken.balanceOf(userWallet.address);
+      const usdtBalance = await usdtToken.balanceOf(userWallet.address);
 
-  async function getPrice(symbol) {
-    try {
-      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol.toLowerCase()}&vs_currencies=usd`);
-      const data = await res.json();
-      return data[symbol.toLowerCase()]?.usd || 0;
-    } catch (e) {
-      return 0;
+      // Convert to decimals (assuming 18 decimals for both tokens)
+      const drfFormattedBalance = ethers.utils.formatUnits(drfBalance, 18);
+      const usdtFormattedBalance = ethers.utils.formatUnits(usdtBalance, 18);
+
+      // Update UI with balances
+      document.getElementById("drfBalance").textContent = `${drfFormattedBalance} DRF`;
+      document.getElementById("usdtBalance").textContent = `${usdtFormattedBalance} USDT`;
     }
-  }
 
-  window.addEventListener("DOMContentLoaded", loadDashboard);
-</script>
+    window.onload = () => {
+      document.getElementById("loading").style.display = "block";
+      initializeWallet();
+    };
+  </script>
+</body>
+</html>
