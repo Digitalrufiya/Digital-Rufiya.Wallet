@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Liquidity Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      max-width: 500px;
+      margin: auto;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; }
+    input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #2980b9; }
+    .info { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Liquidity Manager</h2>
+
+    <label>Private Key:</label>
+    <input type="password" id="privKey" placeholder="Enter private key" />
+
+    <label>DRF Amount:</label>
+    <input type="number" id="drfAmount" placeholder="Amount of DRF to add/withdraw" />
+
+    <label>USDC/USDT Amount:</label>
+    <input type="number" id="tokenAmount" placeholder="Amount of token to add/withdraw" />
+
+    <button onclick="addLiquidity()">Add Liquidity</button>
+    <button onclick="withdrawLiquidity()">Withdraw Liquidity</button>
+
+    <div class="info" id="status">Status: Not connected</div>
+    <div class="info" id="liquidityInfo">Your liquidity: -</div>
+  </div>
+
+  <script>
+    const LIQUIDITY_KEY = 'liquidity';
+    let web3, account;
+
+    async function initWallet() {
+      const pk = document.getElementById("privKey").value.trim();
+      if (!pk || pk.length < 64) return alert("Invalid private key");
+
+      web3 = new Web3("https://bsc-dataseed.binance.org/");
+      account = web3.eth.accounts.privateKeyToAccount(pk);
+      web3.eth.accounts.wallet.add(account);
+      web3.eth.defaultAccount = account.address;
+
+      document.getElementById("status").innerText = "Connected: " + account.address;
+      updateLiquidityInfo();
+    }
+
+    function getStoredLiquidity() {
+      const all = JSON.parse(localStorage.getItem(LIQUIDITY_KEY) || "{}");
+      return all[account.address] || { drf: 0, token: 0 };
+    }
+
+    function saveLiquidity(drf, token) {
+      const all = JSON.parse(localStorage.getItem(LIQUIDITY_KEY) || "{}");
+      all[account.address] = { drf, token };
+      localStorage.setItem(LIQUIDITY_KEY, JSON.stringify(all));
+    }
+
+    function updateLiquidityInfo() {
+      const liq = getStoredLiquidity();
+      document.getElementById("liquidityInfo").innerText = `Your liquidity: ${liq.drf} DRF + ${liq.token} Token`;
+    }
+
+    async function addLiquidity() {
+      await initWallet();
+
+      const drf = parseFloat(document.getElementById("drfAmount").value);
+      const token = parseFloat(document.getElementById("tokenAmount").value);
+
+      if (drf <= 0 || token <= 0) return alert("Invalid amounts");
+
+      const old = getStoredLiquidity();
+      const newDrf = old.drf + drf;
+      const newToken = old.token + token;
+
+      saveLiquidity(newDrf, newToken);
+      updateLiquidityInfo();
+
+      alert("Liquidity added (local simulation)");
+    }
+
+    async function withdrawLiquidity() {
+      await initWallet();
+
+      const drf = parseFloat(document.getElementById("drfAmount").value);
+      const token = parseFloat(document.getElementById("tokenAmount").value);
+
+      const old = getStoredLiquidity();
+      if (drf > old.drf || token > old.token) return alert("Insufficient liquidity");
+
+      const newDrf = old.drf - drf;
+      const newToken = old.token - token;
+
+      saveLiquidity(newDrf, newToken);
+      updateLiquidityInfo();
+
+      alert("Liquidity withdrawn (local simulation)");
+    }
+  </script>
+</body>
+</html>
