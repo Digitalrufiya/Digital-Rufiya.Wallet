@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+<meta charset="UTF-8" />
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script> <!-- QR Code library -->
 </head>
 
 <body style="text-align:center;font-family:sans-serif;background:#f0fcf9;">
@@ -21,14 +21,8 @@
     <button onclick="createAccount()">Create Account</button>
     <button onclick="login()">Login</button>
     <button onclick="recoverAccount()">Recover Account</button>
-    
-    <div id="receiveContainer" style="display: none; margin-top: 20px;">
-      <h3>Receive Tokens</h3>
-      <p>DRF Wallet Address: <span id="walletAddress"></span></p>
-      <div id="qrcode" style="margin-top: 20px;"></div> <!-- QR Code for receiving -->
-    </div>
-    
-    <p id="walletInfo" style="margin-top:20px; font-weight:bold;"></p>
+
+    <p id="walletAddress" style="margin-top:20px; font-weight:bold;"></p>
   </div>
 
   <!-- Footer -->
@@ -38,7 +32,6 @@
   </div>
 
   <script>
-    // Show loading message during account creation or login
     function showLoading(message) {
       const container = document.querySelector('.container');
       container.innerHTML = `
@@ -49,13 +42,12 @@
       `;
     }
 
-    // Generate a random wallet and save it securely
     async function createAccount() {
       const password = prompt("Set a password to encrypt your wallet:");
       if (!password) return alert("Password is required.");
 
       showLoading("Creating your DRF Wallet... Please wait");
-      await new Promise(resolve => setTimeout(resolve, 500)); // Allow loading to show
+      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
 
       const wallet = ethers.Wallet.createRandom();
       const encryptedJson = await wallet.encrypt(password);
@@ -74,7 +66,6 @@
       setTimeout(() => window.location.href = "dashboard.html", 2000);
     }
 
-    // Login with an existing wallet
     async function login() {
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
       if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
@@ -85,16 +76,14 @@
 
       try {
         const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        localStorage.setItem("walletAddress", wallet.address);
-        showReceiveWallet(wallet.address);
         alert("Login successful!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
         alert("Incorrect password or corrupted wallet.");
         location.reload();
       }
     }
 
-    // Recover a wallet from the secret phrase
     async function recoverAccount() {
       const phrase = prompt("Enter your 12-word secret phrase:");
       if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
@@ -108,34 +97,13 @@
         const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
         const encryptedJson = await wallet.encrypt(password);
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-        localStorage.setItem("walletAddress", wallet.address);
-        showReceiveWallet(wallet.address);
         alert("Wallet recovered and encrypted successfully!");
+        setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
         alert("Recovery failed. Invalid phrase.");
         location.reload();
       }
     }
-
-    // Show the wallet address and generate QR Code for receiving tokens
-    function showReceiveWallet(walletAddress) {
-      document.getElementById("walletAddress").textContent = walletAddress;
-      generateQRCode(walletAddress);
-      document.getElementById("receiveContainer").style.display = "block";
-    }
-
-    // Generate QR code for the wallet address
-    function generateQRCode(walletAddress) {
-      const qrCodeElement = document.getElementById('qrcode');
-      QRCode.toCanvas(qrCodeElement, walletAddress, function (error) {
-        if (error) {
-          console.error("Error generating QR code:", error);
-        } else {
-          console.log('QR Code generated successfully!');
-        }
-      });
-    }
-
   </script>
 
   <style>
