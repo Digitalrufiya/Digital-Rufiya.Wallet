@@ -2,168 +2,190 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF ↔ USDC Swap Module (Standalone Wallet)</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <title>DRF Wallet Swap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
   <style>
-    body { font-family: Arial; max-width: 480px; margin: auto; padding: 20px; }
-    label { display: block; margin-top: 10px; }
-    input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
-    .result { margin-top: 15px; font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #2980b9; }
+    .result { text-align: center; margin-top: 20px; font-weight: bold; color: green; }
+    .warning { background: #fff3cd; padding: 10px; margin-top: 15px; border-left: 4px solid #ffa502; font-size: 14px; }
+    #walletSection, #swapSection { display: none; }
   </style>
 </head>
 <body>
-  <h2>DRF ↔ USDC Swap (No External Wallet)</h2>
+  <div class="container">
+    <h2>DRF Wallet & Swap</h2>
 
-  <label>Your BSC Private Key (Mnemonic or Private Key)</label>
-  <input type="password" id="privateKey" placeholder="Paste your private key or mnemonic" />
+    <!-- Wallet Loader -->
+    <div id="walletSection">
+      <input type="text" id="privateKey" placeholder="Enter your private key" />
+      <input type="password" id="setPassword" placeholder="Optional: set password" />
+      <label><input type="checkbox" id="rememberMe" checked /> Remember this wallet</label>
+      <button onclick="loadWallet()">Connect Wallet</button>
+    </div>
 
-  <label>Swap Direction</label>
-  <select id="swapDirection">
-    <option value="drfToUsdc">Sell DRF → Buy USDC</option>
-    <option value="usdcToDrf">Sell USDC → Buy DRF</option>
-  </select>
+    <!-- Swap Module -->
+    <div id="swapSection">
+      <p><b>Wallet:</b> <span id="walletAddr"></span></p>
+      <p><b>Balance:</b> <span id="drfBal">...</span> DRF</p>
 
-  <label>Amount to Swap</label>
-  <input type="number" id="inputAmount" placeholder="Enter amount" />
+      <input type="number" id="drfAmount" placeholder="Enter DRF to swap" />
+      <select id="tokenSelect">
+        <option value="USDC">USDC</option>
+        <option value="USDT">USDT</option>
+      </select>
+      <div class="result" id="calcResult">You will receive: 0</div>
 
-  <div class="result" id="outputAmount">Output amount: 0</div>
+      <button onclick="swapTokens()">Swap DRF</button>
+      <button onclick="forgetWallet()" style="background:red;margin-top:10px;">Forget Wallet</button>
+    </div>
 
-  <button id="connectBtn">Connect Wallet</button>
-  <button id="swapBtn" disabled>Swap Now</button>
+    <div class="warning">
+      1% fee applied. DRF → Token swap auto-calculated. Your key is securely stored locally.
+    </div>
+  </div>
 
-  <div class="result" id="status"></div>
+  <script>
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+    const rateSell = 15.42;
+    const swapFee = 0.01;
 
-<script>
-(async () => {
-  // Addresses of tokens on BSC
-  const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-  const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    let web3;
+    let account;
+    let privateKey;
 
-  // Minimal ERC20 ABI for balanceOf and transfer
-  const ERC20_ABI = [
-    "function balanceOf(address) view returns (uint256)",
-    "function transfer(address to, uint amount) returns (bool)",
-    "function decimals() view returns (uint8)"
-  ];
+    const erc20ABI = [
+      {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
+      {"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"type":"function"},
+      {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"}
+    ];
 
-  // Swap rates and fee
-  const sellRate = 15.42;  // 15.42 DRF = 1 USDC (user sells DRF)
-  const buyRate = 14.42;   // 1 USDC = 14.42 DRF (user sells USDC)
-  const feePercent = 1;    // 1% fee
+    const storedWallet = localStorage.getItem("walletData");
 
-  let provider;
-  let wallet;
-  let drfContract;
-  let usdcContract;
-
-  const privateKeyInput = document.getElementById('privateKey');
-  const swapDirectionSelect = document.getElementById('swapDirection');
-  const inputAmountInput = document.getElementById('inputAmount');
-  const outputAmountDiv = document.getElementById('outputAmount');
-  const statusDiv = document.getElementById('status');
-  const connectBtn = document.getElementById('connectBtn');
-  const swapBtn = document.getElementById('swapBtn');
-
-  // Connect wallet using private key or mnemonic
-  connectBtn.onclick = async () => {
-    const privKey = privateKeyInput.value.trim();
-    if (!privKey) {
-      alert("Enter your private key or mnemonic");
-      return;
-    }
-    try {
-      // Connect to BSC public RPC
-      provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-      // Support mnemonic or private key
-      if (privKey.split(' ').length >= 12) {
-        // mnemonic
-        wallet = ethers.Wallet.fromMnemonic(privKey).connect(provider);
+    window.addEventListener("load", () => {
+      if (storedWallet) {
+        const parsed = JSON.parse(storedWallet);
+        if (parsed.password) {
+          const pwd = prompt("Enter your password to unlock wallet:");
+          try {
+            privateKey = CryptoJS.AES.decrypt(parsed.key, pwd).toString(CryptoJS.enc.Utf8);
+          } catch {
+            alert("Incorrect password");
+            return;
+          }
+        } else {
+          privateKey = parsed.key;
+        }
+        connectWallet(privateKey);
       } else {
-        wallet = new ethers.Wallet(privKey, provider);
+        document.getElementById("walletSection").style.display = "block";
       }
-      drfContract = new ethers.Contract(DRF_ADDRESS, ERC20_ABI, wallet);
-      usdcContract = new ethers.Contract(USDC_ADDRESS, ERC20_ABI, wallet);
+    });
 
-      // Fetch balances and decimals
-      const drfDecimals = await drfContract.decimals();
-      const usdcDecimals = await usdcContract.decimals();
-      const drfBalanceRaw = await drfContract.balanceOf(wallet.address);
-      const usdcBalanceRaw = await usdcContract.balanceOf(wallet.address);
+    function loadWallet() {
+      const key = document.getElementById("privateKey").value.trim();
+      const pwd = document.getElementById("setPassword").value.trim();
+      const remember = document.getElementById("rememberMe").checked;
 
-      const drfBalance = ethers.utils.formatUnits(drfBalanceRaw, drfDecimals);
-      const usdcBalance = ethers.utils.formatUnits(usdcBalanceRaw, usdcDecimals);
+      if (!key.startsWith("0x") || key.length < 64) return alert("Invalid private key");
 
-      statusDiv.innerText = `Connected: ${wallet.address}\nDRF Balance: ${drfBalance}\nUSDC Balance: ${usdcBalance}`;
-      swapBtn.disabled = false;
+      privateKey = key;
+      connectWallet(key);
 
-      // Recalculate output amount on input change
-      calculateOutput();
-    } catch (error) {
-      alert("Failed to connect wallet or invalid key/mnemonic.");
-      console.error(error);
-    }
-  };
-
-  // Calculate output amount with rates and fees
-  function calculateOutput() {
-    const amount = parseFloat(inputAmountInput.value);
-    if (!amount || amount <= 0) {
-      outputAmountDiv.innerText = "Output amount: 0";
-      return;
-    }
-    let output;
-    if (swapDirectionSelect.value === 'drfToUsdc') {
-      // User sells DRF to get USDC: amount DRF / sellRate * 0.99 (1% fee)
-      output = (amount / sellRate) * (1 - feePercent/100);
-      outputAmountDiv.innerText = `Output amount: ${output.toFixed(6)} USDC (after 1% fee)`;
-    } else {
-      // User sells USDC to get DRF: amount USDC * buyRate * 0.99
-      output = amount * buyRate * (1 - feePercent/100);
-      outputAmountDiv.innerText = `Output amount: ${output.toFixed(6)} DRF (after 1% fee)`;
-    }
-  }
-
-  inputAmountInput.oninput = calculateOutput;
-  swapDirectionSelect.onchange = calculateOutput;
-
-  // Swap function (simple transfer for demo)
-  swapBtn.onclick = async () => {
-    const amount = parseFloat(inputAmountInput.value);
-    if (!amount || amount <= 0) {
-      alert("Enter a valid amount");
-      return;
-    }
-
-    swapBtn.disabled = true;
-    statusDiv.innerText = "Swapping... please wait.";
-
-    try {
-      let tx;
-      if (swapDirectionSelect.value === 'drfToUsdc') {
-        // Sell DRF: transfer DRF tokens to a "swap pool" (you control this address)
-        // For demo, just transfer DRF tokens to your own address, in real use case it would be a swap contract address
-
-        const amountRaw = ethers.utils.parseUnits(amount.toString(), await drfContract.decimals());
-        tx = await drfContract.transfer(wallet.address, amountRaw);  // Replace wallet.address with swap pool address in prod
-
-      } else {
-        // Sell USDC: transfer USDC tokens
-        const amountRaw = ethers.utils.parseUnits(amount.toString(), await usdcContract.decimals());
-        tx = await usdcContract.transfer(wallet.address, amountRaw); // Replace wallet.address with swap pool address in prod
+      if (remember) {
+        const toStore = pwd
+          ? { key: CryptoJS.AES.encrypt(key, pwd).toString(), password: true }
+          : { key: key, password: false };
+        localStorage.setItem("walletData", JSON.stringify(toStore));
       }
-
-      await tx.wait();
-
-      statusDiv.innerText = `Swap successful! Tx Hash: ${tx.hash}`;
-      swapBtn.disabled = false;
-    } catch (e) {
-      console.error(e);
-      statusDiv.innerText = "Swap failed: " + e.message;
-      swapBtn.disabled = false;
     }
-  };
 
-})();
-</script>
+    async function connectWallet(pk) {
+      web3 = new Web3("https://bsc-dataseed.binance.org/");
+      account = web3.eth.accounts.privateKeyToAccount(pk);
+      web3.eth.accounts.wallet.add(account);
+      web3.eth.defaultAccount = account.address;
+
+      document.getElementById("walletSection").style.display = "none";
+      document.getElementById("swapSection").style.display = "block";
+      document.getElementById("walletAddr").innerText = account.address;
+
+      updateDRFBalance();
+    }
+
+    async function updateDRFBalance() {
+      const token = new web3.eth.Contract(erc20ABI, DRF_ADDRESS);
+      const decimals = await token.methods.decimals().call();
+      const raw = await token.methods.balanceOf(account.address).call();
+      const balance = raw / (10 ** decimals);
+      document.getElementById("drfBal").innerText = balance.toFixed(2);
+    }
+
+    document.getElementById("drfAmount").addEventListener("input", () => {
+      const amount = parseFloat(document.getElementById("drfAmount").value) || 0;
+      const received = (amount / rateSell) * (1 - swapFee);
+      document.getElementById("calcResult").innerText = `You will receive: $${received.toFixed(2)}`;
+    });
+
+    async function swapTokens() {
+      const drfAmount = parseFloat(document.getElementById("drfAmount").value);
+      const token = document.getElementById("tokenSelect").value;
+
+      if (!drfAmount || drfAmount <= 0) return alert("Enter amount");
+
+      const toAddr = token === "USDC" ? USDC_ADDRESS : USDT_ADDRESS;
+      const tokenInst = new web3.eth.Contract(erc20ABI, DRF_ADDRESS);
+      const decimals = await tokenInst.methods.decimals().call();
+      const amountWei = web3.utils.toBN(drfAmount * 10 ** decimals);
+
+      const tx = tokenInst.methods.transfer(toAddr, amountWei);
+      const gas = await tx.estimateGas({ from: account.address });
+
+      tx.send({ from: account.address, gas })
+        .on("receipt", () => {
+          alert("Swap successful!");
+          updateDRFBalance();
+        })
+        .on("error", (e) => {
+          console.error(e);
+          alert("Swap failed.");
+        });
+    }
+
+    function forgetWallet() {
+      localStorage.removeItem("walletData");
+      location.reload();
+    }
+  </script>
 </body>
 </html>
