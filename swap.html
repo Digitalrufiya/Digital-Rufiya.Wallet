@@ -1,138 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Sell Module</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      text-align: center;
-      color: #222;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    .result {
-      margin-top: 20px;
-      font-size: 18px;
-      font-weight: bold;
-      color: green;
-      text-align: center;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #3498db;
-      color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      margin-top: 20px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #2980b9;
-    }
-
-    .note {
-      margin-top: 20px;
-      font-size: 14px;
-      background: #f0f8ff;
-      padding: 10px;
-      border-left: 4px solid #0077cc;
-    }
-
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      font-size: 13px;
-      color: #888;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF ↔ USDC Swap</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 480px; margin: 30px auto; padding: 20px; }
+  label { display: block; margin-top: 10px; }
+  input { width: 100%; padding: 8px; margin-top: 5px; }
+  button { margin-top: 20px; padding: 12px; width: 100%; font-size: 16px; cursor: pointer; }
+  #status { margin-top: 20px; min-height: 1.2em; }
+  #calculation { margin-top: 10px; font-weight: bold; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>Sell DRF Instantly</h2>
-    <label for="drfAmount">Enter DRF Amount</label>
-    <input type="number" id="drfAmount" placeholder="Enter DRF to sell" />
 
-    <label for="token">Select Receiving Token</label>
-    <select id="token">
-      <option value="usdt">USDT</option>
-      <option value="usdc">USDC</option>
-    </select>
+<h2>DRF ↔ USDC Swap</h2>
 
-    <label for="address">Your Receiving Address (BSC)</label>
-    <input type="text" id="address" placeholder="Enter your BEP20 address" />
+<div>
+  <button id="connectWalletBtn">Connect Wallet</button>
+  <p id="walletAddress"></p>
+</div>
 
-    <div class="result" id="result">You will receive: $0.00</div>
+<div>
+  <h3>Your Balances</h3>
+  <p>DRF: <span id="drfBalance">-</span></p>
+  <p>USDC: <span id="usdcBalance">-</span></p>
+</div>
 
-    <button onclick="submitSell()">Sell DRF Now</button>
+<hr />
 
-    <div class="note">
-      DRF coin is upcoming on the market cap. By submitting this, transferred amounts will be automatically sent to your selected token address. Ensure your BEP20 address is correct.
-    </div>
-    <div class="note">
-      (DRF) Bsc Mainnet Wallet Powered by Bsc Chain & AI Technology.
-    </div>
-  </div>
+<label for="swapDirection">Swap Direction:</label>
+<select id="swapDirection">
+  <option value="usdcToDrf">Buy DRF (pay USDC)</option>
+  <option value="drfToUsdc">Sell DRF (get USDC)</option>
+</select>
 
-  <footer>2025 © Digital Rufiya Wallet - Financial Revolution powered by BSC Blockchain & AI</footer>
+<label for="amountInput">Amount to swap:</label>
+<input type="number" id="amountInput" min="0" step="any" placeholder="Enter amount" />
 
-  <script>
-    const drfInput = document.getElementById('drfAmount');
-    const result = document.getElementById('result');
-    const rate = 15.42;
+<p id="calculation"></p>
 
-    drfInput.addEventListener('input', () => {
-      const drf = parseFloat(drfInput.value) || 0;
-      const usd = (drf / rate).toFixed(2);
-      result.innerText = `You will receive: $${usd}`;
-    });
+<p>Swap Rate Info:</p>
+<ul>
+  <li>Buy DRF: 1 USDC = 14.42 DRF (1% fee applied)</li>
+  <li>Sell DRF: 15.42 DRF = 1 USDC (1% fee applied)</li>
+</ul>
 
-    function submitSell() {
-      const drf = drfInput.value.trim();
-      const token = document.getElementById('token').value;
-      const address = document.getElementById('address').value.trim();
+<button id="swapBtn" disabled>Swap</button>
 
-      if (!drf || !address) {
-        alert("Please fill in all fields correctly.");
-        return;
+<p id="status"></p>
+
+<script>
+  // Contract addresses
+  const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+  const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955"; // reference only
+  const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+
+  // NOTE: Set your Swap Contract Address here:
+  const SWAP_CONTRACT_ADDRESS = "YOUR_SWAP_CONTRACT_ADDRESS";
+
+  const DRF_ABI = [
+    "function balanceOf(address) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function approve(address spender, uint256 amount) returns (bool)",
+    "function allowance(address owner, address spender) view returns (uint256)",
+    "function transferFrom(address sender, address recipient, uint256 amount) returns (bool)",
+    "function transfer(address recipient, uint256 amount) returns (bool)"
+  ];
+
+  const USDC_ABI = DRF_ABI; // standard ERC20
+
+  const SWAP_ABI = [
+    "function buyDRF(uint256 usdcAmount) external",
+    "function sellDRF(uint256 drfAmount) external",
+  ];
+
+  let provider, signer;
+  let drfContract, usdcContract, swapContract;
+  let userAddress;
+  let drfDecimals = 18; // default, update below
+  let usdcDecimals = 18; // default, update below
+
+  const connectWalletBtn = document.getElementById("connectWalletBtn");
+  const walletAddressP = document.getElementById("walletAddress");
+  const drfBalanceSpan = document.getElementById("drfBalance");
+  const usdcBalanceSpan = document.getElementById("usdcBalance");
+  const swapBtn = document.getElementById("swapBtn");
+  const amountInput = document.getElementById("amountInput");
+  const swapDirectionSelect = document.getElementById("swapDirection");
+  const statusP = document.getElementById("status");
+  const calculationP = document.getElementById("calculation");
+
+  // Rates and fee:
+  const buyRate = 14.42;    // 1 USDC = 14.42 DRF (buy DRF)
+  const sellRate = 15.42;   // 15.42 DRF = 1 USDC (sell DRF)
+  const feePercent = 1;     // 1% fee
+
+  async function connectWallet() {
+    if (!window.ethereum) {
+      alert("MetaMask not detected");
+      return;
+    }
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+    walletAddressP.textContent = "Connected: " + userAddress;
+
+    drfContract = new ethers.Contract(DRF_ADDRESS, DRF_ABI, signer);
+    usdcContract = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer);
+    swapContract = new ethers.Contract(SWAP_CONTRACT_ADDRESS, SWAP_ABI, signer);
+
+    drfDecimals = await drfContract.decimals();
+    usdcDecimals = await usdcContract.decimals();
+
+    await updateBalances();
+    swapBtn.disabled = false;
+  }
+
+  async function updateBalances() {
+    let drfBal = await drfContract.balanceOf(userAddress);
+    drfBal = ethers.utils.formatUnits(drfBal, drfDecimals);
+    drfBalanceSpan.textContent = parseFloat(drfBal).toFixed(4);
+
+    let usdcBal = await usdcContract.balanceOf(userAddress);
+    usdcBal = ethers.utils.formatUnits(usdcBal, usdcDecimals);
+    usdcBalanceSpan.textContent = parseFloat(usdcBal).toFixed(4);
+  }
+
+  // Calculate output amount based on input and direction
+  function calculateOutput() {
+    const input = parseFloat(amountInput.value);
+    if (isNaN(input) || input <= 0) {
+      calculationP.textContent = "";
+      return;
+    }
+    const direction = swapDirectionSelect.value;
+
+    if (direction === "usdcToDrf") {
+      // User pays USDC to get DRF
+      // DRF = (USDC amount * buyRate) * (1 - fee%)
+      let drfOut = input * buyRate * (1 - feePercent / 100);
+      calculationP.textContent = `You will receive approx. ${drfOut.toFixed(4)} DRF`;
+    } else {
+      // User sells DRF to get USDC
+      // USDC = (DRF amount / sellRate) * (1 - fee%)
+      let usdcOut = (input / sellRate) * (1 - feePercent / 100);
+      calculationP.textContent = `You will receive approx. ${usdcOut.toFixed(4)} USDC`;
+    }
+  }
+
+  async function swap() {
+    statusP.textContent = "";
+    const amount = amountInput.value;
+    if (!amount || Number(amount) <= 0) {
+      alert("Enter a valid amount");
+      return;
+    }
+
+    const direction = swapDirectionSelect.value;
+
+    try {
+      swapBtn.disabled = true;
+
+      if (direction === "usdcToDrf") {
+        // User buys DRF by paying USDC
+        const usdcAmount = ethers.utils.parseUnits(amount, usdcDecimals);
+
+        // Approve USDC if needed
+        const allowance = await usdcContract.allowance(userAddress, SWAP_CONTRACT_ADDRESS);
+        if (allowance.lt(usdcAmount)) {
+          statusP.textContent = "Approving USDC...";
+          const approveTx = await usdcContract.approve(SWAP_CONTRACT_ADDRESS, usdcAmount);
+          await approveTx.wait();
+        }
+
+        statusP.textContent = "Swapping USDC for DRF...";
+        const tx = await swapContract.buyDRF(usdcAmount);
+        await tx.wait();
+
+      } else {
+        // User sells DRF to get USDC
+        const drfAmount = ethers.utils.parseUnits(amount, drfDecimals);
+
+        // Approve DRF if needed
+        const allowance = await drfContract.allowance(userAddress, SWAP_CONTRACT_ADDRESS);
+        if (allowance.lt(drfAmount)) {
+          statusP.textContent = "Approving DRF...";
+          const approveTx = await drfContract.approve(SWAP_CONTRACT_ADDRESS, drfAmount);
+          await approveTx.wait();
+        }
+
+        statusP.textContent = "Swapping DRF for USDC...";
+        const tx = await swapContract.sellDRF(drfAmount);
+        await tx.wait();
       }
 
-      // Simulated success (Replace with actual backend logic / Google Apps Script POST if needed)
-      alert(`Sell request submitted!\nDRF: ${drf}\nTo: ${address}\nToken: ${token.toUpperCase()}`);
+      statusP.textContent = "Swap successful!";
+      await updateBalances();
+    } catch (err) {
+      console.error(err);
+      statusP.textContent = "Error: " + (err.data?.message || err.message || "Transaction failed");
+    } finally {
+      swapBtn.disabled = false;
     }
-  </script>
+  }
+
+  connectWalletBtn.addEventListener("click", connectWallet);
+  swapBtn.addEventListener("click", swap);
+  amountInput.addEventListener("input", calculateOutput);
+  swapDirectionSelect.addEventListener("change", () => {
+    amountInput.value = "";
+    calculationP.textContent = "";
+  });
+</script>
+
 </body>
 </html>
