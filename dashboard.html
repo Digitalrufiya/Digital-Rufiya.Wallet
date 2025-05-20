@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+  <!-- Dashboard Content -->
+  <div class="card-container">
+    <div class="card three-d-effect" id="drfCard">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" />
+      <h3>DigiTal Rufiya Wallet Binace smart chain Netwotrk</h3>
+      <p class="balance" id="drfBalance"> </p>
+    </div>
+
   <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -12,18 +20,8 @@
   <body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
     <header style="display: flex; justify-content: space-between; align-items: center;">
       <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
-      <button onclick="logoutWallet()" style="font-size: 14px; background: none; border: none; color: #007bff; cursor: pointer;">🔒 Logout</button>
     </header>
 
-<!-- Dashboard Content -->
-  <div class="card-container">
-    <div class="card three-d-effect" id="drfCard">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" />
-      <h3>DigiTal Rufiya Wallet Binace smart Blockchain Netwotrk</h3>
-      <p class="balance" id="drfBalance"> </p>
-    </div>
-
-    
     <div>
       <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
       <p id="walletAddress" style="font-weight: bold;"></p>
@@ -36,6 +34,7 @@
       <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
     </div>
 
+    <!-- 🪙 RECEIVE SECTION -->
     <h3 style="margin-top: 30px;">🔐 Receive Tokens</h3>
     <div id="receiveSection" style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
       <label for="token-select">Select Token:</label>
@@ -57,14 +56,17 @@
       </div>
     </div>
 
+    <!-- Sell DRF -->
     <div style="margin-top: 30px;">
       <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
     </div>
 
+    <!-- Affiliate -->
     <div style="margin-top: 20px;">
       <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
     </div>
 
+    <!-- FOOTER NAV -->
     <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
       <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
       <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
@@ -81,7 +83,7 @@
       const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
       const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
       const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-      const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+
 
       let userWallet;
 
@@ -100,6 +102,7 @@
 
       async function initializeWallet() {
         if (!localStorage.getItem("isLoggedIn")) {
+          alert("Please log in first.");
           return window.location.href = "index.html";
         }
 
@@ -110,6 +113,7 @@
           userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
           fetchBalances();
 
+          // Display wallet info
           document.getElementById("wallet-address-display").value = userWallet.address;
           document.getElementById("walletAddress").textContent = `Your Wallet: ${userWallet.address}`;
           document.getElementById("bscscan-link").href = `https://bscscan.com/address/${userWallet.address}`;
@@ -147,24 +151,9 @@
         alert("Wallet address copied!");
       }
 
-      function updateReceiveDisplay() {}
-
-      function logoutWallet() {
-        localStorage.removeItem("isLoggedIn");
-        location.href = "index.html";
+      function updateReceiveDisplay() {
+        // Already handled by QR code generation above
       }
-
-      let inactivityTimer;
-      function resetInactivityTimer() {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(logoutWallet, 30 * 60 * 1000); // 30 minutes
-      }
-
-      ["click", "mousemove", "keydown", "scroll", "touchstart"].forEach(event => {
-        window.addEventListener(event, resetInactivityTimer);
-      });
-
-      resetInactivityTimer();
 
       window.onload = async () => {
         await setupWalletIfNeeded();
