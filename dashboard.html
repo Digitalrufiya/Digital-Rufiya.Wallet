@@ -10,6 +10,15 @@
   </head>
 
   <body style="font-family: Arial; background: #f4f9fb; padding: 20px;">
+    <!-- Dashboard Content -->
+    <div class="card-container">
+      <div class="card three-d-effect" id="drfCard">
+        <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" />
+        <h3>DigiTal Rufiya Wallet Binace smart chain Netwotrk</h3>
+        <p class="balance" id="drfCardBalance"> </p>
+      </div>
+    </div>
+
     <header style="display: flex; justify-content: space-between; align-items: center;">
       <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
     </header>
@@ -26,6 +35,7 @@
       <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
     </div>
 
+    <!-- 🪙 RECEIVE SECTION -->
     <h3 style="margin-top: 30px;">🔐 Receive Tokens</h3>
     <div id="receiveSection" style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
       <label for="token-select">Select Token:</label>
@@ -47,14 +57,17 @@
       </div>
     </div>
 
+    <!-- Sell DRF -->
     <div style="margin-top: 30px;">
       <button onclick="sellDRF()" style="padding: 10px 20px; background-color: #007bff; color: white;">Sell DRF to Mainnet</button>
     </div>
 
+    <!-- Affiliate -->
     <div style="margin-top: 20px;">
       <button onclick="shareAffiliateLink()" style="padding: 10px 20px; background-color: #28a745; color: white;">Earn by Promoting</button>
     </div>
 
+    <!-- FOOTER NAV -->
     <div class="bottom-nav" style="position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ccc;">
       <a href="dashboard.html"><img src="icon/dashboard.png" alt="Dashboard" width="24" /><br>Dashboard</a>
       <a href="send.html"><img src="icon/send.png" alt="Send" width="24" /><br>Send</a>
@@ -68,10 +81,10 @@
     </footer>
 
     <script>
+      const BSC_RPC_URL = "https://bsc-dataseed.binance.org"; // Add this if it was missing
       const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
       const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
       const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-      const BSC_RPC_URL = "https://bsc-dataseed1.binance.org/";
 
       let userWallet;
 
@@ -79,27 +92,29 @@
         if (!localStorage.getItem("drf_encrypted_wallet")) {
           const wallet = ethers.Wallet.createRandom();
           const password = prompt("Create a password to encrypt your new wallet:");
+          if (!password) return alert("Wallet setup cancelled.");
           const encryptedJson = await wallet.encrypt(password);
 
           localStorage.setItem("drf_encrypted_wallet", encryptedJson);
           localStorage.setItem("isLoggedIn", true);
-
           alert("Wallet created successfully. Please remember your password.");
         }
       }
 
       async function initializeWallet() {
-        const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-
-        if (!encryptedWallet || localStorage.getItem("isLoggedIn") !== "true") {
+        if (!localStorage.getItem("isLoggedIn")) {
           alert("Please log in first.");
           return window.location.href = "index.html";
         }
 
+        const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
         const password = prompt("Enter password to unlock wallet:");
+        if (!password) return;
 
         try {
           userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+          fetchBalances();
+
           document.getElementById("wallet-address-display").value = userWallet.address;
           document.getElementById("walletAddress").textContent = `Your Wallet: ${userWallet.address}`;
           document.getElementById("bscscan-link").href = `https://bscscan.com/address/${userWallet.address}`;
@@ -108,7 +123,6 @@
             if (error) console.error(error);
           });
 
-          fetchBalances();
         } catch (err) {
           alert("Failed to load wallet. Please try again.");
         }
@@ -132,14 +146,14 @@
       }
 
       function copyWalletAddress() {
-        const addr = document.getElementById("wallet-address-display");
-        addr.select();
-        document.execCommand("copy");
-        alert("Wallet address copied!");
+        const addr = document.getElementById("wallet-address-display").value;
+        navigator.clipboard.writeText(addr).then(() => {
+          alert("Wallet address copied!");
+        });
       }
 
       function updateReceiveDisplay() {
-        // Already handled by QR code
+        // QR updates automatically from wallet load
       }
 
       window.onload = async () => {
