@@ -11,62 +11,73 @@
 
   <h2 style="margin-top:30px;">🔐 DRF Wallet - Key Vault</h2>
 
-  <p>For security, please enter your password to view your keys.</p>
-  <input type="password" id="walletPassword" placeholder="Enter your password" style="padding:8px; width:250px;"/>
-  <br><br>
-  <button onclick="unlockWallet()">Unlock Wallet</button>
-<script>
-    function showLoading(message) {
-      const container = document.querySelector('.container');
-      container.innerHTML = `
-        <div style="margin-top: 100px;">
-          <div class="loader" style="margin:auto; border: 4px solid #f3f3f3; border-top: 4px solid #0baf9a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
-          <p style="margin-top: 20px;">${message}</p>
-        </div>
-      `;
-    }
+  <p style="margin: 20px;">Enter your <strong>Secret Phrase (mnemonic)</strong> or <strong>Private Key</strong> below:</p>
 
-  
+  <textarea id="inputKey" rows="4" cols="50" placeholder="Paste your secret phrase or private key here"></textarea><br/><br/>
+  <button onclick="unlockWallet()">Unlock Wallet</button>
+
   <div id="actions" style="display:none; margin-top:30px;">
     <button onclick="showSecretPhrase()">Show Secret Phrase</button>
     <button onclick="showPrivateKey()">Show Private Key</button>
     <button onclick="downloadKeys()">Download Keys</button>
-    <p id="output" style="margin-top:20px; word-break:break-word;"></p>
+    <p id="output" style="margin-top:20px; word-break:break-word; white-space: pre-wrap;"></p>
   </div>
 
-  
+  <p style="color:red; max-width: 400px; margin: 20px auto;">
+    ⚠️ <strong>Important:</strong> Do not share your secret phrase or private key with anyone.<br/>
+    Store it safely. Anyone with these keys can access your wallet and assets.
+  </p>
+
+  <button onclick="window.location.href='contact.html'">Contact Us</button>
+
   <script>
     let decryptedWallet = null;
 
-    async function unlockWallet() {
-      const encrypted = localStorage.getItem("drf_encrypted_wallet");
-      if (!encrypted) return alert("No wallet found. Please create one from index.html.");
+    function unlockWallet() {
+      const input = document.getElementById('inputKey').value.trim();
 
-      const password = document.getElementById("walletPassword").value;
-      if (!password) return alert("Please enter a password.");
+      if (!input) {
+        alert("Please enter your secret phrase or private key.");
+        return;
+      }
 
       try {
-        decryptedWallet = await ethers.Wallet.fromEncryptedJson(encrypted, password);
-        document.getElementById("actions").style.display = "block";
-        alert("Wallet unlocked.");
-      } catch (err) {
-        alert("Invalid password or corrupted wallet.");
+        if (input.split(' ').length >= 12) {
+          // Assume mnemonic phrase
+          decryptedWallet = ethers.Wallet.fromMnemonic(input);
+        } else {
+          // Assume private key
+          decryptedWallet = new ethers.Wallet(input);
+        }
+        document.getElementById('actions').style.display = 'block';
+        document.getElementById('output').innerText = "";
+        alert("Wallet unlocked successfully! You can now view your keys.");
+      } catch (error) {
+        alert("Failed to unlock wallet. Please check your input and try again.");
       }
     }
 
     function showSecretPhrase() {
       if (!decryptedWallet?.mnemonic?.phrase) {
-        return alert("Mnemonic not available for this wallet.");
+        alert("Secret Phrase not available for this wallet.");
+        return;
       }
       document.getElementById("output").innerText = "Secret Phrase:\n" + decryptedWallet.mnemonic.phrase;
     }
 
     function showPrivateKey() {
+      if (!decryptedWallet) {
+        alert("Unlock the wallet first.");
+        return;
+      }
       document.getElementById("output").innerText = "Private Key:\n" + decryptedWallet.privateKey;
     }
 
     function downloadKeys() {
-      if (!decryptedWallet) return alert("Unlock the wallet first.");
+      if (!decryptedWallet) {
+        alert("Unlock the wallet first.");
+        return;
+      }
       const content = `
 DRF Wallet Keys
 ---------------
