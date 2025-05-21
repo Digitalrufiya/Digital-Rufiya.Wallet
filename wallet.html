@@ -2,25 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRF Wallet Keys</title>
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f0fcf9; }
+    #actions { margin-top: 30px; }
+    #output { margin-top: 20px; word-break: break-word; white-space: pre-wrap; }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
-<body style="font-family:sans-serif; text-align:center; background:#f0fcf9;">
+<body>
 
   <h2 style="margin-top:30px;">🔐 DRF Wallet - Key Vault</h2>
 
-  <!-- Show buttons immediately -->
-  <div id="actions" style="display:block; margin-top:30px;">
+  <div id="actions">
     <button onclick="showSecretPhrase()">Show Secret Phrase</button>
     <button onclick="showPrivateKey()">Show Private Key</button>
     <button onclick="downloadKeys()">Download Keys</button>
-    <p id="output" style="margin-top:20px; word-break:break-word;"></p>
+    <p id="output"></p>
   </div>
 
   <script>
-    // Provide your decrypted wallet here:
+    // Put your decrypted wallet info here:
     const decryptedWallet = {
       address: "0xYourWalletAddressHere",
       mnemonic: { phrase: "your secret mnemonic phrase here" },
@@ -29,7 +32,8 @@
 
     function showSecretPhrase() {
       if (!decryptedWallet?.mnemonic?.phrase) {
-        return alert("Mnemonic not available for this wallet.");
+        alert("Mnemonic not available for this wallet.");
+        return;
       }
       document.getElementById("output").innerText = "Secret Phrase:\n" + decryptedWallet.mnemonic.phrase;
     }
@@ -39,7 +43,10 @@
     }
 
     function downloadKeys() {
-      if (!decryptedWallet) return alert("Wallet not loaded.");
+      if (!decryptedWallet) {
+        alert("Wallet data not available.");
+        return;
+      }
       const content = `
 DRF Wallet Keys
 ---------------
@@ -57,5 +64,6 @@ Private Key: ${decryptedWallet.privateKey}
       URL.revokeObjectURL(url);
     }
   </script>
+
 </body>
 </html>
