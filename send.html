@@ -1,102 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Send Tokens - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0fcf9;
+      padding: 20px;
+      max-width: 480px;
+      margin: auto;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: bold;
+    }
+    select, input[type=text], input[type=number], input[type=password] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background-color: #28a745;
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+    .notice {
+      background:#fff3cd;
+      border:1px solid #ffeeba;
+      color:#856404;
+      padding:15px;
+      border-radius:8px;
+      margin-bottom:20px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      min-height: 1.2em;
+      word-break: break-word;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #28a745;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    /* Modal Styles */
+    #confirmModal {
+      display:none;
+      position:fixed;
+      top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.6);
+      z-index:1000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #confirmModal > div {
+      background:white;
+      padding:20px;
+      border-radius:10px;
+      max-width:320px;
+      width:90%;
+      text-align:center;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      color: #222;
+    }
+    #confirmModal button {
+      margin: 12px 8px 0 8px;
+      width: 120px;
+    }
+    .tx-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 8px;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Send Tokens</h1>
+  <h1>Send Tokens</h1>
 
-    <label>Select Token</label>
-    <select id="tokenSelect">
-      <option value="DRF">DRF</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-    </select>
-
-    <input type="text" id="recipient" placeholder="Receiver wallet address" />
-    <input type="number" id="amount" placeholder="Amount to send" />
-
-    <button onclick="confirmSend()">Send</button>
-    <p id="status"></p>
+  <div class="notice">
+    <strong>⚠️ Important Notice — Your Wallet, Your Responsibility</strong><br/><br/>
+    This is your personal <strong>DRF Standalone Wallet</strong>. All transactions are signed <em>locally</em> on your device by you using your private keys.<br/><br/>
+    No one else can access, sign, or control your funds — <strong>only you</strong> hold the keys and authorize transfers.<br/><br/>
+    Please review all transaction details carefully before confirming.<br/>
+    Mistakes or unauthorized transactions <strong>cannot</strong> be reversed.<br/><br/>
+    By using this wallet, you accept full responsibility for managing and securing your funds.
   </div>
 
+  <label for="privateKey">Enter Your Private Key</label>
+  <input type="password" id="privateKey" placeholder="0x..." autocomplete="off" />
+
+  <label for="tokenSelect">Select Token</label>
+  <select id="tokenSelect">
+    <option value="DRF">DRF</option>
+    <option value="USDC">USDC</option>
+    <option value="USDT">USDT</option>
+  </select>
+
+  <label for="recipient">Receiver Wallet Address</label>
+  <input type="text" id="recipient" placeholder="0x..." />
+
+  <label for="amount">Amount to Send</label>
+  <input type="number" id="amount" placeholder="0.0" min="0" step="any" />
+
+  <button id="sendBtn" onclick="confirmSend()">Send</button>
+
+  <p id="status"></p>
+
   <!-- Confirmation Modal -->
-  <div id="confirmModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:white; padding:20px; border-radius:10px; max-width:300px; margin:auto;">
+  <div id="confirmModal">
+    <div>
       <h3>Confirm Transaction</h3>
       <p id="confirmText"></p>
-      <button onclick="executeSend()">Confirm</button>
+      <button onclick="executeSend()" id="confirmBtn">Confirm</button>
       <button onclick="closeModal()">Cancel</button>
     </div>
   </div>
 
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <a href="dashboard.html" class="tab-item"><img src="icons/dashboard.svg" alt="Dashboard">Dashboard</a>
-    <a href="send.html" class="tab-item"><img src="icons/send.svg" alt="Send">Send</a>
-    <a href="swap.html" class="tab-item"><img src="icons/swap.svg" alt="Swap">Swap</a>
-    <a href="transactions.html" class="tab-item"><img src="icons/tx.svg" alt="Tx">Transactions</a>
-    <a href="tokensale.html" class="tab-item"><img src="icons/token.svg" alt="Token">Token Sale</a>
-  </div>
-
   <script>
-    const ADMIN_ADDRESS = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
-    const tokenContracts = {
-      DRF: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
-      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-      USDT: "0x55d398326f99059ff775485246999027b3197955"
-    };
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027b3197955";
+
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+
+    const ADMIN_ADDRESS = DRF_ADDRESS; // fee goes to DRF contract address
 
     const ABI = [
       "function transfer(address to, uint amount) public returns (bool)",
       "function decimals() public view returns (uint8)"
     ];
 
-    let token, signer, provider, decimals;
-    let selectedToken, recipient, amount, feeAmount, sendAmount;
+    let wallet, provider, tokenContract;
+    let selectedToken, recipient, amount, decimals, feeAmount, sendAmount;
 
     async function confirmSend() {
+      document.getElementById("status").innerText = "";
+      const privateKey = document.getElementById("privateKey").value.trim();
       selectedToken = document.getElementById("tokenSelect").value;
       recipient = document.getElementById("recipient").value.trim();
       amount = parseFloat(document.getElementById("amount").value);
 
-      if (!window.ethereum || !recipient || !amount) {
-        alert("Please fill in all fields and connect a Web3 wallet.");
+      if (!privateKey) {
+        alert("Please enter your private key to unlock your wallet.");
+        return;
+      }
+      if (!recipient || !ethers.utils.isAddress(recipient)) {
+        alert("Please enter a valid recipient wallet address.");
+        return;
+      }
+      if (!amount || amount <= 0) {
+        alert("Please enter a valid amount greater than zero.");
         return;
       }
 
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
+      try {
+        provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
+        wallet = new ethers.Wallet(privateKey, provider);
 
-      token = new ethers.Contract(tokenContracts[selectedToken], ABI, signer);
-      decimals = await token.decimals();
+        const tokenAddress = selectedToken === "DRF" ? DRF_ADDRESS :
+                             selectedToken === "USDC" ? USDC_ADDRESS :
+                             USDT_ADDRESS;
 
-      const fullAmount = ethers.utils.parseUnits(amount.toString(), decimals);
-      feeAmount = fullAmount.mul(5).div(100); // 5% fee
-      sendAmount = fullAmount.sub(feeAmount);
+        tokenContract = new ethers.Contract(tokenAddress, ABI, wallet);
 
-      document.getElementById("confirmText").innerText =
-        `Send ${ethers.utils.formatUnits(sendAmount, decimals)} ${selectedToken} to ${recipient}\n` +
-        `5% fee (${ethers.utils.formatUnits(feeAmount, decimals)}) will go to admin.`;
+        decimals = await tokenContract.decimals();
 
-      document.getElementById("confirmModal").style.display = "flex";
+        const fullAmount = ethers.utils.parseUnits(amount.toString(), decimals);
+        feeAmount = fullAmount.mul(5).div(100); // 5% fee
+        sendAmount = fullAmount.sub(feeAmount);
+
+        // Confirmation text
+        const confirmText = 
+          `You are about to send:\n\n` +
+          `- ${ethers.utils.formatUnits(sendAmount, decimals)} ${selectedToken} to\n  ${recipient}\n\n` +
+          `- 5% fee (${ethers.utils.formatUnits(feeAmount, decimals)} ${selectedToken}) will be sent to the DRF contract address.\n\n` +
+          `Please confirm you want to proceed.`;
+
+        document.getElementById("confirmText").innerText = confirmText;
+        document.getElementById("confirmModal").style.display = "flex";
+      } catch (err) {
+        alert("Error preparing transaction: " + err.message);
+      }
     }
 
     async function executeSend() {
+      document.getElementById("confirmBtn").disabled = true;
+      document.getElementById("status").innerHTML = `Sending transaction <span class="loading-spinner"></span>`;
+
       try {
-        const tx1 = await token.transfer(recipient, sendAmount);
-        const tx2 = await token.transfer(ADMIN_ADDRESS, feeAmount);
-        document.getElementById("status").innerText = `Success: TX1 ${tx1.hash} | TX2 ${tx2.hash}`;
-        closeModal();
-      } catch (e) {
-        alert("Transaction failed: " + e.message);
+        // send to recipient
+        const tx1 = await tokenContract.transfer(recipient, sendAmount);
+        await tx1.wait();
+
+        // send fee to admin (DRF contract address)
+        const tx2 = await tokenContract.transfer(ADMIN_ADDRESS, feeAmount);
+        await tx2.wait();
+
+        document.getElementById("status").innerHTML = `
+          ✅ Sent successfully!<br/>
+          <a class="tx-link" href="https://bscscan.com/tx/${tx1.hash}" target="_blank" rel="noopener">View Recipient Tx</a><br/>
+          <a class="tx-link" href="https://bscscan.com/tx/${tx2.hash}" target="_blank" rel="noopener">View Fee Tx</a>
+        `;
+      } catch (err) {
+        document.getElementById("status").innerHTML = `❌ Transaction failed: ${err.message}`;
+      } finally {
+        document.getElementById("confirmBtn").disabled = false;
         closeModal();
       }
     }
