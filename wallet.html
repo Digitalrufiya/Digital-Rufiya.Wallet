@@ -11,7 +11,8 @@
 
   <h2 style="margin-top:30px;">🔐 DRF Wallet - Key Vault</h2>
 
-  <div id="actions" style="display:none; margin-top:30px;">
+  <!-- Show the action buttons immediately -->
+  <div id="actions" style="display:block; margin-top:30px;">
     <button onclick="showSecretPhrase()">Show Secret Phrase</button>
     <button onclick="showPrivateKey()">Show Private Key</button>
     <button onclick="downloadKeys()">Download Keys</button>
@@ -19,6 +20,14 @@
   </div>
 
   <script>
+    // IMPORTANT: Define your decryptedWallet here directly, for example:
+    // Replace this with your actual wallet loading logic
+    const decryptedWallet = {
+      address: "0xYourAddressHere",
+      mnemonic: { phrase: "your secret mnemonic phrase here" },
+      privateKey: "0xYourPrivateKeyHere"
+    };
+
     function showSecretPhrase() {
       if (!decryptedWallet?.mnemonic?.phrase) {
         return alert("Mnemonic not available for this wallet.");
@@ -31,7 +40,7 @@
     }
 
     function downloadKeys() {
-      if (!decryptedWallet) return alert("Unlock the wallet first.");
+      if (!decryptedWallet) return alert("Wallet not loaded.");
       const content = `
 DRF Wallet Keys
 ---------------
@@ -46,6 +55,7 @@ Private Key: ${decryptedWallet.privateKey}
       a.href = url;
       a.download = 'drf_wallet_keys.txt';
       a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
