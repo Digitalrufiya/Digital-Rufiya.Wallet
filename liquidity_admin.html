@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Liquidity Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    .box {
+      background: white;
+      max-width: 500px;
+      margin: auto;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; }
+    input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { background: #2980b9; }
+    .info { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Liquidity Manager</h2>
+
+    <label>Private Key:</label>
+    <input type="password" id="privKey" placeholder="Enter private key" />
+
+    <label>DRF Amount:</label>
+    <input type="number" id="drfAmount" placeholder="Amount of DRF to add/withdraw" />
+
+    <label>USDC Amount:</label>
+    <input type="number" id="tokenAmount" placeholder="Amount of USDC to add/withdraw" />
+
+    <button onclick="addLiquidity()">Add Liquidity</button>
+    <button onclick="withdrawLiquidity()">Withdraw Liquidity</button>
+
+    <div class="info" id="status">Status: Not connected</div>
+  </div>
+
+  <script>
+    const SWAP_CONTRACT = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8";
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+
+    let web3, account, contract;
+
+    const swapABI = [
+      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "addLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "removeLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+    ];
+
+    const tokenABI = [
+      { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+      { "constant": false, "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+    ];
+
+    async function initWallet() {
+      const pk = document.getElementById("privKey").value.trim();
+      if (!pk || pk.length < 64) return alert("Invalid private key");
+
+      web3 = new Web3("https://bsc-dataseed.binance.org/");
+      account = web3.eth.accounts.privateKeyToAccount(pk);
+      web3.eth.accounts.wallet.add(account);
+      web3.eth.defaultAccount = account.address;
+
+      contract = new web3.eth.Contract(swapABI, SWAP_CONTRACT);
+      document.getElementById("status").innerText = "Connected: " + account.address;
+    }
+
+    async function addLiquidity() {
+      await initWallet();
+
+      const drfAmount = parseFloat(document.getElementById("drfAmount").value);
+      const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
+      if (drfAmount <= 0 || usdcAmount <= 0) return alert("Invalid input amounts");
+
+      const drf = new web3.eth.Contract(tokenABI, DRF_ADDRESS);
+      const usdc = new web3.eth.Contract(tokenABI, USDC_ADDRESS);
+      const drfDecimals = await drf.methods.decimals().call();
+      const usdcDecimals = await usdc.methods.decimals().call();
+
+      const drfWei = web3.utils.toBN(drfAmount * (10 ** drfDecimals));
+      const usdcWei = web3.utils.toBN(usdcAmount * (10 ** usdcDecimals));
+
+      await drf.methods.approve(SWAP_CONTRACT, drfWei).send({ from: account.address });
+      await usdc.methods.approve(SWAP_CONTRACT, usdcWei).send({ from: account.address });
+
+      await contract.methods.addLiquidity(drfWei, usdcWei).send({ from: account.address });
+      alert("Liquidity added.");
+    }
+
+    async function withdrawLiquidity() {
+      await initWallet();
+
+      const drfAmount = parseFloat(document.getElementById("drfAmount").value);
+      const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
+      if (drfAmount <= 0 && usdcAmount <= 0) return alert("Enter amount to withdraw");
+
+      const drfWei = web3.utils.toBN(drfAmount * 1e18);
+      const usdcWei = web3.utils.toBN(usdcAmount * 1e18);
+
+      await contract.methods.removeLiquidity(drfWei, usdcWei).send({ from: account.address });
+      alert("Liquidity withdrawn.");
+    }
+  </script>
+</body>
+</html>
