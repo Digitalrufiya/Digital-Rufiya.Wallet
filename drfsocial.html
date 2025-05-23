@@ -4,16 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Social Pro</title>
-
-  <!-- Meta tags for real social sharing -->
-  <meta property="og:title" content="DRF Social Pro" />
-  <meta property="og:description" content="Join the DRF Social Pro network. Share, react, and connect on the blockchain!" />
-  <meta property="og:image" content="https://yourdomain.com/default-image.jpg" />
-  <meta property="og:url" content="https://yourdomain.com/" />
-  <meta name="twitter:card" content="summary_large_image" />
-
   <style>
-    /* ... unchanged styles ... */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 10px;
+    }
+    .post-box, .post {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .post-box textarea {
+      width: 100%;
+      border: none;
+      resize: none;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .post-box input[type="file"] {
+      margin-top: 5px;
+    }
+    .media-preview img, .media-preview video,
+    .post-media img, .post-media video {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .post .username {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .reaction-bar button {
+      margin-right: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .comment-box {
+      margin-top: 10px;
+    }
+    .comment-box input {
+      width: 100%;
+      padding: 5px;
+      font-size: 14px;
+    }
+    .share-buttons {
+      margin-top: 10px;
+    }
+    .share-buttons button {
+      margin-right: 5px;
+      background: #4267B2;
+      border: none;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .share-buttons button.twitter { background: #1DA1F2; }
+    .share-buttons button.linkedin { background: #0077B5; }
+    @media (max-width: 600px) {
+      .container {
+        padding: 5px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -34,13 +98,8 @@
     const feed = document.getElementById("feed");
     const mediaInput = document.getElementById("mediaInput");
     const mediaPreview = document.getElementById("mediaPreview");
-    const usernameInput = document.getElementById("username");
 
     let posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
-
-    // Load username if already stored
-    const savedUsername = localStorage.getItem("drf_username");
-    if (savedUsername) usernameInput.value = savedUsername;
 
     mediaInput.addEventListener("change", () => {
       const file = mediaInput.files[0];
@@ -56,8 +115,7 @@
     });
 
     function createPost() {
-      const username = usernameInput.value || "Anonymous";
-      localStorage.setItem("drf_username", username); // Save for reuse
+      const username = document.getElementById("username").value || "Anonymous";
       const text = document.getElementById("postText").value;
       const file = mediaInput.files[0];
       let media = "";
@@ -116,7 +174,7 @@
       feed.innerHTML = "";
       posts.forEach(post => {
         const shareText = encodeURIComponent(post.text);
-        const postURL = encodeURIComponent(`https://yourdomain.com/#post${post.id}`);
+        const postURL = encodeURIComponent(`https://example.com/#post${post.id}`);
         const div = document.createElement("div");
         div.className = "post";
         div.innerHTML = `
