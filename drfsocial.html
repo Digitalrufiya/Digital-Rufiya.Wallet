@@ -3,95 +3,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Social Feed</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Simple Social Media App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f3f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: auto;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    }
+
+    .post {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+    }
+
+    .comment {
+      margin-left: 10px;
+      font-size: 14px;
+      color: #444;
+    }
+
+    .comment-box {
+      margin-top: 5px;
+    }
+
+    textarea, input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .post-title {
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
 
-  <h1>DRF Social</h1>
+<div class="container">
+  <h2>Create Post</h2>
+  <textarea id="postText" placeholder="What's on your mind?"></textarea>
+  <button onclick="createPost()">Post</button>
 
-  <div class="social-wrapper">
+  <div class="loader" id="loader"></div>
 
-    <!-- Create Post Section -->
-    <div class="create-post-box">
-      <textarea id="postText" placeholder="What's on your mind?"></textarea>
-      <input type="file" id="postMedia" accept="image/*,video/*" />
-      <button class="create-post-btn" onclick="createPost()">Post</button>
-    </div>
+  <h2>All Posts</h2>
+  <div id="postsContainer"></div>
+</div>
 
-    <!-- Posts Feed -->
-    <div id="postsFeed">
-      <!-- Dynamic posts go here -->
-    </div>
+<script>
+  const loader = document.getElementById("loader");
 
-    <div class="loader" id="loadingMore" style="display: none;">
-      <div class="spinner"></div>
-      <p>Loading more posts...</p>
-    </div>
+  function showLoader() {
+    loader.style.display = "block";
+    setTimeout(() => {
+      loader.style.display = "none";
+    }, 500);
+  }
 
-  </div>
+  function createPost() {
+    const text = document.getElementById("postText").value.trim();
+    if (!text) return;
 
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <a class="tab-item" href="dashboard.html"><img src="icons/home.svg" alt="">Home</a>
-    <a class="tab-item" href="wallet.html"><img src="icons/wallet.svg" alt="">Wallet</a>
-    <a class="tab-item" href="swap.html"><img src="icons/swap.svg" alt="">Swap</a>
-    <a class="tab-item" href="token sale.html"><img src="icons/token.svg" alt="">Sale</a>
-    <a class="tab-item" href="drf-social.html"><img src="icons/social.svg" alt="">Social</a>
-  </div>
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    posts.unshift({ text, comments: [] });
+    localStorage.setItem("posts", JSON.stringify(posts));
+    document.getElementById("postText").value = "";
+    showLoader();
+    setTimeout(renderPosts, 600);
+  }
 
-  <script src="app.js"></script>
-  <script>
-    const postsFeed = document.getElementById('postsFeed');
+  function addComment(index) {
+    const commentInput = document.getElementById(`comment-${index}`);
+    const commentText = commentInput.value.trim();
+    if (!commentText) return;
 
-    function createPost() {
-      const text = document.getElementById('postText').value.trim();
-      const mediaFile = document.getElementById('postMedia').files[0];
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    posts[index].comments.push(commentText);
+    localStorage.setItem("posts", JSON.stringify(posts));
+    commentInput.value = "";
+    renderPosts();
+  }
 
-      if (!text && !mediaFile) {
-        alert("Please enter text or choose a media file.");
-        return;
-      }
-
-      const postElement = document.createElement('div');
-      postElement.className = 'post';
-
-      postElement.innerHTML = `
-        <div class="post-header">
-          <img src="icons/profile.png" alt="User" />
-          <strong>You</strong>
-        </div>
-        <div class="post-text">${text}</div>
-        ${mediaFile ? getMediaPreview(mediaFile) : ''}
-        <div class="reactions">
-          <button onclick="alert('Liked!')">❤️</button>
-          <button onclick="alert('Cool!')">🔥</button>
-          <button onclick="alert('Clap!')">👏</button>
-        </div>
+  function renderPosts() {
+    const posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    const container = document.getElementById("postsContainer");
+    container.innerHTML = "";
+    posts.forEach((post, index) => {
+      const postDiv = document.createElement("div");
+      postDiv.className = "post";
+      postDiv.innerHTML = `
+        <div class="post-title">${post.text}</div>
+        ${post.comments.map(c => `<div class="comment">- ${c}</div>`).join("")}
         <div class="comment-box">
-          <input type="text" placeholder="Write a comment..." />
-          <button>Post</button>
+          <input id="comment-${index}" placeholder="Write a comment..." />
+          <button onclick="addComment(${index})">Comment</button>
         </div>
       `;
+      container.appendChild(postDiv);
+    });
+  }
 
-      postsFeed.prepend(postElement);
+  renderPosts();
+</script>
 
-      document.getElementById('postText').value = '';
-      document.getElementById('postMedia').value = '';
-    }
-
-    function getMediaPreview(file) {
-      const url = URL.createObjectURL(file);
-      const ext = file.name.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
-        return `<div class="post-media"><img src="${url}" /></div>`;
-      } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
-        return `<div class="post-media"><video src="${url}" controls></video></div>`;
-      }
-      return '';
-    }
-
-    // Optional: Load sample posts or from storage later
-  </script>
 </body>
 </html>
