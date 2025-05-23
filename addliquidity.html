@@ -1,4 +1,4 @@
-
+<!-- Save this as liquidity.html and open in browser with MetaMask installed -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -43,8 +43,14 @@
   <div class="box">
     <h2>Liquidity Manager</h2>
 
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <div id="connectedAccount" class="info">Status: Not connected</div>
+
     <label>Private Key:</label>
     <input type="password" id="privKey" placeholder="Enter private key" />
+
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Set or enter password" />
 
     <label>DRF Amount:</label>
     <input type="number" id="drfAmount" placeholder="Amount of DRF to add/withdraw" />
@@ -53,9 +59,10 @@
     <input type="number" id="tokenAmount" placeholder="Amount of USDC to add/withdraw" />
 
     <button onclick="addLiquidity()">Add Liquidity</button>
-    <button onclick="withdrawLiquidity()">Withdraw Liquidity</button>
+    <button onclick="withdrawLiquidity()">Remove Liquidity</button>
+    <button onclick="withdrawFees()">Withdraw Fees</button>
 
-    <div class="info" id="status">Status: Not connected</div>
+    <div id="status" class="info"></div>
   </div>
 
   <script>
@@ -63,11 +70,15 @@
     const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
     const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
 
-    let web3, account, contract;
+    let web3;
+    let account;
+    let contract;
+    let encryptedKey = localStorage.getItem("encryptedKey");
 
     const swapABI = [
       { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "addLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "removeLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "removeLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+      { "inputs": [], "name": "withdrawFees", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
     ];
 
     const tokenABI = [
@@ -75,9 +86,41 @@
       { "constant": false, "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
     ];
 
-    async function initWallet() {
-      const pk = document.getElementById("privKey").value.trim();
-      if (!pk || pk.length < 64) return alert("Invalid private key");
+    async function connectWallet() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        document.getElementById("connectedAccount").innerText = "Connected: " + account;
+        contract = new web3.eth.Contract(swapABI, SWAP_CONTRACT);
+      } else {
+        alert("MetaMask not detected!");
+      }
+    }
+
+    function unlockWithPassword() {
+      const pass = document.getElementById("password").value;
+      if (!pass) return null;
+      try {
+        const decrypted = CryptoJS.AES.decrypt(encryptedKey, pass).toString(CryptoJS.enc.Utf8);
+        return decrypted;
+      } catch (e) {
+        alert("Wrong password or decryption failed.");
+        return null;
+      }
+    }
+
+    async function initWithPrivateKey() {
+      let pk;
+      if (encryptedKey) {
+        pk = unlockWithPassword();
+      } else {
+        pk = document.getElementById("privKey").value.trim();
+        const pass = document.getElementById("password").value.trim();
+        if (!pk || pk.length < 64 || !pass) return alert("Provide private key and password.");
+        localStorage.setItem("encryptedKey", CryptoJS.AES.encrypt(pk, pass).toString());
+      }
 
       web3 = new Web3("https://bsc-dataseed.binance.org/");
       account = web3.eth.accounts.privateKeyToAccount(pk);
@@ -85,15 +128,15 @@
       web3.eth.defaultAccount = account.address;
 
       contract = new web3.eth.Contract(swapABI, SWAP_CONTRACT);
-      document.getElementById("status").innerText = "Connected: " + account.address;
+      document.getElementById("connectedAccount").innerText = "Connected: " + account.address;
     }
 
     async function addLiquidity() {
-      await initWallet();
+      await initWithPrivateKey();
 
       const drfAmount = parseFloat(document.getElementById("drfAmount").value);
       const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
-      if (drfAmount <= 0 || usdcAmount <= 0) return alert("Invalid input amounts");
+      if (drfAmount <= 0 || usdcAmount <= 0) return alert("Enter valid token amounts.");
 
       const drf = new web3.eth.Contract(tokenABI, DRF_ADDRESS);
       const usdc = new web3.eth.Contract(tokenABI, USDC_ADDRESS);
@@ -111,17 +154,28 @@
     }
 
     async function withdrawLiquidity() {
-      await initWallet();
+      await initWithPrivateKey();
 
       const drfAmount = parseFloat(document.getElementById("drfAmount").value);
       const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
-      if (drfAmount <= 0 && usdcAmount <= 0) return alert("Enter amount to withdraw");
+      if (drfAmount <= 0 && usdcAmount <= 0) return alert("Enter amounts.");
 
-      const drfWei = web3.utils.toBN(drfAmount * 1e18);
-      const usdcWei = web3.utils.toBN(usdcAmount * 1e18);
+      const drfWei = web3.utils.toWei(drfAmount.toString(), "ether");
+      const usdcWei = web3.utils.toWei(usdcAmount.toString(), "ether");
 
       await contract.methods.removeLiquidity(drfWei, usdcWei).send({ from: account.address });
-      alert("Liquidity withdrawn.");
+      alert("Liquidity removed.");
+    }
+
+    async function withdrawFees() {
+      await initWithPrivateKey();
+      try {
+        await contract.methods.withdrawFees().send({ from: account.address });
+        alert("Fees withdrawn successfully.");
+      } catch (err) {
+        alert("Withdraw fees failed.");
+        console.error(err);
+      }
     }
   </script>
 </body>
