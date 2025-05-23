@@ -1,193 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Gaming Trade (Connected Wallet)</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Gaming Trade</title>
   <style>
     body {
       font-family: sans-serif;
       background: #0d1117;
-      color: white;
+      color: #fff;
       margin: 0;
       padding: 20px;
       text-align: center;
     }
     .container {
-      max-width: 480px;
-      margin: auto;
       background: #161b22;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 12px;
+      max-width: 400px;
+      margin: auto;
     }
     input, select, button {
-      width: 100%;
       padding: 10px;
       margin: 10px 0;
+      width: 100%;
       font-size: 16px;
       border-radius: 6px;
       border: none;
     }
     button {
-      background: #238636;
+      background: #1f6feb;
       color: white;
     }
-    canvas {
-      margin-top: 30px;
-      background: #fff;
-      border-radius: 12px;
+    button:hover {
+      background: #388bfd;
     }
-    #walletAddress {
-      font-size: 14px;
-      margin-top: 10px;
-      color: #58a6ff;
-      word-break: break-word;
+    canvas {
+      background: #fff;
+      border-radius: 10px;
+      margin-top: 30px;
+      width: 100%;
     }
     #drfResult {
+      font-size: 1.1rem;
+      margin-top: 10px;
       color: #0f0;
-    }
-    .stats {
-      background: #1c1f26;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 15px;
-    }
-    .stats p {
-      margin: 5px;
-      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <h2>DRF Trading - Gaming Mode (Connected Wallet)</h2>
+  <h1>DRF Gaming Trade</h1>
   <div class="container">
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <div id="walletAddress">Wallet: Not connected</div>
-    <label for="hourSelect">Select Hour:</label>
-    <select id="hourSelect"></select>
-    <input type="number" id="usdAmount" placeholder="Enter USDT/USDC Amount">
-    <p>Rate Range: 15.00 - 15.42 DRF / 1 USD</p>
-    <p id="drfResult">DRF to Receive: 0</p>
-    <button onclick="simulateTrade()">Simulate Trade</button>
-
-    <div class="stats">
-      <p><strong>Simulated Wallet Balance:</strong> <span id="simBalance">1000 USDT</span></p>
-      <p><strong>Total Won:</strong> <span id="totalWon">0 DRF</span></p>
-      <p><strong>Total Lost:</strong> <span id="totalLost">0 DRF</span></p>
-    </div>
+    <select id="tokenSelect">
+      <option value="USDT">USDT</option>
+      <option value="USDC">USDC</option>
+    </select>
+    <input type="number" id="usdAmount" placeholder="Enter USDT/USDC amount" />
+    <p>Rate: 1 USD = 15.42 DRF</p>
+    <p id="drfResult">DRF Received: 0</p>
+    <button onclick="calculate()">Calculate</button>
+    <button onclick="confirmTrade()">Confirm Trade</button>
   </div>
 
-  <canvas id="candlestickChart" height="350"></canvas>
+  <h2>Simulated DRF Chart</h2>
+  <canvas id="chart" height="200"></canvas>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const hourSelect = document.getElementById("hourSelect");
-    for (let i = 0; i < 24; i++) {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = `${i}:00`;
-      hourSelect.appendChild(option);
+    const fixedRate = 15.42;
+
+    function calculate() {
+      const amount = parseFloat(document.getElementById("usdAmount").value);
+      if (!amount || amount <= 0) return alert("Enter valid amount");
+      const drf = amount * fixedRate;
+      document.getElementById("drfResult").innerText = `DRF Received: ${drf.toFixed(2)}`;
     }
 
-    const ctx = document.getElementById('candlestickChart').getContext('2d');
-    const baseRate = 15.21;
-    const candles = [];
+    function confirmTrade() {
+      const token = document.getElementById("tokenSelect").value;
+      const amount = parseFloat(document.getElementById("usdAmount").value);
+      if (!amount || amount <= 0) return alert("Enter a valid amount");
+      const drf = (amount * fixedRate).toFixed(2);
+      alert(`Trade confirmed:\n${amount} ${token} → ${drf} DRF\n(This is a simulation mode)`);
+    }
 
-    const generateCandles = () => {
-      let t = new Date();
-      for (let i = 0; i < 24; i++) {
-        let open = baseRate + (Math.random() - 0.5) * 0.2;
-        let close = open + (Math.random() - 0.5) * 0.2;
-        let high = Math.max(open, close) + Math.random() * 0.1;
-        let low = Math.min(open, close) - Math.random() * 0.1;
-        candles.push({ x: new Date(t.getTime() + i * 3600000), o: open, h: high, l: low, c: close });
-      }
-      return candles;
-    };
+    // Simulated Chart
+    const ctx = document.getElementById('chart').getContext('2d');
+    let labels = [], data = [], basePrice = 15.42;
+
+    for (let i = 0; i < 30; i++) {
+      labels.push(`T-${30 - i}`);
+      data.push(basePrice + (Math.random() - 0.5) * 0.2);
+    }
 
     const chart = new Chart(ctx, {
-      type: 'candlestick',
+      type: 'line',
       data: {
+        labels: labels,
         datasets: [{
-          label: 'DRF Hourly Price',
-          data: generateCandles(),
-          borderColor: '#00ff88',
-          color: {
-            up: '#00ff88',
-            down: '#ff4c4c',
-            unchanged: '#888'
-          }
+          label: 'DRF Price Simulated',
+          data: data,
+          borderColor: 'lime',
+          backgroundColor: 'rgba(0,255,0,0.1)',
+          tension: 0.3
         }]
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { labels: { color: '#ccc' } },
-          tooltip: {
-            mode: 'index',
-            intersect: false
-          }
-        },
         scales: {
-          x: {
-            type: 'time',
-            time: { unit: 'hour' },
-            ticks: { color: '#888' },
-            grid: { color: 'rgba(255,255,255,0.05)' }
-          },
           y: {
-            ticks: { color: '#888' },
-            grid: { color: 'rgba(255,255,255,0.05)' }
+            suggestedMin: 15.2,
+            suggestedMax: 15.7
           }
         }
       }
     });
 
-    let selectedAccount = null;
-    let simBalance = 1000;
-    let totalWon = 0;
-    let totalLost = 0;
-
-    async function connectWallet() {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          selectedAccount = accounts[0];
-          document.getElementById("walletAddress").textContent = `Wallet: ${selectedAccount}`;
-        } catch (err) {
-          alert("Wallet connection failed.");
-        }
-      } else {
-        alert("MetaMask not found. Please install MetaMask.");
-      }
-    }
-
-    function simulateTrade() {
-      const hour = parseInt(document.getElementById('hourSelect').value);
-      const usd = parseFloat(document.getElementById('usdAmount').value);
-      if (!usd || usd <= 0) return alert("Enter valid amount");
-      if (usd > simBalance) return alert("Insufficient simulated balance");
-
-      const candle = chart.data.datasets[0].data[hour];
-      const rate = candle.c;
-      const drfAmount = usd * rate;
-
-      const outcome = Math.random() < 0.5 ? 'win' : 'lose';
-      if (outcome === 'win') {
-        totalWon += drfAmount;
-      } else {
-        totalLost += drfAmount;
-      }
-
-      simBalance -= usd;
-
-      document.getElementById('drfResult').innerText = `DRF to Receive: ${drfAmount.toFixed(2)} (Rate: ${rate.toFixed(2)}, ${outcome.toUpperCase()})`;
-      document.getElementById('simBalance').innerText = `${simBalance.toFixed(2)} USDT`;
-      document.getElementById('totalWon').innerText = `${totalWon.toFixed(2)} DRF`;
-      document.getElementById('totalLost').innerText = `${totalLost.toFixed(2)} DRF`;
-    }
+    setInterval(() => {
+      labels.shift();
+      data.shift();
+      labels.push(`T-${Math.floor(Math.random()*100)}`);
+      data.push(basePrice + (Math.random() - 0.5) * 0.2);
+      chart.update();
+    }, 5000);
   </script>
 </body>
 </html>
