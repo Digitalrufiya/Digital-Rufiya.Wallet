@@ -43,20 +43,27 @@
     }
 
     async function createAccount() {
+      const username = prompt("Choose a unique username:");
+      if (!username) return alert("Username is required.");
+
       const password = prompt("Set a password to encrypt your wallet:");
       if (!password) return alert("Password is required.");
 
-      showLoading("Creating your DRF Wallet... Please wait");
-      await new Promise(resolve => setTimeout(resolve, 500)); // allow loading to show
+      showLoading("Creating your DRF Wallet...");
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const wallet = ethers.Wallet.createRandom();
       const encryptedJson = await wallet.encrypt(password);
+
+      // Store in new format
+      localStorage.setItem("drf_user_data", JSON.stringify({ username, encryptedJson }));
+
+      // Also store legacy format for backup
       localStorage.setItem("drf_encrypted_wallet", encryptedJson);
 
       const secretPhrase = wallet.mnemonic.phrase;
-      alert("Account created! Your secret phrase:\n\n" + secretPhrase + "\n\nSave it securely. We will never ask for your secret phrase!");
+      alert("Wallet created! Secret phrase:\n\n" + secretPhrase + "\n\nSave it securely!");
 
-      // Offer user the option to download their secret phrase
       const downloadLink = document.createElement('a');
       downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(secretPhrase);
       downloadLink.download = "drf_wallet_secret_phrase.txt";
@@ -67,40 +74,63 @@
     }
 
     async function login() {
+      const userData = localStorage.getItem("drf_user_data");
       const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedWallet) return alert("No wallet found. Please create or recover one.");
 
-      const password = prompt("Enter your password to unlock wallet:");
-      showLoading("Logging in to your DRF Wallet... Please wait");
+      if (!userData && !encryptedWallet) return alert("No wallet found. Please create or recover one.");
+
+      const password = prompt("Enter your wallet password:");
+      showLoading("Logging in...");
       await new Promise(resolve => setTimeout(resolve, 500));
 
       try {
-        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        alert("Login successful!");
+        let encryptedJson, username;
+
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          encryptedJson = parsed.encryptedJson;
+          username = parsed.username;
+        } else {
+          encryptedJson = encryptedWallet;
+          username = "Legacy User";
+        }
+
+        const wallet = await ethers.Wallet.fromEncryptedJson(encryptedJson, password);
+        localStorage.setItem("drf_active_wallet", wallet.address);
+        localStorage.setItem("drf_username", username);
+        alert("Login successful! Welcome, " + username);
         setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
-        alert("Incorrect password or corrupted wallet.");
+        alert("Login failed. Incorrect password or wallet corrupted.");
         location.reload();
       }
     }
 
     async function recoverAccount() {
       const phrase = prompt("Enter your 12-word secret phrase:");
-      if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid phrase.");
-      const password = prompt("Set a password to encrypt recovered wallet:");
+      if (!phrase || phrase.trim().split(" ").length !== 12) return alert("Invalid secret phrase.");
+
+      const username = prompt("Enter a username to recover your profile:");
+      if (!username) return alert("Username is required.");
+
+      const password = prompt("Set a password to encrypt your recovered wallet:");
       if (!password) return alert("Password is required.");
 
-      showLoading("Recovering your DRF Wallet... Please wait");
+      showLoading("Recovering your wallet...");
       await new Promise(resolve => setTimeout(resolve, 500));
 
       try {
         const wallet = ethers.Wallet.fromMnemonic(phrase.trim());
         const encryptedJson = await wallet.encrypt(password);
+
+        // Store both formats
+        localStorage.setItem("drf_user_data", JSON.stringify({ username, encryptedJson }));
         localStorage.setItem("drf_encrypted_wallet", encryptedJson);
-        alert("Wallet recovered and encrypted successfully!");
+
+        alert("Wallet recovered and saved. Welcome, " + username + "!");
         setTimeout(() => window.location.href = "dashboard.html", 2000);
       } catch (err) {
-        alert("Recovery failed. Invalid phrase.");
+        alert("Failed to recover wallet. Please check your phrase.");
         location.reload();
       }
     }
