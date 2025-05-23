@@ -2,172 +2,189 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Social</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Social Pro</title>
   <style>
-    body { font-family: sans-serif; background: #111; color: #eee; margin: 0; }
-    header { background: #222; padding: 15px; text-align: center; font-size: 1.5em; }
-    #feed { max-width: 700px; margin: auto; padding: 20px; }
-    .post { background: #1e1e1e; padding: 15px; margin-bottom: 15px; border-radius: 10px; }
-    .post img, video { max-width: 100%; border-radius: 10px; margin-top: 10px; }
-    .post-header { display: flex; align-items: center; gap: 10px; }
-    .profile-pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .reaction-btn { cursor: pointer; margin-right: 8px; font-size: 1.2em; }
-    .comment { margin-left: 15px; font-size: 0.9em; color: #ccc; }
-    .filters button { margin-right: 5px; }
-    #newPost input, #newPost textarea { width: 100%; margin-top: 10px; padding: 10px; border-radius: 5px; border: none; background: #333; color: #fff; }
-    #newPost button { margin-top: 10px; width: 100%; padding: 10px; background: #007bff; border: none; color: white; border-radius: 5px; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 10px;
+    }
+    .post-box, .post {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .post-box textarea {
+      width: 100%;
+      border: none;
+      resize: none;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .post-box input[type="file"] {
+      margin-top: 5px;
+    }
+    .media-preview img, .media-preview video {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .post .username {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .reaction-bar button {
+      margin-right: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .comment-box {
+      margin-top: 10px;
+    }
+    .comment-box input {
+      width: 100%;
+      padding: 5px;
+    }
+    .link-preview {
+      background: #f0f0f0;
+      border-radius: 5px;
+      padding: 5px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-
-<header>DRF Social</header>
-
-<div id="usernameModal" style="display: none; text-align: center; padding: 40px;">
-  <h2>Create Username</h2>
-  <input type="text" id="usernameInput" placeholder="Enter username" />
-  <br><br>
-  <label>Upload Profile Picture:</label><br>
-  <input type="file" id="profilePicInput" accept="image/*" />
-  <br><br>
-  <button onclick="saveUsername()">Continue</button>
-</div>
-
-<div id="feed" style="display: none;">
-  <div id="newPost">
-    <textarea id="postText" placeholder="Write something..."></textarea>
-    <input type="text" id="postMedia" placeholder="Media URL (image/video/link)" />
-    <button onclick="createPost()">Post</button>
+  <div class="container">
+    <div class="post-box">
+      <input type="text" id="username" placeholder="Enter your username" />
+      <br><br>
+      <textarea id="postText" rows="3" placeholder="What's on your mind?"></textarea>
+      <input type="file" id="mediaInput" accept="image/*,video/*" />
+      <div class="media-preview" id="mediaPreview"></div>
+      <br>
+      <button onclick="createPost()">Post</button>
+    </div>
+    <div id="feed"></div>
   </div>
 
-  <div class="filters">
-    <p>Filter posts: 
-      <button onclick="setFilter('all')">All</button>
-      <button onclick="setFilter('image')">Images</button>
-      <button onclick="setFilter('video')">Videos</button>
-      <button onclick="setFilter('link')">Links</button>
-    </p>
-  </div>
+  <script>
+    const feed = document.getElementById("feed");
+    const mediaInput = document.getElementById("mediaInput");
+    const mediaPreview = document.getElementById("mediaPreview");
 
-  <hr>
-  <div id="posts"></div>
-</div>
+    let posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
 
-<script>
-let username = localStorage.getItem("drf_username");
-let profilePic = localStorage.getItem("drf_profile_pic");
-let posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
-let filter = "all";
+    mediaInput.addEventListener("change", () => {
+      const file = mediaInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          mediaPreview.innerHTML = file.type.startsWith("video")
+            ? `<video controls src="${e.target.result}"></video>`
+            : `<img src="${e.target.result}"/>`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
 
-if (!username) {
-  document.getElementById("usernameModal").style.display = "block";
-} else {
-  document.getElementById("feed").style.display = "block";
-  loadPosts();
-}
+    function createPost() {
+      const username = document.getElementById("username").value || "Anonymous";
+      const text = document.getElementById("postText").value;
+      const file = mediaInput.files[0];
+      let media = "";
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          media = e.target.result;
+          savePost(username, text, media, file.type);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        savePost(username, text, "", "");
+      }
+    }
 
-function saveUsername() {
-  const uname = document.getElementById("usernameInput").value.trim();
-  if (uname.length < 3) return alert("Username too short.");
-  const picInput = document.getElementById("profilePicInput");
-  if (picInput.files[0]) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      localStorage.setItem("drf_username", uname);
-      localStorage.setItem("drf_profile_pic", e.target.result);
-      location.reload();
-    };
-    reader.readAsDataURL(picInput.files[0]);
-  } else {
-    localStorage.setItem("drf_username", uname);
-    location.reload();
-  }
-}
+    function savePost(username, text, media, type) {
+      const post = {
+        id: Date.now(),
+        username,
+        text,
+        media,
+        type,
+        reactions: {like: 0, love: 0, haha: 0, angry: 0, sad: 0},
+        comments: []
+      };
+      posts.unshift(post);
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      renderPosts();
+      document.getElementById("postText").value = "";
+      mediaPreview.innerHTML = "";
+      mediaInput.value = "";
+    }
 
-function createPost() {
-  const text = document.getElementById("postText").value;
-  const media = document.getElementById("postMedia").value;
-  const type = media.includes("jpg") || media.includes("png") ? "image" :
-               media.includes("mp4") || media.includes("webm") ? "video" :
-               media.startsWith("http") ? "link" : "text";
+    function react(id, type) {
+      const post = posts.find(p => p.id === id);
+      if (post) {
+        post.reactions[type]++;
+        localStorage.setItem("drf_posts", JSON.stringify(posts));
+        renderPosts();
+      }
+    }
 
-  posts.unshift({
-    username: username,
-    profilePic: profilePic,
-    text: text,
-    media: media,
-    type: type,
-    time: new Date().toLocaleString(),
-    comments: [],
-    reactions: {}
-  });
-  localStorage.setItem("drf_posts", JSON.stringify(posts));
-  document.getElementById("postText").value = "";
-  document.getElementById("postMedia").value = "";
-  loadPosts();
-}
+    function addComment(id, input) {
+      const comment = input.value;
+      if (comment) {
+        const post = posts.find(p => p.id === id);
+        if (post) {
+          post.comments.push(comment);
+          localStorage.setItem("drf_posts", JSON.stringify(posts));
+          renderPosts();
+        }
+      }
+    }
 
-function loadPosts() {
-  const container = document.getElementById("posts");
-  container.innerHTML = "";
-  posts.forEach((post, i) => {
-    if (filter !== "all" && post.type !== filter) return;
-    const div = document.createElement("div");
-    div.className = "post";
-    div.innerHTML = `
-      <div class="post-header">
-        <img src="${post.profilePic || ''}" class="profile-pic" />
-        <strong>@${post.username}</strong>
-        <small style="margin-left:auto; font-size:0.8em;">${post.time}</small>
-      </div>
-      <p>${post.text}</p>
-      ${renderMedia(post)}
-      <div>
-        ${renderReactions(post, i)}
-        <input type="text" placeholder="Add comment..." onkeypress="addComment(event, ${i})" />
-        ${post.comments.map(c => `<div class="comment"><strong>@${c.user}</strong>: ${c.text}</div>`).join("")}
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
+    function renderPosts() {
+      feed.innerHTML = "";
+      posts.forEach(post => {
+        const div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `
+          <div class="username">${post.username}</div>
+          <div>${post.text}</div>
+          ${post.media ? (
+            post.type.startsWith("video")
+              ? `<video controls src="${post.media}"></video>`
+              : `<img src="${post.media}" />`
+          ) : ""}
+          <div class="reaction-bar">
+            <button onclick="react(${post.id}, 'like')">👍 ${post.reactions.like}</button>
+            <button onclick="react(${post.id}, 'love')">❤️ ${post.reactions.love}</button>
+            <button onclick="react(${post.id}, 'haha')">😂 ${post.reactions.haha}</button>
+            <button onclick="react(${post.id}, 'sad')">😢 ${post.reactions.sad}</button>
+            <button onclick="react(${post.id}, 'angry')">😡 ${post.reactions.angry}</button>
+          </div>
+          <div class="comment-box">
+            ${post.comments.map(c => `<div>${c}</div>`).join("")}
+            <input placeholder="Write a comment..." onkeypress="if(event.key==='Enter')addComment(${post.id}, this)" />
+          </div>
+        `;
+        feed.appendChild(div);
+      });
+    }
 
-function renderMedia(post) {
-  if (post.type === "image") return `<img src="${post.media}" />`;
-  if (post.type === "video") return `<video controls src="${post.media}"></video>`;
-  if (post.type === "link") return `<a href="${post.media}" target="_blank">${post.media}</a>`;
-  return "";
-}
-
-function renderReactions(post, index) {
-  const emojis = ["👍", "❤️", "😂", "😢", "😡"];
-  return emojis.map(e =>
-    `<span class="reaction-btn" onclick="react('${e}', ${index})">${e} ${post.reactions[e] || 0}</span>`
-  ).join("");
-}
-
-function react(emoji, index) {
-  posts[index].reactions[emoji] = (posts[index].reactions[emoji] || 0) + 1;
-  localStorage.setItem("drf_posts", JSON.stringify(posts));
-  loadPosts();
-}
-
-function addComment(e, index) {
-  if (e.key === "Enter") {
-    const text = e.target.value.trim();
-    if (!text) return;
-    posts[index].comments.push({ user: username, text });
-    e.target.value = "";
-    localStorage.setItem("drf_posts", JSON.stringify(posts));
-    loadPosts();
-  }
-}
-
-function setFilter(f) {
-  filter = f;
-  loadPosts();
-}
-</script>
-
+    renderPosts();
+  </script>
 </body>
 </html>
