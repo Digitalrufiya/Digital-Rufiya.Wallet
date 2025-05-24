@@ -1,116 +1,124 @@
-// swap.js
-// Standalone DRF Wallet Swap Handler using PancakeSwap V2
+// swap.js - Fully Standalone PancakeSwap Integration for DRF Wallet DApp
 
-const web3 = new Web3(window.ethereum);
-const routerAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // PancakeSwap V2 Router
-const routerAbi = [
-  // Simplified ABI for swapping
-  {
-    "name": "swapExactETHForTokensSupportingFeeOnTransferTokens",
-    "type": "function",
-    "inputs": [
-      {"name": "amountOutMin", "type": "uint256"},
-      {"name": "path", "type": "address[]"},
-      {"name": "to", "type": "address"},
-      {"name": "deadline", "type": "uint256"}
-    ],
-    "outputs": [],
-    "stateMutability": "payable"
-  },
-  {
-    "name": "swapExactTokensForTokensSupportingFeeOnTransferTokens",
-    "type": "function",
-    "inputs": [
-      {"name": "amountIn", "type": "uint256"},
-      {"name": "amountOutMin", "type": "uint256"},
-      {"name": "path", "type": "address[]"},
-      {"name": "to", "type": "address"},
-      {"name": "deadline", "type": "uint256"}
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "name": "getAmountsOut",
-    "type": "function",
-    "inputs": [
-      {"name": "amountIn", "type": "uint256"},
-      {"name": "path", "type": "address[]"}
-    ],
-    "outputs": [
-      {"name": "amounts", "type": "uint256[]"}
-    ],
-    "stateMutability": "view"
-  }
-];
+const Web3 = window.Web3;
+let web3;
+let userAccount;
 
-const tokenAddresses = {
-  BNB: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-  USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
-  USDT: "0x55d398326f99059fF775485246999027B3197955",
-  DRF: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"
+const pancakeRouterAddress = "0x88880F4082DDC60B9065c3DBf955789336573867"; // PancakeSwap V2
+const feeReceiver = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040"; // Fee in USDC
+
+// Token Contracts
+const TOKENS = {
+  DRF: {
+    address: "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6",
+    decimals: 18,
+  },
+  USDC: {
+    address: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+    decimals: 18,
+  },
+  USDT: {
+    address: "0x55d398326f99059ff775485246999027b3197955",
+    decimals: 18,
+  },
+  BNB: {
+    address: "BNB",
+    decimals: 18,
+  },
 };
 
-const feeReceiver = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+const routerABI = [...]; // Add PancakeSwap V2 Router ABI here
 
-async function connectWallet() {
-  try {
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
+async function initWeb3() {
+  if (window.ethereum) {
+    web3 = new Web3(window.ethereum);
+    await window.ethereum.request({ method: "eth_requestAccounts" });
     const accounts = await web3.eth.getAccounts();
-    document.getElementById("walletAddress").innerText = accounts[0];
-  } catch (err) {
-    alert("Wallet connection failed.");
+    userAccount = accounts[0];
+    checkNetwork();
+  } else {
+    alert("Please install MetaMask or use a Web3-enabled browser.");
   }
 }
 
-async function getSwapEstimate(fromToken, toToken, amountIn) {
-  const router = new web3.eth.Contract(routerAbi, routerAddress);
-  if (fromToken === "BNB") fromToken = tokenAddresses.BNB;
-  if (toToken === "BNB") toToken = tokenAddresses.BNB;
-
-  try {
-    const path = [tokenAddresses[fromToken], tokenAddresses[toToken]];
-    const amounts = await router.methods.getAmountsOut(web3.utils.toWei(amountIn), path).call();
-    return web3.utils.fromWei(amounts[1]);
-  } catch (err) {
-    return "0";
+async function checkNetwork() {
+  const chainId = await web3.eth.getChainId();
+  if (chainId !== 56) {
+    alert("Please switch to BSC Mainnet in MetaMask.");
   }
 }
 
-async function executeSwap() {
-  const fromToken = document.getElementById("fromToken").value;
-  const toToken = document.getElementById("toToken").value;
-  const amount = document.getElementById("fromAmount").value;
+function getAmountWithFee(amountIn, decimals) {
+  const fee = (amountIn * 0.01).toFixed(decimals);
+  const netAmount = (amountIn - fee).toFixed(decimals);
+  return { netAmount, fee };
+}
 
-  const accounts = await web3.eth.getAccounts();
-  const router = new web3.eth.Contract(routerAbi, routerAddress);
+async function executeSwap(fromToken, toToken, amountInRaw) {
+  const router = new web3.eth.Contract(routerABI, pancakeRouterAddress);
+  const decimals = TOKENS[fromToken].decimals;
+  const amountIn = web3.utils.toBN(amountInRaw * 10 ** decimals);
 
-  const path = [tokenAddresses[fromToken], tokenAddresses[toToken]];
+  const { netAmount, fee } = getAmountWithFee(amountInRaw, decimals);
+  const netAmountBN = web3.utils.toBN(netAmount * 10 ** decimals);
+  const feeAmountBN = web3.utils.toBN(fee * 10 ** decimals);
+
+  // Approve and transfer fee to USDC address
+  if (fromToken !== "BNB") {
+    const tokenContract = new web3.eth.Contract(ERC20_ABI, TOKENS[fromToken].address);
+    await tokenContract.methods.approve(pancakeRouterAddress, amountIn.toString()).send({ from: userAccount });
+    if (fromToken !== "USDC") {
+      const feeToken = new web3.eth.Contract(ERC20_ABI, TOKENS["USDC"].address);
+      await feeToken.methods.transfer(feeReceiver, feeAmountBN.toString()).send({ from: userAccount });
+    } else {
+      await tokenContract.methods.transfer(feeReceiver, feeAmountBN.toString()).send({ from: userAccount });
+    }
+  }
+
+  const path = [TOKENS[fromToken].address, TOKENS[toToken].address];
   const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-  const amountOutMin = 0; // For simplicity (can be replaced by slippage setting)
 
   if (fromToken === "BNB") {
-    await router.methods
-      .swapExactETHForTokensSupportingFeeOnTransferTokens(
-        amountOutMin,
-        path,
-        accounts[0],
-        deadline
-      )
-      .send({ from: accounts[0], value: web3.utils.toWei(amount) });
+    await router.methods.swapExactETHForTokens(
+      0,
+      path,
+      userAccount,
+      deadline
+    ).send({ from: userAccount, value: netAmountBN.toString() });
+  } else if (toToken === "BNB") {
+    await router.methods.swapExactTokensForETH(
+      netAmountBN.toString(),
+      0,
+      path,
+      userAccount,
+      deadline
+    ).send({ from: userAccount });
   } else {
-    // Token approval must be done externally before swap
-    await router.methods
-      .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        web3.utils.toWei(amount),
-        amountOutMin,
-        path,
-        accounts[0],
-        deadline
-      )
-      .send({ from: accounts[0] });
+    await router.methods.swapExactTokensForTokens(
+      netAmountBN.toString(),
+      0,
+      path,
+      userAccount,
+      deadline
+    ).send({ from: userAccount });
   }
+
+  alert("Swap completed successfully!");
 }
 
-document.getElementById("connectWallet").onclick = connectWallet;
-document.getElementById("swapButton").onclick = executeSwap;
+function handleSwapClick() {
+  const fromToken = document.getElementById("fromToken").value;
+  const toToken = document.getElementById("toToken").value;
+  const amount = parseFloat(document.getElementById("swapAmount").value);
+
+  if (!fromToken || !toToken || !amount || fromToken === toToken) {
+    alert("Invalid swap details.");
+    return;
+  }
+  executeSwap(fromToken, toToken, amount);
+}
+
+document.getElementById("connectWalletBtn").addEventListener("click", initWeb3);
+document.getElementById("swapNowBtn").addEventListener("click", handleSwapClick);
+
+// Note: You must define ERC20_ABI and routerABI in your project for this script to work.
