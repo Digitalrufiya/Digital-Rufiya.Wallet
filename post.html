@@ -3,113 +3,225 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFBook - Mini Facebook with Media</title>
+  <title>Mini Facebook - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body { font-family: sans-serif; background: #e8f7f4; max-width: 600px; margin: auto; padding: 20px; }
+    body { font-family: sans-serif; background: #e8f7f4; }
+    #container { max-width: 600px; margin: auto; padding: 20px; }
     #profileInfo img { width: 50px; height: 50px; border-radius: 50%; }
-    .post { background: white; padding: 15px; margin: 15px 0; border-radius: 10px; }
+    .post { background: #fff; padding: 10px; margin: 10px 0; border-radius: 10px; }
     .post-header { display: flex; align-items: center; gap: 10px; }
-    .post-content { margin: 10px 0; white-space: pre-wrap; }
-    .post-media img, .post-media video { max-width: 100%; border-radius: 8px; margin-top: 10px; }
-    button { background: #0baf9a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .reaction-btn { cursor: pointer; margin-right: 10px; }
+    .post-header img { width: 30px; height: 30px; border-radius: 50%; }
+    .post-media { max-width: 100%; margin-top: 10px; border-radius: 10px; }
+    .post-media video { max-width: 100%; border-radius: 10px; }
+    .reaction-btn { cursor: pointer; margin-right: 10px; user-select: none; }
+    .comment-input { width: 100%; padding: 5px; margin-top: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    #loadMoreBtn { padding: 10px 20px; background: #0baf9a; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    #loadMoreBtn:hover { background: #089e88; }
     #searchInput { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    #loadMoreBtn { margin: 10px 0; }
   </style>
 </head>
 <body>
+  <div id="container">
+    <h2>DRF Wallet Mini Facebook</h2>
+    <div id="profileInfo"></div>
 
-<h2>DRFBook</h2>
+    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
+    <input type="file" id="media" accept="image/*,video/mp4" style="margin-top: 10px;" />
+    <button onclick="submitPost()" style="margin-top:10px;padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Post</button>
 
-<div id="profileInfo"></div>
+    <input type="text" id="searchInput" placeholder="Search posts..." />
 
-<textarea id="postContent" placeholder="What's on your mind?" rows="3" style="width: 100%; padding: 10px; margin-top:10px;"></textarea><br/>
-<input type="file" id="media" accept="image/*,video/mp4,video/quicktime" /><br/><br/>
-<button id="postBtn" onclick="submitPost()">Post</button>
+    <h3>Community Posts</h3>
+    <div id="postFeed"></div>
+    <button id="loadMoreBtn" onclick="loadMorePosts()">Load More</button>
+  </div>
 
-<input type="text" id="searchInput" placeholder="Search posts..." oninput="renderPosts()" />
+  <script>
+    const scriptURL = "YOUR_SCRIPT_URL_HERE";
 
-<h3>Community Posts</h3>
-<div id="postFeed"></div>
-<button id="loadMoreBtn" onclick="loadMorePosts()">Load More</button>
-
-<script>
-  const scriptURL = 'https://script.google.com/macros/s/AKfycbyuW-IGR9vZcUlhwp1IKgAEsNefIEM4XybxqykGQKvsDZa03Ec1J_mAu4JHbobXB4CjCQ/exec
-  const profile = JSON.parse(localStorage.getItem("drf_profile"));
-  if (!profile) window.location.href = "profile.html";
-
-  const profileInfo = document.getElementById("profileInfo");
-  profileInfo.innerHTML = `<img src="${profile.avatar}" alt="avatar" /><br><strong>${profile.name}</strong>`;
-
-  let allPosts = [];
-  let visibleCount = 5;
-
-  async function submitPost() {
-    const content = document.getElementById("postContent").value.trim();
-    const mediaInput = document.getElementById("media");
-    const file = mediaInput.files[0];
-
-    if (!content && !file) {
-      alert("Write something or upload media.");
-      return;
-    }
-    
-    // Disable post button while uploading
-    const postBtn = document.getElementById("postBtn");
-    postBtn.disabled = true;
-
-    let mediaBase64 = null;
-    let mediaName = null;
-
-    if(file) {
-      // Limit video length client-side (optional, only videos max 3 min)
-      if(file.type.startsWith('video/')) {
-        const maxDurationSec = 180;
-        // No direct way to check duration here, skipping for now or can be implemented with video element (advanced)
-      }
-      
-      mediaName = file.name;
-
-      // Convert file to base64
-      mediaBase64 = await toBase64(file);
+    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    if (!profile) {
+      alert("Please create your profile first.");
+      window.location.href = "profile.html";
     }
 
-    // Prepare post data as JSON
-    const postData = {
-      author: profile.name,
-      avatar: profile.avatar,
-      content: content,
-      mediaBase64: mediaBase64,
-      mediaName: mediaName,
-    };
+    // Show logged-in user info
+    const profileInfo = document.getElementById("profileInfo");
+    profileInfo.innerHTML = `
+      <img src="${profile.avatar}" alt="Avatar" />
+      <strong>${profile.name}</strong>
+    `;
 
-    try {
-      const res = await fetch(scriptURL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postData)
+    let allPosts = [];
+    let visibleCount = 5;
+
+    // Convert file to Base64 DataURL for upload
+    function fileToDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject(e);
+        reader.readAsDataURL(file);
       });
-      const result = await res.json();
-      if (result.status === 'success') {
-        document.getElementById("postContent").value = "";
-        mediaInput.value = "";
-        await loadAllPosts();
-      } else {
-        alert("Failed to post: " + (result.message || "Unknown error"));
-      }
-    } catch(e) {
-      alert("Error posting: " + e.message);
-    } finally {
-      postBtn.disabled = false;
     }
-  }
 
-  function toBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        // Strip "data:*/*;base64," prefix from reader.result
-        const base64String = reader.result.split(',')[1];
-        resolve(base
+    async function submitPost() {
+      const content = document.getElementById("postContent").value.trim();
+      const fileInput = document.getElementById("media");
+      const file = fileInput.files[0];
+
+      if (!content && !file) {
+        alert("Please write something or upload media.");
+        return;
+      }
+
+      let mediaData = "";
+      if (file) {
+        // Limit video length client-side? (Not implemented here, can add)
+        mediaData = await fileToDataURL(file);
+      }
+
+      const post = {
+        author: profile.name,
+        avatar: profile.avatar,
+        content,
+        media: mediaData,
+        timestamp: new Date().toLocaleString(),
+        likes: 0,
+        comments: []
+      };
+
+      try {
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(post)
+        });
+        const result = await response.json();
+        if (result.status === "success") {
+          document.getElementById("postContent").value = "";
+          fileInput.value = "";
+          loadAllPosts();
+        } else {
+          alert("Failed to post. Please try again.");
+        }
+      } catch (error) {
+        alert("Error posting: " + error.message);
+      }
+    }
+
+    async function loadAllPosts() {
+      try {
+        const response = await fetch(scriptURL);
+        const data = await response.json();
+        allPosts = data || [];
+        renderPosts();
+      } catch (error) {
+        console.error("Failed to load posts:", error);
+      }
+    }
+
+    function renderPosts() {
+      const postFeed = document.getElementById("postFeed");
+      const searchText = document.getElementById("searchInput").value.toLowerCase();
+
+      const filteredPosts = allPosts
+        .slice()
+        .reverse()
+        .filter(p => 
+          p.author.toLowerCase().includes(searchText) ||
+          p.content.toLowerCase().includes(searchText)
+        )
+        .slice(0, visibleCount);
+
+      if (filteredPosts.length === 0) {
+        postFeed.innerHTML = "<p>No posts found.</p>";
+        return;
+      }
+
+      postFeed.innerHTML = filteredPosts.map((p, idx) => {
+        const mediaHtml = p.media
+          ? (p.media.startsWith("data:video") 
+             ? `<video class="post-media" controls src="${p.media}"></video>` 
+             : `<img class="post-media" src="${p.media}" alt="Post media" />`)
+          : "";
+
+        const likesCount = p.likes || 0;
+        const commentsCount = p.comments ? p.comments.length : 0;
+
+        return `
+          <div class="post">
+            <div class="post-header">
+              <img src="${p.avatar}" alt="Avatar" />
+              <strong>${p.author}</strong>
+            </div>
+            <p>${p.content}</p>
+            ${mediaHtml}
+            <small>${p.timestamp}</small>
+            <div>
+              <span class="reaction-btn" onclick="likePost(${allPosts.length - idx - 1})">👍 Like (${likesCount})</span>
+              <span class="reaction-btn" onclick="lovePost(${allPosts.length - idx - 1})">❤️ Love</span>
+            </div>
+            <div>
+              <input type="text" class="comment-input" placeholder="Add a comment..." 
+                onkeypress="if(event.key === 'Enter'){ addComment(${allPosts.length - idx - 1}, this.value); this.value=''; }" />
+            </div>
+            <div id="comments-${allPosts.length - idx - 1}">
+              ${(p.comments || []).map(c => `<p><b>${c.author}:</b> ${c.text}</p>`).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function loadMorePosts() {
+      visibleCount += 5;
+      renderPosts();
+    }
+
+    async function likePost(index) {
+      allPosts[index].likes = (allPosts[index].likes || 0) + 1;
+      await savePostsToSheet();
+      renderPosts();
+    }
+
+    async function lovePost(index) {
+      // For demo, love is just like but you can track separately if want
+      await likePost(index);
+    }
+
+    async function addComment(index, text) {
+      if (!text.trim()) return;
+      if (!allPosts[index].comments) allPosts[index].comments = [];
+      allPosts[index].comments.push({ author: profile.name, text });
+      await savePostsToSheet();
+      renderPosts();
+    }
+
+    async function savePostsToSheet() {
+      // For simplicity, rewrite all posts in sheet (replace all rows)
+      try {
+        const response = await fetch(scriptURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ overwriteAll: true, posts: allPosts })
+        });
+        const result = await response.json();
+        if (result.status !== "success") {
+          alert("Failed to save reactions/comments.");
+        }
+      } catch (error) {
+        alert("Error saving: " + error.message);
+      }
+    }
+
+    document.getElementById("searchInput").addEventListener("input", () => {
+      visibleCount = 5;
+      renderPosts();
+    });
+
+    loadAllPosts();
+  </script>
+</body>
+</html>
