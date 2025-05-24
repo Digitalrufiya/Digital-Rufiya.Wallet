@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Profile - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
+  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
+
+  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
+    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
+    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
+  </div>
+
+  <script>
+    function saveProfile() {
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const avatarInput = document.getElementById('avatar');
+
+      if (!name || !password || avatarInput.files.length === 0) {
+        alert("All fields are required.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        const profile = {
+          name,
+          password,
+          avatar: reader.result,
+        };
+        localStorage.setItem('drf_profile', JSON.stringify(profile));
+        alert("Profile saved successfully!");
+        window.location.href = "post.html";
+      };
+      reader.readAsDataURL(avatarInput.files[0]);
+    }
+
+    // If already saved, skip to posts
+    const existing = localStorage.getItem("drf_profile");
+    if (existing) window.location.href = "post.html";
+  </script>
+</body>
+</html>
