@@ -3,281 +3,439 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Buy DrF Tokens</title>
-  <!-- Bootstrap CSS -->
+  <title>DRF Token Live Sale - Trade</title>
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     rel="stylesheet"
   />
-  <!-- Bootstrap Icons -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
-    rel="stylesheet"
-  />
+  <style>
+    body {
+      padding: 2rem;
+      background: #f8f9fa;
+    }
+    #loadingOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #333;
+      z-index: 9999;
+      display: none;
+    }
+    #errorMessage {
+      color: red;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
-<body class="p-4">
+<body>
+  <h1 class="mb-4">DRF Token Live Sale</h1>
 
-  <section id="buy-section" class="container">
-    <!-- Buy Form -->
-    <form
-      id="buy"
-      class="col-lg-5 mx-auto"
-      aria-labelledby="buyform-label"
-      novalidate
+  <div id="errorMessage" role="alert" aria-live="assertive"></div>
+
+  <!-- Wallet Status & Address -->
+  <div class="mb-3">
+    <label for="walletAddress" class="form-label fw-bold"
+      >Connected Wallet Address</label
     >
-      <h3 id="buyform-label" class="fw-bold mb-3 text-center">Buy DrF Tokens</h3>
+    <input
+      type="text"
+      id="walletAddress"
+      class="form-control"
+      placeholder="Not connected"
+      readonly
+      aria-readonly="true"
+    />
+  </div>
 
-      <div class="mb-3">
-        <label for="walletAddress" class="form-label"
-          >Connected Wallet Address</label
-        >
-        <input
-          type="text"
-          id="walletAddress"
-          class="form-control"
-          placeholder="Connect wallet to see address"
-          readonly
-          aria-readonly="true"
-        />
+  <!-- Buy Form -->
+  <form id="buyForm" novalidate>
+    <div class="mb-3">
+      <label for="amountUSDC" class="form-label">Amount to Invest (USDC)</label>
+      <input
+        type="number"
+        id="amountUSDC"
+        class="form-control"
+        placeholder="Enter USDC amount"
+        min="0.001"
+        step="0.001"
+        required
+        aria-describedby="usdcHelp"
+      />
+      <div id="usdcHelp" class="form-text">
+        Minimum investment: 0.001 USDC
       </div>
+      <div class="invalid-feedback">Please enter a valid USDC amount greater than 0.</div>
+    </div>
 
-      <div class="mb-3">
-        <label for="amountBNB" class="form-label">Amount to Invest (BNB)</label>
-        <input
-          type="number"
-          id="amountBNB"
-          class="form-control"
-          placeholder="Enter BNB amount"
-          min="0.001"
-          step="0.001"
-          aria-describedby="bnbHelp"
-          required
-          disabled
-        />
-        <div id="bnbHelp" class="form-text">
-          Minimum investment: 0.001 BNB
-        </div>
-        <div class="invalid-feedback">
-          Please enter a valid BNB amount greater than 0.
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label for="tokenAmount" class="form-label">Estimated DrF Tokens</label>
-        <input
-          type="text"
-          id="tokenAmount"
-          class="form-control"
-          placeholder="Estimated tokens you will receive"
-          readonly
-          aria-readonly="true"
-        />
-      </div>
-
-      <button
-        type="submit"
-        id="buybtn"
-        class="btn btn-primary w-100"
-        disabled
-        aria-disabled="true"
-      >
-        Connect Wallet to Buy
-      </button>
-    </form>
-  </section>
-
-  <!-- Referral Info -->
-  <section id="referral" class="container mt-5 col-lg-5 mx-auto">
-    <h2 class="fw-bold mb-3 text-center">Referral Program</h2>
-    <p class="text-center">
-      Share your referral link and earn a commission when others buy DrF tokens!
-    </p>
-    <div class="input-group mb-3">
+    <div class="mb-3">
+      <label for="tokenAmount" class="form-label">Estimated DRF Tokens</label>
       <input
         type="text"
-        id="referralLink"
+        id="tokenAmount"
         class="form-control"
+        placeholder="Estimated tokens you will receive"
         readonly
-        aria-label="Referral link"
         aria-readonly="true"
       />
-      <button
-        id="copyReferral"
-        class="btn btn-outline-secondary"
-        aria-label="Copy referral link"
-        title="Copy referral link"
-      >
-        <i class="bi bi-clipboard"></i>
-      </button>
     </div>
-    <p class="text-muted text-center">
-      Referral commissions are credited instantly on each successful purchase.
-    </p>
-  </section>
 
-  <!-- Ethers.js & Web3Modal -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.0/dist/ethers.min.js" type="module"></script>
-  <script src="https://unpkg.com/@web3modal/html@2.5.5/dist/index.js"></script>
+    <button
+      type="submit"
+      id="buyBtn"
+      class="btn btn-primary w-100"
+      disabled
+      aria-disabled="true"
+    >
+      Connect Wallet to Buy
+    </button>
+  </form>
 
-  <script type="module">
-    import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.6.0/dist/ethers.esm.min.js";
-    import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.5.5/dist/index.js";
+  <!-- Password / Private Key Modal -->
+  <div
+    class="modal fade"
+    id="authModal"
+    tabindex="-1"
+    aria-labelledby="authModalLabel"
+    aria-hidden="true"
+    data-bs-backdrop="static"
+    data-bs-keyboard="false"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="authForm">
+          <div class="modal-header">
+            <h5 class="modal-title" id="authModalLabel">Wallet Authentication</h5>
+          </div>
+          <div class="modal-body">
+            <div id="authError" class="text-danger mb-2" role="alert"></div>
 
-    const buyForm = document.getElementById("buy");
-    const walletAddressInput = document.getElementById("walletAddress");
-    const amountBNBInput = document.getElementById("amountBNB");
-    const tokenAmountInput = document.getElementById("tokenAmount");
-    const buyBtn = document.getElementById("buybtn");
-    const referralLinkInput = document.getElementById("referralLink");
-    const copyReferralBtn = document.getElementById("copyReferral");
+            <div id="passwordInputGroup" class="mb-3">
+              <label for="walletPassword" class="form-label"
+                >Enter your wallet password</label
+              >
+              <input
+                type="password"
+                id="walletPassword"
+                class="form-control"
+                autocomplete="current-password"
+                required
+                aria-describedby="passwordHelp"
+              />
+              <div id="passwordHelp" class="form-text">
+                Password to decrypt your wallet.
+              </div>
+            </div>
 
-    // Replace with your actual DrF token contract address and ABI if needed for more precise estimation or contract interaction
-    // For demo, we assume 1 BNB = 1000 DrF tokens fixed rate (adjust as needed)
-    const TOKEN_RATE = 1000; // tokens per 1 BNB
+            <div id="privateKeyInputGroup" style="display:none;">
+              <label for="walletPrivateKey" class="form-label"
+                >Enter your Private Key</label
+              >
+              <input
+                type="text"
+                id="walletPrivateKey"
+                class="form-control"
+                autocomplete="off"
+                placeholder="Private key (starts with 0x...)"
+                aria-describedby="privateKeyHelp"
+              />
+              <div id="privateKeyHelp" class="form-text mb-3">
+                Your private key will be encrypted and stored locally.
+              </div>
 
-    // Your dApp URL base - used for referral link
-    const dappBaseURL = window.location.origin + window.location.pathname;
+              <label for="newPassword" class="form-label"
+                >Set a new password</label
+              >
+              <input
+                type="password"
+                id="newPassword"
+                class="form-control"
+                autocomplete="new-password"
+                placeholder="Create a password to protect your wallet"
+                aria-describedby="newPasswordHelp"
+              />
+              <div id="newPasswordHelp" class="form-text">
+                Password used to encrypt your private key locally.
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" id="authSubmitBtn" class="btn btn-primary w-100">
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-    // Web3Modal initialization
-    const web3Modal = new Web3Modal({
-      projectId: "YOUR_PROJECT_ID", // replace with your WalletConnect Project ID for best support or leave blank for default
-      walletConnectVersion: 2,
-      themeMode: "light",
-      ethereum: {
-        appName: "DrF Token Sale",
-        chains: [56], // Binance Smart Chain mainnet chain id
-      },
-    });
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay">Connecting wallet, please wait...</div>
 
-    let provider;
-    let signer;
-    let userAddress = null;
+  <!-- Bootstrap Bundle (Popper + JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- CryptoJS AES -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <!-- ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.0/dist/ethers.min.js"></script>
 
-    async function connectWallet() {
-      try {
-        const instance = await web3Modal.connect();
-        provider = new ethers.BrowserProvider(instance);
-        signer = await provider.getSigner();
-        userAddress = await signer.getAddress();
+  <script>
+    (() => {
+      const TOKEN_PRICE = 15.42; // 1 USDC = 15.42 DRF
+      const STORAGE_KEY = "encryptedWallet"; // localStorage key for encrypted private key
+      let provider, signer, wallet;
+      let authModal, authForm;
+      let loadingTimeout;
 
-        // Show connected wallet address
-        walletAddressInput.value = userAddress;
+      // UI Elements
+      const walletAddressInput = document.getElementById("walletAddress");
+      const amountUSDCInput = document.getElementById("amountUSDC");
+      const tokenAmountInput = document.getElementById("tokenAmount");
+      const buyBtn = document.getElementById("buyBtn");
+      const errorMessage = document.getElementById("errorMessage");
 
-        // Enable input and button
-        amountBNBInput.disabled = false;
-        buyBtn.disabled = false;
-        buyBtn.removeAttribute("aria-disabled");
-        buyBtn.textContent = "Buy DrF Tokens";
+      const authError = document.getElementById("authError");
+      const passwordInputGroup = document.getElementById("passwordInputGroup");
+      const privateKeyInputGroup = document.getElementById("privateKeyInputGroup");
+      const walletPasswordInput = document.getElementById("walletPassword");
+      const walletPrivateKeyInput = document.getElementById("walletPrivateKey");
+      const newPasswordInput = document.getElementById("newPassword");
+      const authSubmitBtn = document.getElementById("authSubmitBtn");
 
-        // Update referral link with wallet address as ref parameter
-        referralLinkInput.value = `${dappBaseURL}?ref=${userAddress}`;
+      // Bootstrap modal instance
+      authModal = new bootstrap.Modal(document.getElementById("authModal"));
 
-        // Listen for amountBNB input change to calculate token amount
-        amountBNBInput.addEventListener("input", updateEstimatedTokens);
-
-        // Optional: listen for wallet disconnect
-        instance.on("disconnect", resetForm);
-
-      } catch (err) {
-        console.error("Wallet connection failed:", err);
+      // Show loading overlay
+      function showLoading() {
+        document.getElementById("loadingOverlay").style.display = "flex";
       }
-    }
-
-    function updateEstimatedTokens() {
-      const bnbAmount = parseFloat(amountBNBInput.value);
-      if (isNaN(bnbAmount) || bnbAmount < 0.001) {
-        tokenAmountInput.value = "";
-        buyBtn.disabled = true;
-        buyBtn.setAttribute("aria-disabled", "true");
-        return;
-      }
-      const tokens = bnbAmount * TOKEN_RATE;
-      tokenAmountInput.value = tokens.toLocaleString(undefined, { maximumFractionDigits: 2 });
-      buyBtn.disabled = false;
-      buyBtn.removeAttribute("aria-disabled");
-    }
-
-    function resetForm() {
-      walletAddressInput.value = "";
-      amountBNBInput.value = "";
-      amountBNBInput.disabled = true;
-      tokenAmountInput.value = "";
-      buyBtn.disabled = true;
-      buyBtn.setAttribute("aria-disabled", "true");
-      referralLinkInput.value = "";
-      userAddress = null;
-    }
-
-    // Handle buy form submit
-    buyForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      if (!userAddress) {
-        alert("Please connect your wallet first.");
-        return;
+      function hideLoading() {
+        document.getElementById("loadingOverlay").style.display = "none";
       }
 
-      const bnbAmount = parseFloat(amountBNBInput.value);
-      if (isNaN(bnbAmount) || bnbAmount < 0.001) {
-        alert("Please enter a valid BNB amount greater than or equal to 0.001.");
-        return;
+      // Show error message in main UI
+      function showError(msg) {
+        errorMessage.textContent = msg;
+      }
+      function clearError() {
+        errorMessage.textContent = "";
       }
 
-      try {
-        buyBtn.disabled = true;
-        buyBtn.textContent = "Processing...";
-
-        // Sending BNB purchase transaction logic here
-        // For demo, we'll just simulate with a delay
-        // Replace this with your contract interaction code or payment method
-
-        await new Promise((res) => setTimeout(res, 3000));
-
-        alert(`Success! You bought approx ${bnbAmount * TOKEN_RATE} DrF tokens.`);
-
-        // Reset input fields after successful purchase
-        amountBNBInput.value = "";
-        tokenAmountInput.value = "";
-        buyBtn.textContent = "Buy DrF Tokens";
-        buyBtn.disabled = false;
-
-      } catch (err) {
-        console.error(err);
-        alert("Transaction failed or rejected.");
-        buyBtn.textContent = "Buy DrF Tokens";
-        buyBtn.disabled = false;
+      // Show error message in modal
+      function showAuthError(msg) {
+        authError.textContent = msg;
       }
-    });
+      function clearAuthError() {
+        authError.textContent = "";
+      }
 
-    // Copy referral link button
-    copyReferralBtn.addEventListener("click", () => {
-      if (!referralLinkInput.value) return;
-      referralLinkInput.select();
-      referralLinkInput.setSelectionRange(0, 99999); // for mobile
-      navigator.clipboard.writeText(referralLinkInput.value).then(() => {
-        copyReferralBtn.innerHTML = `<i class="bi bi-clipboard-check"></i>`;
-        setTimeout(() => {
-          copyReferralBtn.innerHTML = `<i class="bi bi-clipboard"></i>`;
-        }, 1500);
+      // Encrypt private key with password
+      function encryptPrivateKey(privKey, password) {
+        return CryptoJS.AES.encrypt(privKey, password).toString();
+      }
+
+      // Decrypt private key with password, return null if fail
+      function decryptPrivateKey(cipherText, password) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(cipherText, password);
+          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          if (decrypted.length === 64 || (decrypted.startsWith("0x") && decrypted.length === 66)) {
+            return decrypted.startsWith("0x") ? decrypted : "0x" + decrypted;
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      }
+
+      // Save encrypted wallet locally
+      function saveEncryptedWallet(encKey) {
+        localStorage.setItem(STORAGE_KEY, encKey);
+      }
+
+      // Load encrypted wallet from storage
+      function loadEncryptedWallet() {
+        return localStorage.getItem(STORAGE_KEY);
+      }
+
+      // Connect wallet from private key (ethers.Wallet)
+      async function connectWallet(privateKey) {
+        clearError();
+        showLoading();
+
+        // Start 10 sec timeout for loading indicator
+        const timeoutPromise = new Promise((_, reject) =>
+          (loadingTimeout = setTimeout(() => reject(new Error("Connection timeout")), 10000))
+        );
+
+        try {
+          provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+          wallet = new ethers.Wallet(privateKey, provider);
+          signer = wallet.connect(provider);
+
+          // Check address (basic)
+          if (!wallet.address) throw new Error("Invalid wallet address");
+
+          // Wait for 1 block or so for connection? Just a short provider.getBlockNumber call
+          await Promise.race([
+            provider.getBlockNumber(),
+            timeoutPromise,
+          ]);
+
+          clearTimeout(loadingTimeout);
+          hideLoading();
+
+          walletAddressInput.value = wallet.address;
+          buyBtn.disabled = false;
+          buyBtn.setAttribute("aria-disabled", "false");
+
+          // Show connected state
+          buyBtn.textContent = "Buy DRF Tokens";
+
+          return true;
+        } catch (err) {
+          clearTimeout(loadingTimeout);
+          hideLoading();
+          showError("Wallet connection failed: " + err.message);
+          return false;
+        }
+      }
+
+      // On form buy amount input, update estimated DRF tokens
+      function updateTokenAmount() {
+        const usdcVal = parseFloat(amountUSDCInput.value);
+        if (isNaN(usdcVal) || usdcVal < 0.001) {
+          tokenAmountInput.value = "";
+          buyBtn.disabled = true;
+          buyBtn.setAttribute("aria-disabled", "true");
+          return;
+        }
+        const drfAmount = (usdcVal * TOKEN_PRICE).toFixed(4);
+        tokenAmountInput.value = drfAmount;
+
+        if (walletAddressInput.value && walletAddressInput.value !== "") {
+          buyBtn.disabled = false;
+          buyBtn.setAttribute("aria-disabled", "false");
+        }
+      }
+
+      // On buy submit (for now just alert, no contract call)
+      async function onBuySubmit(e) {
+        e.preventDefault();
+        clearError();
+
+        const usdcVal = parseFloat(amountUSDCInput.value);
+        if (isNaN(usdcVal) || usdcVal < 0.001) {
+          showError("Please enter a valid USDC amount greater than 0.001.");
+          return;
+        }
+        if (!wallet) {
+          showError("Wallet not connected.");
+          return;
+        }
+
+        // Here you would implement the actual contract call
+        // For now just alert confirmation
+        alert(
+          `Ready to buy DRF tokens!\n\nWallet: ${wallet.address}\nUSDC: ${usdcVal}\nEstimated DRF: ${(usdcVal * TOKEN_PRICE).toFixed(4)}`
+        );
+      }
+
+      // Show auth modal for password entry or private key input
+      // If wallet encrypted exists -> show password input
+      // Else show private key + password set input
+      function showAuthModal() {
+        clearAuthError();
+        const encrypted = loadEncryptedWallet();
+        if (encrypted) {
+          // Password input mode
+          passwordInputGroup.style.display = "block";
+          privateKeyInputGroup.style.display = "none";
+          walletPasswordInput.value = "";
+          authModal.show();
+          walletPasswordInput.focus();
+          authSubmitBtn.textContent = "Unlock Wallet";
+        } else {
+          // No wallet stored, ask private key + new password
+          passwordInputGroup.style.display = "none";
+          privateKeyInputGroup.style.display = "block";
+          walletPrivateKeyInput.value = "";
+          newPasswordInput.value = "";
+          authModal.show();
+          walletPrivateKeyInput.focus();
+          authSubmitBtn.textContent = "Save Wallet";
+        }
+      }
+
+      // Handle auth form submit
+      authForm = document.getElementById("authForm");
+      authForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearAuthError();
+
+        const encrypted = loadEncryptedWallet();
+
+        if (encrypted) {
+          // Password mode: decrypt and connect
+          const password = walletPasswordInput.value.trim();
+          if (!password) {
+            showAuthError("Password cannot be empty.");
+            return;
+          }
+          const decryptedKey = decryptPrivateKey(encrypted, password);
+          if (!decryptedKey) {
+            showAuthError("Incorrect password or corrupted wallet.");
+            return;
+          }
+
+          const success = await connectWallet(decryptedKey);
+          if (success) {
+            authModal.hide();
+          } else {
+            showAuthError("Failed to connect wallet with decrypted key.");
+          }
+        } else {
+          // New wallet mode: get private key + new password, encrypt & save
+          const pk = walletPrivateKeyInput.value.trim();
+          const np = newPasswordInput.value.trim();
+
+          if (!pk || !np) {
+            showAuthError("Private key and new password are required.");
+            return;
+          }
+          // Basic validation of private key format
+          if (!/^0x[a-fA-F0-9]{64}$/.test(pk)) {
+            showAuthError("Private key format invalid. It should start with 0x and be 64 hex chars.");
+            return;
+          }
+          const enc = encryptPrivateKey(pk, np);
+          saveEncryptedWallet(enc);
+
+          const success = await connectWallet(pk);
+          if (success) {
+            authModal.hide();
+          } else {
+            showAuthError("Failed to connect wallet with provided private key.");
+          }
+        }
       });
-    });
 
-    // On page load: connect wallet button (disabled), enable on user action
-    walletAddressInput.addEventListener("click", () => {
-      if (!userAddress) {
-        connectWallet();
-      }
-    });
+      // On page load, show auth modal and require password entry
+      window.addEventListener("load", () => {
+        showAuthModal();
+      });
 
-    // You can also add a separate Connect Wallet button if you want:
-    // For simplicity, here wallet connects when user clicks the walletAddressInput
+      // Input change updates
+      amountUSDCInput.addEventListener("input", updateTokenAmount);
 
+      // Buy form submit
+      document.getElementById("buyForm").addEventListener("submit", onBuySubmit);
+    })();
   </script>
-
-  <!-- Bootstrap JS Bundle -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-    crossorigin="anonymous"
-  ></script>
 </body>
 </html>
