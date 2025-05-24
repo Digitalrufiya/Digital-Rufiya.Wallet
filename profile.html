@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Profile - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    #avatarPreview {
+      max-width: 100px;
+      max-height: 100px;
+      display: block;
+      margin: 10px auto;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #0baf9a;
+    }
+    #goToPostsBtn {
+      margin-top: 15px;
+      padding: 8px 15px;
+      background: #0baf9a;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
 </head>
 <body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
   <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
@@ -12,38 +33,82 @@
   <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
     <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
     <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
+    
     <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
+    <img id="avatarPreview" src="" alt="Avatar Preview" />
+
     <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
+
+    <button id="goToPostsBtn" onclick="goToPosts()">Go to Posts</button>
   </div>
 
   <script>
-    function saveProfile() {
-      const name = document.getElementById('name').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const avatarInput = document.getElementById('avatar');
+    const nameInput = document.getElementById('name');
+    const passwordInput = document.getElementById('password');
+    const avatarInput = document.getElementById('avatar');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const goToPostsBtn = document.getElementById('goToPostsBtn');
 
-      if (!name || !password || avatarInput.files.length === 0) {
-        alert("All fields are required.");
+    // Load existing profile if present
+    const existing = localStorage.getItem('drf_profile');
+    if (existing) {
+      const profile = JSON.parse(existing);
+      nameInput.value = profile.name || '';
+      // Password is not prefilled for security
+      avatarPreview.src = profile.avatar || '';
+      goToPostsBtn.style.display = 'inline-block';  // Show "Go to Posts" button
+    }
+
+    avatarInput.addEventListener('change', function() {
+      if (avatarInput.files && avatarInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          avatarPreview.src = e.target.result;
+        }
+        reader.readAsDataURL(avatarInput.files[0]);
+      }
+    });
+
+    function saveProfile() {
+      const name = nameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!name || !password) {
+        alert("Name and password are required.");
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = function () {
-        const profile = {
-          name,
-          password,
-          avatar: reader.result,
+      if (avatarInput.files.length === 0 && !avatarPreview.src) {
+        alert("Please select an avatar image.");
+        return;
+      }
+
+      if (avatarInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          saveToLocal(name, password, reader.result);
         };
-        localStorage.setItem('drf_profile', JSON.stringify(profile));
-        alert("Profile saved successfully!");
-        window.location.href = "post.html";
-      };
-      reader.readAsDataURL(avatarInput.files[0]);
+        reader.readAsDataURL(avatarInput.files[0]);
+      } else {
+        // No new avatar selected, keep existing one
+        saveToLocal(name, password, avatarPreview.src);
+      }
     }
 
-    // If already saved, skip to posts
-    const existing = localStorage.getItem("drf_profile");
-    if (existing) window.location.href = "post.html";
+    function saveToLocal(name, password, avatarDataUrl) {
+      const profile = {
+        name,
+        password,
+        avatar: avatarDataUrl,
+      };
+      localStorage.setItem('drf_profile', JSON.stringify(profile));
+      alert("Profile saved successfully!");
+      goToPostsBtn.style.display = 'inline-block'; // Show button after saving
+    }
+
+    function goToPosts() {
+      window.location.href = "post.html";
+    }
   </script>
 </body>
 </html>
