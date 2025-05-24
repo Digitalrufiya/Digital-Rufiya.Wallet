@@ -38,9 +38,14 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbyuW-IGR9vZcUlhwp1IKgAEsNefIEM4XybxqykGQKvsDZa03Ec1J_mAu4JHbobXB4CjCQ/exec
+    const scriptURL = "https://script.google.com/macros/s/AKfycbyuW-IGR9vZcUlhwp1IKgAEsNefIEM4XybxqykGQKvsDZa03Ec1J_mAu4JHbobXB4CjCQ/exec";
 
-    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    let profile = null;
+    try {
+      profile = JSON.parse(localStorage.getItem("drf_profile"));
+    } catch (e) {
+      console.error("Failed to parse profile:", e);
+    }
     if (!profile) {
       alert("Please create your profile first.");
       window.location.href = "profile.html";
@@ -78,7 +83,6 @@
 
       let mediaData = "";
       if (file) {
-        // Limit video length client-side? (Not implemented here, can add)
         mediaData = await fileToDataURL(file);
       }
 
@@ -187,7 +191,6 @@
     }
 
     async function lovePost(index) {
-      // For demo, love is just like but you can track separately if want
       await likePost(index);
     }
 
@@ -200,7 +203,6 @@
     }
 
     async function savePostsToSheet() {
-      // For simplicity, rewrite all posts in sheet (replace all rows)
       try {
         const response = await fetch(scriptURL, {
           method: "POST",
