@@ -1,49 +1,72 @@
+<!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Profile - DRF Wallet</title>
+  <title>DRF Profile</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
-  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
+<body style="font-family: sans-serif; background: #f4f9f7;">
+  <div class="container" style="max-width: 600px; margin: auto; text-align: center;">
+    <h2>Welcome to DRF Wallet Mini Facebook</h2>
+    <p id="walletInfo"></p>
 
-  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
-    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
-    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
-    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
-    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
+    <div>
+      <input type="text" id="userName" placeholder="Enter your Name" />
+      <input type="file" id="profileImage" />
+      <button onclick="saveProfile()">Save Profile</button>
+    </div>
+
+    <hr />
+
+    <textarea id="postContent" placeholder="What's on your mind?" rows="4" style="width: 100%; margin-top: 10px;"></textarea>
+    <br />
+    <button onclick="createPost()">Post</button>
   </div>
 
   <script>
-    function saveProfile() {
-      const name = document.getElementById('name').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const avatarInput = document.getElementById('avatar');
+    const wallet = localStorage.getItem("drf_active_wallet") || "0x0000000000000000000000000000000000000000";
+    document.getElementById("walletInfo").textContent = `Logged in as: ${wallet}`;
 
-      if (!name || !password || avatarInput.files.length === 0) {
-        alert("All fields are required.");
-        return;
-      }
+    function saveProfile() {
+      const name = document.getElementById("userName").value;
+      const file = document.getElementById("profileImage").files[0];
+
+      if (!name || !file) return alert("Name and Profile Image required!");
 
       const reader = new FileReader();
-      reader.onload = function () {
-        const profile = {
-          name,
-          password,
-          avatar: reader.result,
-        };
-        localStorage.setItem('drf_profile', JSON.stringify(profile));
-        alert("Profile saved successfully!");
-        window.location.href = "post.html";
+      reader.onload = function (e) {
+        const imageUrl = e.target.result;
+        localStorage.setItem("drf_profile", JSON.stringify({ name, imageUrl, wallet }));
+        alert("Profile saved!");
       };
-      reader.readAsDataURL(avatarInput.files[0]);
+      reader.readAsDataURL(file);
     }
 
-    // If already saved, skip to posts
-    const existing = localStorage.getItem("drf_profile");
-    if (existing) window.location.href = "post.html";
+    function createPost() {
+      const content = document.getElementById("postContent").value;
+      if (!content) return alert("Post content cannot be empty!");
+
+      const profile = JSON.parse(localStorage.getItem("drf_profile"));
+      if (!profile) return alert("Please create your profile first!");
+
+      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+
+      posts.unshift({
+        wallet,
+        name: profile.name,
+        profileUrl: profile.imageUrl,
+        content,
+        timestamp: new Date().toLocaleString(),
+        reactions: 0,
+        comments: []
+      });
+
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      alert("Post created!");
+
+      document.getElementById("postContent").value = "";
+    }
   </script>
 </body>
 </html>
