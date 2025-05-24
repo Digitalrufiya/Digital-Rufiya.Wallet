@@ -3,89 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Drfbook</title>
+  <title>DRFBook - Community</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body {
-      font-family: sans-serif;
-      background: #e8f7f4;
-      margin: 0;
-      padding: 10px;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-    }
-    .post-box, .post {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    textarea, select, input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      background: #0baf9a;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
-    .media {
-      max-width: 100%;
-      margin-top: 10px;
-    }
-    .reactions span {
-      margin-right: 10px;
-      cursor: pointer;
-    }
-    .comment-box {
-      margin-top: 10px;
-    }
+    body { font-family: sans-serif; background: #e8f7f4; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: auto; }
+    .post-box, .post { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+    .post-box input, .post-box textarea { width: 100%; padding: 10px; margin: 5px 0; }
+    .post img, .post video { max-width: 100%; margin-top: 10px; border-radius: 10px; }
+    .reactions span { cursor: pointer; margin-right: 10px; }
+    .comment-box { margin-top: 10px; }
+    .comment-box input { width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    .search-box { margin-bottom: 15px; }
     @media(max-width: 600px) {
-      textarea, input, button {
-        font-size: 16px;
-      }
+      .container { padding: 10px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Drfbook</h2>
-    <div id="profileInfo" class="post-box"></div>
+    <div id="profileInfo" style="text-align:center;"></div>
 
     <div class="post-box">
       <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-      <input type="file" id="media" accept="image/*,video/mp4" />
-      <select id="visibility">
-        <option value="public">🌐 Public</option>
-        <option value="private">🔒 Private</option>
-      </select>
+      <input type="file" id="media" accept="image/*,video/*" />
       <button onclick="submitPost()">Post</button>
     </div>
 
-    <input type="text" id="searchInput" placeholder="Search posts..." style="margin-top:20px;width:100%;padding:10px;" oninput="renderPosts()" />
-
-    <h3 style="margin-top:30px;">Community Posts</h3>
+    <input type="text" id="searchInput" class="search-box" placeholder="Search posts..." oninput="renderPosts()" />
+    
+    <h3>Community Posts</h3>
     <div id="postFeed"></div>
     <button onclick="loadMorePosts()">Load More</button>
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbw-nyrJSvUpeNi7QShMlrwLV3PEA6ZGsuegOUAsqq6qs903biTTc7_5DjfEYOLpo7uL7Q/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbyQ2s5BBWYUEHyDB2rnh_tD4ItbWIGrR7Ak5YJvHzK7rt9UmCeWDCKCTD60iyxzkm3n8Q/exec";
+
     const profile = JSON.parse(localStorage.getItem("drf_profile"));
     if (!profile) window.location.href = "profile.html";
-
     document.getElementById("profileInfo").innerHTML = `
-      <img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;" /><br>
-      <strong>${profile.name}</strong>
-    `;
+      <img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;"/><br/>
+      <strong>${profile.name}</strong>`;
 
     let allPosts = [];
     let visibleCount = 5;
@@ -94,7 +54,6 @@
       const content = document.getElementById("postContent").value.trim();
       const fileInput = document.getElementById("media");
       const file = fileInput.files[0];
-      const visibility = document.getElementById("visibility").value;
 
       if (!content && !file) return alert("Write something or upload media.");
 
@@ -103,15 +62,12 @@
       formData.append("avatar", profile.avatar);
       formData.append("content", content);
       formData.append("timestamp", new Date().toLocaleString());
-      formData.append("visibility", visibility);
       if (file) formData.append("media", file);
 
-      const res = await fetch(scriptURL, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(scriptURL, { method: "POST", body: formData });
       const result = await res.json();
-      if (result.success) {
+
+      if (result.status === "success") {
         document.getElementById("postContent").value = "";
         fileInput.value = "";
         loadAllPosts();
@@ -129,26 +85,26 @@
     function renderPosts() {
       const postFeed = document.getElementById("postFeed");
       const search = document.getElementById("searchInput").value.toLowerCase();
-      const displayPosts = allPosts.reverse().filter(p =>
-        p.visibility === "public" &&
-        (p.name.toLowerCase().includes(search) || p.content.toLowerCase().includes(search))
-      ).slice(0, visibleCount);
+
+      const displayPosts = allPosts
+        .filter(p => p.author.toLowerCase().includes(search) || p.content.toLowerCase().includes(search))
+        .reverse()
+        .slice(0, visibleCount);
 
       postFeed.innerHTML = displayPosts.map((p, i) => `
         <div class="post">
           <img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;" />
-          <strong>${p.name}</strong><br/>
+          <strong>${p.author}</strong> <small>${p.timestamp}</small>
           <p>${p.content}</p>
-          ${p.media ? (p.media.endsWith(".mp4") ?
-            `<video class="media" controls src="${p.media}"></video>` :
-            `<img class="media" src="${p.media}" />`) : ""}
-          <small>${p.timestamp}</small>
+          ${p.media ? (p.media.endsWith('.mp4') ?
+            `<video controls src="${p.media}" style="max-width:100%;"></video>` :
+            `<img src="${p.media}" alt="Post media" />`) : ''}
           <div class="reactions">
             <span onclick="reactToPost(${i}, 'like')">👍 Like</span>
             <span onclick="reactToPost(${i}, 'love')">❤️ Love</span>
           </div>
           <div class="comment-box">
-            <input type="text" placeholder="Add a comment..." onkeydown="if(event.key==='Enter') commentOnPost(${i}, this)" />
+            <input type="text" id="comment-${i}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter') commentOnPost(${i}, this.value)" />
           </div>
         </div>
       `).join("");
@@ -160,16 +116,15 @@
     }
 
     function reactToPost(index, reaction) {
-      alert(`You reacted with ${reaction} to post #${index + 1}`);
-      // Optional: send to backend for saving
+      alert(`You reacted with ${reaction} to post by ${allPosts[index].author}`);
+      // Optionally send reaction to backend
     }
 
-    function commentOnPost(index, input) {
-      const comment = input.value.trim();
-      if (!comment) return;
-      alert(`You commented: "${comment}" on post #${index + 1}`);
-      input.value = "";
-      // Optional: send to backend for saving
+    function commentOnPost(index, comment) {
+      if (!comment.trim()) return;
+      alert(`You commented: "${comment}" on post by ${allPosts[index].author}`);
+      document.getElementById(`comment-${index}`).value = "";
+      // Optionally send comment to backend
     }
 
     loadAllPosts();
