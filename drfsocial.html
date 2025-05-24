@@ -1,204 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>DRF Wallet Mini Facebook</title>
-<style>
-  body { font-family: Arial, sans-serif; background:#f7f7f7; max-width:600px; margin:20px auto; padding:10px; }
-  #posts { margin-top:20px; }
-  .post { background:#fff; padding:10px; margin-bottom:15px; border-radius:5px; box-shadow:0 0 5px #ccc; }
-  .post-user { font-weight:bold; }
-  .post-content { margin:10px 0; white-space: pre-wrap; }
-  .post-actions { font-size:14px; color:#555; cursor:pointer; user-select:none; }
-  .post-actions span { margin-right:15px; }
-  .comments { margin-top:10px; padding-left:15px; border-left:2px solid #ddd; }
-  .comment { margin-bottom:5px; }
-  #newPost { margin-top:20px; }
-  textarea { width: 100%; height: 60px; padding: 5px; }
-  button { margin-top:5px; padding: 6px 12px; background:#0baf9a; border:none; color:#fff; cursor:pointer; }
-  button:hover { background:#09907f; }
-  #userAddress { font-weight:bold; margin-bottom: 10px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Profile - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
+  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
 
-<h2>DRF Wallet Mini Facebook</h2>
-
-<div id="walletInfo"></div>
-
-<div id="contentArea" style="display:none;">
-  <div id="newPost">
-    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-    <button id="postButton">Post</button>
+  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
+    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
+    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
   </div>
 
-  <div id="posts"></div>
-</div>
+  <script>
+    function saveProfile() {
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const avatarInput = document.getElementById('avatar');
 
-<div id="loginMessage" style="color:red; font-weight:bold;"></div>
+      if (!name || !password || avatarInput.files.length === 0) {
+        alert("All fields are required.");
+        return;
+      }
 
-<script>
-  // Key for all posts storage
-  const postsKey = "drfSocialPosts";
-
-  // Get logged in wallet address from your wallet system localStorage
-  function getLoggedInWallet() {
-    return localStorage.getItem("drf_active_wallet");
-  }
-
-  // Escape HTML to prevent XSS
-  function escapeHtml(text) {
-    return text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-
-  // Load posts from localStorage
-  function loadPosts() {
-    const postsJson = localStorage.getItem(postsKey);
-    if (!postsJson) return [];
-    try {
-      return JSON.parse(postsJson);
-    } catch {
-      return [];
-    }
-  }
-
-  // Save posts to localStorage
-  function savePosts(posts) {
-    localStorage.setItem(postsKey, JSON.stringify(posts));
-  }
-
-  // Render posts
-  function renderPosts() {
-    const posts = loadPosts();
-    const container = document.getElementById("posts");
-    container.innerHTML = "";
-
-    posts.slice().reverse().forEach(post => {
-      const postDiv = document.createElement("div");
-      postDiv.className = "post";
-
-      postDiv.innerHTML = `
-        <div class="post-user">${post.user.slice(0,6)}...${post.user.slice(-4)}</div>
-        <div class="post-content">${escapeHtml(post.content)}</div>
-        <div class="post-actions">
-          <span class="like-btn" data-id="${post.id}">👍 Like (<span class="like-count">${post.likes.length}</span>)</span>
-          <span class="comment-toggle-btn" data-id="${post.id}">💬 Comments (${post.comments.length})</span>
-        </div>
-        <div class="comments" id="comments-${post.id}" style="display:none;">
-          ${post.comments.map(c => `<div class="comment"><b>${c.user.slice(0,6)}...${c.user.slice(-4)}</b>: ${escapeHtml(c.text)}</div>`).join('')}
-          <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${post.id}" />
-        </div>
-      `;
-
-      container.appendChild(postDiv);
-    });
-
-    // Add event listeners for like/comment
-    document.querySelectorAll(".like-btn").forEach(btn => {
-      btn.onclick = () => toggleLike(btn.dataset.id);
-    });
-    document.querySelectorAll(".comment-toggle-btn").forEach(btn => {
-      btn.onclick = () => toggleComments(btn.dataset.id);
-    });
-    document.querySelectorAll(".comment-input").forEach(input => {
-      input.addEventListener("keypress", e => {
-        if (e.key === "Enter" && input.value.trim()) {
-          addComment(input.dataset.id, input.value.trim());
-          input.value = "";
-        }
-      });
-    });
-  }
-
-  // Toggle like
-  function toggleLike(postId) {
-    const user = getLoggedInWallet();
-    if (!user) return alert("Please login or create wallet first.");
-
-    const posts = loadPosts();
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
-    const likeIndex = post.likes.indexOf(user);
-    if (likeIndex > -1) {
-      post.likes.splice(likeIndex, 1);
-    } else {
-      post.likes.push(user);
+      const reader = new FileReader();
+      reader.onload = function () {
+        const profile = {
+          name,
+          password,
+          avatar: reader.result,
+        };
+        localStorage.setItem('drf_profile', JSON.stringify(profile));
+        alert("Profile saved successfully!");
+        window.location.href = "post.html";
+      };
+      reader.readAsDataURL(avatarInput.files[0]);
     }
 
-    savePosts(posts);
-    renderPosts();
-  }
-
-  // Toggle comments display
-  function toggleComments(postId) {
-    const commentsDiv = document.getElementById(`comments-${postId}`);
-    if (commentsDiv.style.display === "none") {
-      commentsDiv.style.display = "block";
-    } else {
-      commentsDiv.style.display = "none";
-    }
-  }
-
-  // Add comment
-  function addComment(postId, text) {
-    const user = getLoggedInWallet();
-    if (!user) return alert("Please login or create wallet first.");
-
-    const posts = loadPosts();
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
-    post.comments.push({ user, text });
-    savePosts(posts);
-    renderPosts();
-  }
-
-  // Create new post
-  function createPost() {
-    const user = getLoggedInWallet();
-    if (!user) return alert("Please login or create wallet first.");
-
-    const content = document.getElementById("postContent").value.trim();
-    if (!content) return alert("Cannot post empty content!");
-
-    const posts = loadPosts();
-    posts.push({
-      id: Date.now().toString(),
-      user,
-      content,
-      likes: [],
-      comments: []
-    });
-    savePosts(posts);
-
-    document.getElementById("postContent").value = "";
-    renderPosts();
-  }
-
-  // Initialization
-  function init() {
-    const user = getLoggedInWallet();
-    const walletInfoDiv = document.getElementById("walletInfo");
-    const contentArea = document.getElementById("contentArea");
-    const loginMessage = document.getElementById("loginMessage");
-
-    if (!user) {
-      walletInfoDiv.innerHTML = "";
-      contentArea.style.display = "none";
-      loginMessage.textContent = "Please create or login to your DRF Wallet first.";
-    } else {
-      walletInfoDiv.innerHTML = `Logged in as wallet: <span id="userAddress">${user}</span>`;
-      contentArea.style.display = "block";
-      loginMessage.textContent = "";
-      renderPosts();
-    }
-  }
-
-  document.getElementById("postButton").onclick = createPost;
-
-  window.onload = init;
-</script>
-
+    // If already saved, skip to posts
+    const existing = localStorage.getItem("drf_profile");
+    if (existing) window.location.href = "post.html";
+  </script>
 </body>
 </html>
