@@ -1,216 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Social</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; background:#f5f5f5; }
-  header { text-align: center; margin-bottom: 30px; }
-  .profile { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px #ccc; display: flex; align-items: center; gap: 15px; }
-  .profile img { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
-  .profile-info { flex-grow: 1; }
-  .profile-info h2 { margin: 0; }
-  .profile-info p { color: #666; margin-top: 5px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Social</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+    .post { background: #fff; margin: 16px auto; padding: 16px; border-radius: 8px; max-width: 600px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .post-header { display: flex; align-items: center; margin-bottom: 8px; }
+    .post-header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; }
+    .username { font-weight: bold; }
+    .post-text { margin: 12px 0; }
+    .post-media img, .post-media video { max-width: 100%; border-radius: 6px; }
+    .reaction-bar { margin-top: 10px; }
+    .reaction-btn { cursor: pointer; margin-right: 8px; }
+    .comments { margin-top: 10px; }
+    .comment-input input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; }
+    .comment { margin-top: 6px; font-size: 14px; }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-  .post { background: white; border-radius: 8px; box-shadow: 0 1px 5px #ccc; margin-bottom: 20px; padding: 15px; }
-  .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .post-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-  .post-header .username { font-weight: bold; }
-  .post-content { margin-bottom: 10px; }
-  .post-content img, .post-content video { max-width: 100%; border-radius: 6px; }
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-  .reaction-bar { display: flex; gap: 15px; margin-bottom: 10px; }
-  button.reaction-btn { background: #eee; border: none; padding: 5px 10px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-  button.reaction-btn:hover { background: #ddd; }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  .comments { background: #fafafa; padding: 10px; border-radius: 6px; }
-  .comment { margin-bottom: 8px; }
-  .comment-input input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
+    const userId = "CURRENT_USER_ID"; // Replace with actual auth logic
+    const postsContainer = document.createElement("div");
+    document.body.appendChild(postsContainer);
 
-  .loader { text-align:center; font-style: italic; color: #888; }
-</style>
-</head>
-<body>
-
-<header>
-  <h1>DRF Social</h1>
-  <div class="profile" id="profile">
-    <img src="" alt="Profile Picture" id="profilePic" />
-    <div class="profile-info">
-      <h2 id="profileUsername">Username</h2>
-      <p id="profileBio">Bio</p>
-    </div>
-  </div>
-</header>
-
-<main>
-  <div id="postsContainer"></div>
-  <div class="loader" id="postsLoader" style="display:none;">Loading posts...</div>
-</main>
-
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-  import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, updateDoc, arrayUnion, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
-
-  // Your Firebase config here:
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // Mock current logged-in user ID (replace with real auth uid if using Firebase Auth)
-  const currentUserId = "sampleUserId123"; // <-- change or fetch from auth in real app
-
-  // Load user profile
-  async function loadUserProfile(userId) {
-    const userDoc = await getDoc(doc(db, "users", userId));
-    if (!userDoc.exists()) {
-      document.getElementById("profileUsername").textContent = "User not found";
-      return;
-    }
-    const user = userDoc.data();
-    document.getElementById("profileUsername").textContent = user.username || "Unknown";
-    document.getElementById("profileBio").textContent = user.bio || "";
-    document.getElementById("profilePic").src = user.profilePictureURL || "https://via.placeholder.com/70?text=User";
-  }
-
-  // Render comments
-  function renderComments(comments) {
-    if (!comments || comments.length === 0) {
-      return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
-    }
-    return comments.map(c => `<div class="comment"><strong>${c.authorUsername}:</strong> ${c.text}</div>`).join("");
-  }
-
-  // Load posts for user
-  async function loadUserPosts(userId) {
-    const postsLoader = document.getElementById("postsLoader");
-    const postsContainer = document.getElementById("postsContainer");
-    postsLoader.style.display = "block";
-    postsContainer.innerHTML = "";
-
-    // Query posts by this user ordered by creation time desc
-    const postsQuery = query(
-      collection(db, "posts"),
-      where("authorId", "==", userId),
-      orderBy("createdAt", "desc")
-    );
-
-    const postsSnapshot = await getDocs(postsQuery);
-    if (postsSnapshot.empty) {
-      postsContainer.innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
-      postsLoader.style.display = "none";
-      return;
+    function renderComments(comments = []) {
+      if (comments.length === 0) return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
+      return comments.map(c => `<div class="comment"><strong>${c.username}:</strong> ${c.text}</div>`).join("");
     }
 
-    for (const docSnap of postsSnapshot.docs) {
-      const post = { id: docSnap.id, ...docSnap.data() };
+    async function loadUserPosts(uid) {
+      postsContainer.innerHTML = "<p>Loading posts...</p>";
+      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(postsQuery);
 
-      // Load comments for this post
-      const commentsSnapshot = await getDocs(collection(db, "posts", post.id, "comments"));
-      const comments = [];
-      for (const cdoc of commentsSnapshot.docs) {
-        const cdata = cdoc.data();
-        // Get author username for comment
-        const authorDoc = await getDoc(doc(db, "users", cdata.authorId));
-        comments.push({
-          text: cdata.text,
-          authorUsername: authorDoc.exists() ? authorDoc.data().username : "Unknown",
-        });
+      if (querySnapshot.empty) {
+        postsContainer.innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
+        return;
       }
 
-      // Count likes for this post (assuming likes stored in "likes" collection with postId and userId)
-      const likesQuery = query(collection(db, "likes"), where("postId", "==", post.id));
-      const likesSnapshot = await getDocs(likesQuery);
-      const likesCount = likesSnapshot.size;
+      postsContainer.innerHTML = "";
+      querySnapshot.forEach(async (docSnap) => {
+        const post = { id: docSnap.id, ...docSnap.data() };
+        const commentsSnapshot = await getDocs(collection(db, "posts", post.id, "comments"));
+        const comments = commentsSnapshot.docs.map(d => d.data());
 
-      // Build post HTML
-      const postHTML = `
-        <div class="post" id="post-${post.id}">
-          <div class="post-header">
-            <img src="${post.authorProfilePictureURL || 'https://via.placeholder.com/40?text=User'}" alt="User" />
-            <div class="username">${post.authorUsername || "Unknown"}</div>
+        const postHTML = `
+          <div class="post" id="post-${post.id}">
+            <div class="post-header">
+              <img src="${post.mediaType === 'video' ? 'https://via.placeholder.com/40?text=Video' : post.userProfilePic || 'https://via.placeholder.com/40?text=User'}" alt="User" />
+              <div class="username">${post.username}</div>
+            </div>
+            <div class="post-text">${post.text || ""}</div>
+            ${post.mediaUrl ? `
+              <div class="post-media">
+                ${post.mediaType === "video" ? `<video src="${post.mediaUrl}" controls></video>` : `<img src="${post.mediaUrl}" alt="Post Image" />`}
+              </div>
+            ` : ""}
+            <div class="reaction-bar">
+              <button class="reaction-btn" data-postid="${post.id}" data-reaction="like">👍 <span class="count">${(post.reactions && post.reactions.like) || 0}</span></button>
+            </div>
+            <div class="comments">
+              ${renderComments(comments)}
+              <div class="comment-input">
+                <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
+              </div>
+            </div>
           </div>
-          <div class="post-content">${post.content || ""}</div>
-          ${post.imageURL ? `<img src="${post.imageURL}" alt="Post Image" />` : ""}
-          ${post.videoURL ? `<video controls src="${post.videoURL}"></video>` : ""}
-          <div class="reaction-bar">
-            <button class="reaction-btn" data-postid="${post.id}">👍 Like (<span class="like-count">${likesCount}</span>)</button>
-          </div>
-          <div class="comments">${renderComments(comments)}</div>
-          <div class="comment-input">
-            <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
-          </div>
-        </div>
-      `;
+        `;
 
-      postsContainer.insertAdjacentHTML("beforeend", postHTML);
+        postsContainer.insertAdjacentHTML("beforeend", postHTML);
+      });
+
+      setTimeout(setupInteractionListeners, 1000);
     }
-    postsLoader.style.display = "none";
 
-    setupListeners();
-  }
+    async function handleReactionClick(event) {
+      const button = event.target.closest("button.reaction-btn");
+      if (!button) return;
+      const postId = button.getAttribute("data-postid");
+      const reactionType = button.getAttribute("data-reaction");
+      const postRef = doc(db, "posts", postId);
 
-  // Setup listeners for likes and comments
-  function setupListeners() {
-    // Like buttons
-    document.querySelectorAll("button.reaction-btn").forEach(btn => {
-      btn.addEventListener("click", async (e) => {
-        const postId = btn.getAttribute("data-postid");
-        if (!postId) return;
+      try {
+        const postSnap = await getDoc(postRef);
+        if (!postSnap.exists()) return;
 
-        // Add like if not already liked by this user
-        const likesRef = collection(db, "likes");
-        // Check if like exists (you might optimize this with real auth)
-        const likeQuery = query(likesRef, where("postId", "==", postId), where("userId", "==", currentUserId));
-        const likeSnap = await getDocs(likeQuery);
-        if (!likeSnap.empty) {
-          alert("You already liked this post!");
-          return;
-        }
+        const postData = postSnap.data();
+        const currentReactions = postData.reactions || {};
+        currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
 
-        // Add like document
-        await addDoc(likesRef, {
-          userId: currentUserId,
-          postId: postId,
-          createdAt: serverTimestamp(),
-        });
+        await updateDoc(postRef, { reactions: currentReactions });
+        button.querySelector(".count").textContent = currentReactions[reactionType];
+      } catch (err) {
+        alert("Failed to react: " + err.message);
+      }
+    }
 
-        // Update UI count immediately
-        const countSpan = btn.querySelector(".like-count");
-        countSpan.textContent = parseInt(countSpan.textContent) + 1;
-      });
-    });
+    async function handleCommentKeyup(event) {
+      if (event.key !== "Enter") return;
+      const input = event.target;
+      const commentText = input.value.trim();
+      if (!commentText) return;
+      const postId = input.getAttribute("data-postid");
 
-    // Comment inputs
-    document.querySelectorAll(".comment-input input").forEach(input => {
-      input.addEventListener("keyup", async (e) => {
-        if (e.key !== "Enter") return;
-        const commentText = input.value.trim();
-        if (!commentText) return;
-        const postId = input.getAttribute("data-postid");
-        if (!postId) return;
+      const currentUser = {
+        userId: userId,
+        username: "DemoUser" // Replace with actual username
+      };
 
-        // Add comment to Firestore
-        const commentsRef = collection(db, "posts", postId, "comments");
-
-        await addDoc(commentsRef, {
-          authorId: currentUserId,
+      try {
+        await addDoc(collection(db, "posts", postId, "comments"), {
+          userId: currentUser.userId,
+          username: currentUser.username,
           text: commentText,
-          createdAt: serverTimestamp(),
+          createdAt: Timestamp.now(),
         });
 
-        // Reload posts or append comment (simpler to reload)
+        const commentsDiv = input.closest(".comments");
+        commentsDiv.insertAdjacentHTML("beforeend", `<div class="comment"><strong>${currentUser.username}:</strong> ${commentText}</div>`);
         input.value = "";
-        await loadUserPosts(currentUserId);
+      } catch (err) {
+        alert("Failed to add comment: " + err.message);
+      }
+    }
+
+    function setupInteractionListeners() {
+      document.querySelectorAll("button.reaction-btn").forEach(btn => {
+        btn.removeEventListener("click", handleReactionClick);
+        btn.addEventListener("click", handleReactionClick);
       });
-    });
+      document.querySelectorAll(".comment-input input").forEach(input => {
+        input.removeEventListener("keyup", handleCommentKeyup);
+        input.addEventListener("keyup", handleCommentKeyup);
+      });
+    }
+
+    loadUserPosts(userId);
+  </script>
+</head>
+<body>
+</body>
+</html>
