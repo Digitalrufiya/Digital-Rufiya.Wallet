@@ -2,33 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mini Facebook - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    .post {
-      background:#fff; padding:10px; margin:10px 0; border-radius:10px;
-    }
-    .avatar {
-      width:30px; height:30px; border-radius:50%; vertical-align:middle;
-    }
-    .media {
-      max-width: 100%; margin-top: 10px; border-radius: 10px;
-    }
-    .like-btn, .comment-btn {
-      cursor: pointer; color: #0baf9a; margin-right: 15px; user-select:none;
-    }
-    .comments-section {
-      margin-top: 10px; padding-left: 40px; font-size: 14px;
-    }
-    .comment {
-      margin-bottom: 5px;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 3px;
-    }
-    .comment strong {
-      color: #0baf9a;
-    }
+    .reaction-btn { cursor:pointer; margin-right:10px; }
+    .comment-box { width:100%; padding:5px; margin-top:5px; }
   </style>
 </head>
 <body style="font-family:sans-serif;background:#e8f7f4;">
@@ -36,173 +15,102 @@
     <h2>DRF Wallet Mini Facebook</h2>
     <div id="profileInfo" style="margin-bottom:20px;text-align:center;"></div>
 
-    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea><br/>
-    <input type="file" id="mediaInput" accept="image/*,video/*" />
-    <small>Upload photo or video (max 3 minutes)</small><br/>
+    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
+    <input type="file" id="media" accept="image/*,video/*" style="margin-top:10px;" />
     <button onclick="submitPost()" style="margin-top:10px;padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Post</button>
+
+    <input type="text" id="searchInput" placeholder="Search posts..." onkeyup="loadPosts()" style="width:100%;margin:20px 0;padding:10px;border-radius:5px;border:1px solid #ccc;" />
 
     <h3 style="margin-top:30px;">Community Posts</h3>
     <div id="postFeed"></div>
+    <button id="loadMore" onclick="loadMorePosts()" style="margin-top:10px;padding:10px;background:#ccc;border:none;border-radius:5px;">Load More</button>
   </div>
 
   <script>
+    const scriptURL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
     const profile = JSON.parse(localStorage.getItem("drf_profile"));
     if (!profile) window.location.href = "profile.html";
 
     const profileInfo = document.getElementById("profileInfo");
     profileInfo.innerHTML = `<img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;" /><br><strong>${profile.name}</strong>`;
 
-    function submitPost() {
+    let allPosts = [];
+    let visibleCount = 5;
+
+    async function submitPost() {
       const content = document.getElementById("postContent").value.trim();
-      const mediaInput = document.getElementById("mediaInput");
+      const fileInput = document.getElementById("media");
+      const file = fileInput.files[0];
 
-      if (!content && mediaInput.files.length === 0) {
-        return alert("Please write something or upload a photo/video.");
-      }
+      if (!content && !file) return alert("Write something or upload media.");
 
-      if (mediaInput.files.length > 0) {
-        const file = mediaInput.files[0];
-        if (file.type.startsWith("video/")) {
-          // Check video duration (max 3 minutes)
-          const url = URL.createObjectURL(file);
-          const video = document.createElement("video");
-          video.preload = "metadata";
-          video.src = url;
-          video.onloadedmetadata = () => {
-            URL.revokeObjectURL(url);
-            if (video.duration > 180) { // 180 seconds = 3 minutes
-              alert("Video duration exceeds 3 minutes limit.");
-              return;
-            } else {
-              readFileAndSavePost(file, content);
-            }
-          };
-        } else {
-          // Image or other media, no duration check needed
-          readFileAndSavePost(file, content);
-        }
+      const formData = new FormData();
+      formData.append("name", profile.name);
+      formData.append("avatar", profile.avatar);
+      formData.append("content", content);
+      formData.append("timestamp", new Date().toLocaleString());
+      if (file) formData.append("media", file);
+
+      const res = await fetch(scriptURL, {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      if (result.success) {
+        document.getElementById("postContent").value = "";
+        fileInput.value = "";
+        loadAllPosts();
       } else {
-        // Text only post
-        savePost(null, content);
+        alert("Failed to post. Try again.");
       }
     }
 
-    function readFileAndSavePost(file, content) {
-      const reader = new FileReader();
-      reader.onload = function () {
-        savePost(reader.result, content, file.type);
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function savePost(mediaData, content, mediaType) {
-      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
-
-      const newPost = {
-        id: Date.now(),
-        author: profile.name,
-        avatar: profile.avatar,
-        content,
-        mediaData: mediaData || null,
-        mediaType: mediaType || null,
-        timestamp: new Date().toLocaleString(),
-        likes: 0,
-        comments: []
-      };
-
-      posts.unshift(newPost);
-      localStorage.setItem("drf_posts", JSON.stringify(posts));
-
-      document.getElementById("postContent").value = "";
-      document.getElementById("mediaInput").value = "";
+    async function loadAllPosts() {
+      const res = await fetch(scriptURL);
+      allPosts = await res.json();
       renderPosts();
     }
 
     function renderPosts() {
       const postFeed = document.getElementById("postFeed");
-      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const displayPosts = allPosts.reverse().filter(p =>
+        p.name.toLowerCase().includes(search) || p.content.toLowerCase().includes(search)
+      ).slice(0, visibleCount);
 
-      postFeed.innerHTML = posts.map(p => `
-        <div class="post" data-id="${p.id}">
-          <img src="${p.avatar}" class="avatar" />
-          <strong>${p.author}</strong><br/>
-          <p>${escapeHtml(p.content)}</p>
-          ${renderMedia(p.mediaData, p.mediaType)}
-          <small>${p.timestamp}</small><br/>
-          <span class="like-btn" onclick="toggleLike(${p.id})">👍 Like (${p.likes})</span>
-          <span class="comment-btn" onclick="toggleComments(${p.id})">💬 Comment (${p.comments.length})</span>
-          <div class="comments-section" id="comments-${p.id}" style="display:none;">
-            ${renderComments(p.comments, p.id)}
-            <input type="text" id="comment-input-${p.id}" placeholder="Write a comment..." style="width:80%;padding:5px;margin-top:5px;" />
-            <button onclick="addComment(${p.id})" style="padding:5px 10px;background:#0baf9a;color:#fff;border:none;border-radius:3px;">Add</button>
+      postFeed.innerHTML = displayPosts.map((p, i) => `
+        <div style="background:#fff;padding:10px;margin:10px 0;border-radius:10px;">
+          <img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;" />
+          <strong>${p.name}</strong><br/>
+          <p>${p.content}</p>
+          ${p.media ? (p.media.endsWith('.mp4') ?
+            `<video src="${p.media}" controls style="max-width:100%;border-radius:10px;"></video>` :
+            `<img src="${p.media}" style="max-width:100%;border-radius:10px;" />`) : ''}
+          <small>${p.timestamp}</small>
+          <div>
+            <span class="reaction-btn" onclick="reactToPost(${i}, 'like')">👍 Like</span>
+            <span class="reaction-btn" onclick="reactToPost(${i}, 'love')">❤️ Love</span>
+            <div><input type="text" class="comment-box" placeholder="Add a comment..." onkeypress="if(event.key==='Enter') commentOnPost(${i}, this.value)"></div>
           </div>
         </div>
       `).join("");
     }
 
-    function renderMedia(mediaData, mediaType) {
-      if (!mediaData) return "";
-      if (mediaType.startsWith("image/")) {
-        return `<img src="${mediaData}" class="media" alt="Posted image" />`;
-      }
-      if (mediaType.startsWith("video/")) {
-        return `<video controls class="media" src="${mediaData}"></video>`;
-      }
-      return "";
+    function loadMorePosts() {
+      visibleCount += 5;
+      renderPosts();
     }
 
-    function toggleLike(postId) {
-      let posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
-      const idx = posts.findIndex(p => p.id === postId);
-      if (idx !== -1) {
-        posts[idx].likes++;
-        localStorage.setItem("drf_posts", JSON.stringify(posts));
-        renderPosts();
-      }
+    function reactToPost(index, reaction) {
+      alert(`You reacted with ${reaction} to post #${index + 1}`);
     }
 
-    function toggleComments(postId) {
-      const commentsDiv = document.getElementById(`comments-${postId}`);
-      if (commentsDiv.style.display === "none") {
-        commentsDiv.style.display = "block";
-      } else {
-        commentsDiv.style.display = "none";
-      }
+    function commentOnPost(index, comment) {
+      if (!comment.trim()) return;
+      alert(`You commented: "${comment}" on post #${index + 1}`);
     }
 
-    function addComment(postId) {
-      const input = document.getElementById(`comment-input-${postId}`);
-      const commentText = input.value.trim();
-      if (!commentText) return alert("Please write a comment.");
-
-      let posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
-      const idx = posts.findIndex(p => p.id === postId);
-      if (idx !== -1) {
-        posts[idx].comments.push({
-          author: profile.name,
-          avatar: profile.avatar,
-          text: commentText,
-          timestamp: new Date().toLocaleString()
-        });
-        localStorage.setItem("drf_posts", JSON.stringify(posts));
-        input.value = "";
-        renderPosts();
-        toggleComments(postId); // Keep comments visible after adding
-      }
-    }
-
-    // Helper function to escape HTML in posts
-    function escapeHtml(text) {
-      if (!text) return "";
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    renderPosts();
+    loadAllPosts();
   </script>
 </body>
 </html>
