@@ -1,128 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Post Feed</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Facebook - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body style="font-family:sans-serif; background:#f8f9fa;">
-  <div style="max-width:600px;margin:20px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.05);">
-    <h2>Welcome to DRF Social Feed</h2>
-    <p id="walletDisplay"></p>
+<body style="font-family:sans-serif;background:#e8f7f4;">
+  <div style="max-width:600px;margin:auto;padding:20px;">
+    <h2>DRF Wallet Mini Facebook</h2>
+    <div id="profileInfo" style="margin-bottom:20px;text-align:center;"></div>
 
-    <!-- Post form -->
-    <textarea id="postText" placeholder="What's on your mind?" style="width:100%;padding:10px;margin:10px 0;"></textarea>
-    <input type="file" id="media" accept="image/*,video/*" style="margin:10px 0;">
-    <button onclick="submitPost()" style="padding:10px 20px;background:#0baf9a;color:white;border:none;border-radius:5px;">Post</button>
+    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
+    <button onclick="submitPost()" style="margin-top:10px;padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Post</button>
 
-    <hr style="margin:20px 0">
-
-    <div id="postContainer"></div>
+    <h3 style="margin-top:30px;">Community Posts</h3>
+    <div id="postFeed"></div>
   </div>
 
   <script>
-    // Load wallet and profile
-    const wallet = localStorage.getItem("drf_active_wallet");
-    const profile = JSON.parse(localStorage.getItem("drf_profile") || '{}');
-    if (!wallet || !profile.name || !profile.avatar) {
-      alert("Please connect wallet and create a profile first.");
-      window.location.href = "profile.html";
-    }
-    document.getElementById("walletDisplay").innerText = `Logged in as ${profile.name} (${wallet})`;
+    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    if (!profile) window.location.href = "profile.html";
+
+    const profileInfo = document.getElementById("profileInfo");
+    profileInfo.innerHTML = `<img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;" /><br><strong>${profile.name}</strong>`;
 
     function submitPost() {
-      const text = document.getElementById("postText").value.trim();
-      const fileInput = document.getElementById("media");
-      const file = fileInput.files[0];
+      const content = document.getElementById("postContent").value.trim();
+      if (!content) return alert("Please write something.");
 
-      if (!text && !file) {
-        alert("Please enter text or select media to post.");
-        return;
-      }
+      const post = {
+        author: profile.name,
+        avatar: profile.avatar,
+        content,
+        timestamp: new Date().toLocaleString(),
+      };
 
-      if (file && file.type.startsWith('video')) {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = function() {
-          window.URL.revokeObjectURL(video.src);
-          if (video.duration > 180) {
-            alert("Video must be under 3 minutes.");
-            return;
-          } else {
-            readAndSavePost();
-          }
-        }
-        video.src = URL.createObjectURL(file);
-      } else {
-        readAndSavePost();
-      }
-
-      function readAndSavePost() {
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function() {
-            savePost(text, reader.result, file.type);
-          };
-          reader.readAsDataURL(file);
-        } else {
-          savePost(text, null, null);
-        }
-      }
-
-      function savePost(text, mediaData, mediaType) {
-        const posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
-        posts.unshift({
-          name: profile.name,
-          avatar: profile.avatar,
-          text,
-          media: mediaData,
-          type: mediaType,
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem("drf_posts", JSON.stringify(posts));
-        document.getElementById("postText").value = "";
-        fileInput.value = "";
-        loadPosts();
-      }
+      let posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+      posts.unshift(post);
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      document.getElementById("postContent").value = "";
+      renderPosts();
     }
 
-    function loadPosts() {
-      const posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
-      const container = document.getElementById("postContainer");
-      container.innerHTML = "";
-
-      posts.forEach(post => {
-        const div = document.createElement("div");
-        div.style = "text-align:left;margin:20px 0;padding:10px;border:1px solid #ccc;border-radius:10px;";
-
-        div.innerHTML = `
-          <div style="display:flex;align-items:center;margin-bottom:10px;">
-            <img src="${post.avatar}" style="width:40px;height:40px;border-radius:50%;margin-right:10px;">
-            <strong>${post.name}</strong>
-          </div>
-          <p>${post.text}</p>
-          ${post.media ? renderMedia(post.media, post.type) : ""}
-          <div style="margin-top:10px;">
-            <button style="margin-right:10px;">❤️ Like</button>
-            <button>💬 Comment</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
+    function renderPosts() {
+      const postFeed = document.getElementById("postFeed");
+      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+      postFeed.innerHTML = posts.map(p => `
+        <div style="background:#fff;padding:10px;margin:10px 0;border-radius:10px;">
+          <img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;" />
+          <strong>${p.author}</strong><br/>
+          <p>${p.content}</p>
+          <small>${p.timestamp}</small>
+        </div>
+      `).join("");
     }
 
-    function renderMedia(data, type) {
-      if (type.startsWith("image")) {
-        return `<img src="${data}" style="max-width:100%;border-radius:10px;margin-top:10px;">`;
-      } else if (type.startsWith("video")) {
-        return `<video src="${data}" controls style="max-width:100%;border-radius:10px;margin-top:10px;"></video>`;
-      } else {
-        return "";
-      }
-    }
-
-    loadPosts();
+    renderPosts();
   </script>
 </body>
 </html>
