@@ -1,198 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Social</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-    header { background: #222; color: #fff; padding: 1em; text-align: center; }
-    #postForm { background: #fff; padding: 1em; margin: 1em auto; width: 90%; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    textarea, input[type="file"] { width: 100%; margin-top: 10px; }
-    button { margin-top: 10px; padding: 0.5em 1em; cursor: pointer; }
-    .post { background: #fff; margin: 1em auto; padding: 1em; width: 90%; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5em; }
-    .post-header img { width: 40px; height: 40px; border-radius: 50%; }
-    .post-text { margin: 1em 0; }
-    .post-media img, .post-media video { max-width: 100%; border-radius: 8px; }
-    .reaction-bar { margin: 1em 0; }
-    .comments { margin-top: 1em; }
-    .comment-input input { width: 100%; margin-top: 0.5em; }
-    .comment { padding: 0.25em 0; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Social DApp</title>
+<style>
+  /* Basic styles */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f0f2f5;
+    color: #333;
+  }
+  header {
+    background: #4267B2;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+  }
+  main {
+    max-width: 900px;
+    margin: 1rem auto;
+    background: white;
+    padding: 1rem;
+    border-radius: 6px;
+  }
+  input, textarea, button {
+    font-size: 1rem;
+    margin: 0.25rem 0;
+    padding: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  button {
+    background: #4267B2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background: #a0b4db;
+    cursor: not-allowed;
+  }
+  .post, .comment {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+  .post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .post-header img {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    object-fit: cover;
+  }
+  .username {
+    font-weight: bold;
+  }
+  .post-content {
+    margin-top: 0.5rem;
+  }
+  .post-media img, .post-media video {
+    max-width: 100%;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+  }
+  .comments-section {
+    margin-top: 1rem;
+    border-top: 1px solid #ccc;
+    padding-top: 0.5rem;
+  }
+  .comment {
+    background: #eee;
+  }
+  .reaction-bar {
+    margin-top: 0.5rem;
+  }
+  .reaction-bar button {
+    margin-right: 0.5rem;
+    background: #e4e6eb;
+    color: #050505;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+  }
+  .reaction-bar button.liked {
+    background: #4267B2;
+    color: white;
+  }
+  #wallet-section {
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 1rem;
+  }
+</style>
 </head>
 <body>
 
 <header>
-  <h1>DRF Social</h1>
+  <h1>DRF Social DApp</h1>
 </header>
 
-<div id="postForm">
-  <h2>Create a Post</h2>
-  <textarea id="postContent" placeholder="What's on your mind?" rows="3"></textarea><br>
-  <input type="file" id="mediaInput" accept="image/*,video/*"><br>
-  <button onclick="submitPost()">Post</button>
-  <hr>
-</div>
+<main>
+  <section id="wallet-section">
+    <h2>Wallet</h2>
+    <div id="wallet-controls">
+      <button id="btnCreateWallet">Create New Wallet</button>
+      <button id="btnImportWallet">Import Wallet (Private Key)</button>
+    </div>
+    <div id="wallet-info" style="display:none;">
+      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
+      <p><strong>Balance:</strong> <span id="walletBalance"></span> ETH</p>
+      <button id="btnDisconnect">Disconnect Wallet</button>
+    </div>
+    <div id="wallet-import-section" style="display:none; margin-top:1rem;">
+      <textarea id="privateKeyInput" placeholder="Paste your private key here"></textarea>
+      <button id="btnImportPK">Import</button>
+      <button id="btnCancelImport">Cancel</button>
+    </div>
+  </section>
 
-<div id="postsContainer"></div>
-<div id="postsLoader" style="text-align:center; display:none;">Loading...</div>
+  <section id="profile-section" style="display:none;">
+    <h2>Your Profile</h2>
+    <input type="text" id="profileUsername" placeholder="Username (required)" />
+    <input type="text" id="profileDisplayName" placeholder="Display Name" />
+    <input type="text" id="profileBio" placeholder="Bio" />
+    <input type="text" id="profileAvatar" placeholder="Avatar URL" />
+    <button id="btnSaveProfile">Save Profile</button>
+  </section>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <section id="newpost-section" style="display:none; margin-top:2rem;">
+    <h2>Create a Post</h2>
+    <textarea id="postContent" placeholder="Write something..."></textarea>
+    <input type="file" id="postMedia" accept="image/*,video/*" />
+    <button id="btnPost" disabled>Post</button>
+  </section>
+
+  <section id="feed-section" style="margin-top:2rem;">
+    <h2>Feed</h2>
+    <div id="postsContainer">Loading posts...</div>
+    <button id="btnLoadMore" style="margin-top:1rem;">Load More</button>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script>
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-  const storage = firebase.storage();
-  const auth = firebase.auth();
-  let CURRENT_USER_ID = "demoUser";
+(async () => {
 
-  async function submitPost() {
-    const content = document.getElementById("postContent").value.trim();
-    const fileInput = document.getElementById("mediaInput");
-    const file = fileInput.files[0];
+  // ==== CONFIGURATION ====
+  const INFURA_PROJECT_ID = "YOUR_INFURA_PROJECT_ID"; // Replace with your Infura project ID
+  const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS";   // Replace with your deployed DRF Social contract address
+  const CONTRACT_ABI = [/* Your Contract ABI JSON here */]; // Replace with your contract ABI
 
-    if (!content && !file) return alert("Write something or upload an image/video.");
+  // For IPFS upload (using public IPFS gateway here for demo)
+  async function uploadToIPFS(file) {
+    // Simple anonymous upload via Pinata public API or Infura IPFS API recommended for production
+    // Here we just simulate for demo: use real upload for your project
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Normally you upload reader.result to IPFS here
+        resolve("ipfs://" + "QmFakeHashForDemo" + file.name); // Fake IPFS hash
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
 
-    const postData = {
-      userId: CURRENT_USER_ID,
-      username: "DemoUser",
-      text: content,
-      createdAt: firebase.firestore.Timestamp.now(),
-      mediaUrl: "",
-      mediaType: "",
-      reactions: {}
+  // ==== STATE ====
+  let provider;
+  let signer;
+  let wallet;
+  let contract;
+  let userAddress = null;
+  let userProfile = null;
+  let posts = [];
+  let postsPage = 0;
+  const POSTS_PER_PAGE = 5;
+
+  // ==== DOM ELEMENTS ====
+  const walletControls = document.getElementById("wallet-controls");
+  const walletInfo = document.getElementById("wallet-info");
+  const walletAddressEl = document.getElementById("walletAddress");
+  const walletBalanceEl = document.getElementById("walletBalance");
+  const btnDisconnect = document.getElementById("btnDisconnect");
+
+  const btnCreateWallet = document.getElementById("btnCreateWallet");
+  const btnImportWallet = document.getElementById("btnImportWallet");
+  const walletImportSection = document.getElementById("wallet-import-section");
+  const privateKeyInput = document.getElementById("privateKeyInput");
+  const btnImportPK = document.getElementById("btnImportPK");
+  const btnCancelImport = document.getElementById("btnCancelImport");
+
+  const profileSection = document.getElementById("profile-section");
+  const profileUsernameInput = document.getElementById("profileUsername");
+  const profileDisplayNameInput = document.getElementById("profileDisplayName");
+  const profileBioInput = document.getElementById("profileBio");
+  const profileAvatarInput = document.getElementById("profileAvatar");
+  const btnSaveProfile = document.getElementById("btnSaveProfile");
+
+  const newPostSection = document.getElementById("newpost-section");
+  const postContentInput = document.getElementById("postContent");
+  const postMediaInput = document.getElementById("postMedia");
+  const btnPost = document.getElementById("btnPost");
+
+  const postsContainer = document.getElementById("postsContainer");
+  const btnLoadMore = document.getElementById("btnLoadMore");
+
+  // ==== HELPERS ====
+
+  function saveProfileToLocal() {
+    const profile = {
+      username: profileUsernameInput.value.trim(),
+      displayName: profileDisplayNameInput.value.trim(),
+      bio: profileBioInput.value.trim(),
+      avatar: profileAvatarInput.value.trim(),
     };
-
-    try {
-      if (file) {
-        const storageRef = storage.ref(`posts/${Date.now()}_${file.name}`);
-        await storageRef.put(file);
-        postData.mediaUrl = await storageRef.getDownloadURL();
-        postData.mediaType = file.type.startsWith("video") ? "video" : "image";
-      }
-      await db.collection("posts").add(postData);
-      alert("Post submitted!");
-      document.getElementById("postContent").value = "";
-      document.getElementById("mediaInput").value = "";
-      loadUserPosts(CURRENT_USER_ID);
-    } catch (err) {
-      alert("Error submitting post: " + err.message);
-    }
-  }
-
-  function renderReactions(post) {
-    return `
-      <button class="reaction-btn" data-postid="${post.id}" data-reaction="like">
-        👍 <span class="count">${post.reactions?.like || 0}</span>
-      </button>
-    `;
-  }
-
-  function renderComments(comments = []) {
-    if (comments.length === 0) return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
-    return comments.map(c => `<div class="comment"><strong>${c.username}:</strong> ${c.text}</div>`).join("");
-  }
-
-  async function loadUserPosts(uid) {
-    document.getElementById("postsLoader").style.display = "block";
-    document.getElementById("postsContainer").innerHTML = "";
-
-    const snapshot = await db.collection("posts").where("userId", "==", uid).orderBy("createdAt", "desc").get();
-    if (snapshot.empty) {
-      document.getElementById("postsContainer").innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
-      document.getElementById("postsLoader").style.display = "none";
-      return;
-    }
-
-    for (const doc of snapshot.docs) {
-      const post = { id: doc.id, ...doc.data() };
-      const commentsSnapshot = await db.collection("posts").doc(post.id).collection("comments").get();
-      const comments = commentsSnapshot.docs.map(d => d.data());
-      const postHTML = `
-        <div class="post" id="post-${post.id}">
-          <div class="post-header">
-            <img src="https://via.placeholder.com/40?text=User" alt="User" />
-            <div class="username">${post.username}</div>
-          </div>
-          <div class="post-text">${post.text || ""}</div>
-          ${post.mediaUrl ? `
-            <div class="post-media">
-              ${post.mediaType === "video" ? `<video src="${post.mediaUrl}" controls></video>` : `<img src="${post.mediaUrl}" alt="Post Image" />`}
-            </div>` : ""}
-          <div class="reaction-bar">
-            ${renderReactions(post)}
-          </div>
-          <div class="comments">
-            ${renderComments(comments)}
-            <div class="comment-input">
-              <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById("postsContainer").insertAdjacentHTML("beforeend", postHTML);
-    }
-    document.getElementById("postsLoader").style.display = "none";
-    setupInteractionListeners();
-  }
-
-  async function handleReactionClick(event) {
-    const button = event.target.closest("button.reaction-btn");
-    if (!button) return;
-    const postId = button.getAttribute("data-postid");
-    const reactionType = button.getAttribute("data-reaction");
-    const postRef = db.collection("posts").doc(postId);
-    const postSnap = await postRef.get();
-    if (!postSnap.exists) return;
-    const postData = postSnap.data();
-    const currentReactions = postData.reactions || {};
-    currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
-    await postRef.update({ reactions: currentReactions });
-    button.querySelector(".count").textContent = currentReactions[reactionType];
-  }
-
-  async function handleCommentKeyup(event) {
-    if (event.key !== "Enter") return;
-    const input = event.target;
-    const commentText = input.value.trim();
-    const postId = input.getAttribute("data-postid");
-    if (!commentText || !postId) return;
-    const commentRef = db.collection("posts").doc(postId).collection("comments");
-    await commentRef.add({
-      userId: CURRENT_USER_ID,
-      username: "DemoUser",
-      text: commentText,
-      createdAt: firebase.firestore.Timestamp.now()
-    });
-    const commentsDiv = input.closest(".comments");
-    commentsDiv.insertAdjacentHTML("beforeend", `<div class="comment"><strong>DemoUser:</strong> ${commentText}</div>`);
-    input.value = "";
-  }
-
-  function setupInteractionListeners() {
-    document.querySelectorAll("button.reaction-btn").forEach(btn => {
-      btn.addEventListener("click", handleReactionClick);
-    });
-    document.querySelectorAll(".comment-input input").forEach(input => {
-      input.addEventListener("keyup", handleCommentKeyup);
-    });
-  }
-
-  window.onload = () => {
-    loadUserPosts(CURRENT_USER_ID);
-  };
-</script>
-</body>
-</html>
+    localStorage.setItem("drfProfile_" + user
