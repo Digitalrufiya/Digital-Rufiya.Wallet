@@ -2,127 +2,201 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Gaming Trade</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Token Trade</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
-      background: #0d1117;
-      color: #fff;
-      margin: 0;
-      padding: 20px;
+      background: #f0fcf9;
       text-align: center;
+      padding: 20px;
     }
-    .container {
-      background: #161b22;
+    #container {
+      max-width: 420px;
+      margin: auto;
+      background: white;
       padding: 20px;
       border-radius: 12px;
-      max-width: 400px;
-      margin: auto;
+      box-shadow: 0 0 10px #aaa;
     }
     input, select, button {
       padding: 10px;
       margin: 10px 0;
       width: 100%;
-      font-size: 16px;
+      font-size: 1rem;
       border-radius: 6px;
-      border: none;
+      border: 1px solid #ccc;
     }
     button {
-      background: #1f6feb;
+      background-color: #0baf9a;
       color: white;
+      border: none;
+      cursor: pointer;
     }
-    button:hover {
-      background: #388bfd;
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
     }
-    canvas {
-      background: #fff;
-      border-radius: 10px;
-      margin-top: 30px;
-      width: 100%;
+    #txStatus {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #0baf9a;
     }
-    #drfResult {
-      font-size: 1.1rem;
+    a.bsc-link {
+      display: inline-block;
       margin-top: 10px;
-      color: #0f0;
+      color: #0baf9a;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <h1>DRF Gaming Trade</h1>
-  <div class="container">
-    <select id="tokenSelect">
-      <option value="USDT">USDT</option>
-      <option value="USDC">USDC</option>
-    </select>
-    <input type="number" id="usdAmount" placeholder="Enter USDT/USDC amount" />
-    <p>Rate: 1 USD = 15.42 DRF</p>
-    <p id="drfResult">DRF Received: 0</p>
-    <button onclick="calculate()">Calculate</button>
-    <button onclick="confirmTrade()">Confirm Trade</button>
+
+  <div id="container">
+    <h2>Buy DRF Tokens with USDC</h2>
+    
+    <button id="connectButton">Connect Wallet</button>
+
+    <p>Your Wallet Address:</p>
+    <p id="walletAddress">Not connected</p>
+
+    <p>Your Balances:</p>
+    <p>USDC: <span id="usdcBalance">0.00</span></p>
+    <p>DRF: <span id="drfBalance">0.00</span></p>
+
+    <label for="usdcAmount">Amount of USDC to spend:</label>
+    <input type="number" id="usdcAmount" min="0" step="0.01" placeholder="Enter USDC amount" />
+
+    <button id="buyButton" disabled>Buy DRF Tokens</button>
+
+    <div id="txStatus"></div>
+    <a id="bscScanTx" class="bsc-link" href="#" target="_blank" style="display:none;">View Transaction on BscScan</a>
   </div>
 
-  <h2>Simulated DRF Chart</h2>
-  <canvas id="chart" height="200"></canvas>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const fixedRate = 15.42;
+    // Token & contract addresses
+    const DRF_TOKEN_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDC_TOKEN_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const BUY_CONTRACT_ADDRESS = "0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7";
 
-    function calculate() {
-      const amount = parseFloat(document.getElementById("usdAmount").value);
-      if (!amount || amount <= 0) return alert("Enter valid amount");
-      const drf = amount * fixedRate;
-      document.getElementById("drfResult").innerText = `DRF Received: ${drf.toFixed(2)}`;
-    }
+    // ABI snippets needed
+    const erc20ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)"
+    ];
+    const buyContractABI = [
+      "function buyDRF(uint256 usdcAmount) external"
+    ];
 
-    function confirmTrade() {
-      const token = document.getElementById("tokenSelect").value;
-      const amount = parseFloat(document.getElementById("usdAmount").value);
-      if (!amount || amount <= 0) return alert("Enter a valid amount");
-      const drf = (amount * fixedRate).toFixed(2);
-      alert(`Trade confirmed:\n${amount} ${token} → ${drf} DRF\n(This is a simulation mode)`);
-    }
+    let provider, signer, userAddress;
+    let usdcContract, buyContract;
 
-    // Simulated Chart
-    const ctx = document.getElementById('chart').getContext('2d');
-    let labels = [], data = [], basePrice = 15.42;
+    const connectBtn = document.getElementById("connectButton");
+    const walletAddressEl = document.getElementById("walletAddress");
+    const usdcBalanceEl = document.getElementById("usdcBalance");
+    const drfBalanceEl = document.getElementById("drfBalance");
+    const usdcAmountInput = document.getElementById("usdcAmount");
+    const buyButton = document.getElementById("buyButton");
+    const txStatus = document.getElementById("txStatus");
+    const bscScanTxLink = document.getElementById("bscScanTx");
 
-    for (let i = 0; i < 30; i++) {
-      labels.push(`T-${30 - i}`);
-      data.push(basePrice + (Math.random() - 0.5) * 0.2);
-    }
+    connectBtn.onclick = connectWallet;
+    buyButton.onclick = buyDRF;
 
-    const chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'DRF Price Simulated',
-          data: data,
-          borderColor: 'lime',
-          backgroundColor: 'rgba(0,255,0,0.1)',
-          tension: 0.3
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            suggestedMin: 15.2,
-            suggestedMax: 15.7
-          }
-        }
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("MetaMask or another Web3 wallet is required.");
+        return;
       }
-    });
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
 
-    setInterval(() => {
-      labels.shift();
-      data.shift();
-      labels.push(`T-${Math.floor(Math.random()*100)}`);
-      data.push(basePrice + (Math.random() - 0.5) * 0.2);
-      chart.update();
-    }, 5000);
+        usdcContract = new ethers.Contract(USDC_TOKEN_ADDRESS, erc20ABI, signer);
+        buyContract = new ethers.Contract(BUY_CONTRACT_ADDRESS, buyContractABI, signer);
+
+        walletAddressEl.textContent = userAddress;
+        connectBtn.textContent = "Wallet Connected";
+
+        await updateBalances();
+        buyButton.disabled = false;
+        txStatus.textContent = "";
+        bscScanTxLink.style.display = "none";
+      } catch (err) {
+        alert("Failed to connect wallet: " + err.message);
+      }
+    }
+
+    async function updateBalances() {
+      try {
+        // Get decimals to format balances properly
+        const usdcDecimals = await usdcContract.decimals();
+        const drfDecimals = 18; // DRF token typically 18 decimals, adjust if needed
+
+        const rawUsdcBal = await usdcContract.balanceOf(userAddress);
+        const rawDrfBal = await (new ethers.Contract(DRF_TOKEN_ADDRESS, erc20ABI, provider)).balanceOf(userAddress);
+
+        const usdcBal = ethers.utils.formatUnits(rawUsdcBal, usdcDecimals);
+        const drfBal = ethers.utils.formatUnits(rawDrfBal, drfDecimals);
+
+        usdcBalanceEl.textContent = parseFloat(usdcBal).toFixed(4);
+        drfBalanceEl.textContent = parseFloat(drfBal).toFixed(4);
+      } catch (err) {
+        console.error("Error updating balances:", err);
+      }
+    }
+
+    async function buyDRF() {
+      const usdcAmount = usdcAmountInput.value;
+      if (!usdcAmount || isNaN(usdcAmount) || Number(usdcAmount) <= 0) {
+        alert("Please enter a valid USDC amount.");
+        return;
+      }
+
+      buyButton.disabled = true;
+      txStatus.textContent = "Checking allowance...";
+
+      try {
+        const usdcDecimals = await usdcContract.decimals();
+        const amountInWei = ethers.utils.parseUnits(usdcAmount, usdcDecimals);
+
+        // Check allowance
+        const allowance = await usdcContract.allowance(userAddress, BUY_CONTRACT_ADDRESS);
+
+        if (allowance.lt(amountInWei)) {
+          txStatus.textContent = "Approving USDC spending...";
+          const approveTx = await usdcContract.approve(BUY_CONTRACT_ADDRESS, amountInWei);
+          await approveTx.wait();
+          txStatus.textContent = "USDC approved!";
+        }
+
+        txStatus.textContent = "Sending buy transaction...";
+        const tx = await buyContract.buyDRF(amountInWei);
+        txStatus.textContent = "Transaction sent! Waiting for confirmation...";
+        const receipt = await tx.wait();
+
+        txStatus.textContent = "Transaction confirmed!";
+
+        bscScanTxLink.href = `https://bscscan.com/tx/${receipt.transactionHash}`;
+        bscScanTxLink.style.display = "inline";
+
+        await updateBalances();
+
+      } catch (err) {
+        console.error(err);
+        txStatus.textContent = "Transaction failed: " + (err.data?.message || err.message || err);
+      } finally {
+        buyButton.disabled = false;
+      }
+    }
   </script>
+
 </body>
 </html>
