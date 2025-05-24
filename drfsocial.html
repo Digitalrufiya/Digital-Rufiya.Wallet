@@ -2,225 +2,203 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Social DApp</title>
+<title>DRF Wallet Mini Facebook</title>
 <style>
-  /* Basic styles */
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0; padding: 0;
-    background: #f0f2f5;
-    color: #333;
-  }
-  header {
-    background: #4267B2;
-    color: white;
-    padding: 1rem;
-    text-align: center;
-  }
-  main {
-    max-width: 900px;
-    margin: 1rem auto;
-    background: white;
-    padding: 1rem;
-    border-radius: 6px;
-  }
-  input, textarea, button {
-    font-size: 1rem;
-    margin: 0.25rem 0;
-    padding: 0.5rem;
-    width: 100%;
-    box-sizing: border-box;
-  }
-  button {
-    background: #4267B2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  button:disabled {
-    background: #a0b4db;
-    cursor: not-allowed;
-  }
-  .post, .comment {
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    padding: 1rem;
-  }
-  .post-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-  .post-header img {
-    width: 40px; height: 40px;
-    border-radius: 50%;
-    margin-right: 0.75rem;
-    object-fit: cover;
-  }
-  .username {
-    font-weight: bold;
-  }
-  .post-content {
-    margin-top: 0.5rem;
-  }
-  .post-media img, .post-media video {
-    max-width: 100%;
-    border-radius: 6px;
-    margin-top: 0.5rem;
-  }
-  .comments-section {
-    margin-top: 1rem;
-    border-top: 1px solid #ccc;
-    padding-top: 0.5rem;
-  }
-  .comment {
-    background: #eee;
-  }
-  .reaction-bar {
-    margin-top: 0.5rem;
-  }
-  .reaction-bar button {
-    margin-right: 0.5rem;
-    background: #e4e6eb;
-    color: #050505;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-  }
-  .reaction-bar button.liked {
-    background: #4267B2;
-    color: white;
-  }
-  #wallet-section {
-    margin-bottom: 1rem;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 1rem;
-  }
+  body { font-family: Arial, sans-serif; background:#f7f7f7; max-width:600px; margin:20px auto; padding:10px; }
+  #posts { margin-top:20px; }
+  .post { background:#fff; padding:10px; margin-bottom:15px; border-radius:5px; box-shadow:0 0 5px #ccc; }
+  .post-user { font-weight:bold; }
+  .post-content { margin:10px 0; white-space: pre-wrap; }
+  .post-actions { font-size:14px; color:#555; cursor:pointer; user-select:none; }
+  .post-actions span { margin-right:15px; }
+  .comments { margin-top:10px; padding-left:15px; border-left:2px solid #ddd; }
+  .comment { margin-bottom:5px; }
+  #newPost { margin-top:20px; }
+  textarea { width: 100%; height: 60px; padding: 5px; }
+  button { margin-top:5px; padding: 6px 12px; background:#0baf9a; border:none; color:#fff; cursor:pointer; }
+  button:hover { background:#09907f; }
+  #userAddress { font-weight:bold; margin-bottom: 10px; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>DRF Social DApp</h1>
-</header>
+<h2>DRF Wallet Mini Facebook</h2>
 
-<main>
-  <section id="wallet-section">
-    <h2>Wallet</h2>
-    <div id="wallet-controls">
-      <button id="btnCreateWallet">Create New Wallet</button>
-      <button id="btnImportWallet">Import Wallet (Private Key)</button>
-    </div>
-    <div id="wallet-info" style="display:none;">
-      <p><strong>Address:</strong> <span id="walletAddress"></span></p>
-      <p><strong>Balance:</strong> <span id="walletBalance"></span> ETH</p>
-      <button id="btnDisconnect">Disconnect Wallet</button>
-    </div>
-    <div id="wallet-import-section" style="display:none; margin-top:1rem;">
-      <textarea id="privateKeyInput" placeholder="Paste your private key here"></textarea>
-      <button id="btnImportPK">Import</button>
-      <button id="btnCancelImport">Cancel</button>
-    </div>
-  </section>
+<div id="walletInfo"></div>
 
-  <section id="profile-section" style="display:none;">
-    <h2>Your Profile</h2>
-    <input type="text" id="profileUsername" placeholder="Username (required)" />
-    <input type="text" id="profileDisplayName" placeholder="Display Name" />
-    <input type="text" id="profileBio" placeholder="Bio" />
-    <input type="text" id="profileAvatar" placeholder="Avatar URL" />
-    <button id="btnSaveProfile">Save Profile</button>
-  </section>
+<div id="contentArea" style="display:none;">
+  <div id="newPost">
+    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+    <button id="postButton">Post</button>
+  </div>
 
-  <section id="newpost-section" style="display:none; margin-top:2rem;">
-    <h2>Create a Post</h2>
-    <textarea id="postContent" placeholder="Write something..."></textarea>
-    <input type="file" id="postMedia" accept="image/*,video/*" />
-    <button id="btnPost" disabled>Post</button>
-  </section>
+  <div id="posts"></div>
+</div>
 
-  <section id="feed-section" style="margin-top:2rem;">
-    <h2>Feed</h2>
-    <div id="postsContainer">Loading posts...</div>
-    <button id="btnLoadMore" style="margin-top:1rem;">Load More</button>
-  </section>
-</main>
+<div id="loginMessage" style="color:red; font-weight:bold;"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 <script>
-(async () => {
+  // Key for all posts storage
+  const postsKey = "drfSocialPosts";
 
-  // ==== CONFIGURATION ====
-  const INFURA_PROJECT_ID = "YOUR_INFURA_PROJECT_ID"; // Replace with your Infura project ID
-  const CONTRACT_ADDRESS = "YOUR_CONTRACT_ADDRESS";   // Replace with your deployed DRF Social contract address
-  const CONTRACT_ABI = [/* Your Contract ABI JSON here */]; // Replace with your contract ABI
+  // Get logged in wallet address from your wallet system localStorage
+  function getLoggedInWallet() {
+    return localStorage.getItem("drf_active_wallet");
+  }
 
-  // For IPFS upload (using public IPFS gateway here for demo)
-  async function uploadToIPFS(file) {
-    // Simple anonymous upload via Pinata public API or Infura IPFS API recommended for production
-    // Here we just simulate for demo: use real upload for your project
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // Normally you upload reader.result to IPFS here
-        resolve("ipfs://" + "QmFakeHashForDemo" + file.name); // Fake IPFS hash
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
+  // Escape HTML to prevent XSS
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // Load posts from localStorage
+  function loadPosts() {
+    const postsJson = localStorage.getItem(postsKey);
+    if (!postsJson) return [];
+    try {
+      return JSON.parse(postsJson);
+    } catch {
+      return [];
+    }
+  }
+
+  // Save posts to localStorage
+  function savePosts(posts) {
+    localStorage.setItem(postsKey, JSON.stringify(posts));
+  }
+
+  // Render posts
+  function renderPosts() {
+    const posts = loadPosts();
+    const container = document.getElementById("posts");
+    container.innerHTML = "";
+
+    posts.slice().reverse().forEach(post => {
+      const postDiv = document.createElement("div");
+      postDiv.className = "post";
+
+      postDiv.innerHTML = `
+        <div class="post-user">${post.user.slice(0,6)}...${post.user.slice(-4)}</div>
+        <div class="post-content">${escapeHtml(post.content)}</div>
+        <div class="post-actions">
+          <span class="like-btn" data-id="${post.id}">👍 Like (<span class="like-count">${post.likes.length}</span>)</span>
+          <span class="comment-toggle-btn" data-id="${post.id}">💬 Comments (${post.comments.length})</span>
+        </div>
+        <div class="comments" id="comments-${post.id}" style="display:none;">
+          ${post.comments.map(c => `<div class="comment"><b>${c.user.slice(0,6)}...${c.user.slice(-4)}</b>: ${escapeHtml(c.text)}</div>`).join('')}
+          <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${post.id}" />
+        </div>
+      `;
+
+      container.appendChild(postDiv);
+    });
+
+    // Add event listeners for like/comment
+    document.querySelectorAll(".like-btn").forEach(btn => {
+      btn.onclick = () => toggleLike(btn.dataset.id);
+    });
+    document.querySelectorAll(".comment-toggle-btn").forEach(btn => {
+      btn.onclick = () => toggleComments(btn.dataset.id);
+    });
+    document.querySelectorAll(".comment-input").forEach(input => {
+      input.addEventListener("keypress", e => {
+        if (e.key === "Enter" && input.value.trim()) {
+          addComment(input.dataset.id, input.value.trim());
+          input.value = "";
+        }
+      });
     });
   }
 
-  // ==== STATE ====
-  let provider;
-  let signer;
-  let wallet;
-  let contract;
-  let userAddress = null;
-  let userProfile = null;
-  let posts = [];
-  let postsPage = 0;
-  const POSTS_PER_PAGE = 5;
+  // Toggle like
+  function toggleLike(postId) {
+    const user = getLoggedInWallet();
+    if (!user) return alert("Please login or create wallet first.");
 
-  // ==== DOM ELEMENTS ====
-  const walletControls = document.getElementById("wallet-controls");
-  const walletInfo = document.getElementById("wallet-info");
-  const walletAddressEl = document.getElementById("walletAddress");
-  const walletBalanceEl = document.getElementById("walletBalance");
-  const btnDisconnect = document.getElementById("btnDisconnect");
+    const posts = loadPosts();
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
 
-  const btnCreateWallet = document.getElementById("btnCreateWallet");
-  const btnImportWallet = document.getElementById("btnImportWallet");
-  const walletImportSection = document.getElementById("wallet-import-section");
-  const privateKeyInput = document.getElementById("privateKeyInput");
-  const btnImportPK = document.getElementById("btnImportPK");
-  const btnCancelImport = document.getElementById("btnCancelImport");
+    const likeIndex = post.likes.indexOf(user);
+    if (likeIndex > -1) {
+      post.likes.splice(likeIndex, 1);
+    } else {
+      post.likes.push(user);
+    }
 
-  const profileSection = document.getElementById("profile-section");
-  const profileUsernameInput = document.getElementById("profileUsername");
-  const profileDisplayNameInput = document.getElementById("profileDisplayName");
-  const profileBioInput = document.getElementById("profileBio");
-  const profileAvatarInput = document.getElementById("profileAvatar");
-  const btnSaveProfile = document.getElementById("btnSaveProfile");
+    savePosts(posts);
+    renderPosts();
+  }
 
-  const newPostSection = document.getElementById("newpost-section");
-  const postContentInput = document.getElementById("postContent");
-  const postMediaInput = document.getElementById("postMedia");
-  const btnPost = document.getElementById("btnPost");
+  // Toggle comments display
+  function toggleComments(postId) {
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    if (commentsDiv.style.display === "none") {
+      commentsDiv.style.display = "block";
+    } else {
+      commentsDiv.style.display = "none";
+    }
+  }
 
-  const postsContainer = document.getElementById("postsContainer");
-  const btnLoadMore = document.getElementById("btnLoadMore");
+  // Add comment
+  function addComment(postId, text) {
+    const user = getLoggedInWallet();
+    if (!user) return alert("Please login or create wallet first.");
 
-  // ==== HELPERS ====
+    const posts = loadPosts();
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
 
-  function saveProfileToLocal() {
-    const profile = {
-      username: profileUsernameInput.value.trim(),
-      displayName: profileDisplayNameInput.value.trim(),
-      bio: profileBioInput.value.trim(),
-      avatar: profileAvatarInput.value.trim(),
-    };
-    localStorage.setItem("drfProfile_" + user
+    post.comments.push({ user, text });
+    savePosts(posts);
+    renderPosts();
+  }
+
+  // Create new post
+  function createPost() {
+    const user = getLoggedInWallet();
+    if (!user) return alert("Please login or create wallet first.");
+
+    const content = document.getElementById("postContent").value.trim();
+    if (!content) return alert("Cannot post empty content!");
+
+    const posts = loadPosts();
+    posts.push({
+      id: Date.now().toString(),
+      user,
+      content,
+      likes: [],
+      comments: []
+    });
+    savePosts(posts);
+
+    document.getElementById("postContent").value = "";
+    renderPosts();
+  }
+
+  // Initialization
+  function init() {
+    const user = getLoggedInWallet();
+    const walletInfoDiv = document.getElementById("walletInfo");
+    const contentArea = document.getElementById("contentArea");
+    const loginMessage = document.getElementById("loginMessage");
+
+    if (!user) {
+      walletInfoDiv.innerHTML = "";
+      contentArea.style.display = "none";
+      loginMessage.textContent = "Please create or login to your DRF Wallet first.";
+    } else {
+      walletInfoDiv.innerHTML = `Logged in as wallet: <span id="userAddress">${user}</span>`;
+      contentArea.style.display = "block";
+      loginMessage.textContent = "";
+      renderPosts();
+    }
+  }
+
+  document.getElementById("postButton").onclick = createPost;
+
+  window.onload = init;
+</script>
+
+</body>
+</html>
