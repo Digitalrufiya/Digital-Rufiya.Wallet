@@ -37,18 +37,23 @@
     <button id="loadMoreBtn" onclick="loadMorePosts()">Load More</button>
   </div>
 
-  <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbw5woEH6Yrh6PNWbiyMhIOuglpQ6UuiGFX0sI8OuS0caSOJd6jpgqekBKFFhBPgFPrA/exec
-    let profile = null;
-    try {
-      profile = JSON.parse(localStorage.getItem("drf_profile"));
-    } catch (e) {
-      console.error("Failed to parse profile:", e);
-    }
-    if (!profile) {
-      alert("Please create your profile first.");
-      window.location.href = "profile.html";
-    }
+fetch('https://script.google.com/macros/s/AKfycbw5woEH6Yrh6PNWbiyMhIOuglpQ6UuiGFX0sI8OuS0caSOJd6jpgqekBKFFhBPgFPrA/exec', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    author: "Test User",
+    avatar: "https://i.imgur.com/youravatar.png",
+    content: "This is a test post",
+    mediaName: "test.jpg",
+    mediaBase64: "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQC..." // Shortened base64 image
+  })
+})
+  .then(res => res.json())
+  .then(data => console.log("✅ Response:", data))
+  .catch(err => console.error("❌ Error:", err));
+
 
     // Show logged-in user info
     const profileInfo = document.getElementById("profileInfo");
