@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Facebook - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body style="font-family:sans-serif;background:#e8f7f4;">
+  <div style="max-width:600px;margin:auto;padding:20px;">
+    <h2>DRF Wallet Mini Facebook</h2>
+    <div id="profileInfo" style="margin-bottom:20px;text-align:center;"></div>
+
+    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
+    <button onclick="submitPost()" style="margin-top:10px;padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Post</button>
+
+    <h3 style="margin-top:30px;">Community Posts</h3>
+    <div id="postFeed"></div>
+  </div>
+
+  <script>
+    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    if (!profile) window.location.href = "profile.html";
+
+    const profileInfo = document.getElementById("profileInfo");
+    profileInfo.innerHTML = `<img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;" /><br><strong>${profile.name}</strong>`;
+
+    function submitPost() {
+      const content = document.getElementById("postContent").value.trim();
+      if (!content) return alert("Please write something.");
+
+      const post = {
+        author: profile.name,
+        avatar: profile.avatar,
+        content,
+        timestamp: new Date().toLocaleString(),
+      };
+
+      let posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+      posts.unshift(post);
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      document.getElementById("postContent").value = "";
+      renderPosts();
+    }
+
+    function renderPosts() {
+      const postFeed = document.getElementById("postFeed");
+      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+      postFeed.innerHTML = posts.map(p => `
+        <div style="background:#fff;padding:10px;margin:10px 0;border-radius:10px;">
+          <img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;" />
+          <strong>${p.author}</strong><br/>
+          <p>${p.content}</p>
+          <small>${p.timestamp}</small>
+        </div>
+      `).join("");
+    }
+
+    renderPosts();
+  </script>
+</body>
+</html>
