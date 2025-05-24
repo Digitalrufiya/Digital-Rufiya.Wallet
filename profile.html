@@ -1,61 +1,115 @@
-<!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Profile</title>
+  <title>DRF Community Posts</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f5f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 10px;
+    }
+    .post {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .profile {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .profile img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .profile-name {
+      font-weight: bold;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: none;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #0baf9a;
+      color: #fff;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .reactions {
+      margin-top: 10px;
+    }
+    .reaction-btn {
+      cursor: pointer;
+      color: #0baf9a;
+      margin-right: 10px;
+    }
+    .comment-input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+  </style>
 </head>
-<body style="font-family: sans-serif; background: #f4f9f7;">
-  <div class="container" style="max-width: 600px; margin: auto; text-align: center;">
-    <h2>Welcome to DRF Wallet Mini Facebook</h2>
-    <p id="walletInfo"></p>
+<body>
+  <div class="container">
+    <h2>Welcome to DRF Community</h2>
 
-    <div>
-      <input type="text" id="userName" placeholder="Enter your Name" />
-      <input type="file" id="profileImage" />
-      <button onclick="saveProfile()">Save Profile</button>
+    <div class="post">
+      <div class="profile" id="myProfile">
+        <img src="" id="myAvatar" alt="Avatar" />
+        <div>
+          <div class="profile-name" id="myName"></div>
+          <div style="font-size:12px;color:gray;" id="myWallet"></div>
+        </div>
+      </div>
+      <textarea id="newPost" rows="3" placeholder="What's on your mind?"></textarea>
+      <button onclick="submitPost()">Post</button>
     </div>
 
-    <hr />
-
-    <textarea id="postContent" placeholder="What's on your mind?" rows="4" style="width: 100%; margin-top: 10px;"></textarea>
-    <br />
-    <button onclick="createPost()">Post</button>
+    <div id="allPosts"></div>
   </div>
 
   <script>
-    const wallet = localStorage.getItem("drf_active_wallet") || "0x0000000000000000000000000000000000000000";
-    document.getElementById("walletInfo").textContent = `Logged in as: ${wallet}`;
+    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    const wallet = localStorage.getItem("drf_active_wallet") || "Anonymous";
 
-    function saveProfile() {
-      const name = document.getElementById("userName").value;
-      const file = document.getElementById("profileImage").files[0];
-
-      if (!name || !file) return alert("Name and Profile Image required!");
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const imageUrl = e.target.result;
-        localStorage.setItem("drf_profile", JSON.stringify({ name, imageUrl, wallet }));
-        alert("Profile saved!");
-      };
-      reader.readAsDataURL(file);
+    if (!profile) {
+      alert("Please create your profile first.");
+      window.location.href = "profile.html";
     }
 
-    function createPost() {
-      const content = document.getElementById("postContent").value;
-      if (!content) return alert("Post content cannot be empty!");
+    document.getElementById("myName").innerText = profile.name;
+    document.getElementById("myAvatar").src = profile.avatar;
+    document.getElementById("myWallet").innerText = wallet;
 
-      const profile = JSON.parse(localStorage.getItem("drf_profile"));
-      if (!profile) return alert("Please create your profile first!");
+    function submitPost() {
+      const content = document.getElementById("newPost").value.trim();
+      if (!content) return alert("Write something before posting.");
 
       const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
 
       posts.unshift({
-        wallet,
         name: profile.name,
-        profileUrl: profile.imageUrl,
+        avatar: profile.avatar,
+        wallet,
         content,
         timestamp: new Date().toLocaleString(),
         reactions: 0,
@@ -63,10 +117,62 @@
       });
 
       localStorage.setItem("drf_posts", JSON.stringify(posts));
-      alert("Post created!");
-
-      document.getElementById("postContent").value = "";
+      document.getElementById("newPost").value = "";
+      loadPosts();
     }
+
+    function likePost(index) {
+      const posts = JSON.parse(localStorage.getItem("drf_posts"));
+      posts[index].reactions += 1;
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      loadPosts();
+    }
+
+    function commentPost(index, input) {
+      const text = input.value.trim();
+      if (!text) return;
+      const posts = JSON.parse(localStorage.getItem("drf_posts"));
+      posts[index].comments.push({ user: profile.name, text });
+      localStorage.setItem("drf_posts", JSON.stringify(posts));
+      input.value = "";
+      loadPosts();
+    }
+
+    function loadPosts() {
+      const container = document.getElementById("allPosts");
+      container.innerHTML = "";
+      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
+
+      posts.forEach((post, i) => {
+        const div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `
+          <div class="profile">
+            <img src="${post.avatar}" />
+            <div>
+              <div class="profile-name">${post.name}</div>
+              <div style="font-size:12px;color:gray;">${post.wallet}</div>
+              <div style="font-size:12px;color:#888;">${post.timestamp}</div>
+            </div>
+          </div>
+          <p>${post.content}</p>
+          <div class="reactions">
+            <span class="reaction-btn" onclick="likePost(${i})">👍 Like (${post.reactions})</span>
+          </div>
+          <div class="comments">
+            <strong>Comments:</strong>
+            <div id="comment-list-${i}">
+              ${post.comments.map(c => `<p><b>${c.user}</b>: ${c.text}</p>`).join("")}
+            </div>
+            <input class="comment-input" placeholder="Write a comment..." 
+              onkeydown="if(event.key==='Enter')commentPost(${i}, this)" />
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    loadPosts();
   </script>
 </body>
 </html>
