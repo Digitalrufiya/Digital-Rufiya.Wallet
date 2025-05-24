@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Facebook - DRF Wallet</title>
+  <title>DRFbook - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     .reaction-btn { cursor:pointer; margin-right:10px; }
@@ -12,7 +12,7 @@
 </head>
 <body style="font-family:sans-serif;background:#e8f7f4;">
   <div style="max-width:600px;margin:auto;padding:20px;">
-    <h2>DRF Wallet Mini Facebook</h2>
+    <h2>Drfbook</h2>
     <div id="profileInfo" style="margin-bottom:20px;text-align:center;"></div>
 
     <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
@@ -27,7 +27,85 @@
   </div>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Facebook - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body style="font-family:sans-serif;background:#e8f7f4;">
+  <div style="max-width:600px;margin:auto;padding:20px;">
+    <h2>DRF Wallet Mini Facebook</h2>
+    <div id="profileInfo" style="margin-bottom:20px;text-align:center;"></div>
+
+    <textarea id="postContent" placeholder="What's on your mind?" style="width:100%;padding:10px;"></textarea>
+    <input type="file" id="media" accept="image/*,video/*" style="margin-top:10px;" />
+    <button onclick="submitPost()" style="margin-top:10px;padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Post</button>
+
+    <h3 style="margin-top:30px;">Community Posts</h3>
+    <div id="postFeed"></div>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbw-nyrJSvUpeNi7QShMlrwLV3PEA6ZGsuegOUAsqq6qs903biTTc7_5DjfEYOLpo7uL7Q/exec";
+    const profile = JSON.parse(localStorage.getItem("drf_profile"));
+    if (!profile) window.location.href = "profile.html";
+
+    const profileInfo = document.getElementById("profileInfo");
+    profileInfo.innerHTML = `<img src="${profile.avatar}" style="width:50px;height:50px;border-radius:50%;" /><br><strong>${profile.name}</strong>`;
+
+    async function submitPost() {
+      const content = document.getElementById("postContent").value.trim();
+      const fileInput = document.getElementById("media");
+      const file = fileInput.files[0];
+
+      if (!content && !file) return alert("Write something or upload media.");
+
+      const formData = new FormData();
+      formData.append("name", profile.name);
+      formData.append("avatar", profile.avatar);
+      formData.append("content", content);
+      formData.append("timestamp", new Date().toLocaleString());
+      if (file) formData.append("media", file);
+
+      const res = await fetch(scriptURL, {
+        method: "POST",
+        body: formData
+      });
+      const result = await res.json();
+      if (result.success) {
+        document.getElementById("postContent").value = "";
+        fileInput.value = "";
+        loadPosts();
+      } else {
+        alert("Failed to post. Try again.");
+      }
+    }
+
+    async function loadPosts() {
+      const res = await fetch(scriptURL);
+      const posts = await res.json();
+      const postFeed = document.getElementById("postFeed");
+      postFeed.innerHTML = posts.reverse().map(p => `
+        <div style="background:#fff;padding:10px;margin:10px 0;border-radius:10px;">
+          <img src="${p.avatar}" style="width:30px;height:30px;border-radius:50%;vertical-align:middle;" />
+          <strong>${p.name}</strong><br/>
+          <p>${p.content}</p>
+          ${p.media ? (p.media.endsWith('.mp4') ?
+            `<video src="${p.media}" controls style="max-width:100%;border-radius:10px;"></video>` :
+            `<img src="${p.media}" style="max-width:100%;border-radius:10px;" />`) : ''}
+          <small>${p.timestamp}</small>
+        </div>
+      `).join("");
+    }
+
+    loadPosts();
+  </script>
+</body>
+</html>
+
     const profile = JSON.parse(localStorage.getItem("drf_profile"));
     if (!profile) window.location.href = "profile.html";
 
