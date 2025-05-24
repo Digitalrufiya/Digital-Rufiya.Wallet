@@ -1,214 +1,146 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Social Pro</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f2f5;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      padding: 10px;
-    }
-    .post-box, .post {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .post-box textarea {
-      width: 100%;
-      border: none;
-      resize: none;
-      font-size: 16px;
-      margin-bottom: 10px;
-    }
-    .post-box input[type="file"] {
-      margin-top: 5px;
-    }
-    .media-preview img, .media-preview video,
-    .post-media img, .post-media video {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    .post .username {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .reaction-bar button {
-      margin-right: 8px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-size: 18px;
-    }
-    .comment-box {
-      margin-top: 10px;
-    }
-    .comment-box input {
-      width: 100%;
-      padding: 5px;
-      font-size: 14px;
-    }
-    .share-buttons {
-      margin-top: 10px;
-    }
-    .share-buttons button {
-      margin-right: 5px;
-      background: #4267B2;
-      border: none;
-      color: white;
-      padding: 5px 8px;
-      border-radius: 4px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .share-buttons button.twitter { background: #1DA1F2; }
-    .share-buttons button.linkedin { background: #0077B5; }
-    @media (max-width: 600px) {
-      .container {
-        padding: 5px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="post-box">
-      <input type="text" id="username" placeholder="Enter your username" />
-      <br><br>
-      <textarea id="postText" rows="3" placeholder="What's on your mind?"></textarea>
-      <input type="file" id="mediaInput" accept="image/*,video/*" />
-      <div class="media-preview" id="mediaPreview"></div>
-      <br>
-      <button onclick="createPost()">Post</button>
-    </div>
-    <div id="feed"></div>
-  </div>
+// Render comments HTML
+function renderComments(comments = []) {
+  if (comments.length === 0) return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
+  return comments
+    .map(c => `<div class="comment"><strong>${c.username}:</strong> ${c.text}</div>`)
+    .join("");
+}
 
-  <script>
-    const feed = document.getElementById("feed");
-    const mediaInput = document.getElementById("mediaInput");
-    const mediaPreview = document.getElementById("mediaPreview");
+// Load posts for user
+async function loadUserPosts(uid) {
+  postsLoader.style.display = "block";
+  postsContainer.innerHTML = "";
+  const postsQuery = query(
+    collection(db, "posts"),
+    where("userId", "==", uid),
+    orderBy("createdAt", "desc")
+  );
+  const querySnapshot = await getDocs(postsQuery);
 
-    let posts = JSON.parse(localStorage.getItem("drf_posts") || "[]");
+  if (querySnapshot.empty) {
+    postsContainer.innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
+    postsLoader.style.display = "none";
+    return;
+  }
 
-    mediaInput.addEventListener("change", () => {
-      const file = mediaInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          mediaPreview.innerHTML = file.type.startsWith("video")
-            ? `<video controls src="${e.target.result}"></video>`
-            : `<img src="${e.target.result}"/>`;
-        };
-        reader.readAsDataURL(file);
-      }
+  // For each post
+  querySnapshot.forEach(async (docSnap) => {
+    const post = { id: docSnap.id, ...docSnap.data() };
+
+    // Fetch comments subcollection
+    const commentsSnapshot = await getDocs(collection(db, "posts", post.id, "comments"));
+    const comments = commentsSnapshot.docs.map(d => d.data());
+
+    // Build post HTML
+    const postHTML = `
+      <div class="post" id="post-${post.id}">
+        <div class="post-header">
+          <img src="${post.mediaType === 'video' ? 'https://via.placeholder.com/40?text=Video' : post.userProfilePic || 'https://via.placeholder.com/40?text=User'}" alt="User" />
+          <div class="username">${post.username}</div>
+        </div>
+        <div class="post-text">${post.text || ""}</div>
+        ${post.mediaUrl ? `
+          <div class="post-media">
+            ${post.mediaType === "video" ? `<video src="${post.mediaUrl}" controls></video>` : `<img src="${post.mediaUrl}" alt="Post Image" />`}
+          </div>
+        ` : ""}
+        <div class="reaction-bar">
+          ${renderReactions(post)}
+        </div>
+        <div class="comments">
+          ${renderComments(comments)}
+          <div class="comment-input">
+            <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
+          </div>
+        </div>
+      </div>
+    `;
+
+    postsContainer.insertAdjacentHTML("beforeend", postHTML);
+  });
+  postsLoader.style.display = "none";
+
+  // Attach event listeners for reactions and comments
+  setupInteractionListeners();
+}
+
+// Handle reaction clicks
+async function handleReactionClick(event) {
+  const button = event.target.closest("button.reaction-btn");
+  if (!button) return;
+  const postId = button.getAttribute("data-postid");
+  const reactionType = button.getAttribute("data-reaction");
+  if (!postId || !reactionType) return;
+
+  const postRef = doc(db, "posts", postId);
+
+  // Atomically increment reaction count
+  try {
+    // Read current reactions
+    const postSnap = await getDoc(postRef);
+    if (!postSnap.exists()) return;
+
+    const postData = postSnap.data();
+    const currentReactions = postData.reactions || {};
+    currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
+
+    await updateDoc(postRef, { reactions: currentReactions });
+    
+    // Update UI immediately
+    button.querySelector(".count").textContent = currentReactions[reactionType];
+  } catch (err) {
+    alert("Failed to add reaction: " + err.message);
+  }
+}
+
+// Handle comment submission
+async function handleCommentKeyup(event) {
+  if (event.key !== "Enter") return;
+  const input = event.target;
+  const commentText = input.value.trim();
+  if (!commentText) return;
+  const postId = input.getAttribute("data-postid");
+  if (!postId) return;
+
+  // For demo, fake current user data:
+  const currentUser = {
+    userId: userId,
+    username: profileUsernameEl.textContent,
+  };
+
+  try {
+    const commentRef = collection(db, "posts", postId, "comments");
+    await db.collection("posts").doc(postId).collection("comments").add({
+      userId: currentUser.userId,
+      username: currentUser.username,
+      text: commentText,
+      createdAt: Timestamp.now(),
     });
 
-    function createPost() {
-      const username = document.getElementById("username").value || "Anonymous";
-      const text = document.getElementById("postText").value;
-      const file = mediaInput.files[0];
-      let media = "";
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          media = e.target.result;
-          savePost(username, text, media, file.type);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        savePost(username, text, "", "");
-      }
-    }
+    // Append new comment in UI
+    const commentsDiv = input.closest(".comments");
+    const newCommentHTML = `<div class="comment"><strong>${currentUser.username}:</strong> ${commentText}</div>`;
+    commentsDiv.insertAdjacentHTML("beforeend", newCommentHTML);
+    input.value = "";
+  } catch (err) {
+    alert("Failed to add comment: " + err.message);
+  }
+}
 
-    function savePost(username, text, media, type) {
-      const post = {
-        id: Date.now(),
-        username,
-        text,
-        media,
-        type,
-        reactions: {like: 0, love: 0, haha: 0, angry: 0, sad: 0},
-        comments: []
-      };
-      posts.unshift(post);
-      localStorage.setItem("drf_posts", JSON.stringify(posts));
-      renderPosts();
-      document.getElementById("postText").value = "";
-      mediaPreview.innerHTML = "";
-      mediaInput.value = "";
-    }
+// Setup event listeners for reactions and comment inputs
+function setupInteractionListeners() {
+  // Reactions
+  document.querySelectorAll("button.reaction-btn").forEach(btn => {
+    btn.addEventListener("click", handleReactionClick);
+  });
+  // Comment inputs
+  document.querySelectorAll(".comment-input input").forEach(input => {
+    input.addEventListener("keyup", handleCommentKeyup);
+  });
+}
 
-    function react(id, type) {
-      const post = posts.find(p => p.id === id);
-      if (post) {
-        post.reactions[type]++;
-        localStorage.setItem("drf_posts", JSON.stringify(posts));
-        renderPosts();
-      }
-    }
-
-    function addComment(id, input) {
-      const comment = input.value;
-      if (comment) {
-        const post = posts.find(p => p.id === id);
-        if (post) {
-          post.comments.push(comment);
-          localStorage.setItem("drf_posts", JSON.stringify(posts));
-          renderPosts();
-        }
-      }
-    }
-
-    function renderPosts() {
-      feed.innerHTML = "";
-      posts.forEach(post => {
-        const shareText = encodeURIComponent(post.text);
-        const postURL = encodeURIComponent(`https://example.com/#post${post.id}`);
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <div class="username">${post.username}</div>
-          <div>${post.text}</div>
-          <div class="post-media">
-            ${post.media ? (
-              post.type.startsWith("video")
-                ? `<video controls src="${post.media}"></video>`
-                : `<img src="${post.media}" />`
-            ) : ""}
-          </div>
-          <div class="reaction-bar">
-            <button onclick="react(${post.id}, 'like')">👍 ${post.reactions.like}</button>
-            <button onclick="react(${post.id}, 'love')">❤️ ${post.reactions.love}</button>
-            <button onclick="react(${post.id}, 'haha')">😂 ${post.reactions.haha}</button>
-            <button onclick="react(${post.id}, 'sad')">😢 ${post.reactions.sad}</button>
-            <button onclick="react(${post.id}, 'angry')">😡 ${post.reactions.angry}</button>
-          </div>
-          <div class="comment-box">
-            ${post.comments.map(c => `<div>${c}</div>`).join("")}
-            <input placeholder="Write a comment..." onkeypress="if(event.key==='Enter')addComment(${post.id}, this)" />
-          </div>
-          <div class="share-buttons">
-            <button onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${postURL}&quote=${shareText}', '_blank')" class="facebook">Facebook</button>
-            <button onclick="window.open('https://twitter.com/intent/tweet?text=${shareText}%20${postURL}', '_blank')" class="twitter">Twitter</button>
-            <button onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=${postURL}', '_blank')" class="linkedin">LinkedIn</button>
-          </div>
-        `;
-        feed.appendChild(div);
-      });
-    }
-
-    renderPosts();
-  </script>
-</body>
-</html>
+// Load profile and posts on page load
+(async function init() {
+  await loadUserProfile(userId);
+  await loadUserPosts(userId);
+})();
