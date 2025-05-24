@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Post Upload</title>
-  </head>
   <body>
-    <h3>Create a Post</h3>
-    <input type="file" id="file" accept="image/*,video/*" /><br /><br />
-    <input type="text" id="author" placeholder="Your name" required /><br /><br />
-    <textarea id="content" placeholder="Say something..." required></textarea><br /><br />
+    <h3>DRF Mini Facebook Posts</h3>
+    <input type="file" id="file" /><br/>
+    <input type="text" id="author" placeholder="Your name" /><br/>
+    <textarea id="content" placeholder="Say something..."></textarea><br/>
     <button onclick="upload()">Post</button>
-
-    <p id="status"></p>
 
     <script>
       async function upload() {
@@ -18,49 +13,59 @@
         const file = fileInput.files[0];
         const author = document.getElementById("author").value.trim();
         const content = document.getElementById("content").value.trim();
-        const status = document.getElementById("status");
 
-        if (!author || !content) {
-          status.innerText = "❌ Author and content are required.";
+        if(!author){
+          alert('Please enter your name');
+          return;
+        }
+        if(!content && !file){
+          alert('Please enter content or select a photo');
           return;
         }
 
-        if (!file) {
-          status.innerText = "❌ Please select a file.";
-          return;
+        let mediaBase64 = '';
+        let mediaName = '';
+
+        if(file){
+          mediaName = file.name;
+          mediaBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result.split(',')[1]);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
         }
 
-        const reader = new FileReader();
-        reader.onloadend = async function () {
-          const base64 = reader.result.split(",")[1]; // remove base64 prefix
-          const payload = {
-            author: author,
-            avatar: "https://i.imgur.com/abc123.png", // optional
-            content: content,
-            mediaName: file.name,
-            mediaBase64: base64,
-          };
-
-          try {
-            const res = await fetch("https://script.google.com/macros/s/AKfycbw5woEH6Yrh6PNWbiyMhIOuglpQ6UuiGFX0sI8OuS0caSOJd6jpgqekBKFFhBPgFPrA/exec", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-
-            const result = await res.json();
-            if (result.status === "success") {
-              status.innerText = "✅ Post uploaded successfully!";
-            } else {
-              status.innerText = "❌ Error from server: " + result.message;
-            }
-          } catch (err) {
-            status.innerText = "❌ Failed to post: " + err.message;
-          }
+        const payload = {
+          author,
+          avatar: 'https://i.imgur.com/abc123.png', // You can replace with dynamic avatars
+          content,
+          mediaName,
+          mediaBase64
         };
 
-        reader.readAsDataURL(file);
-        status.innerText = "⏳ Uploading...";
+        try {
+          const res = await fetch('https://script.google.com/macros/s/AKfycbz97g2aAC7Po3mK4GVz5jsiRLNVw76d2jLnx44JDnyL221Gv6jZ60xscWWD4BOxxXyL/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if(data.status === 'success'){
+            alert('Post uploaded successfully!');
+            // Optionally clear inputs
+            fileInput.value = '';
+            document.getElementById("author").value = '';
+            document.getElementById("content").value = '';
+          } else {
+            alert('Error: ' + data.message);
+          }
+        } catch(e){
+          alert('Network or server error');
+          console.error(e);
+        }
       }
     </script>
   </body>
