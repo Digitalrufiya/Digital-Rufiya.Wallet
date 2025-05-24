@@ -2,177 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Community Posts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Profile - DRF Wallet</title>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f0f5f4;
-    }
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      padding: 10px;
-    }
-    .post {
-      background: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    .profile {
-      display: flex;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .profile img {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      margin-right: 10px;
-    }
-    .profile-name {
-      font-weight: bold;
-    }
-    textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      resize: none;
-      margin-bottom: 10px;
-    }
-    button {
-      background: #0baf9a;
-      color: #fff;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .reactions {
-      margin-top: 10px;
-    }
-    .reaction-btn {
-      cursor: pointer;
-      color: #0baf9a;
-      margin-right: 10px;
-    }
-    .comment-input {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-  </style>
 </head>
-<body>
-  <div class="container">
-    <h2>Welcome to DRF Community</h2>
+<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
+  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
 
-    <div class="post">
-      <div class="profile" id="myProfile">
-        <img src="" id="myAvatar" alt="Avatar" />
-        <div>
-          <div class="profile-name" id="myName"></div>
-          <div style="font-size:12px;color:gray;" id="myWallet"></div>
-        </div>
-      </div>
-      <textarea id="newPost" rows="3" placeholder="What's on your mind?"></textarea>
-      <button onclick="submitPost()">Post</button>
-    </div>
-
-    <div id="allPosts"></div>
+  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
+    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
+    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
+    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
   </div>
 
   <script>
-    const profile = JSON.parse(localStorage.getItem("drf_profile"));
-    const wallet = localStorage.getItem("drf_active_wallet") || "Anonymous";
+    function saveProfile() {
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const avatarInput = document.getElementById('avatar');
 
-    if (!profile) {
-      alert("Please create your profile first.");
-      window.location.href = "profile.html";
+      if (!name || !password || avatarInput.files.length === 0) {
+        alert("All fields are required.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        const profile = {
+          name,
+          password,
+          avatar: reader.result,
+        };
+        localStorage.setItem('drf_profile', JSON.stringify(profile));
+        alert("Profile saved successfully!");
+        window.location.href = "post.html";
+      };
+      reader.readAsDataURL(avatarInput.files[0]);
     }
 
-    document.getElementById("myName").innerText = profile.name;
-    document.getElementById("myAvatar").src = profile.avatar;
-    document.getElementById("myWallet").innerText = wallet;
-
-    function submitPost() {
-      const content = document.getElementById("newPost").value.trim();
-      if (!content) return alert("Write something before posting.");
-
-      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
-
-      posts.unshift({
-        name: profile.name,
-        avatar: profile.avatar,
-        wallet,
-        content,
-        timestamp: new Date().toLocaleString(),
-        reactions: 0,
-        comments: []
-      });
-
-      localStorage.setItem("drf_posts", JSON.stringify(posts));
-      document.getElementById("newPost").value = "";
-      loadPosts();
-    }
-
-    function likePost(index) {
-      const posts = JSON.parse(localStorage.getItem("drf_posts"));
-      posts[index].reactions += 1;
-      localStorage.setItem("drf_posts", JSON.stringify(posts));
-      loadPosts();
-    }
-
-    function commentPost(index, input) {
-      const text = input.value.trim();
-      if (!text) return;
-      const posts = JSON.parse(localStorage.getItem("drf_posts"));
-      posts[index].comments.push({ user: profile.name, text });
-      localStorage.setItem("drf_posts", JSON.stringify(posts));
-      input.value = "";
-      loadPosts();
-    }
-
-    function loadPosts() {
-      const container = document.getElementById("allPosts");
-      container.innerHTML = "";
-      const posts = JSON.parse(localStorage.getItem("drf_posts")) || [];
-
-      posts.forEach((post, i) => {
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <div class="profile">
-            <img src="${post.avatar}" />
-            <div>
-              <div class="profile-name">${post.name}</div>
-              <div style="font-size:12px;color:gray;">${post.wallet}</div>
-              <div style="font-size:12px;color:#888;">${post.timestamp}</div>
-            </div>
-          </div>
-          <p>${post.content}</p>
-          <div class="reactions">
-            <span class="reaction-btn" onclick="likePost(${i})">👍 Like (${post.reactions})</span>
-          </div>
-          <div class="comments">
-            <strong>Comments:</strong>
-            <div id="comment-list-${i}">
-              ${post.comments.map(c => `<p><b>${c.user}</b>: ${c.text}</p>`).join("")}
-            </div>
-            <input class="comment-input" placeholder="Write a comment..." 
-              onkeydown="if(event.key==='Enter')commentPost(${i}, this)" />
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    loadPosts();
+    // If already saved, skip to posts
+    const existing = localStorage.getItem("drf_profile");
+    if (existing) window.location.href = "post.html";
   </script>
 </body>
 </html>
