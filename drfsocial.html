@@ -4,155 +4,195 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRF Social</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
-    .post { background: #fff; margin: 16px auto; padding: 16px; border-radius: 8px; max-width: 600px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .post-header { display: flex; align-items: center; margin-bottom: 8px; }
-    .post-header img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; }
-    .username { font-weight: bold; }
-    .post-text { margin: 12px 0; }
-    .post-media img, .post-media video { max-width: 100%; border-radius: 6px; }
-    .reaction-bar { margin-top: 10px; }
-    .reaction-btn { cursor: pointer; margin-right: 8px; }
-    .comments { margin-top: 10px; }
-    .comment-input input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; }
-    .comment { margin-top: 6px; font-size: 14px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+    header { background: #222; color: #fff; padding: 1em; text-align: center; }
+    #postForm { background: #fff; padding: 1em; margin: 1em auto; width: 90%; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    textarea, input[type="file"] { width: 100%; margin-top: 10px; }
+    button { margin-top: 10px; padding: 0.5em 1em; cursor: pointer; }
+    .post { background: #fff; margin: 1em auto; padding: 1em; width: 90%; max-width: 600px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 0.5em; }
+    .post-header img { width: 40px; height: 40px; border-radius: 50%; }
+    .post-text { margin: 1em 0; }
+    .post-media img, .post-media video { max-width: 100%; border-radius: 8px; }
+    .reaction-bar { margin: 1em 0; }
+    .comments { margin-top: 1em; }
+    .comment-input input { width: 100%; margin-top: 0.5em; }
+    .comment { padding: 0.25em 0; }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const userId = "CURRENT_USER_ID"; // Replace with actual auth logic
-    const postsContainer = document.createElement("div");
-    document.body.appendChild(postsContainer);
-
-    function renderComments(comments = []) {
-      if (comments.length === 0) return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
-      return comments.map(c => `<div class="comment"><strong>${c.username}:</strong> ${c.text}</div>`).join("");
-    }
-
-    async function loadUserPosts(uid) {
-      postsContainer.innerHTML = "<p>Loading posts...</p>";
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(postsQuery);
-
-      if (querySnapshot.empty) {
-        postsContainer.innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
-        return;
-      }
-
-      postsContainer.innerHTML = "";
-      querySnapshot.forEach(async (docSnap) => {
-        const post = { id: docSnap.id, ...docSnap.data() };
-        const commentsSnapshot = await getDocs(collection(db, "posts", post.id, "comments"));
-        const comments = commentsSnapshot.docs.map(d => d.data());
-
-        const postHTML = `
-          <div class="post" id="post-${post.id}">
-            <div class="post-header">
-              <img src="${post.mediaType === 'video' ? 'https://via.placeholder.com/40?text=Video' : post.userProfilePic || 'https://via.placeholder.com/40?text=User'}" alt="User" />
-              <div class="username">${post.username}</div>
-            </div>
-            <div class="post-text">${post.text || ""}</div>
-            ${post.mediaUrl ? `
-              <div class="post-media">
-                ${post.mediaType === "video" ? `<video src="${post.mediaUrl}" controls></video>` : `<img src="${post.mediaUrl}" alt="Post Image" />`}
-              </div>
-            ` : ""}
-            <div class="reaction-bar">
-              <button class="reaction-btn" data-postid="${post.id}" data-reaction="like">👍 <span class="count">${(post.reactions && post.reactions.like) || 0}</span></button>
-            </div>
-            <div class="comments">
-              ${renderComments(comments)}
-              <div class="comment-input">
-                <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
-              </div>
-            </div>
-          </div>
-        `;
-
-        postsContainer.insertAdjacentHTML("beforeend", postHTML);
-      });
-
-      setTimeout(setupInteractionListeners, 1000);
-    }
-
-    async function handleReactionClick(event) {
-      const button = event.target.closest("button.reaction-btn");
-      if (!button) return;
-      const postId = button.getAttribute("data-postid");
-      const reactionType = button.getAttribute("data-reaction");
-      const postRef = doc(db, "posts", postId);
-
-      try {
-        const postSnap = await getDoc(postRef);
-        if (!postSnap.exists()) return;
-
-        const postData = postSnap.data();
-        const currentReactions = postData.reactions || {};
-        currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
-
-        await updateDoc(postRef, { reactions: currentReactions });
-        button.querySelector(".count").textContent = currentReactions[reactionType];
-      } catch (err) {
-        alert("Failed to react: " + err.message);
-      }
-    }
-
-    async function handleCommentKeyup(event) {
-      if (event.key !== "Enter") return;
-      const input = event.target;
-      const commentText = input.value.trim();
-      if (!commentText) return;
-      const postId = input.getAttribute("data-postid");
-
-      const currentUser = {
-        userId: userId,
-        username: "DemoUser" // Replace with actual username
-      };
-
-      try {
-        await addDoc(collection(db, "posts", postId, "comments"), {
-          userId: currentUser.userId,
-          username: currentUser.username,
-          text: commentText,
-          createdAt: Timestamp.now(),
-        });
-
-        const commentsDiv = input.closest(".comments");
-        commentsDiv.insertAdjacentHTML("beforeend", `<div class="comment"><strong>${currentUser.username}:</strong> ${commentText}</div>`);
-        input.value = "";
-      } catch (err) {
-        alert("Failed to add comment: " + err.message);
-      }
-    }
-
-    function setupInteractionListeners() {
-      document.querySelectorAll("button.reaction-btn").forEach(btn => {
-        btn.removeEventListener("click", handleReactionClick);
-        btn.addEventListener("click", handleReactionClick);
-      });
-      document.querySelectorAll(".comment-input input").forEach(input => {
-        input.removeEventListener("keyup", handleCommentKeyup);
-        input.addEventListener("keyup", handleCommentKeyup);
-      });
-    }
-
-    loadUserPosts(userId);
-  </script>
 </head>
 <body>
+
+<header>
+  <h1>DRF Social</h1>
+</header>
+
+<div id="postForm">
+  <h2>Create a Post</h2>
+  <textarea id="postContent" placeholder="What's on your mind?" rows="3"></textarea><br>
+  <input type="file" id="mediaInput" accept="image/*,video/*"><br>
+  <button onclick="submitPost()">Post</button>
+  <hr>
+</div>
+
+<div id="postsContainer"></div>
+<div id="postsLoader" style="text-align:center; display:none;">Loading...</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+  const auth = firebase.auth();
+  let CURRENT_USER_ID = "demoUser";
+
+  async function submitPost() {
+    const content = document.getElementById("postContent").value.trim();
+    const fileInput = document.getElementById("mediaInput");
+    const file = fileInput.files[0];
+
+    if (!content && !file) return alert("Write something or upload an image/video.");
+
+    const postData = {
+      userId: CURRENT_USER_ID,
+      username: "DemoUser",
+      text: content,
+      createdAt: firebase.firestore.Timestamp.now(),
+      mediaUrl: "",
+      mediaType: "",
+      reactions: {}
+    };
+
+    try {
+      if (file) {
+        const storageRef = storage.ref(`posts/${Date.now()}_${file.name}`);
+        await storageRef.put(file);
+        postData.mediaUrl = await storageRef.getDownloadURL();
+        postData.mediaType = file.type.startsWith("video") ? "video" : "image";
+      }
+      await db.collection("posts").add(postData);
+      alert("Post submitted!");
+      document.getElementById("postContent").value = "";
+      document.getElementById("mediaInput").value = "";
+      loadUserPosts(CURRENT_USER_ID);
+    } catch (err) {
+      alert("Error submitting post: " + err.message);
+    }
+  }
+
+  function renderReactions(post) {
+    return `
+      <button class="reaction-btn" data-postid="${post.id}" data-reaction="like">
+        👍 <span class="count">${post.reactions?.like || 0}</span>
+      </button>
+    `;
+  }
+
+  function renderComments(comments = []) {
+    if (comments.length === 0) return `<p style="color:#888; font-style:italic;">No comments yet</p>`;
+    return comments.map(c => `<div class="comment"><strong>${c.username}:</strong> ${c.text}</div>`).join("");
+  }
+
+  async function loadUserPosts(uid) {
+    document.getElementById("postsLoader").style.display = "block";
+    document.getElementById("postsContainer").innerHTML = "";
+
+    const snapshot = await db.collection("posts").where("userId", "==", uid).orderBy("createdAt", "desc").get();
+    if (snapshot.empty) {
+      document.getElementById("postsContainer").innerHTML = "<p style='color:#888; text-align:center;'>No posts yet.</p>";
+      document.getElementById("postsLoader").style.display = "none";
+      return;
+    }
+
+    for (const doc of snapshot.docs) {
+      const post = { id: doc.id, ...doc.data() };
+      const commentsSnapshot = await db.collection("posts").doc(post.id).collection("comments").get();
+      const comments = commentsSnapshot.docs.map(d => d.data());
+      const postHTML = `
+        <div class="post" id="post-${post.id}">
+          <div class="post-header">
+            <img src="https://via.placeholder.com/40?text=User" alt="User" />
+            <div class="username">${post.username}</div>
+          </div>
+          <div class="post-text">${post.text || ""}</div>
+          ${post.mediaUrl ? `
+            <div class="post-media">
+              ${post.mediaType === "video" ? `<video src="${post.mediaUrl}" controls></video>` : `<img src="${post.mediaUrl}" alt="Post Image" />`}
+            </div>` : ""}
+          <div class="reaction-bar">
+            ${renderReactions(post)}
+          </div>
+          <div class="comments">
+            ${renderComments(comments)}
+            <div class="comment-input">
+              <input type="text" placeholder="Write a comment..." data-postid="${post.id}" />
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById("postsContainer").insertAdjacentHTML("beforeend", postHTML);
+    }
+    document.getElementById("postsLoader").style.display = "none";
+    setupInteractionListeners();
+  }
+
+  async function handleReactionClick(event) {
+    const button = event.target.closest("button.reaction-btn");
+    if (!button) return;
+    const postId = button.getAttribute("data-postid");
+    const reactionType = button.getAttribute("data-reaction");
+    const postRef = db.collection("posts").doc(postId);
+    const postSnap = await postRef.get();
+    if (!postSnap.exists) return;
+    const postData = postSnap.data();
+    const currentReactions = postData.reactions || {};
+    currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
+    await postRef.update({ reactions: currentReactions });
+    button.querySelector(".count").textContent = currentReactions[reactionType];
+  }
+
+  async function handleCommentKeyup(event) {
+    if (event.key !== "Enter") return;
+    const input = event.target;
+    const commentText = input.value.trim();
+    const postId = input.getAttribute("data-postid");
+    if (!commentText || !postId) return;
+    const commentRef = db.collection("posts").doc(postId).collection("comments");
+    await commentRef.add({
+      userId: CURRENT_USER_ID,
+      username: "DemoUser",
+      text: commentText,
+      createdAt: firebase.firestore.Timestamp.now()
+    });
+    const commentsDiv = input.closest(".comments");
+    commentsDiv.insertAdjacentHTML("beforeend", `<div class="comment"><strong>DemoUser:</strong> ${commentText}</div>`);
+    input.value = "";
+  }
+
+  function setupInteractionListeners() {
+    document.querySelectorAll("button.reaction-btn").forEach(btn => {
+      btn.addEventListener("click", handleReactionClick);
+    });
+    document.querySelectorAll(".comment-input input").forEach(input => {
+      input.addEventListener("keyup", handleCommentKeyup);
+    });
+  }
+
+  window.onload = () => {
+    loadUserPosts(CURRENT_USER_ID);
+  };
+</script>
 </body>
 </html>
