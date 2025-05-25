@@ -27,6 +27,9 @@
     </div>
 
     <div id="buySection" class="d-none">
+      <!-- Wallet Info will appear here -->
+      <div id="walletInfo" class="alert alert-success"></div>
+
       <div class="mb-3">
         <label class="form-label">USDC Amount</label>
         <input type="number" id="usdcAmount" class="form-control" min="1" step="0.01" />
@@ -56,8 +59,9 @@
     let signer;
 
     const showError = msg => {
-      document.getElementById('error').textContent = msg;
-      document.getElementById('error').classList.remove('d-none');
+      const errBox = document.getElementById('error');
+      errBox.textContent = msg;
+      errBox.classList.remove('d-none');
     };
 
     async function connectWallet() {
@@ -66,6 +70,8 @@
 
       try {
         const pw = document.getElementById("walletPassword").value;
+        provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+
         const encrypted = localStorage.getItem("encryptedWallet");
 
         if (encrypted) {
@@ -78,12 +84,16 @@
           localStorage.setItem("encryptedWallet", encryptedJson);
         }
 
-        provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
         signer = wallet.connect(provider);
+        const address = await signer.getAddress();
 
+        // Show wallet info
+        document.getElementById("walletInfo").innerHTML = `<strong>Wallet Connected:</strong> ${address}`;
         document.getElementById("buySection").classList.remove("d-none");
         document.getElementById("loader").style.display = "none";
+
       } catch (err) {
+        console.error(err);
         document.getElementById("loader").style.display = "none";
         showError("Connection failed. Invalid password or private key.");
       }
@@ -112,6 +122,7 @@
         await tx.wait();
         alert("USDC sent successfully. DRF will be sent manually.");
       } catch (err) {
+        console.error(err);
         showError("Transaction failed: " + err.message);
       }
     }
