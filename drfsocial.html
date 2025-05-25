@@ -1,88 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Social Firebase Demo</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Social Post Test</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+    measurementId: "G-TPT7QMWDYE"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    let currentUser = null;
+  window.submitPost = async function() {
+    const text = document.getElementById("postText").value.trim();
+    if (!text) {
+      alert("Please enter some text.");
+      return;
+    }
 
-    // Sign in anonymously for demo
-    signInAnonymously(auth).catch(console.error);
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        document.getElementById('status').innerText = `User ID: ${user.uid}`;
-        loadPosts();
-      } else {
-        currentUser = null;
-        document.getElementById('status').innerText = "Not signed in";
-      }
-    });
-
-    async function submitPost() {
-      const text = document.getElementById('postText').value.trim();
-      if (!text) return alert("Post cannot be empty!");
-
+    try {
       await addDoc(collection(db, "posts"), {
         text,
-        createdAt: serverTimestamp(),
-        userId: currentUser.uid
+        timestamp: new Date()
       });
-
-      document.getElementById('postText').value = '';
-      loadPosts();
+      document.getElementById("postText").value = "";
+      loadFeed();
+    } catch(e) {
+      alert("Error posting: " + e.message);
     }
+  };
 
-    async function loadPosts() {
-      const feed = document.getElementById('feed');
-      feed.innerHTML = 'Loading...';
+  window.loadFeed = async function() {
+    const feedContainer = document.getElementById("feed");
+    feedContainer.innerHTML = "Loading...";
 
-      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
+    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+    const querySnapshot = await getDocs(q);
+    feedContainer.innerHTML = "";
+    querySnapshot.forEach(doc => {
+      const post = doc.data();
+      const div = document.createElement("div");
+      div.textContent = post.text;
+      div.className = "post mb-4 p-2 border rounded";
+      feedContainer.appendChild(div);
+    });
+  };
 
-      feed.innerHTML = '';
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const time = data.createdAt?.toDate ? data.createdAt.toDate().toLocaleString() : "just now";
-        feed.innerHTML += `
-          <div style="border:1px solid #ddd; margin-bottom:10px; padding:10px;">
-            <p>${data.text}</p>
-            <small>${time}</small>
-          </div>
-        `;
-      });
-    }
-  </script>
+  window.onload = () => {
+    loadFeed();
+  };
+</script>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body style="max-width:600px; margin:2rem auto; font-family:sans-serif;">
-  <h1>DRF Social Firebase Demo</h1>
-  <div id="status">Connecting...</div>
-
-  <textarea id="postText" placeholder="What's on your mind?" style="width:100%; height:80px;"></textarea><br/>
-  <button onclick="submitPost()">Post</button>
-
-  <h2>Feed</h2>
-  <div id="feed"></div>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div class="max-w-xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4">DRF Social Post Test</h1>
+    <textarea id="postText" class="w-full p-2 border rounded mb-2" placeholder="Write your post here..."></textarea>
+    <button onclick="submitPost()" class="bg-blue-600 text-white px-4 py-2 rounded mb-6">Post</button>
+    <div id="feed" class="bg-white p-4 rounded shadow"></div>
+  </div>
 </body>
 </html>
