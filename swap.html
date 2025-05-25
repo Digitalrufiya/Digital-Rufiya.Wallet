@@ -2,145 +2,285 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Swap - Earn While You Hold</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
-  <script type="module" src="swap.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Token Swap with Fees</title>
   <style>
-    body {
-      background: #0f0f0f;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    .card {
-      background: #1c1c1c;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
-      margin: 20px auto;
-      max-width: 480px;
-      animation: fadeIn 1s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    button {
-      padding: 12px 20px;
-      background: #00ffcc;
-      color: black;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-      border-radius: 8px;
-      margin-top: 10px;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #00ddb3;
-    }
-    select, input {
-      width: 100%;
-      margin-top: 6px;
-      padding: 10px;
-      background: #2a2a2a;
-      color: white;
-      border: 1px solid #444;
-      border-radius: 8px;
-    }
-    #status {
-      margin-top: 15px;
-      font-size: 14px;
-      min-height: 20px;
-    }
+    body { font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto; padding: 10px; }
+    label, select, input, button { display: block; width: 100%; margin: 10px 0; font-size: 1rem; }
+    button { padding: 10px; background-color: #1e90ff; border: none; color: white; cursor: pointer; }
+    button:hover { background-color: #0c66d1; }
+    #status { margin-top: 15px; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="text-center">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" class="h-16 mx-auto mb-2" alt="DRF Logo" style="height: 64px; margin: 20px auto;"/>
-    <h1 style="font-size: 28px; font-weight: bold;">DRF Finance Swap</h1>
-    <p style="opacity: 0.7; margin-bottom: 20px;">Swap tokens & earn 5% rewards with DRF</p>
-  </div>
 
-  <div class="card">
-    <label for="fromToken">From:</label>
-    <select id="fromToken">
-      <option value="BNB">BNB</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-      <option value="DRF">DRF</option>
-    </select>
-    <input type="number" id="fromAmount" placeholder="Amount" />
+  <h2>DRF Token Swap with 1.5% Fee (min 1 USDT)</h2>
 
-    <br/><br/>
+  <button id="connectBtn">Connect Wallet</button>
 
-    <label for="toToken">To:</label>
-    <select id="toToken">
-      <option value="DRF">DRF</option>
-      <option value="BNB">BNB</option>
-      <option value="USDC">USDC</option>
-      <option value="USDT">USDT</option>
-    </select>
+  <label for="fromToken">From Token:</label>
+  <select id="fromToken">
+    <option value="BNB">BNB</option>
+    <option value="USDC">USDC</option>
+    <option value="USDT">USDT</option>
+    <option value="DRF">DRF</option>
+  </select>
 
-    <br/>
-    <label for="slippage">Slippage Tolerance (%)</label>
-    <input type="number" id="slippage" value="5" min="1" max="50" />
+  <label for="toToken">To Token:</label>
+  <select id="toToken">
+    <option value="DRF">DRF</option>
+    <option value="USDC">USDC</option>
+    <option value="USDT">USDT</option>
+    <option value="BNB">BNB</option>
+  </select>
 
-    <br/>
-    <div id="quoteInfo" style="margin-top: 10px; font-size: 14px; color: #ccc;">Estimated output will appear here.</div>
+  <label for="fromAmount">Amount to Swap:</label>
+  <input type="number" id="fromAmount" placeholder="Enter amount" min="0" step="any" />
 
-    <button id="connectBtn">Connect Wallet</button>
-    <button id="swapBtn" style="display: none;">Swap Now</button>
+  <button id="swapBtn">Swap Tokens</button>
 
-    <div id="status"></div>
-  </div>
+  <div id="status"></div>
 
-  <footer style="text-align: center; font-size: 13px; margin-top: 40px; opacity: 0.5">
-    DRF Swap is secure, decentralized, and rewards loyal holders. Built with ❤️ for the DRF community.
-  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
 
-  <audio id="swapSound" src="https://cdn.pixabay.com/audio/2023/03/23/audio_eb6a3edb8e.mp3" preload="auto"></audio>
   <script>
-    const fromTokenEl = document.getElementById('fromToken');
-    const toTokenEl = document.getElementById('toToken');
-    const fromAmountEl = document.getElementById('fromAmount');
-    const quoteInfo = document.getElementById('quoteInfo');
+    let web3;
+    let signerAddress;
 
-    fromTokenEl.addEventListener('change', fetchQuote);
-    toTokenEl.addEventListener('change', fetchQuote);
-    fromAmountEl.addEventListener('input', fetchQuote);
+    // Addresses & ABIs
+    const pancakeRouterAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+    const feeReceiverAddress = "0xYourUSDCFeeReceiverAddressHere"; // <== Replace with your USDC fee wallet
 
-    async function fetchQuote() {
-      const from = fromTokenEl.value;
-      const to = toTokenEl.value;
-      const amt = parseFloat(fromAmountEl.value);
-      if (!from || !to || !amt || from === to) return;
+    const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC BSC mainnet
+    const usdtAddress = "0x55d398326f99059ff775485246999027b3197955"; // USDT BSC mainnet
+    const drfAddress  = "0xYourDRFTokenAddressHere"; // <== Replace with your DRF token address
 
-      try {
-        const Web3 = window.Web3;
-        const web3 = new Web3('https://bsc-dataseed.binance.org/');
-        const routerAbi = [{"constant":true,"inputs":[{"name":"amountIn","type":"uint256"},{"name":"path","type":"address[]"}],"name":"getAmountsOut","outputs":[{"name":"amounts","type":"uint256[]"}],"payable":false,"stateMutability":"view","type":"function"}];
-        const router = new web3.eth.Contract(routerAbi, '0x10ED43C718714eb63d5aA57B78B54704E256024E');
+    // Minimal ERC20 ABI for allowance, approve, transfer, decimals
+    const ERC20_ABI = [
+      { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+      { "constant": true, "inputs": [{ "name": "_owner", "type": "address" }, { "name": "_spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
+      { "constant": false, "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" },
+      { "constant": false, "inputs": [{ "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "transfer", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+    ];
 
-        const tokens = {
-          BNB: null,
-          USDC: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-          USDT: '0x55d398326f99059fF775485246999027B3197955',
-          DRF: '0x23b2C59F5d6fD182B1F52F685F7cd7A9a8d07c8E'
-        };
+    // PancakeSwap Router ABI (only the functions we need)
+    const PANCAKE_ROUTER_ABI = [
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
+          { "internalType": "address[]", "name": "path", "type": "address[]" },
+          { "internalType": "address", "name": "to", "type": "address" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
+        ],
+        "name": "swapExactETHForTokens",
+        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
+        "stateMutability": "payable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "amountIn", "type": "uint256" },
+          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
+          { "internalType": "address[]", "name": "path", "type": "address[]" },
+          { "internalType": "address", "name": "to", "type": "address" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
+        ],
+        "name": "swapExactTokensForETH",
+        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "amountIn", "type": "uint256" },
+          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
+          { "internalType": "address[]", "name": "path", "type": "address[]" },
+          { "internalType": "address", "name": "to", "type": "address" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
+        ],
+        "name": "swapExactTokensForTokens",
+        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      }
+    ];
 
-        const path = [tokens[from] || '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', tokens[to] || '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'];
-        const amountIn = web3.utils.toWei(amt.toString(), 'ether');
-        const amounts = await router.methods.getAmountsOut(amountIn, path).call();
-        const outAmt = web3.utils.fromWei(amounts[1]);
+    // Utility to get token decimals
+    async function getTokenDecimals(tokenAddress) {
+      if (tokenAddress === "BNB") return 18;
+      const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
+      return await tokenContract.methods.decimals().call();
+    }
 
-        quoteInfo.innerText = `Est. Output: ${parseFloat(outAmt).toFixed(6)} ${to}`;
-      } catch (e) {
-        quoteInfo.innerText = 'Error fetching quote';
+    // Resolve symbol to address
+    function getTokenAddress(symbol) {
+      switch (symbol) {
+        case "BNB": return "BNB";
+        case "USDC": return usdcAddress;
+        case "USDT": return usdtAddress;
+        case "DRF": return drfAddress;
+        default: return null;
       }
     }
+
+    // Status update
+    function updateStatus(text, isError = false) {
+      const statusEl = document.getElementById("status");
+      statusEl.style.color = isError ? "#ff6b6b" : "#58a6ff";
+      statusEl.innerText = text;
+    }
+
+    // Connect wallet
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          web3 = new Web3(window.ethereum);
+          const accounts = await web3.eth.getAccounts();
+          signerAddress = accounts[0];
+          updateStatus("Connected: " + signerAddress);
+        } catch (err) {
+          updateStatus("User denied wallet connection", true);
+        }
+      } else {
+        updateStatus("No Ethereum wallet found. Please install MetaMask.", true);
+      }
+    }
+
+    // Approve token spending
+    async function approveToken(tokenAddress, amount, spender) {
+      const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
+      const allowance = await tokenContract.methods.allowance(signerAddress, spender).call();
+      if (BigInt(allowance) >= BigInt(amount)) return true; // already approved
+
+      updateStatus("Approving " + tokenAddress + "...");
+      try {
+        await tokenContract.methods.approve(spender, amount).send({ from: signerAddress });
+        updateStatus("Approval successful.");
+        return true;
+      } catch (err) {
+        updateStatus("Approval failed: " + err.message, true);
+        return false;
+      }
+    }
+
+    async function doSwap() {
+      if (!signerAddress) {
+        updateStatus("Connect wallet first.", true);
+        return;
+      }
+
+      const fromTokenSymbol = document.getElementById("fromToken").value;
+      const toTokenSymbol = document.getElementById("toToken").value;
+      const inputAmount = parseFloat(document.getElementById("fromAmount").value);
+
+      if (!inputAmount || inputAmount <= 0) {
+        updateStatus("Enter a valid amount.", true);
+        return;
+      }
+      if (fromTokenSymbol === toTokenSymbol) {
+        updateStatus("Select different tokens to swap.", true);
+        return;
+      }
+
+      const fromToken = getTokenAddress(fromTokenSymbol);
+      const toToken = getTokenAddress(toTokenSymbol);
+
+      const fromDecimals = fromTokenSymbol === "BNB" ? 18 : await getTokenDecimals(fromToken);
+      const toDecimals = toTokenSymbol === "BNB" ? 18 : await getTokenDecimals(toToken);
+
+      // Calculate fee 1.5%
+      const feePercent = 0.015;
+      let feeAmount = inputAmount * feePercent;
+      if (feeAmount < 1) feeAmount = 1; // minimum 1 USDT fee
+
+      const amountAfterFee = inputAmount - feeAmount;
+      if (amountAfterFee <= 0) {
+        updateStatus("Amount after fee must be greater than zero.", true);
+        return;
+      }
+
+      const amountAfterFeeWei = web3.utils.toBN((amountAfterFee * (10 ** fromDecimals)).toString());
+
+      updateStatus("Preparing swap...");
+
+      const router = new web3.eth.Contract(PANCAKE_ROUTER_ABI, pancakeRouterAddress);
+      const WBNB_ADDRESS = "0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+
+      function resolveAddress(token) {
+        if (token === "BNB") return WBNB_ADDRESS;
+        return token;
+      }
+
+      const path = [resolveAddress(fromToken), resolveAddress(toToken)];
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+
+      try {
+        if (fromToken !== "BNB") {
+          const approved = await approveToken(fromToken, amountAfterFeeWei.toString(), pancakeRouterAddress);
+          if (!approved) return;
+        }
+
+        updateStatus("Sending swap transaction... Confirm in wallet.");
+
+        let tx;
+
+        if (fromToken === "BNB") {
+          tx = await router.methods.swapExactETHForTokens(
+            0,
+            path,
+            signerAddress,
+            deadline
+          ).send({
+            from: signerAddress,
+            value: amountAfterFeeWei.toString(),
+            gas: 250000
+          });
+        } else if (toToken === "BNB") {
+          tx = await router.methods.swapExactTokensForETH(
+            amountAfterFeeWei.toString(),
+            0,
+            path,
+            signerAddress,
+            deadline
+          ).send({ from: signerAddress, gas: 250000 });
+        } else {
+          tx = await router.methods.swapExactTokensForTokens(
+            amountAfterFeeWei.toString(),
+            0,
+            path,
+            signerAddress,
+            deadline
+          ).send({ from: signerAddress, gas: 250000 });
+        }
+
+        updateStatus("Swap successful! Tx Hash: " + tx.transactionHash);
+
+        // Now pay fee in USDC
+        const feeInUSDC = feeAmount; // feeAmount in tokens, minimum 1 USDT enforced above
+        const feeInUSDCWei = web3.utils.toBN((feeInUSDC * (10 ** 18)).toString());
+
+        const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcAddress);
+        const allowance = await usdcContract.methods.allowance(signerAddress, feeReceiverAddress).call();
+
+        if (BigInt(allowance) < BigInt(feeInUSDCWei)) {
+          updateStatus("Approving USDC fee payment...");
+          await usdcContract.methods.approve(feeReceiverAddress, feeInUSDCWei.toString()).send({ from: signerAddress });
+          updateStatus("USDC fee approved.");
+        }
+
+        updateStatus("Transferring USDC fee...");
+        await usdcContract.methods.transfer(feeReceiverAddress, feeInUSDCWei.toString()).send({ from: signerAddress });
+        updateStatus("Fee of " + feeInUSDC + " USDC paid to fee wallet.");
+
+      } catch (error) {
+        updateStatus("Swap failed: " + error.message, true);
+      }
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", connectWallet);
+    document.getElementById("swapBtn").addEventListener("click", doSwap);
   </script>
+
 </body>
 </html>
