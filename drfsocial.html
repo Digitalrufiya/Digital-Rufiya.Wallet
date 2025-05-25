@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Social Post Test</title>
 <script type="module">
+  // Import Firebase app and database SDK
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
+  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -21,55 +17,25 @@
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const database = getDatabase(app);
 
-  window.submitPost = async function() {
-    const text = document.getElementById("postText").value.trim();
-    if (!text) {
-      alert("Please enter some text.");
-      return;
-    }
-
-    try {
-      await addDoc(collection(db, "posts"), {
-        text,
-        timestamp: new Date()
-      });
-      document.getElementById("postText").value = "";
-      loadFeed();
-    } catch(e) {
-      alert("Error posting: " + e.message);
-    }
-  };
-
-  window.loadFeed = async function() {
-    const feedContainer = document.getElementById("feed");
-    feedContainer.innerHTML = "Loading...";
-
-    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-    const querySnapshot = await getDocs(q);
-    feedContainer.innerHTML = "";
-    querySnapshot.forEach(doc => {
-      const post = doc.data();
-      const div = document.createElement("div");
-      div.textContent = post.text;
-      div.className = "post mb-4 p-2 border rounded";
-      feedContainer.appendChild(div);
+  // Example: Push a new post
+  function addPost(wallet, text) {
+    const postsRef = ref(database, 'posts');
+    const newPostRef = push(postsRef);
+    set(newPostRef, {
+      wallet: wallet,
+      text: text,
+      timestamp: Date.now()
     });
-  };
+  }
 
-  window.onload = () => {
-    loadFeed();
-  };
+  // Example: Listen to posts changes
+  function listenPosts(callback) {
+    const postsRef = ref(database, 'posts');
+    onValue(postsRef, (snapshot) => {
+      const data = snapshot.val();
+      callback(data);
+    });
+  }
 </script>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-</head>
-<body class="bg-gray-100 min-h-screen p-4">
-  <div class="max-w-xl mx-auto">
-    <h1 class="text-2xl font-bold mb-4">DRF Social Post Test</h1>
-    <textarea id="postText" class="w-full p-2 border rounded mb-2" placeholder="Write your post here..."></textarea>
-    <button onclick="submitPost()" class="bg-blue-600 text-white px-4 py-2 rounded mb-6">Post</button>
-    <div id="feed" class="bg-white p-4 rounded shadow"></div>
-  </div>
-</body>
-</html>
