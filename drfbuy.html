@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Token Sale</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      padding: 2rem;
+    }
+    .card {
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .btn-primary {
+      border-radius: 12px;
+    }
+    .btn-secondary {
+      border-radius: 12px;
+    }
+    #buyStatus {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card p-4">
+      <h2 class="text-center mb-4">Buy DRF Token</h2>
+      <div class="mb-3">
+        <label for="buyAmount" class="form-label">Amount in DRF</label>
+        <input type="number" class="form-control" id="buyAmount" placeholder="Enter DRF amount" min="1"/>
+      </div>
+      <div class="d-grid gap-2">
+        <button id="switch" class="btn btn-secondary">Switch to BSC</button>
+        <button id="buyBtn" class="btn btn-primary">Buy with USDC</button>
+      </div>
+      <div id="buyStatus" class="text-center text-danger mt-3"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const buyBtn = document.getElementById('buyBtn');
+      const switchBtn = document.getElementById('switch');
+
+      switchBtn.addEventListener('click', async () => {
+        if (window.ethereum) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x38' }],
+            });
+          } catch (switchError) {
+            alert('Switch failed. Try switching manually in MetaMask.');
+          }
+        } else {
+          alert('No Ethereum wallet detected');
+        }
+      });
+
+      buyBtn.addEventListener('click', async () => {
+        const amountDrf = Number(document.getElementById('buyAmount').value);
+        const buyStatus = document.getElementById('buyStatus');
+
+        if (!amountDrf || amountDrf <= 0) {
+          alert('Enter a valid amount.');
+          return;
+        }
+
+        if (typeof window.ethereum === 'undefined') {
+          alert('Wallet not found. Please install MetaMask.');
+          return;
+        }
+
+        try {
+          const web3 = new Web3(window.ethereum);
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await web3.eth.getAccounts();
+          const from = accounts[0];
+
+          const USDC_ADDRESS = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
+          const SALE_WALLET = '0xYourSaleWalletAddressHere'; // REPLACE with actual wallet
+          const DRF_PER_USDC = 15.42;
+
+          const USDC_ABI = [
+            {
+              constant: false,
+              inputs: [
+                { name: '_to', type: 'address' },
+                { name: '_value', type: 'uint256' }
+              ],
+              name: 'transfer',
+              outputs: [{ name: '', type: 'bool' }],
+              type: 'function'
+            },
+            {
+              constant: true,
+              inputs: [{ name: '_owner', type: 'address' }],
+              name: 'balanceOf',
+              outputs: [{ name: 'balance', type: 'uint256' }],
+              type: 'function'
+            }
+          ];
+
+          const usdcAmount = amountDrf / DRF_PER_USDC;
+          const usdcAmountWei = web3.utils.toWei(usdcAmount.toString(), 'ether');
+
+          const usdc = new web3.eth.Contract(USDC_ABI, USDC_ADDRESS);
+          const balance = await usdc.methods.balanceOf(from).call();
+
+          if (BigInt(balance) < BigInt(usdcAmountWei)) {
+            alert('Insufficient USDC balance.');
+            return;
+          }
+
+          buyStatus.innerText = 'Processing transaction...';
+
+          const tx = await usdc.methods.transfer(SALE_WALLET, usdcAmountWei).send({ from });
+
+          buyStatus.innerText = `Success! TX: ${tx.transactionHash}`;
+          document.getElementById('buyAmount').value = '';
+        } catch (err) {
+          console.error('Buy failed:', err);
+          buyStatus.innerText = 'Transaction failed or rejected.';
+          alert('Wallet connection failed or rejected.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
