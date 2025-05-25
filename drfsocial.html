@@ -1,9 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Social Firebase RTDB Test</title>
 <script type="module">
-  // Import Firebase app and database SDK
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  // Your web app's Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -15,27 +19,61 @@
     measurementId: "G-TPT7QMWDYE"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const database = getDatabase(app);
 
-  // Example: Push a new post
-  function addPost(wallet, text) {
+  window.addPost = function() {
+    const wallet = document.getElementById('wallet').value.trim();
+    const text = document.getElementById('postText').value.trim();
+    if(!wallet || !text) {
+      alert('Wallet and Post text are required');
+      return;
+    }
     const postsRef = ref(database, 'posts');
     const newPostRef = push(postsRef);
     set(newPostRef, {
-      wallet: wallet,
-      text: text,
+      wallet,
+      text,
       timestamp: Date.now()
+    }).then(() => {
+      document.getElementById('postText').value = '';
     });
-  }
+  };
 
-  // Example: Listen to posts changes
-  function listenPosts(callback) {
+  window.loadPosts = function() {
     const postsRef = ref(database, 'posts');
     onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
-      callback(data);
+      const container = document.getElementById('feed');
+      container.innerHTML = '';
+      if(!data) {
+        container.innerHTML = '<p>No posts yet</p>';
+        return;
+      }
+      // Sort posts by timestamp descending
+      const posts = Object.entries(data).sort((a,b) => b[1].timestamp - a[1].timestamp);
+      posts.forEach(([id, post]) => {
+        const postDiv = document.createElement('div');
+        postDiv.style.border = '1px solid #ccc';
+        postDiv.style.margin = '10px 0';
+        postDiv.style.padding = '8px';
+        postDiv.innerHTML = `<b>${post.wallet}</b><br>${post.text}<br><small>${new Date(post.timestamp).toLocaleString()}</small>`;
+        container.appendChild(postDiv);
+      });
     });
-  }
+  };
+
+  window.onload = function() {
+    loadPosts();
+  };
 </script>
+</head>
+<body style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; padding:10px;">
+  <h2>DRF Social Post Test</h2>
+  <input id="wallet" placeholder="Wallet Address" style="width:100%; padding:8px; margin-bottom:6px;" />
+  <textarea id="postText" placeholder="Write your post here..." rows="3" style="width:100%; padding:8px;"></textarea>
+  <button onclick="addPost()" style="margin-top:6px; padding:8px 16px;">Post</button>
+  <h3>Feed</h3>
+  <div id="feed"></div>
+</body>
+</html>
