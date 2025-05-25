@@ -1,182 +1,175 @@
-<!-- Save this as liquidity.html and open in browser with MetaMask installed -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Liquidity Management</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    .box {
-      background: white;
-      max-width: 500px;
-      margin: auto;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 { text-align: center; }
-    input, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #3498db;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover { background: #2980b9; }
-    .info { margin-top: 10px; font-weight: bold; }
-  </style>
+  <title>DRF Liquidity Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
-<body>
-  <div class="box">
-    <h2>Liquidity Manager</h2>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-6">
 
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <div id="connectedAccount" class="info">Status: Not connected</div>
+  <div class="max-w-md w-full bg-white rounded shadow p-6">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="mx-auto h-16 mb-4" />
+    <h1 class="text-center text-2xl font-bold mb-4">Add Liquidity to DRF-USDT Pool</h1>
 
-    <label>Private Key:</label>
-    <input type="password" id="privKey" placeholder="Enter private key" />
+    <button id="connectWallet" class="w-full bg-blue-600 text-white py-2 rounded mb-4">Connect Wallet</button>
 
-    <label>Password:</label>
-    <input type="password" id="password" placeholder="Set or enter password" />
+    <label class="block mb-1 font-semibold">USDT Amount</label>
+    <input id="usdtAmount" type="number" min="0" step="0.01" placeholder="Enter USDT amount" class="w-full border rounded p-2 mb-4" />
 
-    <label>DRF Amount:</label>
-    <input type="number" id="drfAmount" placeholder="Amount of DRF to add/withdraw" />
+    <label class="block mb-1 font-semibold">DRF Amount (calculated)</label>
+    <input id="drfAmount" type="text" readonly class="w-full border rounded p-2 mb-4 bg-gray-200" />
 
-    <label>USDC Amount:</label>
-    <input type="number" id="tokenAmount" placeholder="Amount of USDC to add/withdraw" />
+    <button id="approveBtn" disabled class="w-full bg-yellow-500 text-white py-2 rounded mb-2">Approve Tokens</button>
+    <button id="addLiquidityBtn" disabled class="w-full bg-green-600 text-white py-2 rounded">Add Liquidity</button>
 
-    <button onclick="addLiquidity()">Add Liquidity</button>
-    <button onclick="withdrawLiquidity()">Remove Liquidity</button>
-    <button onclick="withdrawFees()">Withdraw Fees</button>
-
-    <div id="status" class="info"></div>
+    <p id="status" class="mt-4 text-center text-gray-700"></p>
   </div>
 
   <script>
-    const SWAP_CONTRACT = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8";
-    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const DRF_ADDRESS = "YOUR_DRF_CONTRACT_ADDRESS";   // Replace with your DRF token contract address
+    const USDT_ADDRESS = "YOUR_USDT_CONTRACT_ADDRESS"; // Replace with your USDT token contract address
+    const PANCAKE_ROUTER_ADDRESS = "YOUR_PANCAKE_ROUTER_ADDRESS"; // Replace with PancakeSwap Router address
 
-    let web3;
-    let account;
-    let contract;
-    let encryptedKey = localStorage.getItem("encryptedKey");
+    // Fixed rate
+    const RATE = 15.42; // 1 USDT = 15.42 DRF
 
-    const swapABI = [
-      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "addLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-      { "inputs": [{"internalType":"uint256","name":"drfAmount","type":"uint256"},{"internalType":"uint256","name":"usdcAmount","type":"uint256"}], "name": "removeLiquidity", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
-      { "inputs": [], "name": "withdrawFees", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+    let provider, signer, userAddress;
+    let drfContract, usdtContract;
+    let routerContract;
+
+    const connectWalletBtn = document.getElementById('connectWallet');
+    const usdtAmountInput = document.getElementById('usdtAmount');
+    const drfAmountInput = document.getElementById('drfAmount');
+    const approveBtn = document.getElementById('approveBtn');
+    const addLiquidityBtn = document.getElementById('addLiquidityBtn');
+    const statusEl = document.getElementById('status');
+
+    // ERC20 ABI minimal for approve and allowance and decimals
+    const ERC20_ABI = [
+      "function approve(address spender, uint256 amount) external returns (bool)",
+      "function allowance(address owner, address spender) external view returns (uint256)",
+      "function decimals() view returns (uint8)"
     ];
 
-    const tokenABI = [
-      { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
-      { "constant": false, "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+    // PancakeSwap Router ABI minimal for addLiquidity
+    const ROUTER_ABI = [
+      "function addLiquidity(address tokenA,address tokenB,uint amountADesired,uint amountBDesired,uint amountAMin,uint amountBMin,address to,uint deadline) external returns (uint amountA, uint amountB, uint liquidity)"
     ];
 
     async function connectWallet() {
-      if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const accounts = await web3.eth.getAccounts();
-        account = accounts[0];
-        document.getElementById("connectedAccount").innerText = "Connected: " + account;
-        contract = new web3.eth.Contract(swapABI, SWAP_CONTRACT);
-      } else {
-        alert("MetaMask not detected!");
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
       }
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      connectWalletBtn.innerText = `Connected: ${userAddress.substring(0,6)}...${userAddress.slice(-4)}`;
+      connectWalletBtn.disabled = true;
+
+      // Setup contracts
+      drfContract = new ethers.Contract(DRF_ADDRESS, ERC20_ABI, signer);
+      usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+      routerContract = new ethers.Contract(PANCAKE_ROUTER_ADDRESS, ROUTER_ABI, signer);
+
+      approveBtn.disabled = false;
+      addLiquidityBtn.disabled = true;
+
+      statusEl.innerText = "";
     }
 
-    function unlockWithPassword() {
-      const pass = document.getElementById("password").value;
-      if (!pass) return null;
+    connectWalletBtn.onclick = connectWallet;
+
+    // Update DRF amount based on USDT input
+    usdtAmountInput.addEventListener('input', () => {
+      const usdtVal = parseFloat(usdtAmountInput.value);
+      if (isNaN(usdtVal) || usdtVal <= 0) {
+        drfAmountInput.value = "";
+        approveBtn.disabled = true;
+        addLiquidityBtn.disabled = true;
+        return;
+      }
+      const drfVal = (usdtVal * RATE).toFixed(6);
+      drfAmountInput.value = drfVal;
+      approveBtn.disabled = false;
+      addLiquidityBtn.disabled = true;
+      statusEl.innerText = "";
+    });
+
+    // Approve tokens for router contract
+    approveBtn.onclick = async () => {
       try {
-        const decrypted = CryptoJS.AES.decrypt(encryptedKey, pass).toString(CryptoJS.enc.Utf8);
-        return decrypted;
-      } catch (e) {
-        alert("Wrong password or decryption failed.");
-        return null;
-      }
-    }
+        approveBtn.disabled = true;
+        statusEl.innerText = "Approving USDT...";
+        const usdtDecimals = await usdtContract.decimals();
+        const drfDecimals = await drfContract.decimals();
 
-    async function initWithPrivateKey() {
-      let pk;
-      if (encryptedKey) {
-        pk = unlockWithPassword();
-      } else {
-        pk = document.getElementById("privKey").value.trim();
-        const pass = document.getElementById("password").value.trim();
-        if (!pk || pk.length < 64 || !pass) return alert("Provide private key and password.");
-        localStorage.setItem("encryptedKey", CryptoJS.AES.encrypt(pk, pass).toString());
-      }
+        const usdtAmount = ethers.utils.parseUnits(usdtAmountInput.value, usdtDecimals);
+        const drfAmount = ethers.utils.parseUnits(drfAmountInput.value, drfDecimals);
 
-      web3 = new Web3("https://bsc-dataseed.binance.org/");
-      account = web3.eth.accounts.privateKeyToAccount(pk);
-      web3.eth.accounts.wallet.add(account);
-      web3.eth.defaultAccount = account.address;
+        // Approve USDT
+        const usdtTx = await usdtContract.approve(PANCAKE_ROUTER_ADDRESS, usdtAmount);
+        await usdtTx.wait();
 
-      contract = new web3.eth.Contract(swapABI, SWAP_CONTRACT);
-      document.getElementById("connectedAccount").innerText = "Connected: " + account.address;
-    }
+        statusEl.innerText = "USDT approved. Approving DRF...";
 
-    async function addLiquidity() {
-      await initWithPrivateKey();
+        // Approve DRF
+        const drfTx = await drfContract.approve(PANCAKE_ROUTER_ADDRESS, drfAmount);
+        await drfTx.wait();
 
-      const drfAmount = parseFloat(document.getElementById("drfAmount").value);
-      const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
-      if (drfAmount <= 0 || usdcAmount <= 0) return alert("Enter valid token amounts.");
-
-      const drf = new web3.eth.Contract(tokenABI, DRF_ADDRESS);
-      const usdc = new web3.eth.Contract(tokenABI, USDC_ADDRESS);
-      const drfDecimals = await drf.methods.decimals().call();
-      const usdcDecimals = await usdc.methods.decimals().call();
-
-      const drfWei = web3.utils.toBN(drfAmount * (10 ** drfDecimals));
-      const usdcWei = web3.utils.toBN(usdcAmount * (10 ** usdcDecimals));
-
-      await drf.methods.approve(SWAP_CONTRACT, drfWei).send({ from: account.address });
-      await usdc.methods.approve(SWAP_CONTRACT, usdcWei).send({ from: account.address });
-
-      await contract.methods.addLiquidity(drfWei, usdcWei).send({ from: account.address });
-      alert("Liquidity added.");
-    }
-
-    async function withdrawLiquidity() {
-      await initWithPrivateKey();
-
-      const drfAmount = parseFloat(document.getElementById("drfAmount").value);
-      const usdcAmount = parseFloat(document.getElementById("tokenAmount").value);
-      if (drfAmount <= 0 && usdcAmount <= 0) return alert("Enter amounts.");
-
-      const drfWei = web3.utils.toWei(drfAmount.toString(), "ether");
-      const usdcWei = web3.utils.toWei(usdcAmount.toString(), "ether");
-
-      await contract.methods.removeLiquidity(drfWei, usdcWei).send({ from: account.address });
-      alert("Liquidity removed.");
-    }
-
-    async function withdrawFees() {
-      await initWithPrivateKey();
-      try {
-        await contract.methods.withdrawFees().send({ from: account.address });
-        alert("Fees withdrawn successfully.");
+        statusEl.innerText = "Tokens approved! You can now add liquidity.";
+        addLiquidityBtn.disabled = false;
       } catch (err) {
-        alert("Withdraw fees failed.");
         console.error(err);
+        statusEl.innerText = "Approval failed. Please try again.";
+        approveBtn.disabled = false;
       }
-    }
+    };
+
+    // Add liquidity function
+    addLiquidityBtn.onclick = async () => {
+      try {
+        addLiquidityBtn.disabled = true;
+        statusEl.innerText = "Adding liquidity...";
+
+        const usdtDecimals = await usdtContract.decimals();
+        const drfDecimals = await drfContract.decimals();
+
+        const usdtAmount = ethers.utils.parseUnits(usdtAmountInput.value, usdtDecimals);
+        const drfAmount = ethers.utils.parseUnits(drfAmountInput.value, drfDecimals);
+
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes from now
+
+        // Add liquidity with 0 slippage min for simplicity (you can add slippage protection later)
+        const tx = await routerContract.addLiquidity(
+          USDT_ADDRESS,
+          DRF_ADDRESS,
+          usdtAmount,
+          drfAmount,
+          0,
+          0,
+          userAddress,
+          deadline
+        );
+
+        await tx.wait();
+        statusEl.innerText = "Liquidity added successfully!";
+        approveBtn.disabled = false;
+        addLiquidityBtn.disabled = true;
+        usdtAmountInput.value = "";
+        drfAmountInput.value = "";
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = "Failed to add liquidity.";
+        addLiquidityBtn.disabled = false;
+      }
+    };
   </script>
+
 </body>
 </html>
