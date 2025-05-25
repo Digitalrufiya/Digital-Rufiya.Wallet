@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Social</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script>
+    const scriptEndpoint = "https://script.google.com/macros/s/AKfycbx49Me_qp-9f12bpeGGuk-yxSbiXQn5p_PJXFPfxA2zShdXg3JFrVczDtnMkImfC_Yp/exec";
+    let userWallet = "";
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        const web3 = new Web3(window.ethereum);
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await web3.eth.getAccounts();
+          userWallet = accounts[0];
+          document.getElementById("walletBtn").innerText = userWallet.slice(0, 6) + "..." + userWallet.slice(-4);
+          document.getElementById("postForm").classList.remove("hidden");
+          loadFeed();
+        } catch (err) {
+          alert("Wallet connection failed");
+        }
+      } else {
+        alert("MetaMask not found");
+      }
+    }
+
+    async function submitPost() {
+      const text = document.getElementById("postText").value;
+      const file = document.getElementById("postImage").files[0];
+      const form = new FormData();
+      form.append("wallet", userWallet);
+      form.append("text", text);
+      if (file) form.append("file", file);
+      form.append("action", "post");
+
+      const res = await fetch(scriptEndpoint, { method: "POST", body: form });
+      const result = await res.json();
+      if (result.success) {
+        document.getElementById("postText").value = "";
+        document.getElementById("postImage").value = "";
+        loadFeed();
+      }
+    }
+
+    async function loadFeed() {
+      const res = await fetch(scriptEndpoint + '?action=feed');
+      const data = await res.json();
+      const container = document.getElementById("feed");
+      container.innerHTML = "";
+
+      data.reverse().forEach(post => {
+        container.innerHTML += `
+          <div class="bg-white shadow p-4 rounded mb-4">
+            <div class="flex items-center mb-2">
+              <img src="${post.profile || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full mr-2" />
+              <div>
+                <p class="font-bold text-sm">${post.wallet.slice(0,6)}...${post.wallet.slice(-4)}</p>
+              </div>
+            </div>
+            <p class="mb-2">${post.text}</p>
+            ${post.image ? `<img src="${post.image}" class="w-full rounded mb-2">` : ""}
+            <div class="flex items-center space-x-4 text-sm text-gray-600">
+              <button onclick="reactPost('${post.id}')">❤️ Like (${post.likes || 0})</button>
+              <button onclick="toggleComment('${post.id}')">💬 Comment</button>
+            </div>
+            <div id="comment-${post.id}" class="hidden mt-2">
+              <input id="comment-input-${post.id}" class="w-full border rounded p-1 mt-1" placeholder="Write a comment...">
+              <button onclick="submitComment('${post.id}')" class="text-blue-500 mt-1">Send</button>
+              <div class="mt-2 text-sm">${(post.comments || []).map(c => `<p><b>${c.user.slice(0,6)}:</b> ${c.text}</p>`).join("")}</div>
+            </div>
+          </div>`;
+      });
+    }
+
+    async function reactPost(id) {
+      const res = await fetch(scriptEndpoint + `?action=like&id=${id}&wallet=${userWallet}`);
+      const data = await res.json();
+      if (data.success) loadFeed();
+    }
+
+    function toggleComment(id) {
+      const el = document.getElementById("comment-" + id);
+      el.classList.toggle("hidden");
+    }
+
+    async function submitComment(id) {
+      const input = document.getElementById("comment-input-" + id);
+      const text = input.value;
+      const res = await fetch(scriptEndpoint + `?action=comment&id=${id}&wallet=${userWallet}&text=${encodeURIComponent(text)}`);
+      const data = await res.json();
+      if (data.success) loadFeed();
+    }
+
+    async function uploadProfileCover(type) {
+      const file = document.getElementById(type+"Upload").files[0];
+      const form = new FormData();
+      form.append("wallet", userWallet);
+      form.append("file", file);
+      form.append("action", type);
+      await fetch(scriptEndpoint, { method: "POST", body: form });
+      loadFeed();
+    }
+  </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="max-w-xl mx-auto py-4 px-2">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-xl font-bold">DRF Social</h1>
+      <button id="walletBtn" onclick="connectWallet()" class="bg-blue-600 text-white px-4 py-2 rounded">Connect Wallet</button>
+    </div>
+
+    <div class="bg-white p-4 rounded shadow hidden" id="postForm">
+      <textarea id="postText" class="w-full border p-2 rounded mb-2" placeholder="What's on your mind?"></textarea>
+      <input type="file" id="postImage" class="mb-2">
+      <button onclick="submitPost()" class="bg-green-600 text-white px-4 py-2 rounded">Post</button>
+
+      <div class="mt-4">
+        <label class="block mb-1">Profile Photo</label>
+        <input type="file" id="profileUpload" onchange="uploadProfileCover('profile')" class="mb-2">
+        <label class="block mb-1">Cover Photo</label>
+        <input type="file" id="coverUpload" onchange="uploadProfileCover('cover')">
+      </div>
+    </div>
+
+    <div id="feed" class="mt-4"></div>
+  </div>
+</body>
+</html>
