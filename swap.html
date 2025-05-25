@@ -3,57 +3,144 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Swap - Powered by PancakeSwap</title>
-  <link rel="stylesheet" href="style.css">
+  <title>DRF Swap - Earn While You Hold</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+  <script type="module" src="swap.js"></script>
   <style>
-    body { background-color: #0f0f0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-    .container { max-width: 500px; margin: auto; padding: 20px; border-radius: 20px; background-color: #1f1f1f; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-    select, input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; border: none; font-size: 16px; }
-    button { background-color: #3b82f6; color: white; cursor: pointer; }
-    button:hover { background-color: #2563eb; }
-    .logo { height: 64px; margin-bottom: 16px; }
-    .text-center { text-align: center; }
-    .footer { text-align: center; margin-top: 30px; font-size: 14px; color: #aaa; }
+    body {
+      background: #0f0f0f;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card {
+      background: #1c1c1c;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+      margin: 20px auto;
+      max-width: 480px;
+      animation: fadeIn 1s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    button {
+      padding: 12px 20px;
+      background: #00ffcc;
+      color: black;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 8px;
+      margin-top: 10px;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #00ddb3;
+    }
+    select, input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+      background: #2a2a2a;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 8px;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      min-height: 20px;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="text-center">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="logo">
-      <h2>DRF Token Swap</h2>
-      <p>Earn 5% DRF rewards on every swap!</p>
-    </div>
+  <div class="text-center">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" class="h-16 mx-auto mb-2" alt="DRF Logo" style="height: 64px; margin: 20px auto;"/>
+    <h1 style="font-size: 28px; font-weight: bold;">DRF Finance Swap</h1>
+    <p style="opacity: 0.7; margin-bottom: 20px;">Swap tokens & earn 5% rewards with DRF</p>
+  </div>
 
+  <div class="card">
     <label for="fromToken">From:</label>
     <select id="fromToken">
       <option value="BNB">BNB</option>
       <option value="USDC">USDC</option>
       <option value="USDT">USDT</option>
+      <option value="DRF">DRF</option>
     </select>
+    <input type="number" id="fromAmount" placeholder="Amount" />
 
-    <input type="number" id="fromAmount" placeholder="Amount">
+    <br/><br/>
 
     <label for="toToken">To:</label>
     <select id="toToken">
       <option value="DRF">DRF</option>
+      <option value="BNB">BNB</option>
+      <option value="USDC">USDC</option>
+      <option value="USDT">USDT</option>
     </select>
 
-    <div style="margin-top: 10px; font-size: 14px; color: #aaa;">
-      Swap Fee: <strong>1%</strong> | DRF Holder Rewards: <strong>5%</strong>
-    </div>
+    <br/>
+    <label for="slippage">Slippage Tolerance (%)</label>
+    <input type="number" id="slippage" value="5" min="1" max="50" />
+
+    <br/>
+    <div id="quoteInfo" style="margin-top: 10px; font-size: 14px; color: #ccc;">Estimated output will appear here.</div>
 
     <button id="connectBtn">Connect Wallet</button>
     <button id="swapBtn" style="display: none;">Swap Now</button>
-    <div id="status" style="margin-top: 15px; font-size: 14px;"></div>
+
+    <div id="status"></div>
   </div>
 
-  <div class="footer">
+  <footer style="text-align: center; font-size: 13px; margin-top: 40px; opacity: 0.5">
     DRF Swap is secure, decentralized, and rewards loyal holders. Built with ❤️ for the DRF community.
-  </div>
+  </footer>
 
-  <script src="swap.js"></script>
+  <audio id="swapSound" src="https://cdn.pixabay.com/audio/2023/03/23/audio_eb6a3edb8e.mp3" preload="auto"></audio>
+  <script>
+    const fromTokenEl = document.getElementById('fromToken');
+    const toTokenEl = document.getElementById('toToken');
+    const fromAmountEl = document.getElementById('fromAmount');
+    const quoteInfo = document.getElementById('quoteInfo');
+
+    fromTokenEl.addEventListener('change', fetchQuote);
+    toTokenEl.addEventListener('change', fetchQuote);
+    fromAmountEl.addEventListener('input', fetchQuote);
+
+    async function fetchQuote() {
+      const from = fromTokenEl.value;
+      const to = toTokenEl.value;
+      const amt = parseFloat(fromAmountEl.value);
+      if (!from || !to || !amt || from === to) return;
+
+      try {
+        const Web3 = window.Web3;
+        const web3 = new Web3('https://bsc-dataseed.binance.org/');
+        const routerAbi = [{"constant":true,"inputs":[{"name":"amountIn","type":"uint256"},{"name":"path","type":"address[]"}],"name":"getAmountsOut","outputs":[{"name":"amounts","type":"uint256[]"}],"payable":false,"stateMutability":"view","type":"function"}];
+        const router = new web3.eth.Contract(routerAbi, '0x10ED43C718714eb63d5aA57B78B54704E256024E');
+
+        const tokens = {
+          BNB: null,
+          USDC: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+          USDT: '0x55d398326f99059fF775485246999027B3197955',
+          DRF: '0x23b2C59F5d6fD182B1F52F685F7cd7A9a8d07c8E'
+        };
+
+        const path = [tokens[from] || '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', tokens[to] || '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'];
+        const amountIn = web3.utils.toWei(amt.toString(), 'ether');
+        const amounts = await router.methods.getAmountsOut(amountIn, path).call();
+        const outAmt = web3.utils.fromWei(amounts[1]);
+
+        quoteInfo.innerText = `Est. Output: ${parseFloat(outAmt).toFixed(6)} ${to}`;
+      } catch (e) {
+        quoteInfo.innerText = 'Error fetching quote';
+      }
+    }
+  </script>
 </body>
 </html>
