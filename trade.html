@@ -6,287 +6,286 @@
   <title>Buy DrF Token - Digital Rufiya Sale</title>
   <meta name="description" content="Buy DRF token securely with USDC. Join Digital Rufiya's token sale." />
   <link rel="icon" href="/logo.png" type="image/png" />
-
+  
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet" />
-
+  
   <!-- jQuery and Web3 -->
   <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 
   <style>
-    body {
-      background: #f4f7fa;
-      color: #333;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    body.bg-light {
+      background-color: #f8f9fa !important;
     }
     .navbar-brand {
       font-weight: 700;
-      font-size: 1.8rem;
-      letter-spacing: 1px;
+      font-size: 1.5rem;
+      letter-spacing: 0.04em;
     }
     header {
-      background: white;
-      padding: 3rem 0;
-      text-align: center;
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
-      margin-bottom: 2rem;
-    }
-    header img {
-      max-width: 80px;
-      margin-bottom: 1rem;
+      background-color: white;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
     }
     header h1 {
-      font-weight: 800;
-      font-size: 2.8rem;
-      margin-bottom: 0.5rem;
-      color: #0d6efd;
+      font-weight: 700;
     }
-    header p.lead {
-      font-size: 1.2rem;
-      color: #555;
-    }
-    #switch {
-      margin-top: 1rem;
-    }
-    .info-card {
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.07);
-      padding: 1.5rem;
-      background: white;
-      transition: transform 0.3s ease;
-    }
-    .info-card:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 8px 20px rgb(0 0 0 / 0.1);
-    }
-    .info-card h5 {
-      font-weight: 600;
-      color: #0d6efd;
-      margin-bottom: 0.75rem;
-    }
-    #buy input {
+    section#buy input,
+    section#referral input {
       max-width: 400px;
-      margin: 0 auto 1rem auto;
-      padding: 1rem 1.2rem;
-      font-size: 1.1rem;
-      border-radius: 12px;
-      border: 1.5px solid #ced4da;
-      transition: border-color 0.3s ease;
     }
-    #buy input:focus {
-      border-color: #0d6efd;
-      outline: none;
-      box-shadow: 0 0 8px #0d6efd66;
+    .btn-copy {
+      cursor: pointer;
     }
-    #buyBtn {
-      padding: 0.75rem 3rem;
-      font-size: 1.15rem;
-      border-radius: 50px;
-      font-weight: 700;
-      transition: background-color 0.3s ease;
-    }
-    #buyBtn:hover {
-      background-color: #0b5ed7;
-    }
-    #buyStatus {
-      margin-top: 1.2rem;
-      font-style: italic;
+    .status-text {
       min-height: 1.5em;
-      color: #444;
-    }
-    #referral {
-      background: #e9f0ff;
-      padding: 3rem 1rem;
-      border-radius: 12px;
-      text-align: center;
-      max-width: 700px;
-      margin: 3rem auto;
-      box-shadow: 0 4px 16px rgb(13 110 253 / 0.15);
-    }
-    #referral h2 {
-      color: #0d6efd;
-      margin-bottom: 1rem;
-      font-weight: 700;
-    }
-    #referral p {
-      margin-bottom: 1.5rem;
-      font-size: 1.1rem;
-      color: #444;
-    }
-    #refLink {
-      width: 100%;
-      max-width: 500px;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      border: 1.5px solid #0d6efd;
       font-weight: 500;
-      font-size: 1rem;
-      color: #0d6efd;
-      user-select: all;
-      background: #ffffff;
-      margin-bottom: 1rem;
-    }
-    #referral button {
-      border-radius: 50px;
-      padding: 0.5rem 2.5rem;
-      font-weight: 600;
-    }
-    footer {
-      background: #0d6efd;
-      color: white;
-      padding: 1.5rem 0;
-      text-align: center;
-      font-size: 0.9rem;
-      margin-top: 4rem;
-      user-select: none;
     }
   </style>
 </head>
-<body>
+<body class="bg-light">
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
     <div class="container">
       <a class="navbar-brand" href="#">Digital Rufiya</a>
-      <div class="ms-auto d-flex align-items-center gap-3">
-        <!-- You can add wallet connect button here if you have web3modal or w3m-button -->
-        <!-- Placeholder icon -->
-        <i class="bi bi-wallet2 fs-4"></i>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <button class="btn btn-outline-light btn-sm" id="switchNetworkBtn" title="Switch to BSC Mainnet">
+          <i class="bi bi-arrow-repeat"></i> Switch to BSC
+        </button>
+        <button class="btn btn-light btn-sm" id="connectWalletBtn">Connect Wallet</button>
       </div>
     </div>
   </nav>
 
-  <header>
-    <img src="/logo.png" alt="DrF Logo" />
-    <h1>Buy DrF Token</h1>
-    <p class="lead">Join the Digital Rufiya revolution. Buy tokens using USDC on Binance Smart Chain.</p>
-    <button class="btn btn-outline-primary" id="switch" aria-label="Switch Network">Switch to BSC</button>
+  <header class="py-5 text-center">
+    <div class="container">
+      <img src="/logo.png" alt="DrF Logo" width="80" class="mb-3" />
+      <h1 class="display-5">Buy DrF Token</h1>
+      <p class="lead">Join the Digital Rufiya revolution. Buy tokens using USDC on Binance Smart Chain.</p>
+    </div>
   </header>
 
-  <section class="container mb-5">
-    <div class="row g-4 text-center">
-      <div class="col-md-4">
-        <div class="info-card">
-          <h5>Token Name</h5>
-          <p class="mb-0">Digital Rufiya</p>
+  <section class="py-4 text-center bg-white border-bottom">
+    <div class="container">
+      <div class="row gy-3 justify-content-center">
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm">
+            <h5>Token Name</h5>
+            <p class="text-muted">Digital Rufiya</p>
+          </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="info-card">
-          <h5>Token Symbol</h5>
-          <p class="mb-0">DrF</p>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm">
+            <h5>Token Symbol</h5>
+            <p class="text-muted">DrF</p>
+          </div>
         </div>
-      </div>
-      <div class="col-md-4">
-        <div class="info-card">
-          <h5>Token Address</h5>
-          <p class="text-break mb-0">
-            <a href="https://bscscan.com/token/0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
-              0x82dAa3...8A3c7 <i class="bi bi-box-arrow-up-right"></i>
-            </a>
-          </p>
+        <div class="col-md-4">
+          <div class="card p-3 shadow-sm">
+            <h5>Token Address</h5>
+            <p class="text-break text-muted">
+              <a href="https://bscscan.com/token/0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                0x82dAa3...8A3c7 <i class="bi bi-box-arrow-up-right"></i>
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="buy" class="text-center container mb-5">
-    <h2 class="mb-4 fw-bold">Buy DrF with USDC</h2>
-    <input
-      type="number"
-      id="buyAmount"
-      class="form-control"
-      placeholder="Enter amount of DrF tokens"
-      min="1"
-      step="any"
-      aria-label="Enter amount of DrF tokens"
-    />
-    <button id="buyBtn" class="btn btn-primary mt-3" aria-live="polite" aria-label="Buy DrF tokens">Buy DrF</button>
-    <p id="buyStatus" class="mt-3"></p>
+  <section id="buy" class="py-5 text-center">
+    <div class="container">
+      <h2 class="mb-4">Buy DrF with USDC</h2>
+      <input
+        type="number"
+        id="buyAmount"
+        class="form-control mb-3 mx-auto"
+        placeholder="Enter amount of DrF tokens"
+        min="1"
+        step="any"
+      />
+      <button id="buyBtn" class="btn btn-primary" disabled>Buy DrF</button>
+      <p id="buyStatus" class="mt-3 text-muted status-text"></p>
+    </div>
   </section>
 
-  <section id="referral">
-    <h2>Referral Program</h2>
-    <p>Share your referral link and earn extra DrF tokens when others buy using your link.</p>
-    <input
-      type="text"
-      id="refLink"
-      readonly
-      value="https://yourdomain.com/buy.html?ref=0xYourAddress"
-      aria-label="Referral link"
-      onclick="this.select();"
-    />
-    <button class="btn btn-outline-secondary" onclick="copyReferral()" aria-label="Copy referral link">Copy Referral Link</button>
+  <section id="referral" class="py-5 bg-white text-center border-top border-bottom">
+    <div class="container">
+      <h2 class="mb-3">Referral Program</h2>
+      <p>Share your referral link and earn extra DrF tokens when others buy using your link.</p>
+      <div class="input-group justify-content-center" style="max-width: 500px; margin: 0 auto;">
+        <input
+          type="text"
+          id="refLink"
+          class="form-control"
+          readonly
+          aria-label="Referral link"
+          value=""
+        />
+        <button class="btn btn-outline-secondary" id="copyReferralBtn" type="button" title="Copy Referral Link">
+          <i class="bi bi-clipboard"></i> Copy
+        </button>
+      </div>
+    </div>
   </section>
 
-  <footer>
-    &copy; 2025 Digital Rufiya. All rights reserved.
+  <footer class="py-4 bg-dark text-white text-center">
+    <div class="container">
+      <p class="mb-0">&copy; 2025 Digital Rufiya. All rights reserved.</p>
+    </div>
   </footer>
 
-  <script>
-    // ==== Config ====
-    const contractAddress = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7';
-    const tokenSymbol = 'DrF';
-    const tokenName = 'Digital Rufiya';
+<script>
+  const contractAddress = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7'; // DrF token address (if needed)
+  const tokenSymbol = 'DrF';
+  const tokenName = 'Digital Rufiya';
 
-    // Your sale wallet address here (receives USDC)
-    const saleRecipient = '0xYourSaleWalletAddressHere';
+  // Sale wallet that will receive USDC payments
+  const saleRecipient = '0xYourSaleWalletAddressHere'; // <-- CHANGE THIS!
 
-    // Price rate: 15.42 DrF per 1 USDC
-    const drfPerUSDC = 15.42;
+  // Price rate: how many DrF tokens per 1 USDC
+  const drfPerUSDC = 15.42;
 
-    // USDC contract on BSC Mainnet (18 decimals)
-    const USDCContractAddress = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
+  // USDC contract address on BSC Mainnet (18 decimals)
+  const USDCContractAddress = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
 
-    const USDC_ABI = [
-      {
-        constant: false,
-        inputs: [
-          { name: '_to', type: 'address' },
-          { name: '_value', type: 'uint256' }
-        ],
-        name: 'transfer',
-        outputs: [{ name: '', type: 'bool' }],
-        type: 'function'
-      },
-      {
-        constant: true,
-        inputs: [{ name: '_owner', type: 'address' }],
-        name: 'balanceOf',
-        outputs: [{ name: 'balance', type: 'uint256' }],
-        type: 'function'
-      }
-    ];
+  // Minimal USDC ABI for balanceOf and transfer
+  const USDC_ABI = [
+    {
+      constant: false,
+      inputs: [
+        { name: '_to', type: 'address' },
+        { name: '_value', type: 'uint256' }
+      ],
+      name: 'transfer',
+      outputs: [{ name: '', type: 'bool' }],
+      type: 'function'
+    },
+    {
+      constant: true,
+      inputs: [{ name: '_owner', type: 'address' }],
+      name: 'balanceOf',
+      outputs: [{ name: 'balance', type: 'uint256' }],
+      type: 'function'
+    }
+  ];
 
-    // Switch network to BSC Mainnet
-    document.getElementById('switch').addEventListener('click', async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x38' }] // BSC Mainnet
-          });
-          alert('Switched to Binance Smart Chain.');
-        } catch (e) {
-          alert('Switch failed. Please open MetaMask and manually switch to Binance Smart Chain.');
+  let web3;
+  let userAddress = null;
+
+  const connectWalletBtn = document.getElementById('connectWalletBtn');
+  const buyBtn = document.getElementById('buyBtn');
+  const buyStatus = document.getElementById('buyStatus');
+  const buyAmountInput = document.getElementById('buyAmount');
+  const refLinkInput = document.getElementById('refLink');
+  const copyReferralBtn = document.getElementById('copyReferralBtn');
+  const switchNetworkBtn = document.getElementById('switchNetworkBtn');
+
+  // On load: try to detect wallet & update UI accordingly
+  window.addEventListener('load', async () => {
+    if (window.ethereum) {
+      web3 = new Web3(window.ethereum);
+      try {
+        const accounts = await web3.eth.getAccounts();
+        if (accounts.length > 0) {
+          userAddress = accounts[0];
+          onWalletConnected();
         }
-      } else {
-        alert('No wallet detected');
+      } catch (e) {
+        console.error('Error fetching accounts', e);
       }
-    });
-
-    // Copy referral link to clipboard
-    function copyReferral() {
-      const ref = document.getElementById('refLink');
-      ref.select();
-      ref.setSelectionRange(0, 99999); // For mobile devices
-      navigator.clipboard.writeText(ref.value).then(() => {
-        alert('Referral link copied!');
-      }).catch(() => {
-        alert('Failed to copy referral link.');
-      });
+    } else {
+      buyStatus.innerText = 'No Ethereum wallet detected. Please install MetaMask or another wallet.';
+      buyBtn.disabled = true;
+      connectWalletBtn.disabled = true;
     }
 
-    // Buy button click handler
-    document.getElementById('buyBtn').addEventListener('click
+    // Setup referral link based on URL param or user wallet
+    setupReferralLink();
+  });
+
+  // Connect wallet button handler
+  connectWalletBtn.addEventListener('click', async () => {
+    if (!window.ethereum) {
+      alert('No Ethereum wallet detected. Please install MetaMask or another wallet.');
+      return;
+    }
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await web3.eth.getAccounts();
+      userAddress = accounts[0];
+      onWalletConnected();
+    } catch (e) {
+      alert('Wallet connection failed or rejected.');
+      console.error(e);
+    }
+  });
+
+  // Switch to BSC Mainnet button handler
+  switchNetworkBtn.addEventListener('click', async () => {
+    if (!window.ethereum) {
+      alert('No Ethereum wallet detected.');
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x38' }] // BSC mainnet chainId in hex
+      });
+      buyStatus.innerText = 'Switched to Binance Smart Chain.';
+    } catch (switchError) {
+      alert('Switch failed. Please manually switch your wallet to Binance Smart Chain.');
+      console.error(switchError);
+    }
+  });
+
+  // Copy referral link button handler
+  copyReferralBtn.addEventListener('click', () => {
+    refLinkInput.select();
+    refLinkInput.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand('copy');
+    alert('Referral link copied!');
+  });
+
+  // Buy button click handler
+  buyBtn.addEventListener('click', async () => {
+    const amountDrf = Number(buyAmountInput.value);
+    if (!amountDrf || amountDrf <= 0) {
+      alert('Please enter a valid DrF token amount.');
+      return;
+    }
+    if (!userAddress) {
+      alert('Please connect your wallet first.');
+      return
+;
+}
+    const usdcAmount = amountDrf / drfPerUSDC;
+const usdcAmountWei = web3.utils.toWei(usdcAmount.toString(), 'mwei'); // USDC uses 6 decimals = 'mwei' in web3.js
+
+buyStatus.innerText = 'Preparing transaction...';
+
+const usdcContract = new web3.eth.Contract(USDC_ABI, USDCContractAddress);
+
+try {
+  // Check USDC balance
+  const balance = await usdcContract.methods.balanceOf(userAddress).call();
+  if (BigInt(balance) < BigInt(usdcAmountWei)) {
+    buyStatus.innerText = 'Insufficient USDC balance.';
+    return;
+  }
+
+  buyStatus.innerText = 'Sending USDC payment... Confirm wallet transaction.';
+
+  // Send USDC tokens to saleRecipient wallet
+  const tx = await usdcContract.methods.transfer(saleRecipient, usdcAmountWei).send({ from: userAddress });
+
+  buyStatus.innerText = `Transaction successful! Tx Hash: ${tx.transactionHash}`;
+
+  // Optionally, here you can call your backend or smart contract to record the purchase for referral bonuses, etc.
+
+} catch (error) {
+  console.error(error);
+  buyStatus.innerText = 'Transaction failed or rejected.';
+}
