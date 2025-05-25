@@ -1,285 +1,256 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Token Swap with Fees</title>
+  <title>DRF Swap - Powered by PancakeSwap</title>
+
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+
+  <!-- Ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <!-- WalletConnect Provider -->
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; max-width: 480px; margin: 20px auto; padding: 10px; }
-    label, select, input, button { display: block; width: 100%; margin: 10px 0; font-size: 1rem; }
-    button { padding: 10px; background-color: #1e90ff; border: none; color: white; cursor: pointer; }
-    button:hover { background-color: #0c66d1; }
-    #status { margin-top: 15px; font-weight: bold; }
+    /* DRF branded colors */
+    :root {
+      --drf-blue: #1e40af; /* Tailwind blue-900 */
+      --drf-green: #22c55e; /* Tailwind green-500 */
+      --drf-dark: #0f172a; /* Tailwind gray-900 */
+      --drf-light: #f9fafb; /* Tailwind gray-50 */
+    }
   </style>
 </head>
-<body>
+<body class="bg-drf-light min-h-screen flex items-center justify-center font-sans px-4">
 
-  <h2>DRF Token Swap with 1.5% Fee (min 1 USDT)</h2>
+  <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-6 border border-gray-200">
+    <div class="text-center">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="mx-auto h-20 w-auto mb-3" />
+      <h1 class="text-3xl font-extrabold text-drf-blue">DRF Finance Swap</h1>
+      <p class="text-gray-700 mt-1">Earn 5% DRF rewards automatically by holding DRF.</p>
+    </div>
 
-  <button id="connectBtn">Connect Wallet</button>
+    <button id="connectWallet" class="w-full py-3 rounded-md bg-drf-blue text-white text-lg font-semibold hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed">
+      Connect Wallet
+    </button>
 
-  <label for="fromToken">From Token:</label>
-  <select id="fromToken">
-    <option value="BNB">BNB</option>
-    <option value="USDC">USDC</option>
-    <option value="USDT">USDT</option>
-    <option value="DRF">DRF</option>
-  </select>
+    <div class="space-y-4 mt-4">
+      <div>
+        <label for="fromToken" class="block text-gray-700 font-semibold mb-1">From Token</label>
+        <select id="fromToken" class="w-full border border-gray-300 rounded-md p-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-drf-green">
+          <option value="BNB">BNB</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
+      </div>
 
-  <label for="toToken">To Token:</label>
-  <select id="toToken">
-    <option value="DRF">DRF</option>
-    <option value="USDC">USDC</option>
-    <option value="USDT">USDT</option>
-    <option value="BNB">BNB</option>
-  </select>
+      <div>
+        <label for="fromAmount" class="block text-gray-700 font-semibold mb-1">Amount</label>
+        <input type="number" id="fromAmount" min="0" step="any" placeholder="Enter amount" class="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-drf-green" />
+      </div>
 
-  <label for="fromAmount">Amount to Swap:</label>
-  <input type="number" id="fromAmount" placeholder="Enter amount" min="0" step="any" />
+      <div>
+        <label for="toToken" class="block text-gray-700 font-semibold mb-1">To Token</label>
+        <select id="toToken" class="w-full border border-gray-300 rounded-md p-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-drf-green">
+          <option value="DRF">DRF</option>
+          <option value="BNB">BNB</option>
+          <option value="USDC">USDC</option>
+          <option value="USDT">USDT</option>
+        </select>
+      </div>
 
-  <button id="swapBtn">Swap Tokens</button>
+      <button id="swapBtn" class="w-full py-3 rounded-md bg-drf-green text-white text-lg font-semibold hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+        Swap Now
+      </button>
+    </div>
 
-  <div id="status"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <div id="status" class="text-center mt-4 text-gray-800 min-h-[1.5rem]"></div>
+  </div>
 
   <script>
-    let web3;
-    let signerAddress;
+    // Contract Addresses on BSC mainnet
+    const TOKEN_ADDRESSES = {
+      BNB: "0x0000000000000000000000000000000000000000", // native
+      USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+      USDT: "0x55d398326f99059ff775485246999027b3197955",
+      DRF: "0x1d9eE2f692278946cD9bAaBEB6B4B25912049f5B" // example DRF address (replace with real)
+    };
 
-    // Addresses & ABIs
-    const pancakeRouterAddress = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-    const feeReceiverAddress = "0xYourUSDCFeeReceiverAddressHere"; // <== Replace with your USDC fee wallet
+    // PancakeSwap Router address on BSC mainnet
+    const PANCAKE_ROUTER_ADDRESS = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 
-    const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC BSC mainnet
-    const usdtAddress = "0x55d398326f99059ff775485246999027b3197955"; // USDT BSC mainnet
-    const drfAddress  = "0xYourDRFTokenAddressHere"; // <== Replace with your DRF token address
-
-    // Minimal ERC20 ABI for allowance, approve, transfer, decimals
-    const ERC20_ABI = [
-      { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
-      { "constant": true, "inputs": [{ "name": "_owner", "type": "address" }, { "name": "_spender", "type": "address" }], "name": "allowance", "outputs": [{ "name": "", "type": "uint256" }], "type": "function" },
-      { "constant": false, "inputs": [{ "name": "_spender", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" },
-      { "constant": false, "inputs": [{ "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" }], "name": "transfer", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
-    ];
-
-    // PancakeSwap Router ABI (only the functions we need)
+    // PancakeSwap Router ABI (only swap functions we need)
     const PANCAKE_ROUTER_ABI = [
-      {
-        "inputs": [
-          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
-          { "internalType": "address[]", "name": "path", "type": "address[]" },
-          { "internalType": "address", "name": "to", "type": "address" },
-          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
-        ],
-        "name": "swapExactETHForTokens",
-        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
-        "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          { "internalType": "uint256", "name": "amountIn", "type": "uint256" },
-          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
-          { "internalType": "address[]", "name": "path", "type": "address[]" },
-          { "internalType": "address", "name": "to", "type": "address" },
-          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
-        ],
-        "name": "swapExactTokensForETH",
-        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          { "internalType": "uint256", "name": "amountIn", "type": "uint256" },
-          { "internalType": "uint256", "name": "amountOutMin", "type": "uint256" },
-          { "internalType": "address[]", "name": "path", "type": "address[]" },
-          { "internalType": "address", "name": "to", "type": "address" },
-          { "internalType": "uint256", "name": "deadline", "type": "uint256" }
-        ],
-        "name": "swapExactTokensForTokens",
-        "outputs": [{ "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      }
+      "function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts)",
+      "function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)",
+      "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)",
+      "function approve(address spender, uint256 amount) external returns (bool)"
     ];
 
-    // Utility to get token decimals
-    async function getTokenDecimals(tokenAddress) {
-      if (tokenAddress === "BNB") return 18;
-      const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
-      return await tokenContract.methods.decimals().call();
-    }
+    // ERC20 ABI (basic)
+    const ERC20_ABI = [
+      "function approve(address spender, uint256 amount) external returns (bool)",
+      "function allowance(address owner, address spender) external view returns (uint256)",
+      "function balanceOf(address owner) external view returns (uint256)",
+      "function decimals() external view returns (uint8)"
+    ];
 
-    // Resolve symbol to address
-    function getTokenAddress(symbol) {
-      switch (symbol) {
-        case "BNB": return "BNB";
-        case "USDC": return usdcAddress;
-        case "USDT": return usdtAddress;
-        case "DRF": return drfAddress;
-        default: return null;
-      }
-    }
+    let provider, signer, userAddress;
+    const connectWalletBtn = document.getElementById('connectWallet');
+    const statusBox = document.getElementById('status');
+    const swapBtn = document.getElementById('swapBtn');
 
-    // Status update
-    function updateStatus(text, isError = false) {
-      const statusEl = document.getElementById("status");
-      statusEl.style.color = isError ? "#ff6b6b" : "#58a6ff";
-      statusEl.innerText = text;
-    }
-
-    // Connect wallet
     async function connectWallet() {
       if (window.ethereum) {
         try {
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          web3 = new Web3(window.ethereum);
-          const accounts = await web3.eth.getAccounts();
-          signerAddress = accounts[0];
-          updateStatus("Connected: " + signerAddress);
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+
+          connectWalletBtn.innerText = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+          connectWalletBtn.disabled = true;
+          statusBox.innerText = "Wallet connected successfully!";
+          swapBtn.disabled = false;
         } catch (err) {
-          updateStatus("User denied wallet connection", true);
+          console.error("User rejected wallet connection:", err);
+          statusBox.innerText = "Wallet connection rejected.";
         }
       } else {
-        updateStatus("No Ethereum wallet found. Please install MetaMask.", true);
+        alert("MetaMask or compatible wallet is not installed.");
       }
     }
 
-    // Approve token spending
-    async function approveToken(tokenAddress, amount, spender) {
-      const tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
-      const allowance = await tokenContract.methods.allowance(signerAddress, spender).call();
-      if (BigInt(allowance) >= BigInt(amount)) return true; // already approved
+    connectWalletBtn.addEventListener("click", connectWallet);
 
-      updateStatus("Approving " + tokenAddress + "...");
+    swapBtn.disabled = true;
+
+    // Helper to get decimals for token
+    async function getTokenDecimals(tokenAddress) {
+      if (tokenAddress === TOKEN_ADDRESSES.BNB) return 18;
       try {
-        await tokenContract.methods.approve(spender, amount).send({ from: signerAddress });
-        updateStatus("Approval successful.");
-        return true;
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        return await tokenContract.decimals();
       } catch (err) {
-        updateStatus("Approval failed: " + err.message, true);
-        return false;
+        console.error("Failed to get token decimals:", err);
+        return 18;
       }
     }
 
-    async function doSwap() {
-      if (!signerAddress) {
-        updateStatus("Connect wallet first.", true);
+    async function swapTokens() {
+      if (!signer) {
+        statusBox.innerText = "Please connect your wallet first.";
         return;
       }
 
-      const fromTokenSymbol = document.getElementById("fromToken").value;
-      const toTokenSymbol = document.getElementById("toToken").value;
-      const inputAmount = parseFloat(document.getElementById("fromAmount").value);
+      const fromTokenSymbol = document.getElementById('fromToken').value;
+      const toTokenSymbol = document.getElementById('toToken').value;
+      const amountInput = document.getElementById('fromAmount').value.trim();
 
-      if (!inputAmount || inputAmount <= 0) {
-        updateStatus("Enter a valid amount.", true);
-        return;
-      }
       if (fromTokenSymbol === toTokenSymbol) {
-        updateStatus("Select different tokens to swap.", true);
+        statusBox.innerText = "From and To tokens must be different.";
         return;
       }
 
-      const fromToken = getTokenAddress(fromTokenSymbol);
-      const toToken = getTokenAddress(toTokenSymbol);
-
-      const fromDecimals = fromTokenSymbol === "BNB" ? 18 : await getTokenDecimals(fromToken);
-      const toDecimals = toTokenSymbol === "BNB" ? 18 : await getTokenDecimals(toToken);
-
-      // Calculate fee 1.5%
-      const feePercent = 0.015;
-      let feeAmount = inputAmount * feePercent;
-      if (feeAmount < 1) feeAmount = 1; // minimum 1 USDT fee
-
-      const amountAfterFee = inputAmount - feeAmount;
-      if (amountAfterFee <= 0) {
-        updateStatus("Amount after fee must be greater than zero.", true);
+      if (!amountInput || isNaN(amountInput) || Number(amountInput) <= 0) {
+        statusBox.innerText = "Please enter a valid amount.";
         return;
       }
 
-      const amountAfterFeeWei = web3.utils.toBN((amountAfterFee * (10 ** fromDecimals)).toString());
-
-      updateStatus("Preparing swap...");
-
-      const router = new web3.eth.Contract(PANCAKE_ROUTER_ABI, pancakeRouterAddress);
-      const WBNB_ADDRESS = "0xBB4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-
-      function resolveAddress(token) {
-        if (token === "BNB") return WBNB_ADDRESS;
-        return token;
+      const fromToken = TOKEN_ADDRESSES[fromTokenSymbol];
+      const toToken = TOKEN_ADDRESSES[toTokenSymbol];
+      if (!fromToken || !toToken) {
+        statusBox.innerText = "Unsupported token selection.";
+        return;
       }
 
-      const path = [resolveAddress(fromToken), resolveAddress(toToken)];
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+      const routerContract = new ethers.Contract(PANCAKE_ROUTER_ADDRESS, PANCAKE_ROUTER_ABI, signer);
+
+      statusBox.innerText = "Preparing swap transaction...";
 
       try {
-        if (fromToken !== "BNB") {
-          const approved = await approveToken(fromToken, amountAfterFeeWei.toString(), pancakeRouterAddress);
-          if (!approved) return;
-        }
+        const decimalsFrom = await getTokenDecimals(fromToken);
+        const decimalsTo = await getTokenDecimals(toToken);
+        const amountIn = ethers.utils.parseUnits(amountInput, decimalsFrom);
 
-        updateStatus("Sending swap transaction... Confirm in wallet.");
+        // Deadlines and slippage
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 10; // 10 minutes from now
+        const slippageTolerance = 0.03; // 3% slippage
+        // For simplicity, we won't fetch exact amountsOutMin, so we'll accept minimum 97% of amountIn (this can be improved)
 
-        let tx;
-
-        if (fromToken === "BNB") {
-          tx = await router.methods.swapExactETHForTokens(
-            0,
+        let path;
+        if (fromTokenSymbol === "BNB") {
+          // BNB to Token swap
+          path = [TOKEN_ADDRESSES.BNB, toToken];
+          // swapExactETHForTokens
+          statusBox.innerText = "Sending swap transaction...";
+          const tx = await routerContract.swapExactETHForTokens(
+            0, // amountOutMin, set to 0 for demo (not recommended for production)
             path,
-            signerAddress,
-            deadline
-          ).send({
-            from: signerAddress,
-            value: amountAfterFeeWei.toString(),
-            gas: 250000
-          });
-        } else if (toToken === "BNB") {
-          tx = await router.methods.swapExactTokensForETH(
-            amountAfterFeeWei.toString(),
-            0,
+            userAddress,
+            deadline,
+            { value: amountIn }
+          );
+          statusBox.innerText = "Swap transaction sent, waiting for confirmation...";
+          await tx.wait();
+          statusBox.innerText = "Swap completed successfully!";
+        } else if (toTokenSymbol === "BNB") {
+          // Token to BNB swap
+          path = [fromToken, TOKEN_ADDRESSES.BNB];
+          // Need approval first
+          const tokenContract = new ethers.Contract(fromToken, ERC20_ABI, signer);
+          const allowance = await tokenContract.allowance(userAddress, PANCAKE_ROUTER_ADDRESS);
+          if (allowance.lt(amountIn)) {
+            statusBox.innerText = "Approving token spend...";
+            const approveTx = await tokenContract.approve(PANCAKE_ROUTER_ADDRESS, ethers.constants.MaxUint256);
+            await approveTx.wait();
+            statusBox.innerText = "Token spend approved.";
+          }
+          statusBox.innerText = "Sending swap transaction...";
+          const tx = await routerContract.swapExactTokensForETH(
+            amountIn,
+            0, // amountOutMin
             path,
-            signerAddress,
+            userAddress,
             deadline
-          ).send({ from: signerAddress, gas: 250000 });
+          );
+          statusBox.innerText = "Swap transaction sent, waiting for confirmation...";
+          await tx.wait();
+          statusBox.innerText = "Swap completed successfully!";
         } else {
-          tx = await router.methods.swapExactTokensForTokens(
-            amountAfterFeeWei.toString(),
-            0,
+          // Token to Token swap
+          path = [fromToken, toToken];
+          // Need approval first
+          const tokenContract = new ethers.Contract(fromToken, ERC20_ABI, signer);
+          const allowance = await tokenContract.allowance(userAddress, PANCAKE_ROUTER_ADDRESS);
+          if (allowance.lt(amountIn)) {
+            statusBox.innerText = "Approving token spend...";
+            const approveTx = await tokenContract.approve(PANCAKE_ROUTER_ADDRESS, ethers.constants.MaxUint256);
+            await approveTx.wait();
+            statusBox.innerText = "Token spend approved.";
+          }
+          statusBox.innerText = "Sending swap transaction...";
+          const tx = await routerContract.swapExactTokensForTokens(
+            amountIn,
+            0, // amountOutMin
             path,
-            signerAddress,
+            userAddress,
             deadline
-          ).send({ from: signerAddress, gas: 250000 });
+          );
+          statusBox.innerText = "Swap transaction sent, waiting for confirmation...";
+          await tx.wait();
+          statusBox.innerText = "Swap completed successfully!";
         }
-
-        updateStatus("Swap successful! Tx Hash: " + tx.transactionHash);
-
-        // Now pay fee in USDC
-        const feeInUSDC = feeAmount; // feeAmount in tokens, minimum 1 USDT enforced above
-        const feeInUSDCWei = web3.utils.toBN((feeInUSDC * (10 ** 18)).toString());
-
-        const usdcContract = new web3.eth.Contract(ERC20_ABI, usdcAddress);
-        const allowance = await usdcContract.methods.allowance(signerAddress, feeReceiverAddress).call();
-
-        if (BigInt(allowance) < BigInt(feeInUSDCWei)) {
-          updateStatus("Approving USDC fee payment...");
-          await usdcContract.methods.approve(feeReceiverAddress, feeInUSDCWei.toString()).send({ from: signerAddress });
-          updateStatus("USDC fee approved.");
-        }
-
-        updateStatus("Transferring USDC fee...");
-        await usdcContract.methods.transfer(feeReceiverAddress, feeInUSDCWei.toString()).send({ from: signerAddress });
-        updateStatus("Fee of " + feeInUSDC + " USDC paid to fee wallet.");
-
       } catch (error) {
-        updateStatus("Swap failed: " + error.message, true);
+        console.error(error);
+        statusBox.innerText = "Swap failed: " + (error.data?.message || error.message || "Unknown error");
       }
     }
 
-    document.getElementById("connectBtn").addEventListener("click", connectWallet);
-    document.getElementById("swapBtn").addEventListener("click", doSwap);
+    swapBtn.addEventListener("click", swapTokens);
   </script>
 
 </body>
