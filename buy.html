@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Token Sale</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .logo {
+      width: 100px;
+      margin-bottom: 15px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #000000;
+      margin-bottom: 20px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    input {
+      background: #f9f9f9;
+      color: #000;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #238636;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #2ea043;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" alt="DRF Logo" class="logo">
+    <h2>DRF Token Sale</h2>
+    <p class="subtitle"><strong>Hold DRF to earn 5% rewards.</strong> No staking needed. DRF Finance is now live!</p>
+
+    <button id="connectWalletBtn">Connect Wallet</button>
+    <input id="buyAmount" type="number" placeholder="Amount in USDC"/>
+    <button id="buyBtn" disabled>Buy DRF</button>
+    <button id="switchBtn">Switch to BSC</button>
+
+    <h3>Your Referral Link</h3>
+    <input id="refLink" type="text" readonly/>
+    <button onclick="copyReferral()">Copy Referral</button>
+  </div>
+
+  <script>
+    let userAddress = '';
+    const connectWalletBtn = document.getElementById("connectWalletBtn");
+    const buyBtn = document.getElementById("buyBtn");
+    const switchBtn = document.getElementById("switchBtn");
+    const refLinkInput = document.getElementById("refLink");
+    const buyAmountInput = document.getElementById("buyAmount");
+
+    const saleRecipient = '0xYourSaleWalletAddressHere'; // Replace with your address
+    const usdcAddress = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'; // BSC USDC
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          userAddress = accounts[0];
+          onWalletConnected();
+        } catch (err) {
+          alert("Wallet connection failed or rejected.");
+        }
+      } else {
+        alert("MetaMask is not installed.");
+      }
+    }
+
+    async function switchToBSC() {
+      try {
+        const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+        if (currentChainId !== '0x38') {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x38' }],
+          });
+        } else {
+          alert("You are already on BSC.");
+        }
+      } catch (err) {
+        alert("Failed to switch network: " + err.message);
+      }
+    }
+
+    async function buyDRF() {
+      const amount = parseFloat(buyAmountInput.value);
+      if (!userAddress || isNaN(amount) || amount <= 0) {
+        alert("Connect wallet and enter a valid amount.");
+        return;
+      }
+
+      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+      if (currentChainId !== '0x38') {
+        alert("Please switch to BSC network first.");
+        return;
+      }
+
+      const amountInWei = BigInt(amount * 1e18).toString();
+      const txParams = {
+        from: userAddress,
+        to: usdcAddress,
+        data: '0xa9059cbb' + saleRecipient.slice(2).padStart(64, '0') + BigInt(amount * 1e18).toString(16).padStart(64, '0')
+      };
+
+      try {
+        const txHash = await ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [txParams],
+        });
+        alert("Transaction sent: " + txHash);
+      } catch (err) {
+        alert("Transaction failed: " + err.message);
+      }
+    }
+
+    function copyReferral() {
+      refLinkInput.select();
+      document.execCommand("copy");
+      alert("Referral link copied!");
+    }
+
+    function onWalletConnected() {
+      connectWalletBtn.innerText = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+      connectWalletBtn.disabled = true;
+      checkBuyButtonState();
+      setupReferralLink();
+    }
+
+    function checkBuyButtonState() {
+      const value = parseFloat(buyAmountInput.value);
+      buyBtn.disabled = !(userAddress && value > 0);
+    }
+
+    buyAmountInput.addEventListener('input', checkBuyButtonState);
+    connectWalletBtn.addEventListener('click', connectWallet);
+    switchBtn.addEventListener('click', switchToBSC);
+    buyBtn.addEventListener('click', buyDRF);
+
+    function setupReferralLink() {
+      const url = new URL(window.location.href);
+      const ref = url.searchParams.get("ref") || userAddress;
+      const link = `${window.location.origin}${window.location.pathname}?ref=${ref}`;
+      refLinkInput.value = link;
+    }
+  </script>
+</body>
+</html>
