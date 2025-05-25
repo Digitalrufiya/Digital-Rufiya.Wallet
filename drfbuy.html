@@ -1,138 +1,174 @@
+bro make it branded Here is drf logo https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226
+
+and mention users hold drf no need staking this new DRF finance you will get 5% rewards while you holding it 
+
+here is a file source code update it do not change other things 
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Token Sale</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
   <style>
     body {
-      background-color: #f8f9fa;
-      padding: 2rem;
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #fff;
+      padding: 20px;
     }
-    .card {
+    .container {
       max-width: 500px;
-      margin: 0 auto;
-      border-radius: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin: auto;
+      padding: 20px;
+      background: #161b22;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
-    .btn-primary {
-      border-radius: 12px;
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
     }
-    .btn-secondary {
-      border-radius: 12px;
+    input {
+      background: #0d1117;
+      color: #fff;
+      border: 1px solid #30363d;
     }
-    #buyStatus {
-      margin-top: 1rem;
-      font-weight: bold;
+    button {
+      background: #238636;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #2ea043;
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="card p-4">
-      <h2 class="text-center mb-4">Buy DRF Token</h2>
-      <div class="mb-3">
-        <label for="buyAmount" class="form-label">Amount in DRF</label>
-        <input type="number" class="form-control" id="buyAmount" placeholder="Enter DRF amount" min="1"/>
-      </div>
-      <div class="d-grid gap-2">
-        <button id="switch" class="btn btn-secondary">Switch to BSC</button>
-        <button id="buyBtn" class="btn btn-primary">Buy with USDC</button>
-      </div>
-      <div id="buyStatus" class="text-center text-danger mt-3"></div>
-    </div>
+    <h2>DRF Token Sale</h2>
+    <button id="connectWalletBtn">Connect Wallet</button>
+    <input id="buyAmount" type="number" placeholder="Amount in USDC"/>
+    <button id="buyBtn" disabled>Buy DRF</button>
+    <button id="switchBtn">Switch to BSC</button>
+    <h3>Your Referral Link</h3>
+    <input id="refLink" type="text" readonly/>
+    <button onclick="copyReferral()">Copy Referral</button>
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const buyBtn = document.getElementById('buyBtn');
-      const switchBtn = document.getElementById('switch');
+    let userAddress = '';
+    const connectWalletBtn = document.getElementById("connectWalletBtn");
+    const buyBtn = document.getElementById("buyBtn");
+    const switchBtn = document.getElementById("switchBtn");
+    const refLinkInput = document.getElementById("refLink");
+    const buyAmountInput = document.getElementById("buyAmount");
 
-      switchBtn.addEventListener('click', async () => {
-        if (window.ethereum) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x38' }],
-            });
-          } catch (switchError) {
-            alert('Switch failed. Try switching manually in MetaMask.');
-          }
-        } else {
-          alert('No Ethereum wallet detected');
-        }
-      });
+    const saleRecipient = '0xYourSaleWalletAddressHere'; // Replace with your address
+    const usdcAddress = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'; // BSC USDC
 
-      buyBtn.addEventListener('click', async () => {
-        const amountDrf = Number(document.getElementById('buyAmount').value);
-        const buyStatus = document.getElementById('buyStatus');
-
-        if (!amountDrf || amountDrf <= 0) {
-          alert('Enter a valid amount.');
-          return;
-        }
-
-        if (typeof window.ethereum === 'undefined') {
-          alert('Wallet not found. Please install MetaMask.');
-          return;
-        }
-
+    async function connectWallet() {
+      if (window.ethereum) {
         try {
-          const web3 = new Web3(window.ethereum);
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const accounts = await web3.eth.getAccounts();
-          const from = accounts[0];
-
-          const USDC_ADDRESS = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d';
-          const SALE_WALLET = '0xYourSaleWalletAddressHere'; // REPLACE with actual wallet
-          const DRF_PER_USDC = 15.42;
-
-          const USDC_ABI = [
-            {
-              constant: false,
-              inputs: [
-                { name: '_to', type: 'address' },
-                { name: '_value', type: 'uint256' }
-              ],
-              name: 'transfer',
-              outputs: [{ name: '', type: 'bool' }],
-              type: 'function'
-            },
-            {
-              constant: true,
-              inputs: [{ name: '_owner', type: 'address' }],
-              name: 'balanceOf',
-              outputs: [{ name: 'balance', type: 'uint256' }],
-              type: 'function'
-            }
-          ];
-
-          const usdcAmount = amountDrf / DRF_PER_USDC;
-          const usdcAmountWei = web3.utils.toWei(usdcAmount.toString(), 'ether');
-
-          const usdc = new web3.eth.Contract(USDC_ABI, USDC_ADDRESS);
-          const balance = await usdc.methods.balanceOf(from).call();
-
-          if (BigInt(balance) < BigInt(usdcAmountWei)) {
-            alert('Insufficient USDC balance.');
-            return;
-          }
-
-          buyStatus.innerText = 'Processing transaction...';
-
-          const tx = await usdc.methods.transfer(SALE_WALLET, usdcAmountWei).send({ from });
-
-          buyStatus.innerText = `Success! TX: ${tx.transactionHash}`;
-          document.getElementById('buyAmount').value = '';
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          userAddress = accounts[0];
+          onWalletConnected();
         } catch (err) {
-          console.error('Buy failed:', err);
-          buyStatus.innerText = 'Transaction failed or rejected.';
-          alert('Wallet connection failed or rejected.');
+          alert("Wallet connection failed or rejected.");
         }
-      });
-    });
+      } else {
+        alert("MetaMask is not installed.");
+      }
+    }
+
+    async function switchToBSC() {
+      try {
+        const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+        if (currentChainId !== '0x38') {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x38' }],
+          });
+        } else {
+          alert("You are already on BSC.");
+        }
+      } catch (err) {
+        alert("Failed to switch network: " + err.message);
+      }
+    }
+
+    async function buyDRF() {
+      const amount = parseFloat(buyAmountInput.value);
+      if (!userAddress || isNaN(amount) || amount <= 0) {
+        alert("Connect wallet and enter a valid amount.");
+        return;
+      }
+
+      const currentChainId = await ethereum.request({ method: 'eth_chainId' });
+      if (currentChainId !== '0x38') {
+        alert("Please switch to BSC network first.");
+        return;
+      }
+
+      const amountInWei = BigInt(amount * 1e18).toString();
+      const txParams = {
+        from: userAddress,
+        to: usdcAddress,
+        data: '0xa9059cbb' + saleRecipient.slice(2).padStart(64, '0') + BigInt(amount * 1e18).toString(16).padStart(64, '0')
+      };
+
+      try {
+        const txHash = await ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [txParams],
+        });
+        alert("Transaction sent: " + txHash);
+      } catch (err) {
+        alert("Transaction failed: " + err.message);
+      }
+    }
+
+    function copyReferral() {
+      refLinkInput.select();
+      document.execCommand("copy");
+      alert("Referral link copied!");
+    }
+
+    function onWalletConnected() {
+      connectWalletBtn.innerText = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+      connectWalletBtn.disabled = true;
+      checkBuyButtonState();
+      setupReferralLink();
+    }
+
+    function checkBuyButtonState() {
+      const value = parseFloat(buyAmountInput.value);
+      if (userAddress && value > 0) {
+        buyBtn.disabled = false;
+      } else {
+        buyBtn.disabled = true;
+      }
+    }
+
+    buyAmountInput.addEventListener('input', checkBuyButtonState);
+    connectWalletBtn.addEventListener('click', connectWallet);
+    switchBtn.addEventListener('click', switchToBSC);
+    buyBtn.addEventListener('click', buyDRF);
+
+    function setupReferralLink() {
+      const url = new URL(window.location.href);
+      const ref = url.searchParams.get("ref") || userAddress;
+      const link = `${window.location.origin}${window.location.pathname}?ref=${ref}`;
+      refLinkInput.value = link;
+    }
   </script>
 </body>
 </html>
