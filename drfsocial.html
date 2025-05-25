@@ -1,49 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Profile - DRF Wallet</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Social - Connect & Share</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 </head>
-<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
-  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
+<body class="bg-gray-100 min-h-screen font-sans">
+  <div class="max-w-4xl mx-auto p-4">
+    <div class="bg-white rounded-xl shadow-md p-6 mb-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <img src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg" alt="DRF Logo" class="w-12 h-12 rounded-full">
+          <h1 class="text-2xl font-bold">DRF Social</h1>
+        </div>
+        <button id="connectWallet" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Connect Wallet</button>
+      </div>
+    </div>
 
-  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
-    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
-    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
-    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
-    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
+    <div class="bg-white rounded-xl shadow-md p-6 mb-4">
+      <h2 class="text-xl font-semibold mb-2">Create Post</h2>
+      <textarea id="postText" rows="3" placeholder="What's on your mind?" class="w-full p-2 border rounded mb-2"></textarea>
+      <input type="file" id="mediaFile" accept="image/*,video/*" class="mb-2">
+      <button onclick="uploadPost()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Post</button>
+      <div id="uploadStatus" class="text-sm text-gray-600 mt-2"></div>
+    </div>
+
+    <div id="feed" class="space-y-4"></div>
   </div>
 
   <script>
-    function saveProfile() {
-      const name = document.getElementById('name').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const avatarInput = document.getElementById('avatar');
+    let userAddress = "";
+    const scriptURL = "YOUR_SCRIPT_URL_HERE";
 
-      if (!name || !password || avatarInput.files.length === 0) {
-        alert("All fields are required.");
-        return;
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          userAddress = accounts[0];
+          document.getElementById("connectWallet").innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+          loadFeed();
+        } catch (e) {
+          alert("Wallet connection failed.");
+        }
+      } else {
+        alert("Install MetaMask!");
       }
-
-      const reader = new FileReader();
-      reader.onload = function () {
-        const profile = {
-          name,
-          password,
-          avatar: reader.result,
-        };
-        localStorage.setItem('drf_profile', JSON.stringify(profile));
-        alert("Profile saved successfully!");
-        window.location.href = "post.html";
-      };
-      reader.readAsDataURL(avatarInput.files[0]);
     }
 
-    // If already saved, skip to posts
-    const existing = localStorage.getItem("drf_profile");
-    if (existing) window.location.href = "post.html";
+    async function uploadPost() {
+      const text = document.getElementById("postText").value;
+      const file = document.getElementById("mediaFile").files[0];
+      if (!userAddress) return alert("Connect wallet first");
+      if (!text && !file) return alert("Enter text or select media");
+
+      const formData = new FormData();
+      formData.append("wallet", userAddress);
+      formData.append("text", text);
+      if (file) formData.append("file", file);
+
+      document.getElementById("uploadStatus").innerText = "Uploading...";
+
+      try {
+        const res = await fetch(scriptURL + "?action=uploadPost", {
+          method: "POST",
+          body: formData
+        });
+        const msg = await res.text();
+        document.getElementById("uploadStatus").innerText = msg;
+        document.getElementById("postText").value = "";
+        document.getElementById("mediaFile").value = "";
+        loadFeed();
+      } catch (err) {
+        document.getElementById("uploadStatus").innerText = "Upload failed.";
+      }
+    }
+
+    async function loadFeed() {
+      const res = await fetch(scriptURL + "?action=getAllPosts");
+      const data = await res.json();
+      const feedDiv = document.getElementById("feed");
+      feedDiv.innerHTML = "";
+
+      data.reverse().forEach(post => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded shadow";
+        div.innerHTML = `
+          <div class='text-sm text-gray-600 mb-1'>${post.wallet.slice(0, 6)}...${post.wallet.slice(-4)} | ${post.timestamp}</div>
+          <div class='mb-2'>${post.text}</div>
+          ${post.mediaLink ? (post.mediaType.startsWith("image") ? `<img src="${post.mediaLink}" class='w-full rounded'>` : `<video controls src="${post.mediaLink}" class='w-full rounded'></video>`) : ""}
+        `;
+        feedDiv.appendChild(div);
+      });
+    }
+
+    document.getElementById("connectWallet").addEventListener("click", connectWallet);
   </script>
 </body>
 </html>
