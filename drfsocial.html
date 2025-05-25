@@ -1,79 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Social Firebase RTDB Test</title>
+  <meta charset="UTF-8" />
+  <title>DRF Social Feed</title>
+  <style>
+    /* Minimal styling */
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; }
+    .post { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+    .post img, .post video { max-width: 100%; height: auto; }
+    .profile-photo { width: 40px; height: 40px; border-radius: 50%; }
+    .cover-photo { width: 100%; max-height: 150px; object-fit: cover; }
+    .like-btn, .comment-btn, .share-btn { cursor: pointer; margin-right: 10px; color: blue; }
+    .comments { margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Create / Update Profile</h2>
+<form id="profileForm">
+  <input type="text" id="name" placeholder="Name" required />
+  <input type="text" id="username" placeholder="Username" required />
+  <input type="file" id="profilePhoto" accept="image/*" />
+  <input type="file" id="coverPhoto" accept="image/*" />
+  <button type="submit">Save Profile</button>
+</form>
+
+<hr />
+
+<h2>Create Post</h2>
+<form id="postForm">
+  <textarea id="postText" placeholder="What's on your mind?" required></textarea><br />
+  <input type="file" id="postPhoto" accept="image/*" />
+  <input type="file" id="postVideo" accept="video/mp4" />
+  <button type="submit">Post</button>
+</form>
+
+<hr />
+
+<h2>Feed</h2>
+<div id="feed"></div>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-    measurementId: "G-TPT7QMWDYE"
-  };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, set, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
 
-  const app = initializeApp(firebaseConfig);
-  const database = getDatabase(app);
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+  measurementId: "G-TPT7QMWDYE"
+};
 
-  window.addPost = function() {
-    const wallet = document.getElementById('wallet').value.trim();
-    const text = document.getElementById('postText').value.trim();
-    if(!wallet || !text) {
-      alert('Wallet and Post text are required');
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const storage = getStorage(app);
+
+// For demo purpose: simple userId - in real app, use Firebase Auth!
+const userId = 'user1'; 
+
+// --- PROFILE FORM HANDLER ---
+const profileForm = document.getElementById('profileForm');
+profileForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const username = document.getElementById('username').value.trim();
+
+  // Upload photos if selected
+  let profilePhotoURL = '';
+  let coverPhotoURL = '';
+
+  const profilePhotoFile = document.getElementById('profilePhoto').files[0];
+  if (profilePhotoFile) {
+    const pRef = storageRef(storage, `users/${userId}/profilePhoto_${profilePhotoFile.name}`);
+    await uploadBytes(pRef, profilePhotoFile);
+    profilePhotoURL = await getDownloadURL(pRef);
+  }
+
+  const coverPhotoFile = document.getElementById('coverPhoto').files[0];
+  if (coverPhotoFile) {
+    const cRef = storageRef(storage, `users/${userId}/coverPhoto_${coverPhotoFile.name}`);
+    await uploadBytes(cRef, coverPhotoFile);
+    coverPhotoURL = await getDownloadURL(cRef);
+  }
+
+  // Save to database
+  await set(ref(database, `users/${userId}`), {
+    name,
+    username,
+    profilePhotoURL,
+    coverPhotoURL
+  });
+
+  alert('Profile saved!');
+});
+
+// --- POST FORM HANDLER ---
+const postForm = document.getElementById('postForm');
+postForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const text = document.getElementById('postText').value.trim();
+  if(!text) {
+    alert("Please enter some text!");
+    return;
+  }
+
+  // Upload photo/video if selected
+  let photoURL = '';
+  let videoURL = '';
+
+  const postPhotoFile = document.getElementById('postPhoto').files[0];
+  if(postPhotoFile) {
+    const photoRef = storageRef(storage, `posts/${userId}/photos/${postPhotoFile.name}`);
+    await uploadBytes(photoRef, postPhotoFile);
+    photoURL = await getDownloadURL(photoRef);
+  }
+
+  const postVideoFile = document.getElementById('postVideo').files[0];
+  if(postVideoFile) {
+    if(postVideoFile.size > 180 * 1024 * 1024) { // ~180MB for 3 mins approx
+      alert("Video too large. Max 3 minutes mp4 allowed.");
       return;
     }
-    const postsRef = ref(database, 'posts');
-    const newPostRef = push(postsRef);
-    set(newPostRef, {
-      wallet,
-      text,
-      timestamp: Date.now()
-    }).then(() => {
-      document.getElementById('postText').value = '';
-    });
+    const videoRef = storageRef(storage, `posts/${userId}/videos/${postVideoFile.name}`);
+    await uploadBytes(videoRef, postVideoFile);
+    videoURL = await getDownloadURL(videoRef);
+  }
+
+  // Create post object
+  const newPostRef = push(ref(database, 'posts'));
+  await set(newPostRef, {
+    userId,
+    text,
+    photoURL,
+    videoURL,
+    timestamp: Date.now(),
+    likes: {},
+    comments: {}
+  });
+
+  postForm.reset();
+  alert("Post created!");
+});
+
+// --- LOAD FEED ---
+const feedDiv = document.getElementById('feed');
+
+function renderPost(postId, postData, userData) {
+  const postEl = document.createElement('div');
+  postEl.className = 'post';
+  
+  const userPhoto = userData.profilePhotoURL ? `<img src="${userData.profilePhotoURL}" class="profile-photo" alt="Profile" />` : '';
+  
+  const userName = userData.name || 'Anonymous';
+  const userUsername = userData.username ? `@${userData.username}` : '';
+
+  let mediaHTML = '';
+  if(postData.photoURL) {
+    mediaHTML += `<img src="${postData.photoURL}" alt="Post photo" />`;
+  }
+  if(postData.videoURL) {
+    mediaHTML += `<video controls src="${postData.videoURL}"></video>`;
+  }
+
+  // Count likes
+  const likesCount = postData.likes ? Object.keys(postData.likes).length : 0;
+
+  // Like button with toggle
+  const likedByUser = postData.likes && postData.likes[userId];
+
+  const likeBtnText = likedByUser ? `❤️ ${likesCount}` : `🤍 ${likesCount}`;
+
+  postEl.innerHTML = `
+    <div>${userPhoto} <strong>${userName}</strong> <small>${userUsername}</small></div>
+    <div>${mediaHTML}</div>
+    <p>${postData.text}</p>
+    <div>
+      <span class="like-btn" data-postid="${postId}">${likeBtnText}</span>
+      <span class="comment-btn" data-postid="${postId}">💬 Comment</span>
+      <span class="share-btn" data-postid="${postId}">🔗 Share</span>
+    </div>
+    <div class="comments" id="comments-${postId}"></div>
+  `;
+
+  // Comment form toggle
+  const commentBtn = postEl.querySelector('.comment-btn');
+  commentBtn.onclick = () => {
+    const commentsDiv = postEl.querySelector(`#comments-${postId}`);
+    if(commentsDiv.innerHTML) {
+      commentsDiv.innerHTML = '';
+    } else {
+      renderComments(postId, commentsDiv);
+      renderCommentForm(postId, commentsDiv);
+    }
   };
 
-  window.loadPosts = function() {
-    const postsRef = ref(database, 'posts');
-    onValue(postsRef, (snapshot) => {
-      const data = snapshot.val();
-      const container = document.getElementById('feed');
-      container.innerHTML = '';
-      if(!data) {
-        container.innerHTML = '<p>No posts yet</p>';
-        return;
-      }
-      // Sort posts by timestamp descending
-      const posts = Object.entries(data).sort((a,b) => b[1].timestamp - a[1].timestamp);
-      posts.forEach(([id, post]) => {
-        const postDiv = document.createElement('div');
-        postDiv.style.border = '1px solid #ccc';
-        postDiv.style.margin = '10px 0';
-        postDiv.style.padding = '8px';
-        postDiv.innerHTML = `<b>${post.wallet}</b><br>${post.text}<br><small>${new Date(post.timestamp).toLocaleString()}</small>`;
-        container.appendChild(postDiv);
+  // Like button toggle handler
+  const likeBtn = postEl.querySelector('.like-btn');
+  likeBtn.onclick = async () => {
+    const likeRef = ref(database, `posts/${postId}/likes/${userId}`);
+    if(likedByUser) {
+      await set(likeRef, null); // Remove like
+    } else {
+      await set(likeRef, true); // Add like
+    }
+  };
+
+  // Share button copies post URL
+  const shareBtn = postEl.querySelector('.share-btn');
+  shareBtn.onclick = () => {
+    const postURL = window.location.href + `#post-${postId}`;
+    navigator.clipboard.writeText(postURL);
+    alert("Post URL copied to clipboard!");
+  };
+
+  return postEl;
+}
+
+function renderComments(postId, container) {
+  const commentsRef = ref(database, `posts/${postId}/comments`);
+  onValue(commentsRef, snapshot => {
+    const comments = snapshot.val();
+    let html = '';
+    if(comments) {
+      Object.entries(comments).forEach(([commentId, c]) => {
+        html += `<div><strong>${c.userId}</strong>: ${c.text}</div>`;
       });
-    });
-  };
+    } else {
+      html = '<div>No comments yet.</div>';
+    }
+    container.innerHTML = html;
+  });
+}
 
-  window.onload = function() {
-    loadPosts();
+function renderCommentForm(postId, container) {
+  const form = document.createElement('form');
+  form.innerHTML = `
+    <input type="text" placeholder="Write a comment..." required style="width:80%;" />
+    <button type="submit">Send</button>
+  `;
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const input = form.querySelector('input');
+    const commentText = input.value.trim();
+    if(!commentText) return;
+
+    const newCommentRef = push(ref(database, `posts/${postId}/comments`));
+    await set(newCommentRef, {
+      userId,
+      text: commentText,
+      timestamp: Date.now()
+    });
+    input.value = '';
   };
+  container.appendChild(form);
+}
+
+// Load all posts + users and render feed
+const postsRef = ref(database, 'posts');
+onValue(postsRef, async snapshot => {
+  const posts = snapshot.val();
+  feedDiv.innerHTML = '';
+
+  if(!posts) {
+    feedDiv.innerHTML = '<p>No posts yet.</p>';
+    return;
+  }
+
+  for (const [postId, postData] of Object.entries(posts)) {
+    const userSnapshot = await get(ref(database, `users/${postData.userId}`));
+    const userData = userSnapshot.val() || { name: 'Unknown', username: '', profilePhotoURL: '' };
+    const postEl = renderPost(postId, postData, userData);
+    feedDiv.appendChild(postEl);
+  }
+});
+
 </script>
-</head>
-<body style="max-width:600px; margin:0 auto; font-family:Arial,sans-serif; padding:10px;">
-  <h2>DRF Social Post Test</h2>
-  <input id="wallet" placeholder="Wallet Address" style="width:100%; padding:8px; margin-bottom:6px;" />
-  <textarea id="postText" placeholder="Write your post here..." rows="3" style="width:100%; padding:8px;"></textarea>
-  <button onclick="addPost()" style="margin-top:6px; padding:8px 16px;">Post</button>
-  <h3>Feed</h3>
-  <div id="feed"></div>
+
 </body>
 </html>
