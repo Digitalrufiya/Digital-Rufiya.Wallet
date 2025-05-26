@@ -1,46 +1,25 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.firebasestorage.app",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-  measurementId: "G-TPT7QMWDYE"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const storage = getStorage(app);
-
-let userId = ""; // Replace with MetaMask or auth uid
-
-window.onload = () => {
-  // TEMP: prompt for ID
-  userId = prompt("Enter your Wallet or Username (temp)");
-
-  // Load profile if exists
-  get(child(ref(db), 'users/' + userId)).then(snapshot => {
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      document.getElementById("name").value = data.name || "";
-      document.getElementById("profilePicPreview").src = data.profilePhoto || "default-avatar.png";
-      document.getElementById("coverPicPreview").src = data.coverPhoto || "default-cover.jpg";
-    }
-  });
-}
-
 async function uploadImage(file, path) {
-  const imageRef = sRef(storage, `drfsocial/${userId}/${path}`);
-  await uploadBytes(imageRef, file);
-  return getDownloadURL(imageRef);
+  try {
+    console.log(`Uploading image to path: drfsocial/${userId}/${path}`);
+    const imageRef = sRef(storage, `drfsocial/${userId}/${path}`);
+    const snapshot = await uploadBytes(imageRef, file);
+    console.log("Upload snapshot:", snapshot);
+    const url = await getDownloadURL(imageRef);
+    console.log("Download URL:", url);
+    return url;
+  } catch (error) {
+    console.error("Upload failed:", error);
+    alert("Image upload failed: " + error.message);
+    return null;
+  }
 }
 
 window.saveProfile = async function () {
+  if (!userId) {
+    alert("User ID not set!");
+    return;
+  }
+
   const name = document.getElementById("name").value;
   let profilePhoto = document.getElementById("profilePicPreview").src;
   let coverPhoto = document.getElementById("coverPicPreview").src;
@@ -48,14 +27,36 @@ window.saveProfile = async function () {
   const profileFile = document.getElementById("profilePic").files[0];
   const coverFile = document.getElementById("coverPic").files[0];
 
-  if (profileFile) profilePhoto = await uploadImage(profileFile, "profile.jpg");
-  if (coverFile) coverPhoto = await uploadImage(coverFile, "cover.jpg");
+  console.log("Starting profile save...");
+  console.log("User ID:", userId);
+  console.log("Name:", name);
 
-  await set(ref(db, 'users/' + userId), {
-    name,
-    profilePhoto,
-    coverPhoto
-  });
+  if (profileFile) {
+    console.log("Profile file found, uploading...");
+    const url = await uploadImage(profileFile, "profile.jpg");
+    if (url) profilePhoto = url;
+  } else {
+    console.log("No profile file selected.");
+  }
 
-  alert("Profile saved!");
+  if (coverFile) {
+    console.log("Cover file found, uploading...");
+    const url = await uploadImage(coverFile, "cover.jpg");
+    if (url) coverPhoto = url;
+  } else {
+    console.log("No cover file selected.");
+  }
+
+  try {
+    await set(ref(db, 'users/' + userId), {
+      name,
+      profilePhoto,
+      coverPhoto
+    });
+    console.log("Profile saved in database.");
+    alert("Profile saved!");
+  } catch (error) {
+    console.error("Saving profile failed:", error);
+    alert("Failed to save profile data: " + error.message);
+  }
 };
