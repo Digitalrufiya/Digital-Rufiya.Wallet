@@ -7,7 +7,7 @@
     input[type="text"] { padding: 8px; width: 80%; margin: 10px auto; display: block; }
     img { max-width: 200px; border-radius: 50%; margin: 10px; }
     .cover { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; }
-    .btn { padding: 10px 20px; margin-top: 10px; background: #007bff; color: white; border: none; border-radius: 8px; }
+    .btn { padding: 10px 20px; margin-top: 10px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -36,7 +36,7 @@
       authDomain: "drfsocial-23a06.firebaseapp.com",
       databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
       projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:b37dffeb550941ffff3f40",
       measurementId: "G-TPT7QMWDYE"
@@ -48,7 +48,7 @@
 
     let userId = "";
 
-    window.onload = () => {
+    window.onload = async () => {
       userId = prompt("Enter your Wallet or Username (temp)");
 
       if (!userId) {
@@ -56,14 +56,18 @@
         return;
       }
 
-      get(child(ref(db), 'users/' + userId)).then(snapshot => {
+      try {
+        const snapshot = await get(child(ref(db), 'users/' + userId));
         if (snapshot.exists()) {
           const data = snapshot.val();
           document.getElementById("name").value = data.name || "";
           document.getElementById("profilePicPreview").src = data.profilePhoto || "default-avatar.png";
           document.getElementById("coverPicPreview").src = data.coverPhoto || "default-cover.jpg";
         }
-      });
+      } catch (err) {
+        console.error("Error loading profile:", err);
+        alert("Failed to load profile data.");
+      }
     }
 
     async function uploadImage(file, path) {
@@ -72,7 +76,6 @@
       return getDownloadURL(imageRef);
     }
 
-    // Expose saveProfile globally so inline onclick can access it
     window.saveProfile = async function () {
       if (!userId) {
         alert("User ID not set!");
@@ -86,16 +89,21 @@
       const profileFile = document.getElementById("profilePic").files[0];
       const coverFile = document.getElementById("coverPic").files[0];
 
-      if (profileFile) profilePhoto = await uploadImage(profileFile, "profile.jpg");
-      if (coverFile) coverPhoto = await uploadImage(coverFile, "cover.jpg");
+      try {
+        if (profileFile) profilePhoto = await uploadImage(profileFile, "profile.jpg");
+        if (coverFile) coverPhoto = await uploadImage(coverFile, "cover.jpg");
 
-      await set(ref(db, 'users/' + userId), {
-        name,
-        profilePhoto,
-        coverPhoto
-      });
+        await set(ref(db, 'users/' + userId), {
+          name,
+          profilePhoto,
+          coverPhoto
+        });
 
-      alert("Profile saved!");
+        alert("Profile saved!");
+      } catch (err) {
+        console.error("Save failed:", err);
+        alert("Failed to save profile. Try again.");
+      }
     };
   </script>
 </body>
