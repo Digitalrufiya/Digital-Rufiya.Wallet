@@ -2,112 +2,178 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Profile - DRF Wallet</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile Setup - Mini Facebook</title>
   <style>
-    #avatarPreview {
-      max-width: 100px;
-      max-height: 100px;
-      display: block;
-      margin: 10px auto;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #0baf9a;
-    }
-    #goToPostsBtn {
-      margin-top: 15px;
-      padding: 8px 15px;
-      background: #0baf9a;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      display: none;
-    }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+    label { display: block; margin: 10px 0 5px; }
+    input[type="text"] { width: 100%; padding: 8px; }
+    input[type="file"] { margin-top: 5px; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    img { max-width: 150px; margin-top: 10px; border-radius: 8px; }
+    #coverPreview { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; }
+    .wallet-address { margin: 10px 0; font-weight: bold; word-break: break-all; }
+    #status { margin-top: 20px; }
   </style>
 </head>
-<body style="font-family:sans-serif;background:#f4f4f4;text-align:center;">
-  <h2 style="margin-top: 30px;">Create Your DRF Profile</h2>
+<body>
 
-  <div style="max-width:400px;margin:30px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);">
-    <input type="text" id="name" placeholder="Enter your name" style="width:100%;padding:10px;margin:10px 0;" />
-    <input type="password" id="password" placeholder="Set a password" style="width:100%;padding:10px;margin:10px 0;" />
-    
-    <input type="file" id="avatar" accept="image/*" style="margin:10px 0;" />
-    <img id="avatarPreview" src="" alt="Avatar Preview" />
+  <h1>Setup Your Profile</h1>
 
-    <button onclick="saveProfile()" style="padding:10px 20px;background:#0baf9a;color:#fff;border:none;border-radius:5px;">Save Profile</button>
+  <button id="connectWalletBtn">Connect Wallet</button>
+  <div class="wallet-address" id="walletAddress"></div>
 
-    <button id="goToPostsBtn" onclick="goToPosts()">Go to Posts</button>
-  </div>
+  <form id="profileForm" style="display:none;">
+    <label for="username">Username (display name):</label>
+    <input type="text" id="username" required />
 
-  <script>
-    const nameInput = document.getElementById('name');
-    const passwordInput = document.getElementById('password');
-    const avatarInput = document.getElementById('avatar');
-    const avatarPreview = document.getElementById('avatarPreview');
-    const goToPostsBtn = document.getElementById('goToPostsBtn');
+    <label for="profilePhoto">Profile Photo:</label>
+    <input type="file" id="profilePhoto" accept="image/*" />
 
-    // Load existing profile if present
-    const existing = localStorage.getItem('drf_profile');
-    if (existing) {
-      const profile = JSON.parse(existing);
-      nameInput.value = profile.name || '';
-      // Password is not prefilled for security
-      avatarPreview.src = profile.avatar || '';
-      goToPostsBtn.style.display = 'inline-block';  // Show "Go to Posts" button
-    }
+    <img id="profilePreview" src="" alt="Profile Preview" style="display:none;" />
 
-    avatarInput.addEventListener('change', function() {
-      if (avatarInput.files && avatarInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          avatarPreview.src = e.target.result;
+    <label for="coverPhoto">Cover Photo:</label>
+    <input type="file" id="coverPhoto" accept="image/*" />
+
+    <img id="coverPreview" src="" alt="Cover Preview" style="display:none;" />
+
+    <button type="submit">Save Profile</button>
+  </form>
+
+  <div id="status"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const storage = getStorage(app);
+
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressDiv = document.getElementById('walletAddress');
+    const profileForm = document.getElementById('profileForm');
+    const usernameInput = document.getElementById('username');
+    const profilePhotoInput = document.getElementById('profilePhoto');
+    const profilePreview = document.getElementById('profilePreview');
+    const coverPhotoInput = document.getElementById('coverPhoto');
+    const coverPreview = document.getElementById('coverPreview');
+    const statusDiv = document.getElementById('status');
+
+    let walletAddress = null;
+
+    // Connect to MetaMask wallet
+    connectWalletBtn.onclick = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          walletAddress = accounts[0];
+          walletAddressDiv.textContent = `Wallet: ${walletAddress}`;
+          connectWalletBtn.style.display = 'none';
+          profileForm.style.display = 'block';
+          loadProfile();
+        } catch (err) {
+          alert('Wallet connection failed: ' + err.message);
         }
-        reader.readAsDataURL(avatarInput.files[0]);
-      }
-    });
-
-    function saveProfile() {
-      const name = nameInput.value.trim();
-      const password = passwordInput.value.trim();
-
-      if (!name || !password) {
-        alert("Name and password are required.");
-        return;
-      }
-
-      if (avatarInput.files.length === 0 && !avatarPreview.src) {
-        alert("Please select an avatar image.");
-        return;
-      }
-
-      if (avatarInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          saveToLocal(name, password, reader.result);
-        };
-        reader.readAsDataURL(avatarInput.files[0]);
       } else {
-        // No new avatar selected, keep existing one
-        saveToLocal(name, password, avatarPreview.src);
+        alert('Please install MetaMask or compatible wallet!');
+      }
+    };
+
+    // Show image preview when file selected
+    profilePhotoInput.onchange = e => {
+      const file = e.target.files[0];
+      if (file) {
+        profilePreview.src = URL.createObjectURL(file);
+        profilePreview.style.display = 'block';
+      }
+    };
+    coverPhotoInput.onchange = e => {
+      const file = e.target.files[0];
+      if (file) {
+        coverPreview.src = URL.createObjectURL(file);
+        coverPreview.style.display = 'block';
+      }
+    };
+
+    // Load existing profile if any
+    async function loadProfile() {
+      if (!walletAddress) return;
+      const userRef = ref(database, 'users/' + walletAddress);
+      const snapshot = await get(userRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        usernameInput.value = data.username || '';
+        if (data.profilePhotoURL) {
+          profilePreview.src = data.profilePhotoURL;
+          profilePreview.style.display = 'block';
+        }
+        if (data.coverPhotoURL) {
+          coverPreview.src = data.coverPhotoURL;
+          coverPreview.style.display = 'block';
+        }
       }
     }
 
-    function saveToLocal(name, password, avatarDataUrl) {
-      const profile = {
-        name,
-        password,
-        avatar: avatarDataUrl,
-      };
-      localStorage.setItem('drf_profile', JSON.stringify(profile));
-      alert("Profile saved successfully!");
-      goToPostsBtn.style.display = 'inline-block'; // Show button after saving
-    }
+    profileForm.onsubmit = async e => {
+      e.preventDefault();
+      if (!walletAddress) {
+        alert('Please connect wallet first.');
+        return;
+      }
+      statusDiv.textContent = 'Saving profile...';
 
-    function goToPosts() {
-      window.location.href = "post.html";
+      const username = usernameInput.value.trim();
+      if (!username) {
+        alert('Please enter a username.');
+        statusDiv.textContent = '';
+        return;
+      }
+
+      // Upload images if selected
+      let profilePhotoURL = null;
+      let coverPhotoURL = null;
+
+      if (profilePhotoInput.files.length > 0) {
+        const file = profilePhotoInput.files[0];
+        profilePhotoURL = await uploadImage(file, `users/${walletAddress}/profilePhoto`);
+      }
+      if (coverPhotoInput.files.length > 0) {
+        const file = coverPhotoInput.files[0];
+        coverPhotoURL = await uploadImage(file, `users/${walletAddress}/coverPhoto`);
+      }
+
+      // Prepare data to save
+      const userData = {
+        username,
+        timestamp: Date.now(),
+      };
+      if (profilePhotoURL) userData.profilePhotoURL = profilePhotoURL;
+      if (coverPhotoURL) userData.coverPhotoURL = coverPhotoURL;
+
+      // Save to Realtime Database
+      const userRef = ref(database, 'users/' + walletAddress);
+      await set(userRef, userData);
+
+      statusDiv.textContent = 'Profile saved successfully!';
+    };
+
+    async function uploadImage(file, path) {
+      const storageReference = storageRef(storage, path);
+      await uploadBytes(storageReference, file);
+      return await getDownloadURL(storageReference);
     }
   </script>
 </body>
