@@ -1,0 +1,161 @@
+<!-- Full Package Countdown Banner -->
+<style>
+  #countdown-banner {
+    background: linear-gradient(135deg, #001020, #002040);
+    color: #00f0ff;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 35px 30px;
+    border-radius: 16px;
+    max-width: 700px;
+    margin: 50px auto;
+    box-shadow: 0 0 40px #00f0ffcc;
+    user-select: none;
+    opacity: 0;
+    animation: fadeIn 1.5s forwards;
+    position: relative;
+  }
+
+  #countdown-banner h2 {
+    font-weight: 800;
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-shadow: 0 0 15px #00f0ffcc;
+    animation: pulseGlow 3s infinite;
+  }
+
+  #countdown {
+    font-size: 3rem;
+    letter-spacing: 5px;
+    font-weight: 900;
+    text-shadow: 0 0 25px #00f0ffcc;
+    animation: pulseGlow 3s infinite;
+  }
+
+  #progress-bar {
+    height: 10px;
+    background: #00f0ff33;
+    border-radius: 8px;
+    margin: 25px auto 30px auto;
+    max-width: 80%;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px #00f0ff77;
+  }
+
+  #progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00fff7, #00aaff);
+    border-radius: 8px;
+    box-shadow: 0 0 15px #00f0ffbb;
+    transition: width 0.5s ease;
+  }
+
+  #join-btn {
+    background: #00f0ff;
+    color: #001020;
+    font-weight: 700;
+    font-size: 1.4rem;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 0 20px #00f0ffbb;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+  }
+
+  #join-btn:hover {
+    background: #00aaff;
+    box-shadow: 0 0 40px #00f0ffdd;
+    transform: scale(1.1);
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      text-shadow: 0 0 15px #00f0ffcc, 0 0 25px #00f0ffbb;
+    }
+    50% {
+      text-shadow: 0 0 35px #00fff7ff, 0 0 45px #00aaffff;
+    }
+  }
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    #countdown-banner {
+      padding: 25px 20px;
+    }
+    #countdown {
+      font-size: 2.2rem;
+      letter-spacing: 3px;
+    }
+    #join-btn {
+      font-size: 1.1rem;
+      padding: 12px 30px;
+    }
+  }
+</style>
+
+<div id="countdown-banner">
+  <h2>Time Fix Countdown</h2>
+  <div id="countdown">Loading...</div>
+
+  <div id="progress-bar">
+    <div id="progress-bar-fill"></div>
+  </div>
+
+  <button id="join-btn" onclick="window.location.href='https://digitalrufiya.com'">
+    Join Now
+  </button>
+</div>
+
+<script>
+  // Set target date/time here (ISO 8601 format)
+  const targetDate = new Date("2025-06-10T18:00:00").getTime();
+
+  const countdownEl = document.getElementById('countdown');
+  const progressBarFill = document.getElementById('progress-bar-fill');
+
+  // For progress bar, we need total duration and elapsed time
+  // Let's assume you started countdown 10 days before target (adjust as needed)
+  const countdownDuration = 10 * 24 * 60 * 60 * 1000; // 10 days in ms
+  const countdownStart = targetDate - countdownDuration;
+
+  function updateCountdown() {
+    const now = new Date().getTime();
+    const distance = targetDate - now;
+
+    if (distance <= 0) {
+      countdownEl.innerHTML = "Time Fixed! ✅";
+      progressBarFill.style.width = '100%';
+      clearInterval(timerInterval);
+      return;
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    countdownEl.innerHTML = 
+      `${days}d : ${hours.toString().padStart(2,'0')}h : ` +
+      `${minutes.toString().padStart(2,'0')}m : ${seconds.toString().padStart(2,'0')}s`;
+
+    // Calculate progress percentage (0 to 100)
+    const elapsed = now - countdownStart;
+    let progressPercent = (elapsed / countdownDuration) * 100;
+    if (progressPercent > 100) progressPercent = 100;
+    if (progressPercent < 0) progressPercent = 0;
+
+    progressBarFill.style.width = progressPercent + '%';
+  }
+
+  updateCountdown();
+  const timerInterval = setInterval(updateCountdown, 1000);
+</script>
