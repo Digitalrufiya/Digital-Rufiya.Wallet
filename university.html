@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI University - Student Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #walletAddress { font-weight: bold; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    #inputArea { margin-top: 10px; }
+    #inputArea input { width: 80%; padding: 8px; }
+    #inputArea button { padding: 8px; }
+    #projectUpload { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h1>Welcome to AI University</h1>
+
+  <button id="connectWalletBtn">Connect Wallet</button>  
+  <div>Your Wallet: <span id="walletAddress">Not connected</span></div>
+
+  <h2>AI Chat Assistant</h2>
+  <div id="chat"></div>
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="Ask me anything..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <h2>Upload Your Project</h2>
+  <input type="file" id="projectFile" />
+  <button id="uploadBtn">Upload to IPFS/Filecoin</button>
+  <div id="uploadStatus"></div>
+
+  <h2>Certificate Hash & On-Chain Proof</h2>
+  <textarea id="certificateData" rows="4" cols="50" placeholder="Paste your certificate JSON here..."></textarea><br />
+  <button id="hashCertBtn">Generate SHA-256 Hash & Send On-Chain</button>
+  <div id="hashOutput"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+    // Wallet connect logic
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+
+    let provider;
+    let signer;
+    let userAddress;
+
+    connectWalletBtn.onclick = async () => {
+      if(window.ethereum){
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+          walletAddressSpan.textContent = userAddress;
+          addChatMessage('System', 'Wallet connected: ' + userAddress);
+        } catch(e) {
+          alert('Wallet connection failed');
+        }
+      } else {
+        alert('Please install MetaMask or compatible wallet.');
+      }
+    };
+
+    // Simple chat UI (mock AI response)
+    const chatDiv = document.getElementById('chat');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function addChatMessage(sender, message) {
+      const msg = document.createElement('div');
+      msg.innerHTML = `<b>${sender}:</b> ${message}`;
+      chatDiv.appendChild(msg);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    sendBtn.onclick = () => {
+      const question = userInput.value.trim();
+      if(!question) return;
+      addChatMessage('You', question);
+      userInput.value = '';
+
+      // MOCK AI response - replace with real API call
+      setTimeout(() => {
+        addChatMessage('AI', 'This is a mock response to: "' + question + '".');
+      }, 1000);
+    };
+
+    // Upload project placeholder (no real IPFS upload here yet)
+    const uploadBtn = document.getElementById('uploadBtn');
+    const projectFileInput = document.getElementById('projectFile');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    uploadBtn.onclick = () => {
+      if(!projectFileInput.files.length) {
+        alert('Please select a project file first.');
+        return;
+      }
+      const file = projectFileInput.files[0];
+      // TODO: Integrate IPFS/Filecoin upload here
+      uploadStatus.textContent = `Uploading "${file.name}" ... (functionality coming soon)`;
+    };
+
+    // Certificate hashing and mock on-chain send
+    const hashCertBtn = document.getElementById('hashCertBtn');
+    const certificateData = document.getElementById('certificateData');
+    const hashOutput = document.getElementById('hashOutput');
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    hashCertBtn.onclick = async () => {
+      const certText = certificateData.value.trim();
+      if(!certText) {
+        alert('Please paste your certificate JSON data.');
+        return;
+      }
+      const hash = await sha256(certText);
+      hashOutput.textContent = 'SHA-256 Hash: ' + hash;
+
+      addChatMessage('System', `Certificate hash generated: ${hash}`);
+      
+      // TODO: Add blockchain transaction sending code here
+      // Example: call a smart contract method with this hash from connected wallet
+    };
+
+  </script>
+
+</body>
+</html>
