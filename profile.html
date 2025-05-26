@@ -2,85 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Social - Profile</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #f0f2f5;
+      font-family: sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 0;
     }
-    .profile-header {
-      position: relative;
-      text-align: center;
-      color: white;
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     .cover-photo {
       width: 100%;
-      height: 200px;
+      height: 180px;
       object-fit: cover;
-    }
-    .profile-pic {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      border: 4px solid white;
-      position: absolute;
-      bottom: -60px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    .profile-content {
-      padding-top: 80px;
-      text-align: center;
-    }
-    .btn {
-      margin-top: 10px;
-      padding: 8px 16px;
-      background: #1877f2;
-      color: white;
-      border: none;
       border-radius: 6px;
-      cursor: pointer;
+    }
+    .profile-photo {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-top: -50px;
+      border: 4px solid white;
+    }
+    .username {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 10px 0;
     }
     input[type="file"] {
-      display: none;
+      display: block;
+      margin-top: 10px;
+    }
+    .btn {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <div class="profile-header">
-    <img id="coverPhoto" class="cover-photo" src="default_cover.jpg" alt="Cover Photo"/>
-    <img id="profilePic" class="profile-pic" src="default_profile.jpg" alt="Profile Picture"/>
+  <div class="container">
+    <img id="coverPreview" class="cover-photo" src="" alt="Cover Photo">
+    <img id="profilePreview" class="profile-photo" src="" alt="Profile Photo">
+
+    <div class="username" id="displayName">Your Name</div>
+
+    <input type="text" id="usernameInput" placeholder="Enter your name" />
+    <input type="file" id="coverInput" accept="image/*">
+    <input type="file" id="profileInput" accept="image/*">
+    <button class="btn" onclick="saveProfile()">Save Profile</button>
   </div>
 
-  <div class="profile-content">
-    <h2 id="username">Username</h2>
-    <p id="bio">User bio goes here...</p>
-    <button class="btn" onclick="document.getElementById('editModal').style.display='block'">Edit Profile</button>
-  </div>
-
-  <!-- Edit Modal -->
-  <div id="editModal" style="display:none; padding:20px; background:white; position:fixed; top:10%; left:10%; width:80%; max-width:400px; box-shadow:0 0 10px #333;">
-    <h3>Edit Profile</h3>
-    <input type="text" id="editName" placeholder="Username"/><br><br>
-    <textarea id="editBio" placeholder="Your bio..."></textarea><br><br>
-    <label class="btn">
-      Upload Profile Photo
-      <input type="file" id="profileUpload"/>
-    </label><br><br>
-    <label class="btn">
-      Upload Cover Photo
-      <input type="file" id="coverUpload"/>
-    </label><br><br>
-    <button class="btn" onclick="saveProfile()">Save</button>
-    <button class="btn" onclick="document.getElementById('editModal').style.display='none'" style="background:#ccc;">Cancel</button>
-  </div>
-
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -90,60 +80,57 @@
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase();
-    const storage = getStorage();
+    const db = getDatabase(app);
+    const storage = getStorage(app);
 
-    const userId = "testuser"; // Temporary static user ID
-
-    // Load existing profile
-    const userRef = ref(db, 'users/' + userId);
-    get(userRef).then((snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        document.getElementById('username').textContent = data.name || "No Name";
-        document.getElementById('bio').textContent = data.bio || "";
-        if (data.profileURL) document.getElementById('profilePic').src = data.profileURL;
-        if (data.coverURL) document.getElementById('coverPhoto').src = data.coverURL;
-      }
-    });
-
-    // Save profile
     async function saveProfile() {
-      const name = document.getElementById('editName').value;
-      const bio = document.getElementById('editBio').value;
+      const username = document.getElementById("usernameInput").value;
+      const profileInput = document.getElementById("profileInput").files[0];
+      const coverInput = document.getElementById("coverInput").files[0];
+      let profileURL = "";
+      let coverURL = "";
 
-      let profileURL = null;
-      let coverURL = null;
-
-      const profileFile = document.getElementById('profileUpload').files[0];
-      const coverFile = document.getElementById('coverUpload').files[0];
-
-      if (profileFile) {
-        const profilePath = sRef(storage, `profile_pictures/${userId}.jpg`);
-        await uploadBytes(profilePath, profileFile);
-        profileURL = await getDownloadURL(profilePath);
+      if (profileInput) {
+        const profileRef = storageRef(storage, `drfsocial/profiles/${Date.now()}_${profileInput.name}`);
+        await uploadBytes(profileRef, profileInput);
+        profileURL = await getDownloadURL(profileRef);
       }
 
-      if (coverFile) {
-        const coverPath = sRef(storage, `cover_photos/${userId}.jpg`);
-        await uploadBytes(coverPath, coverFile);
-        coverURL = await getDownloadURL(coverPath);
+      if (coverInput) {
+        const coverRef = storageRef(storage, `drfsocial/covers/${Date.now()}_${coverInput.name}`);
+        await uploadBytes(coverRef, coverInput);
+        coverURL = await getDownloadURL(coverRef);
       }
 
       const userData = {
-        name,
-        bio,
-        ...(profileURL && { profileURL }),
-        ...(coverURL && { coverURL }),
+        name: username,
+        profilePhoto: profileURL,
+        coverPhoto: coverURL,
+        timestamp: Date.now()
       };
 
-      await set(userRef, userData);
+      await set(ref(db, 'users/demoUser'), userData);
+
+      document.getElementById("displayName").innerText = username;
+      document.getElementById("profilePreview").src = profileURL;
+      document.getElementById("coverPreview").src = coverURL;
       alert("✅ Profile updated!");
-      location.reload();
     }
+
+    // Load existing user data (optional)
+    (async function loadProfile() {
+      const snapshot = await get(ref(db, 'users/demoUser'));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("displayName").innerText = data.name || "Your Name";
+        document.getElementById("coverPreview").src = data.coverPhoto || "";
+        document.getElementById("profilePreview").src = data.profilePhoto || "";
+      }
+    })();
   </script>
 </body>
 </html>
