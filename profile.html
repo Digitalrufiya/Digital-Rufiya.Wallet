@@ -24,7 +24,7 @@
   <input type="file" id="coverPic" accept="image/*"><br>
   <img id="coverPicPreview" class="cover" src="default-cover.jpg" alt="Cover Photo">
 
-  <br><button class="btn" onclick="saveProfile()">Save Profile</button>
+  <br><button class="btn" id="saveBtn">Save Profile</button>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -36,7 +36,7 @@
       authDomain: "drfsocial-23a06.firebaseapp.com",
       databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
       projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
+      storageBucket: "drfsocial-23a06.appspot.com",  // <--- important: use appspot.com NOT firebasestorage.app
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:b37dffeb550941ffff3f40",
       measurementId: "G-TPT7QMWDYE"
@@ -64,11 +64,10 @@
           document.getElementById("profilePicPreview").src = data.profilePhoto || "default-avatar.png";
           document.getElementById("coverPicPreview").src = data.coverPhoto || "default-cover.jpg";
         }
-      } catch (err) {
-        console.error("Error loading profile:", err);
-        alert("Failed to load profile data.");
+      } catch (error) {
+        console.error("Failed to load user data:", error);
       }
-    }
+    };
 
     async function uploadImage(file, path) {
       const imageRef = sRef(storage, `drfsocial/${userId}/${path}`);
@@ -76,13 +75,13 @@
       return getDownloadURL(imageRef);
     }
 
-    window.saveProfile = async function () {
+    document.getElementById('saveBtn').addEventListener('click', async () => {
       if (!userId) {
         alert("User ID not set!");
         return;
       }
 
-      const name = document.getElementById("name").value;
+      const name = document.getElementById("name").value.trim();
       let profilePhoto = document.getElementById("profilePicPreview").src;
       let coverPhoto = document.getElementById("coverPicPreview").src;
 
@@ -90,8 +89,14 @@
       const coverFile = document.getElementById("coverPic").files[0];
 
       try {
-        if (profileFile) profilePhoto = await uploadImage(profileFile, "profile.jpg");
-        if (coverFile) coverPhoto = await uploadImage(coverFile, "cover.jpg");
+        if (profileFile) {
+          profilePhoto = await uploadImage(profileFile, "profile.jpg");
+          document.getElementById("profilePicPreview").src = profilePhoto;
+        }
+        if (coverFile) {
+          coverPhoto = await uploadImage(coverFile, "cover.jpg");
+          document.getElementById("coverPicPreview").src = coverPhoto;
+        }
 
         await set(ref(db, 'users/' + userId), {
           name,
@@ -101,10 +106,10 @@
 
         alert("Profile saved!");
       } catch (err) {
-        console.error("Save failed:", err);
-        alert("Failed to save profile. Try again.");
+        console.error("Error saving profile:", err);
+        alert("Failed to save profile, check console.");
       }
-    };
+    });
   </script>
 </body>
 </html>
