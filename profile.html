@@ -1,50 +1,26 @@
+<!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Profile Setup - Mini Facebook</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Page</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-    label { display: block; margin: 10px 0 5px; }
-    input[type="text"] { width: 100%; padding: 8px; }
-    input[type="file"] { margin-top: 5px; }
-    button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
-    img { max-width: 150px; margin-top: 10px; border-radius: 8px; }
-    #coverPreview { width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; }
-    .wallet-address { margin: 10px 0; font-weight: bold; word-break: break-all; }
-    #status { margin-top: 20px; }
+    body { font-family: sans-serif; padding: 20px; }
+    input, button { display: block; margin: 10px 0; }
+    img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; }
   </style>
 </head>
 <body>
-
-  <h1>Setup Your Profile</h1>
-
-  <button id="connectWalletBtn">Connect Wallet</button>
-  <div class="wallet-address" id="walletAddress"></div>
-
-  <form id="profileForm" style="display:none;">
-    <label for="username">Username (display name):</label>
-    <input type="text" id="username" required />
-
-    <label for="profilePhoto">Profile Photo:</label>
-    <input type="file" id="profilePhoto" accept="image/*" />
-
-    <img id="profilePreview" src="" alt="Profile Preview" style="display:none;" />
-
-    <label for="coverPhoto">Cover Photo:</label>
-    <input type="file" id="coverPhoto" accept="image/*" />
-
-    <img id="coverPreview" src="" alt="Cover Preview" style="display:none;" />
-
-    <button type="submit">Save Profile</button>
-  </form>
-
-  <div id="status"></div>
+  <h1>Update Profile</h1>
+  <input type="text" id="username" placeholder="Enter username">
+  <input type="file" id="profilePhoto">
+  <button id="saveBtn">Save Profile</button>
+  <p id="status"></p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
 
     const firebaseConfig = {
@@ -54,127 +30,40 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40"
     };
 
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
     const storage = getStorage(app);
 
-    const connectWalletBtn = document.getElementById('connectWalletBtn');
-    const walletAddressDiv = document.getElementById('walletAddress');
-    const profileForm = document.getElementById('profileForm');
-    const usernameInput = document.getElementById('username');
-    const profilePhotoInput = document.getElementById('profilePhoto');
-    const profilePreview = document.getElementById('profilePreview');
-    const coverPhotoInput = document.getElementById('coverPhoto');
-    const coverPreview = document.getElementById('coverPreview');
-    const statusDiv = document.getElementById('status');
-
-    let walletAddress = null;
-
-    // Connect to MetaMask wallet
-    connectWalletBtn.onclick = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          walletAddress = accounts[0];
-          walletAddressDiv.textContent = `Wallet: ${walletAddress}`;
-          connectWalletBtn.style.display = 'none';
-          profileForm.style.display = 'block';
-          loadProfile();
-        } catch (err) {
-          alert('Wallet connection failed: ' + err.message);
+    document.getElementById('saveBtn').onclick = async () => {
+      const username = document.getElementById('username').value;
+      const file = document.getElementById('profilePhoto').files[0];
+      const status = document.getElementById('status');
+      const wallet = localStorage.getItem('wallet') || 'testuser';
+      
+      status.textContent = 'Saving profile...';
+      try {
+        let photoURL = '';
+        if (file) {
+          const fileRef = storageRef(storage, 'profiles/' + wallet);
+          await uploadBytes(fileRef, file);
+          photoURL = await getDownloadURL(fileRef);
         }
-      } else {
-        alert('Please install MetaMask or compatible wallet!');
+
+        await set(ref(database, 'users/' + wallet), {
+          username: username,
+          photoURL: photoURL
+        });
+
+        status.textContent = 'Profile saved successfully!';
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Error saving profile';
       }
-    };
-
-    // Show image preview when file selected
-    profilePhotoInput.onchange = e => {
-      const file = e.target.files[0];
-      if (file) {
-        profilePreview.src = URL.createObjectURL(file);
-        profilePreview.style.display = 'block';
-      }
-    };
-    coverPhotoInput.onchange = e => {
-      const file = e.target.files[0];
-      if (file) {
-        coverPreview.src = URL.createObjectURL(file);
-        coverPreview.style.display = 'block';
-      }
-    };
-
-    // Load existing profile if any
-    async function loadProfile() {
-      if (!walletAddress) return;
-      const userRef = ref(database, 'users/' + walletAddress);
-      const snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        usernameInput.value = data.username || '';
-        if (data.profilePhotoURL) {
-          profilePreview.src = data.profilePhotoURL;
-          profilePreview.style.display = 'block';
-        }
-        if (data.coverPhotoURL) {
-          coverPreview.src = data.coverPhotoURL;
-          coverPreview.style.display = 'block';
-        }
-      }
-    }
-
-    profileForm.onsubmit = async e => {
-      e.preventDefault();
-      if (!walletAddress) {
-        alert('Please connect wallet first.');
-        return;
-      }
-      statusDiv.textContent = 'Saving profile...';
-
-      const username = usernameInput.value.trim();
-      if (!username) {
-        alert('Please enter a username.');
-        statusDiv.textContent = '';
-        return;
-      }
-
-      // Upload images if selected
-      let profilePhotoURL = null;
-      let coverPhotoURL = null;
-
-      if (profilePhotoInput.files.length > 0) {
-        const file = profilePhotoInput.files[0];
-        profilePhotoURL = await uploadImage(file, `users/${walletAddress}/profilePhoto`);
-      }
-      if (coverPhotoInput.files.length > 0) {
-        const file = coverPhotoInput.files[0];
-        coverPhotoURL = await uploadImage(file, `users/${walletAddress}/coverPhoto`);
-      }
-
-      // Prepare data to save
-      const userData = {
-        username,
-        timestamp: Date.now(),
-      };
-      if (profilePhotoURL) userData.profilePhotoURL = profilePhotoURL;
-      if (coverPhotoURL) userData.coverPhotoURL = coverPhotoURL;
-
-      // Save to Realtime Database
-      const userRef = ref(database, 'users/' + walletAddress);
-      await set(userRef, userData);
-
-      statusDiv.textContent = 'Profile saved successfully!';
-    };
-
-    async function uploadImage(file, path) {
-      const storageReference = storageRef(storage, path);
-      await uploadBytes(storageReference, file);
-      return await getDownloadURL(storageReference);
     }
   </script>
 </body>
 </html>
+
