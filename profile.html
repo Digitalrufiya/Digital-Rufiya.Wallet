@@ -199,6 +199,122 @@
     });
   }
 
+<!-- CONTINUED SCRIPT FROM WHERE YOU LEFT OFF -->
+      .then(() => {
+        authStatus.textContent = 'Logged in successfully!';
+      })
+      .catch(error => {
+        authStatus.textContent = 'Login failed: ' + error.message;
+      });
+  });
+
+  // Handle Register
+  registerBtn.addEventListener('click', () => {
+    const email = regEmail.value.trim();
+    const password = regPassword.value.trim();
+    if (!email || !password) {
+      authStatus.textContent = 'Please enter email and password.';
+      return;
+    }
+    authStatus.textContent = 'Registering...';
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        authStatus.textContent = 'Registered successfully!';
+      })
+      .catch(error => {
+        authStatus.textContent = 'Registration failed: ' + error.message;
+      });
+  });
+
+  // Handle Logout
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth);
+  });
+
+  // File input for profile image
+  fileInput.addEventListener('change', e => {
+    selectedFile = e.target.files[0];
+    saveProfileBtn.disabled = !selectedFile && !fullNameInput.value.trim();
+  });
+
+  fullNameInput.addEventListener('input', () => {
+    saveProfileBtn.disabled = !selectedFile && !fullNameInput.value.trim();
+  });
+
+  // Save Profile
+  saveProfileBtn.addEventListener('click', async () => {
+    if (!currentUser) return;
+    saveProfileBtn.disabled = true;
+    uploadStatus.textContent = 'Saving...';
+
+    try {
+      let photoURL = profileAvatar.src;
+      if (selectedFile) {
+        const storageRef = ref(storage, `avatars/${currentUser.uid}`);
+        await uploadBytes(storageRef, selectedFile);
+        photoURL = await getDownloadURL(storageRef);
+      }
+
+      const fullName = fullNameInput.value.trim();
+
+      const userRef = dbRef(database, `users/${currentUser.uid}`);
+      await set(userRef, {
+        fullName,
+        photoURL
+      });
+
+      profileAvatar.src = photoURL;
+      uploadStatus.textContent = 'Profile updated!';
+      selectedFile = null;
+      fullNameInput.value = '';
+    } catch (error) {
+      uploadStatus.textContent = 'Error: ' + error.message;
+    } finally {
+      saveProfileBtn.disabled = false;
+    }
+  });
+
+  // Load user data
+  async function loadUserProfile(uid) {
+    try {
+      const snapshot = await get(child(dbRef(database), `users/${uid}`));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data.photoURL) profileAvatar.src = data.photoURL;
+        if (data.fullName) fullNameInput.placeholder = data.fullName;
+      }
+    } catch (err) {
+      console.error('Error loading profile:', err);
+    }
+  }
+
+  // On auth state change
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      currentUser = user;
+      authStatus.textContent = '';
+      loginForm.style.display = 'none';
+      registerForm.style.display = 'none';
+      profileSection.style.display = 'block';
+      postSection.style.display = 'block';
+      loadFeed();
+      loadUserProfile(user.uid);
+    } else {
+      currentUser = null;
+      profileSection.style.display = 'none';
+      postSection.style.display = 'none';
+      loginForm.style.display = 'block';
+      feed.innerHTML = '';
+      authStatus.textContent = 'Please log in or register.';
+    }
+  });
+</script>
+
+</body>
+</html>
+
+
+
   // Dummy interactions
   window.likePost = (id) => alert(`You liked post ${id}`);
   window.commentPost = (id) => alert(`You clicked comment on post ${id}`);
@@ -401,117 +517,3 @@
 </script>
 </body>
 </html>
-<!-- CONTINUED SCRIPT FROM WHERE YOU LEFT OFF -->
-      .then(() => {
-        authStatus.textContent = 'Logged in successfully!';
-      })
-      .catch(error => {
-        authStatus.textContent = 'Login failed: ' + error.message;
-      });
-  });
-
-  // Handle Register
-  registerBtn.addEventListener('click', () => {
-    const email = regEmail.value.trim();
-    const password = regPassword.value.trim();
-    if (!email || !password) {
-      authStatus.textContent = 'Please enter email and password.';
-      return;
-    }
-    authStatus.textContent = 'Registering...';
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(() => {
-        authStatus.textContent = 'Registered successfully!';
-      })
-      .catch(error => {
-        authStatus.textContent = 'Registration failed: ' + error.message;
-      });
-  });
-
-  // Handle Logout
-  logoutBtn.addEventListener('click', () => {
-    signOut(auth);
-  });
-
-  // File input for profile image
-  fileInput.addEventListener('change', e => {
-    selectedFile = e.target.files[0];
-    saveProfileBtn.disabled = !selectedFile && !fullNameInput.value.trim();
-  });
-
-  fullNameInput.addEventListener('input', () => {
-    saveProfileBtn.disabled = !selectedFile && !fullNameInput.value.trim();
-  });
-
-  // Save Profile
-  saveProfileBtn.addEventListener('click', async () => {
-    if (!currentUser) return;
-    saveProfileBtn.disabled = true;
-    uploadStatus.textContent = 'Saving...';
-
-    try {
-      let photoURL = profileAvatar.src;
-      if (selectedFile) {
-        const storageRef = ref(storage, `avatars/${currentUser.uid}`);
-        await uploadBytes(storageRef, selectedFile);
-        photoURL = await getDownloadURL(storageRef);
-      }
-
-      const fullName = fullNameInput.value.trim();
-
-      const userRef = dbRef(database, `users/${currentUser.uid}`);
-      await set(userRef, {
-        fullName,
-        photoURL
-      });
-
-      profileAvatar.src = photoURL;
-      uploadStatus.textContent = 'Profile updated!';
-      selectedFile = null;
-      fullNameInput.value = '';
-    } catch (error) {
-      uploadStatus.textContent = 'Error: ' + error.message;
-    } finally {
-      saveProfileBtn.disabled = false;
-    }
-  });
-
-  // Load user data
-  async function loadUserProfile(uid) {
-    try {
-      const snapshot = await get(child(dbRef(database), `users/${uid}`));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        if (data.photoURL) profileAvatar.src = data.photoURL;
-        if (data.fullName) fullNameInput.placeholder = data.fullName;
-      }
-    } catch (err) {
-      console.error('Error loading profile:', err);
-    }
-  }
-
-  // On auth state change
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      currentUser = user;
-      authStatus.textContent = '';
-      loginForm.style.display = 'none';
-      registerForm.style.display = 'none';
-      profileSection.style.display = 'block';
-      postSection.style.display = 'block';
-      loadFeed();
-      loadUserProfile(user.uid);
-    } else {
-      currentUser = null;
-      profileSection.style.display = 'none';
-      postSection.style.display = 'none';
-      loginForm.style.display = 'block';
-      feed.innerHTML = '';
-      authStatus.textContent = 'Please log in or register.';
-    }
-  });
-</script>
-
-</body>
-</html>
-
