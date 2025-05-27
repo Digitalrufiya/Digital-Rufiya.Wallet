@@ -101,7 +101,120 @@
     <button id="logoutBtn">Logout</button>
   </div>
 </div>
+<!-- Add after profileSection -->
+<div id="postSection" style="display:none; margin-top: 40px;">
+  <h2>Create a Post</h2>
+  <textarea id="postText" placeholder="What's on your mind?" rows="3" style="width: 90%; padding: 8px; border-radius: 5px;"></textarea>
+  <br />
+  <input type="file" id="postMedia" accept="image/*,video/*" />
+  <br />
+  <button id="postBtn">Post</button>
+  <p id="postStatus"></p>
+</div>
 
+<div id="feedSection" style="margin-top: 40px;">
+  <h2>Timeline</h2>
+  <div id="feed"></div>
+</div>
+
+<script type="module">
+  import { push, onValue } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+
+  const postSection = document.getElementById('postSection');
+  const feed = document.getElementById('feed');
+  const postBtn = document.getElementById('postBtn');
+  const postText = document.getElementById('postText');
+  const postMedia = document.getElementById('postMedia');
+  const postStatus = document.getElementById('postStatus');
+
+  let selectedPostFile = null;
+  postMedia.addEventListener('change', e => {
+    selectedPostFile = e.target.files[0];
+  });
+
+  async function createPost() {
+    if (!currentUser) return;
+    postStatus.textContent = 'Uploading...';
+    postBtn.disabled = true;
+
+    try {
+      let mediaUrl = '';
+      let mediaType = '';
+      if (selectedPostFile) {
+        const ext = selectedPostFile.type.startsWith('video/') ? 'video' : 'image';
+        mediaType = ext;
+        const postRef = ref(storage, `posts/${currentUser.uid}/${Date.now()}_${selectedPostFile.name}`);
+        await uploadBytes(postRef, selectedPostFile);
+        mediaUrl = await getDownloadURL(postRef);
+      }
+
+      const postData = {
+        uid: currentUser.uid,
+        text: postText.value.trim(),
+        mediaUrl,
+        mediaType,
+        timestamp: Date.now()
+      };
+
+      await push(dbRef(database, 'posts'), postData);
+      postText.value = '';
+      postMedia.value = '';
+      selectedPostFile = null;
+      postStatus.textContent = 'Posted!';
+    } catch (err) {
+      postStatus.textContent = 'Post failed: ' + err.message;
+    } finally {
+      postBtn.disabled = false;
+    }
+  }
+
+  postBtn.addEventListener('click', createPost);
+
+  function renderPost(postId, post) {
+    const postEl = document.createElement('div');
+    postEl.style = "background:white;margin:10px;padding:10px;border-radius:10px;text-align:left;";
+    postEl.innerHTML = `
+      <p>${post.text || ''}</p>
+      ${post.mediaUrl && post.mediaType === 'image' ? `<img src="${post.mediaUrl}" style="max-width:100%;border-radius:10px;" />` : ''}
+      ${post.mediaUrl && post.mediaType === 'video' ? `<video src="${post.mediaUrl}" controls style="width:100%;border-radius:10px;"></video>` : ''}
+      <div style="margin-top: 10px;">
+        <button onclick="likePost('${postId}')">❤️ Like</button>
+        <button onclick="commentPost('${postId}')">💬 Comment</button>
+        <button onclick="sharePost('${postId}')">🔗 Share</button>
+      </div>
+    `;
+    feed.prepend(postEl);
+  }
+
+  function loadFeed() {
+    onValue(dbRef(database, 'posts'), (snapshot) => {
+      feed.innerHTML = '';
+      const posts = snapshot.val();
+      if (posts) {
+        const sorted = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+        sorted.forEach(([id, post]) => renderPost(id, post));
+      } else {
+        feed.innerHTML = '<p>No posts yet.</p>';
+      }
+    });
+  }
+
+  // Dummy interactions
+  window.likePost = (id) => alert(`You liked post ${id}`);
+  window.commentPost = (id) => alert(`You clicked comment on post ${id}`);
+  window.sharePost = (id) => alert(`You clicked share on post ${id}`);
+
+  // Update UI on login
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      postSection.style.display = 'block';
+      loadFeed();
+    } else {
+      postSection.style.display = 'none';
+      feed.innerHTML = '';
+    }
+  });
+</script>
 <!-- Firebase SDKs -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
