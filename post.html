@@ -2,127 +2,184 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Mini Facebook Posts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Post - DRF Social</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-    input, textarea, button { width: 100%; margin: 8px 0; padding: 8px; font-size: 1em; }
-    img { max-width: 100%; height: auto; margin-top: 8px; }
-    .post { border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; border-radius: 6px; }
-    .post-header { font-weight: bold; }
-    .post-avatar { width: 40px; height: 40px; border-radius: 50%; vertical-align: middle; margin-right: 8px; }
-    .post-media { max-width: 100%; margin-top: 8px; border-radius: 6px; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
+    input, textarea, button { width: 100%; margin: 0.5rem 0; padding: 0.5rem; }
+    video, img { max-width: 100%; margin-top: 1rem; }
   </style>
-</head>
-<body>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+    import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
 
-  <h2>DRF Mini Facebook Posts</h2>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
+    };
 
-  <div>
-    <input id="author" placeholder="Your name" />
-    <input id="avatar" placeholder="Avatar URL (optional)" />
-    <textarea id="content" rows="3" placeholder="Say something..."></textarea>
-    <input type="file" id="mediaFile" accept="image/*" />
-    <button onclick="submitPost()">Post</button>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
 
-  <h3>Posts</h3>
-  <div id="postsContainer">Loading posts...</div>
+    let currentUser = null;
 
-  <script>
-    const API_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLhblnZ_n17cz46Zflwt73ai2Q9gNnfS0MHZwYMjdM832oPtZ0EdU-7_JYM0PJI1RnIFZR744fAsIJgrSDNVSreZ1jw2Ax6_-5nhol_nSfjem-j60BUZ31RdJozLxzOn8V7Md-zKXtNYraePhsQCgstr0fD5KRaFl6hK4tsUCt9BHGM-CyAyh1oIKE_9IA59F2LC4j4v1KXZ35zNSjFPtmqVHNSnsypkfS4452NDOoiSSxIvvWNPnjsHe84N_UC8S6Q_glu7nMKT8ZAWq5FcDEmsiKrBVA&lib=MuSHhWDH67F1PbHb9b2pycxS3bZAyAmZg';
-
-    async function fetchPosts() {
-      try {
-        const res = await fetch(API_URL);
-        const posts = await res.json();
-        const container = document.getElementById('postsContainer');
-        if (!Array.isArray(posts) || posts.length === 0) {
-          container.innerHTML = '<p>No posts yet.</p>';
-          return;
-        }
-        container.innerHTML = '';
-        posts.reverse().forEach(post => {
-          const div = document.createElement('div');
-          div.className = 'post';
-
-          const avatarImg = post.avatar
-            ? `<img class="post-avatar" src="${post.avatar}" alt="avatar" onerror="this.style.display='none'" />`
-            : '';
-          div.innerHTML = `
-            <div class="post-header">${avatarImg} <span>${post.author || 'Anonymous'}</span> <small style="color:#666;font-size:0.9em;">${post.timestamp || ''}</small></div>
-            <div class="post-content">${post.content || ''}</div>
-            ${post.mediaLink ? `<img class="post-media" src="${post.mediaLink}" alt="media" />` : ''}
-            <div style="margin-top:6px; font-size:0.9em; color:#555;">Likes: ${post.likes || 0} | Comments: ${post.comments || ''}</div>
-          `;
-          container.appendChild(div);
-        });
-      } catch (e) {
-        document.getElementById('postsContainer').innerHTML = 'Failed to load posts.';
-        console.error(e);
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("userinfo").textContent = `Logged in as: ${user.email}`;
+      } else {
+        currentUser = null;
+        document.getElementById("userinfo").textContent = 'Not logged in. Please login first.';
+        document.getElementById("postForm").style.display = 'none';
       }
-    }
+    });
 
-    async function submitPost() {
-      const author = document.getElementById('author').value.trim() || 'Anonymous';
-      const avatar = document.getElementById('avatar').value.trim() || '';
-      const content = document.getElementById('content').value.trim();
-      const fileInput = document.getElementById('mediaFile');
-      const file = fileInput.files[0];
+    // File size & duration limits
+    const MAX_PHOTO_SIZE = 100 * 1024 * 1024; // 100MB
+    const MAX_VIDEO_DURATION = 2 * 60; // 2 minutes in seconds
 
-      if (!content && !file) {
-        alert('Please enter content or upload an image.');
-        return;
-      }
-
-      let mediaName = '';
-      let mediaBase64 = '';
-
-      if (file) {
-        mediaName = file.name;
-        mediaBase64 = await toBase64(file);
-      }
-
-      const payload = {
-        author,
-        avatar,
-        content,
-        mediaName,
-        mediaBase64
-      };
-
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await res.json();
-        if (result.status === 'success') {
-          alert('Post submitted successfully!');
-          // Clear inputs
-          document.getElementById('content').value = '';
-          document.getElementById('mediaFile').value = '';
-          fetchPosts();
-        } else {
-          alert('Error: ' + result.message);
-        }
-      } catch (e) {
-        alert('Failed to submit post.');
-        console.error(e);
-      }
-    }
-
-    function toBase64(file) {
+    // Video validation helper
+    function validateVideoDuration(file) {
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
+        const url = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = url;
+        video.onloadedmetadata = function () {
+          URL.revokeObjectURL(url);
+          if (video.duration <= MAX_VIDEO_DURATION) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        };
+        video.onerror = () => {
+          resolve(false);
+        };
       });
     }
 
-    // Load posts on page load
-    fetchPosts();
+    async function handlePost(e) {
+      e.preventDefault();
+      if (!currentUser) {
+        alert("You must be logged in to post.");
+        return;
+      }
+
+      const caption = document.getElementById("caption").value.trim();
+      const fileInput = document.getElementById("mediaFile");
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Please select a photo or video to upload.");
+        return;
+      }
+
+      const isVideo = file.type.startsWith("video/");
+      const isPhoto = file.type.startsWith("image/");
+
+      if (!isVideo && !isPhoto) {
+        alert("Only image and video files are allowed.");
+        return;
+      }
+
+      // Validate file size
+      if (file.size > MAX_PHOTO_SIZE) {
+        alert("File too large! Max 100MB allowed.");
+        return;
+      }
+
+      if (isVideo) {
+        const validDuration = await validateVideoDuration(file);
+        if (!validDuration) {
+          alert("Video too long! Maximum duration is 2 minutes.");
+          return;
+        }
+      }
+
+      // Upload to Firebase Storage
+      const timestamp = Date.now();
+      const ext = file.name.split('.').pop();
+      const storagePath = `posts/${currentUser.uid}/${timestamp}.${ext}`;
+      const storageReference = storageRef(storage, storagePath);
+
+      const uploadTask = uploadBytesResumable(storageReference, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          // Optionally handle progress here
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          document.getElementById('progress').textContent = `Upload is ${progress.toFixed(2)}% done`;
+        }, 
+        (error) => {
+          alert("Upload failed: " + error.message);
+        }, 
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            // Save post data to database
+            const postsRef = ref(db, 'posts');
+            push(postsRef, {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              caption: caption,
+              mediaUrl: downloadURL,
+              mediaType: isVideo ? 'video' : 'photo',
+              timestamp: serverTimestamp()
+            }).then(() => {
+              alert("Post uploaded successfully!");
+              document.getElementById("postForm").reset();
+              document.getElementById('preview').innerHTML = '';
+              document.getElementById('progress').textContent = '';
+            }).catch((err) => {
+              alert("Failed to save post: " + err.message);
+            });
+          });
+        }
+      );
+    }
+
+    // Preview media before upload
+    function previewFile() {
+      const preview = document.getElementById('preview');
+      preview.innerHTML = '';
+      const fileInput = document.getElementById("mediaFile");
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      if (file.type.startsWith("image/")) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        preview.appendChild(img);
+      } else if (file.type.startsWith("video/")) {
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(file);
+        video.controls = true;
+        preview.appendChild(video);
+      }
+    }
   </script>
+</head>
+<body>
+  <h2>Post to DRF Social</h2>
+  <div id="userinfo">Checking login status...</div>
+
+  <form id="postForm" onsubmit="handlePost(event)" enctype="multipart/form-data">
+    <textarea id="caption" placeholder="Write something..." maxlength="300"></textarea>
+    <input type="file" id="mediaFile" accept="image/*,video/*" onchange="previewFile()" required />
+    <div id="preview"></div>
+    <div id="progress" style="color: green;"></div>
+    <button type="submit">Post</button>
+  </form>
 </body>
 </html>
