@@ -1,141 +1,290 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Profile | DRF Wallet</title>
-  <link href="style.css" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Social - User Profile</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 400px;
+    margin: 30px auto;
+    text-align: center;
+    background-color: #f0f5f7;
+    color: #2c3e50;
+  }
+  h1 {
+    margin-bottom: 10px;
+  }
+  .avatar {
+    width: 150px;
+    height: 150px;
+    margin: 20px auto;
+    border-radius: 50%;
+    border: 4px solid #1abc9c;
+    object-fit: cover;
+    background-color: white;
+  }
+  input[type="file"],
+  input[type="text"] {
+    margin-top: 15px;
+    padding: 8px;
+    font-size: 16px;
+    width: 80%;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  button {
+    margin-top: 15px;
+    background-color: #1abc9c;
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    font-size: 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+  }
+  #uploadStatus, #authStatus {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  #logoutBtn {
+    margin-top: 25px;
+    background-color: #e74c3c;
+  }
+  #loginForm {
+    margin-top: 40px;
+  }
+  #loginForm input {
+    display: block;
+    margin: 10px auto;
+    width: 80%;
+  }
+</style>
 </head>
-<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+<body>
 
-  <div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <div class="relative">
-      <!-- Cover Photo with Public URL -->
-      <img id="coverPicPreview" class="w-full h-48 object-cover rounded-lg"
-           src="https://i.imgur.com/3ZQ3Z7Z.jpg" alt="Cover Photo"/>
+<h1>Your Profile</h1>
 
-      <!-- Avatar with Public URL -->
-      <div class="absolute left-4 -bottom-12 w-24 h-24">
-        <img id="profilePicPreview" class="w-24 h-24 object-cover rounded-full border-4 border-white"
-             src="https://i.imgur.com/5tj6S7O.png" alt="Profile Picture"/>
-      </div>
-    </div>
-
-    <div class="mt-16 text-center">
-      <h1 id="userName" class="text-2xl font-bold text-gray-800">Loading...</h1>
-      <p id="userEmail" class="text-gray-600">Loading...</p>
-    </div>
-
-    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-gray-700 font-medium mb-1">Change Profile Picture</label>
-        <input type="file" id="profilePic" accept="image/*"
-               class="w-full border border-gray-300 rounded px-3 py-2"/>
-      </div>
-
-      <div>
-        <label class="block text-gray-700 font-medium mb-1">Change Cover Photo</label>
-        <input type="file" id="coverPic" accept="image/*"
-               class="w-full border border-gray-300 rounded px-3 py-2"/>
-      </div>
-    </div>
-
-    <div class="mt-6 text-center">
-      <button id="saveProfile"
-              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded">
-        Save Changes
-      </button>
-    </div>
+<div id="authSection">
+  <p id="authStatus">Checking auth...</p>
+  
+  <div id="loginForm" style="display:none;">
+    <h2>Login</h2>
+    <input type="email" id="emailInput" placeholder="Email" required />
+    <input type="password" id="passwordInput" placeholder="Password" required />
+    <button id="loginBtn">Login</button>
+    <p>Don't have an account? <a href="#" id="showRegister">Register here</a></p>
   </div>
 
-  <script>
-    // Firebase Config (Replace with your own)
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DB_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  <div id="registerForm" style="display:none;">
+    <h2>Register</h2>
+    <input type="email" id="regEmail" placeholder="Email" required />
+    <input type="password" id="regPassword" placeholder="Password" required />
+    <button id="registerBtn">Register</button>
+    <p>Already have an account? <a href="#" id="showLogin">Login here</a></p>
+  </div>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+  <div id="profileSection" style="display:none;">
+    <img id="profileAvatar" class="avatar" alt="User Avatar" src="https://cdn-icons-png.flaticon.com/512/4712/4712027.png" />
+    <br />
+    <input type="file" id="fileInput" accept="image/*" />
+    <br />
+    <input type="text" id="fullNameInput" placeholder="Full Name" />
+    <br />
+    <button id="saveProfileBtn" disabled>Save Profile</button>
+    <p id="uploadStatus"></p>
+    <button id="logoutBtn">Logout</button>
+  </div>
+</div>
 
-    const profilePicInput = document.getElementById("profilePic");
-    const coverPicInput = document.getElementById("coverPic");
-    const profilePreview = document.getElementById("profilePicPreview");
-    const coverPreview = document.getElementById("coverPicPreview");
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-storage.js";
+  import { getDatabase, ref as dbRef, set, get, child } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
 
-    window.onload = () => {
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          userEmail.textContent = user.email;
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.firebasestorage.app",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+    measurementId: "G-TPT7QMWDYE"
+  };
 
-          const safeUID = user.uid.replace(/[.#$[\]]/g, "_");
-          const userRef = db.ref("users/" + safeUID);
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  const database = getDatabase(app);
 
-          userRef.once("value").then(snapshot => {
-            const data = snapshot.val();
-            if (data) {
-              userName.textContent = data.name || "Unnamed";
-              if (data.profilePic) profilePreview.src = data.profilePic;
-              if (data.coverPic) coverPreview.src = data.coverPic;
-            }
-          });
+  // DOM Elements
+  const authStatus = document.getElementById('authStatus');
+  const profileSection = document.getElementById('profileSection');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const fileInput = document.getElementById('fileInput');
+  const profileAvatar = document.getElementById('profileAvatar');
+  const fullNameInput = document.getElementById('fullNameInput');
+  const saveProfileBtn = document.getElementById('saveProfileBtn');
 
-          document.getElementById("saveProfile").onclick = () => {
-            const reader1 = new FileReader();
-            const reader2 = new FileReader();
-            const updates = {};
+  const regEmail = document.getElementById('regEmail');
+  const regPassword = document.getElementById('regPassword');
+  const registerBtn = document.getElementById('registerBtn');
+  const showRegister = document.getElementById('showRegister');
+  const showLogin = document.getElementById('showLogin');
 
-            reader1.onload = () => {
-              updates.profilePic = reader1.result;
-              checkAndSave();
-            };
-            reader2.onload = () => {
-              updates.coverPic = reader2.result;
-              checkAndSave();
-            };
+  let selectedFile = null;
+  let currentUser = null;
 
-            let pending = 0;
-            function checkAndSave() {
-              pending--;
-              if (pending <= 0) {
-                userRef.update(updates)
-                  .then(() => alert("Profile updated successfully."))
-                  .catch(err => alert("Error updating profile: " + err.message));
-              }
-            }
+  // Show login or register form toggle
+  showRegister.addEventListener('click', e => {
+    e.preventDefault();
+    loginForm.style.display = 'none';
+    registerForm.style.display = 'block';
+    authStatus.textContent = '';
+  });
+  showLogin.addEventListener('click', e => {
+    e.preventDefault();
+    registerForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    authStatus.textContent = '';
+  });
 
-            pending = 0;
-            if (profilePicInput.files[0]) {
-              pending++;
-              reader1.readAsDataURL(profilePicInput.files[0]);
-            }
-            if (coverPicInput.files[0]) {
-              pending++;
-              reader2.readAsDataURL(coverPicInput.files[0]);
-            }
-
-            if (pending === 0) {
-              alert("No changes made.");
-            }
-          };
-
-        } else {
-          window.location.href = "login.html"; // or wherever your login page is
-        }
+  // Handle Login
+  loginBtn.addEventListener('click', () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+    if (!email || !password) {
+      authStatus.textContent = 'Please enter email and password.';
+      return;
+    }
+    authStatus.textContent = 'Logging in...';
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        authStatus.textContent = 'Logged in successfully!';
+      })
+      .catch(err => {
+        authStatus.textContent = 'Login error: ' + err.message;
       });
-    };
-  </script>
+  });
+
+  // Handle Register
+  registerBtn.addEventListener('click', () => {
+    const email = regEmail.value.trim();
+    const password = regPassword.value.trim();
+    if (!email || !password) {
+      authStatus.textContent = 'Please enter email and password.';
+      return;
+    }
+    authStatus.textContent = 'Registering...';
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        authStatus.textContent = 'Registered successfully! You can now log in.';
+        registerForm.style.display = 'none';
+        loginForm.style.display = 'block';
+      })
+      .catch(err => {
+        authStatus.textContent = 'Registration error: ' + err.message;
+      });
+  });
+
+  // Handle Logout
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth);
+  });
+
+  // Enable Save button if name or file selected
+  function updateSaveBtnState() {
+    saveProfileBtn.disabled = !fullNameInput.value.trim() && !selectedFile;
+  }
+
+  fullNameInput.addEventListener('input', updateSaveBtnState);
+  fileInput.addEventListener('change', e => {
+    selectedFile = e.target.files[0];
+    updateSaveBtnState();
+  });
+
+  // Save profile data (upload avatar if selected + save full name)
+  saveProfileBtn.addEventListener('click', async () => {
+    if (!currentUser) return;
+
+    saveProfileBtn.disabled = true;
+    authStatus.textContent = 'Saving profile...';
+
+    try {
+      let avatarUrl = profileAvatar.src; // current avatar
+
+      if (selectedFile) {
+        // Upload new avatar
+        const avatarRef = ref(storage, 'profiles/' + currentUser.uid + '/' + selectedFile.name);
+        await uploadBytes(avatarRef, selectedFile);
+        avatarUrl = await getDownloadURL(avatarRef);
+      }
+
+      // Save profile info to Realtime DB
+      await set(dbRef(database, 'users/' + currentUser.uid), {
+        fullName: fullNameInput.value.trim(),
+        avatar: avatarUrl
+      });
+
+      profileAvatar.src = avatarUrl;
+      authStatus.textContent = 'Profile saved successfully!';
+      selectedFile = null;
+      fileInput.value = '';
+      updateSaveBtnState();
+
+    } catch (err) {
+      authStatus.textContent = 'Error saving profile: ' + err.message;
+    } finally {
+      saveProfileBtn.disabled = false;
+    }
+  });
+
+  // Listen for auth state changes
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    if (user) {
+      // Hide login/register forms, show profile
+      loginForm.style.display = 'none';
+      registerForm.style.display = 'none';
+      profileSection.style.display = 'block';
+      authStatus.textContent = `Welcome, ${user.email}`;
+
+      // Load profile info from database
+      const snapshot = await get(child(dbRef(database), 'users/' + user.uid));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        fullNameInput.value = data.fullName || '';
+        profileAvatar.src = data.avatar || profileAvatar.src;
+      } else {
+        // Defaults if no profile yet
+        fullNameInput.value = '';
+        profileAvatar.src = 'https://cdn-icons-png.flaticon.com/512/4712/4712027.png';
+      }
+
+      updateSaveBtnState();
+
+    } else {
+      // No user logged in, show login form
+      profileSection.style.display = 'none';
+      registerForm.style.display = 'none';
+      loginForm.style.display = 'block';
+      authStatus.textContent = 'Please log in.';
+    }
+  });
+</script>
 </body>
 </html>
