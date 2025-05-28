@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charity Game | DRF Ummah</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .question {
+      margin-bottom: 15px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #0056b3;
+    }
+    .leaderboard, .donate-box {
+      margin-top: 20px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .donate-box input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🕌 DRF Charity Game</h1>
+    <p>Answer questions and earn points. Donate your points to help orphans and the needy in our Ummah!</p>
+
+    <div class="game-section">
+      <div id="question-box">
+        <h2 id="question-title">Loading question...</h2>
+        <div id="options"></div>
+      </div>
+      <div id="feedback" class="success"></div>
+    </div>
+
+    <div class="donate-box">
+      <h2>🤲 Donate Points</h2>
+      <p>You have <strong id="points">0</strong> points</p>
+      <input type="number" id="donateAmount" placeholder="Points to donate" />
+      <button class="btn" onclick="donatePoints()">Donate</button>
+      <div id="donate-feedback" class="success"></div>
+    </div>
+
+    <div class="leaderboard">
+      <h2>🏆 Leaderboard</h2>
+      <ol id="leaderboard">
+        <li>You - <span id="userScore">0</span> points</li>
+        <li>Ayesha - 15 points</li>
+        <li>Omar - 12 points</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        question: "What is the first pillar of Islam?",
+        options: ["Salah", "Zakat", "Shahada", "Hajj"],
+        answer: "Shahada"
+      },
+      {
+        question: "How many times Muslims pray in a day?",
+        options: ["3", "5", "7", "2"],
+        answer: "5"
+      },
+      {
+        question: "What is the name of the Holy Book in Islam?",
+        options: ["Bible", "Torah", "Quran", "Gita"],
+        answer: "Quran"
+      }
+    ];
+
+    let currentQ = 0;
+    let userPoints = 0;
+
+    function showQuestion() {
+      const q = questions[currentQ];
+      document.getElementById("question-title").textContent = q.question;
+      const optionsHTML = q.options.map(opt =>
+        `<button class="btn" onclick="checkAnswer('${opt}')">${opt}</button>`
+      ).join("");
+      document.getElementById("options").innerHTML = optionsHTML;
+      document.getElementById("feedback").textContent = "";
+    }
+
+    function checkAnswer(selected) {
+      const correct = questions[currentQ].answer;
+      if (selected === correct) {
+        userPoints += 5;
+        document.getElementById("feedback").textContent = "✅ Correct! +5 Points";
+      } else {
+        document.getElementById("feedback").textContent = "❌ Wrong answer";
+      }
+      document.getElementById("points").textContent = userPoints;
+      document.getElementById("userScore").textContent = userPoints;
+      currentQ++;
+      if (currentQ < questions.length) {
+        setTimeout(showQuestion, 1500);
+      } else {
+        setTimeout(() => {
+          document.getElementById("question-box").innerHTML = "<h2>You've completed the quiz!</h2>";
+        }, 1500);
+      }
+    }
+
+    function donatePoints() {
+      const donateAmount = parseInt(document.getElementById("donateAmount").value);
+      const feedback = document.getElementById("donate-feedback");
+      if (isNaN(donateAmount) || donateAmount <= 0 || donateAmount > userPoints) {
+        feedback.textContent = "❌ Invalid amount";
+        return;
+      }
+      userPoints -= donateAmount;
+      document.getElementById("points").textContent = userPoints;
+      document.getElementById("userScore").textContent = userPoints;
+      feedback.textContent = `✅ You donated ${donateAmount} points! May Allah reward you.`;
+    }
+
+    showQuestion();
+  </script>
+</body>
+</html>
