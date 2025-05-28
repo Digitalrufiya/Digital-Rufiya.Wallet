@@ -1,158 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Charity Quiz Game | BitcoinPound</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #f3f4f6, #e0f7fa);
-      color: #333;
-      padding: 20px;
-      margin: 0;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      text-align: center;
-      color: #1976d2;
-    }
-    .question {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    .answers button {
-      display: block;
-      margin: 5px 0;
-      padding: 10px;
-      width: 100%;
-      border: 1px solid #ccc;
-      background-color: #f9f9f9;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .answers button:hover {
-      background-color: #e3f2fd;
-    }
-    .score-board, .donation-board {
-      margin-top: 20px;
-      text-align: center;
-    }
-    .leaderboard {
-      margin-top: 30px;
-    }
-    iframe {
-      width: 100%;
-      height: 300px;
-      border: none;
-    }
-  </style>
+  <title>Score Submit Test</title>
 </head>
 <body>
-  <div class="container">
-    <h1>Charity Quiz Game</h1>
-    <div id="quiz">
-      <div class="question" id="question">Loading question...</div>
-      <div class="answers" id="answers"></div>
-    </div>
 
-    <div class="score-board">
-      <p>Your Points: <span id="score">0</span></p>
-      <input type="text" id="playerName" placeholder="Enter your name" />
-      <button onclick="submitScore()">Submit Score</button>
-    </div>
+<h1>🏆 Submit Score to Google Sheets</h1>
+<button onclick="submitScore()">Submit Test Score</button>
 
-    <div class="donation-board">
-      <button onclick="donatePoints()">Donate Points</button>
-    </div>
+<script>
+function submitScore() {
+  fetch("https://script.google.com/macros/s/AKfycbwlae9Nl2ueR5U_wO1JvtWOPcz2sREnyEj-LYD2JhvEcuDFGY-1Q55gqx7L8ct49C1j/exec", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Test Player",
+      score: Math.floor(Math.random() * 100)
+    })
+  })
+  .then(res => res.json())
+  .then(data => alert("✅ Score submitted: " + JSON.stringify(data)))
+  .catch(err => alert("❌ Error: " + err));
+}
+</script>
 
-    <div class="leaderboard">
-      <h2>Leaderboard</h2>
-      <iframe src="https://script.google.com/macros/s/AKfycbwlae9Nl2ueR5U_wO1JvtWOPcz2sREnyEj-LYD2JhvEcuDFGY-1Q55gqx7L8ct49C1j/exec"></iframe>
-    </div>
-  </div>
-
-  <script>
-    const questions = [
-      {
-        q: "Who was the last Prophet in Islam?",
-        options: ["Isa (Jesus)", "Musa (Moses)", "Muhammad (SAW)", "Ibrahim (Abraham)"],
-        correct: 2
-      },
-      {
-        q: "What is Zakat?",
-        options: ["A type of prayer", "A pilgrimage", "Charitable giving", "Fasting"],
-        correct: 2
-      },
-      {
-        q: "How many pillars of Islam are there?",
-        options: ["3", "4", "5", "6"],
-        correct: 2
-      },
-      {
-        q: "Where is the Kaaba located?",
-        options: ["Medina", "Jerusalem", "Cairo", "Mecca"],
-        correct: 3
-      }
-    ];
-
-    let currentQ = 0;
-    let score = 0;
-
-    function showQuestion() {
-      const q = questions[currentQ];
-      document.getElementById("question").innerText = q.q;
-      const answersDiv = document.getElementById("answers");
-      answersDiv.innerHTML = "";
-      q.options.forEach((option, idx) => {
-        const btn = document.createElement("button");
-        btn.innerText = option;
-        btn.onclick = () => checkAnswer(idx);
-        answersDiv.appendChild(btn);
-      });
-    }
-
-    function checkAnswer(idx) {
-      if (idx === questions[currentQ].correct) {
-        score += 10;
-        document.getElementById("score").innerText = score;
-      }
-      currentQ++;
-      if (currentQ < questions.length) {
-        showQuestion();
-      } else {
-        document.getElementById("quiz").innerHTML = "<h3>Quiz completed!</h3>";
-      }
-    }
-
-    function submitScore() {
-      const name = document.getElementById("playerName").value;
-      if (!name) return alert("Enter your name");
-
-      fetch("https://script.google.com/macros/s/AKfycbwlae9Nl2ueR5U_wO1JvtWOPcz2sREnyEj-LYD2JhvEcuDFGY-1Q55gqx7L8ct49C1j/exec", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ name: name, score: score })
-      })
-        .then(res => res.text())
-        .then(msg => alert("Submitted: " + msg))
-        .catch(err => alert("Error: " + err));
-    }
-
-    function donatePoints() {
-      alert("Thank you for donating your points to support orphans and children in need. May Allah reward you.");
-    }
-
-    showQuestion();
-  </script>
 </body>
 </html>
