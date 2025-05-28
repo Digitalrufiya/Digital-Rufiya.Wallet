@@ -23,6 +23,9 @@
     h1, h2 {
       text-align: center;
     }
+    .question {
+      margin: 20px 0;
+    }
     .answers button {
       display: block;
       margin: 10px 0;
@@ -77,12 +80,11 @@
 
     <div class="leaderboard">
       <h3>🌟 Leaderboard</h3>
-      <ul id="leaderboard-list"></ul>
+      <ul id="leaderboard-list"><li>Loading...</li></ul>
     </div>
   </div>
 
   <script>
-    const scriptURL = "YOUR_DEPLOYED_SCRIPT_URL_HERE";
     const questions = [
       {
         question: "What is the best deed in Islam?",
@@ -103,6 +105,8 @@
 
     let currentQuestionIndex = 0;
     let points = 0;
+
+    const scriptURL = "https://script.google.com/macros/s/AKfycbxg3KZHRr_KYRn1I5_d3LK76ACw8-RXpOugfy3EGM3IcbHkm5IOVoGlzYIRTNSZstH4/exec";
 
     function showQuestion() {
       const q = questions[currentQuestionIndex];
@@ -134,7 +138,7 @@
 
     async function donatePoints() {
       if (points === 0) {
-        document.getElementById('donation-msg').innerText = "You have no points to donate.";
+        document.getElementById('donation-msg').innerText = "You have no Bitcoin Pound coin 🪙 to donate.";
         return;
       }
 
@@ -151,15 +155,15 @@
         });
         const result = await response.json();
         if (result.success) {
-          document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your points were donated. 🌟`;
+          document.getElementById('donation-msg').innerText = `✅ Thank you, ${name}! Your donation of ${points} 🪙 was successful.`;
           points = 0;
           document.getElementById('points').innerText = points;
           loadLeaderboard();
         } else {
-          document.getElementById('donation-msg').innerText = result.message || "Donation failed.";
+          document.getElementById('donation-msg').innerText = `❌ ${result.message || "Donation failed."}`;
         }
       } catch (err) {
-        document.getElementById('donation-msg').innerText = "Error sending data. Try again later.";
+        document.getElementById('donation-msg').innerText = "❌ Error sending data. Try again later.";
       }
     }
 
@@ -169,17 +173,18 @@
         const data = await res.json();
         const list = document.getElementById('leaderboard-list');
         list.innerHTML = '';
-        if (data.success && data.leaderboard) {
+
+        if (data.success && data.leaderboard.length > 0) {
           data.leaderboard.forEach((entry, i) => {
             const li = document.createElement('li');
             li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
             list.appendChild(li);
           });
         } else {
-          list.innerHTML = "<li>Failed to load leaderboard</li>";
+          list.innerHTML = '<li>No donations yet.</li>';
         }
-      } catch {
-        document.getElementById('leaderboard-list').innerHTML = "<li>Failed to load leaderboard</li>";
+      } catch (err) {
+        document.getElementById('leaderboard-list').innerHTML = '<li>Failed to load leaderboard</li>';
       }
     }
 
