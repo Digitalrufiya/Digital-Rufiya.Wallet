@@ -2,102 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Charity Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Charity Quiz Game | BitcoinPound</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #f3f4f6, #e0f7fa);
+      color: #333;
       padding: 20px;
-      background: #f8f8f8;
-      text-align: center;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
     }
     h1 {
-      color: #008000;
+      text-align: center;
+      color: #1976d2;
     }
-    .question, .score-board, .leaderboard {
-      background: white;
-      padding: 15px;
-      margin: 10px auto;
-      max-width: 500px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    .question {
+      font-weight: bold;
+      margin-bottom: 10px;
     }
-    button {
-      padding: 10px 20px;
-      margin: 10px;
-      background: #008000;
-      color: white;
-      border: none;
-      border-radius: 5px;
+    .answers button {
+      display: block;
+      margin: 5px 0;
+      padding: 10px;
+      width: 100%;
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+      border-radius: 6px;
       cursor: pointer;
     }
-    input {
-      padding: 10px;
-      width: 80%;
-      margin-bottom: 10px;
+    .answers button:hover {
+      background-color: #e3f2fd;
+    }
+    .score-board, .donation-board {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .leaderboard {
+      margin-top: 30px;
+    }
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: none;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Charity Quiz Game</h1>
+    <div id="quiz">
+      <div class="question" id="question">Loading question...</div>
+      <div class="answers" id="answers"></div>
+    </div>
 
-  <h1>🌍 Charity Quiz for Good</h1>
+    <div class="score-board">
+      <p>Your Points: <span id="score">0</span></p>
+      <input type="text" id="playerName" placeholder="Enter your name" />
+      <button onclick="submitScore()">Submit Score</button>
+    </div>
 
-  <div class="question">
-    <h3>What's the best way to help orphans?</h3>
-    <button onclick="answer(true)">Donate & Educate</button>
-    <button onclick="answer(false)">Ignore</button>
-  </div>
+    <div class="donation-board">
+      <button onclick="donatePoints()">Donate Points</button>
+    </div>
 
-  <div class="score-board" id="scoreBoard" style="display:none;">
-    <h3>Your Score: <span id="score">0</span></h3>
-    <input type="text" id="playerName" placeholder="Enter your name">
-    <button onclick="submitScore()">Submit Score</button>
-  </div>
-
-  <div class="leaderboard">
-    <h2>🏆 Leaderboard</h2>
-    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTZlktaLn7TbEubOnJybK6j7mutV8ELYYTqbwNh4YGcf6r64ClsZek2hFFl3BPvbqyjkQsPO1gpwCdQ/pubhtml?gid=0&single=true" width="100%" height="300" frameborder="0"></iframe>
+    <div class="leaderboard">
+      <h2>Leaderboard</h2>
+      <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTldRevbdkogQsFAHuMqrpcxfGYRcVp3MRNf67cUAe2SOKIh57rJiT5tmCGupo-XWjxCyMiCAreO4VC/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
+    </div>
   </div>
 
   <script>
+    const questions = [
+      {
+        q: "Who was the last Prophet in Islam?",
+        options: ["Isa (Jesus)", "Musa (Moses)", "Muhammad (SAW)", "Ibrahim (Abraham)"],
+        correct: 2
+      },
+      {
+        q: "What is Zakat?",
+        options: ["A type of prayer", "A pilgrimage", "Charitable giving", "Fasting"],
+        correct: 2
+      },
+      {
+        q: "How many pillars of Islam are there?",
+        options: ["3", "4", "5", "6"],
+        correct: 2
+      },
+      {
+        q: "Where is the Kaaba located?",
+        options: ["Medina", "Jerusalem", "Cairo", "Mecca"],
+        correct: 3
+      }
+    ];
+
+    let currentQ = 0;
     let score = 0;
 
-    function answer(correct) {
-      if (correct) {
+    function showQuestion() {
+      const q = questions[currentQ];
+      document.getElementById("question").innerText = q.q;
+      const answersDiv = document.getElementById("answers");
+      answersDiv.innerHTML = "";
+      q.options.forEach((option, idx) => {
+        const btn = document.createElement("button");
+        btn.innerText = option;
+        btn.onclick = () => checkAnswer(idx);
+        answersDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(idx) {
+      if (idx === questions[currentQ].correct) {
         score += 10;
-        alert("Correct! +10 points");
-      } else {
-        alert("Oops! Try again.");
+        document.getElementById("score").innerText = score;
       }
-      document.getElementById('score').textContent = score;
-      document.getElementById('scoreBoard').style.display = 'block';
+      currentQ++;
+      if (currentQ < questions.length) {
+        showQuestion();
+      } else {
+        document.getElementById("quiz").innerHTML = "<h3>Quiz completed!</h3>";
+      }
     }
 
     function submitScore() {
-      const name = document.getElementById('playerName').value.trim();
-      if (!name) {
-        alert("Please enter your name.");
-        return;
-      }
+      const name = document.getElementById("playerName").value;
+      if (!name) return alert("Enter your name");
 
-      fetch('https://script.google.com/macros/s/AKfycbyDTEUng34v7WBQZOS53yuisjdTTFJZYyEf0ryc9NVngd8gNg7FPkTH31ovcl2z9ZPJ/exec', {
-        method: 'POST',
-        body: JSON.stringify({ name: name, score: score }),
-        headers: { 'Content-Type': 'application/json' }
+      fetch("https://script.google.com/macros/s/AKfycbwlae9Nl2ueR5U_wO1JvtWOPcz2sREnyEj-LYD2JhvEcuDFGY-1Q55gqx7L8ct49C1j/exec", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name: name, score: score })
       })
-      .then(res => res.text())
-      .then(data => {
-        alert("Score submitted successfully!");
-        score = 0;
-        document.getElementById('score').textContent = score;
-        document.getElementById('playerName').value = '';
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Failed to submit score.");
-      });
+        .then(res => res.text())
+        .then(msg => alert("Submitted: " + msg))
+        .catch(err => alert("Error: " + err));
     }
-  </script>
 
+    function donatePoints() {
+      alert("Thank you for donating your points to support orphans and children in need. May Allah reward you.");
+    }
+
+    showQuestion();
+  </script>
 </body>
 </html>
