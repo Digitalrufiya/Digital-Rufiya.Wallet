@@ -1,28 +1,43 @@
-async function donatePoints() {
-  if (points === 0) {
-    document.getElementById('donation-msg').innerText = "You have no points to donate.";
-    return;
+const SHEET_NAME = 'Donations';
+
+function doGet(e) {
+  if (e.parameter.action === 'getLeaderboard') {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    const data = sheet.getDataRange().getValues().slice(1); // skip header
+
+    const result = data.map(row => ({
+      name: row[1],
+      points: parseInt(row[2]),
+      date: row[3]
+    }));
+
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const name = prompt("Enter your name or wallet address:");
-  if (!name) return;
+  return ContentService.createTextOutput("Invalid request");
+}
 
-  // Send to Google Apps Script
-  const res = await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec", {
-    method: "POST",
-    mode: "no-cors", // if your script allows CORS, you can use 'cors' and handle the JSON
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name, points }),
-  });
+function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const body = JSON.parse(e.postData.contents);
+  const name = body.name;
+  const points = parseInt(body.points);
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
 
-  // Update local leaderboard
-  leaderboard.push({ name, points });
-  leaderboard.sort((a, b) => b.points - a.points);
-  updateLeaderboard();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][1] === name && rows[i][3] === today) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: false, message: "You already donated today." }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
 
-  points = 0;
-  document.getElementById('points').innerText = points;
-  document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your ${points} points were donated. 🌟`;
+  sheet.appendRow([new Date(), name, points, today]);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: true }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
