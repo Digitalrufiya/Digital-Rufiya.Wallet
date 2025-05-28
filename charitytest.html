@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Charity Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f8f8f8;
+      text-align: center;
+    }
+    h1 {
+      color: #008000;
+    }
+    .question, .score-board, .leaderboard {
+      background: white;
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 500px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: #008000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    input {
+      padding: 10px;
+      width: 80%;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌍 Charity Quiz for Good</h1>
+
+  <div class="question">
+    <h3>What's the best way to help orphans?</h3>
+    <button onclick="answer(true)">Donate & Educate</button>
+    <button onclick="answer(false)">Ignore</button>
+  </div>
+
+  <div class="score-board" id="scoreBoard" style="display:none;">
+    <h3>Your Score: <span id="score">0</span></h3>
+    <input type="text" id="playerName" placeholder="Enter your name">
+    <button onclick="submitScore()">Submit Score</button>
+  </div>
+
+  <div class="leaderboard">
+    <h2>🏆 Leaderboard</h2>
+    <iframe src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTZlktaLn7TbEubOnJybK6j7mutV8ELYYTqbwNh4YGcf6r64ClsZek2hFFl3BPvbqyjkQsPO1gpwCdQ/pubhtml?gid=0&single=true" width="100%" height="300" frameborder="0"></iframe>
+  </div>
+
+  <script>
+    let score = 0;
+
+    function answer(correct) {
+      if (correct) {
+        score += 10;
+        alert("Correct! +10 points");
+      } else {
+        alert("Oops! Try again.");
+      }
+      document.getElementById('score').textContent = score;
+      document.getElementById('scoreBoard').style.display = 'block';
+    }
+
+    function submitScore() {
+      const name = document.getElementById('playerName').value.trim();
+      if (!name) {
+        alert("Please enter your name.");
+        return;
+      }
+
+      fetch('https://script.google.com/macros/s/AKfycbyDTEUng34v7WBQZOS53yuisjdTTFJZYyEf0ryc9NVngd8gNg7FPkTH31ovcl2z9ZPJ/exec', {
+        method: 'POST',
+        body: JSON.stringify({ name: name, score: score }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.text())
+      .then(data => {
+        alert("Score submitted successfully!");
+        score = 0;
+        document.getElementById('score').textContent = score;
+        document.getElementById('playerName').value = '';
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Failed to submit score.");
+      });
+    }
+  </script>
+
+</body>
+</html>
