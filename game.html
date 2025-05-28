@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Charity Game - DRF Wallet</title>
   <style>
     body {
@@ -65,7 +65,7 @@
 <body>
   <div class="container">
     <h1>🤲 Charity Challenge</h1>
-    <p>Answer questions, earn BitcoinPound points 🪙, and donate to help orphans and the needy. ❤️</p>
+    <p>Answer questions, earn Bitcoin Pound coin 🪙, and donate to help orphans and the needy. ❤️</p>
 
     <div class="question">
       <h2 id="question-text">Loading question...</h2>
@@ -73,18 +73,20 @@
     </div>
 
     <div class="donation-section">
-      <h3>Your Points: <span id="points">0</span> 🪙</h3>
+      <h3>Your Bitcoin Pound coin 🪙: <span id="points">0</span></h3>
       <button onclick="donatePoints()">Donate Points to Charity Wallet</button>
       <p id="donation-msg"></p>
     </div>
 
     <div class="leaderboard">
       <h3>🌟 Leaderboard</h3>
-      <ul id="leaderboard-list"></ul>
+      <ul id="leaderboard-list">Loading leaderboard...</ul>
     </div>
   </div>
 
   <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec";
+
     const questions = [
       {
         question: "What is the best deed in Islam?",
@@ -106,6 +108,27 @@
     let currentQuestionIndex = 0;
     let points = 0;
     let leaderboard = [];
+
+    // Load leaderboard entries from Google Sheet via Apps Script
+    async function loadLeaderboard() {
+      try {
+        const response = await fetch(SCRIPT_URL + "?action=getLeaderboard");
+        if (!response.ok) throw new Error("Failed to fetch leaderboard");
+
+        const data = await response.json();
+        // Data format assumed: [{name: 'Alice', points: 30, date: '2025-05-28'}, ...]
+        leaderboard = data;
+
+        // Sort by points desc
+        leaderboard.sort((a, b) => b.points - a.points);
+
+        updateLeaderboard();
+      } catch (e) {
+        console.error("Error loading leaderboard:", e);
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = "<li>Failed to load leaderboard</li>";
+      }
+    }
 
     function showQuestion() {
       const q = questions[currentQuestionIndex];
@@ -144,26 +167,36 @@
       const name = prompt("Enter your name or wallet address:");
       if (!name) return;
 
-      // Send to Google Apps Script
+      // Check if user already donated today
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const hasDonatedToday = leaderboard.some(
+        entry => entry.name.toLowerCase() === name.toLowerCase() && entry.date === today
+      );
+      if (hasDonatedToday) {
+        document.getElementById('donation-msg').innerText = "You have already donated today. Try again tomorrow.";
+        return;
+      }
+
+      // Send donation to Google Apps Script
       try {
-        await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec", {
+        const response = await fetch(SCRIPT_URL, {
           method: "POST",
-          mode: "no-cors",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ name, points }),
         });
 
-        // Update local leaderboard
-        leaderboard.push({ name, points });
-        leaderboard.sort((a, b) => b.points - a.points);
-        updateLeaderboard();
+        if (!response.ok) throw new Error("Failed to submit donation");
 
-        document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your points were donated. 🌟`;
+        // Refresh leaderboard from server to get latest data
+        await loadLeaderboard();
+
+        document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your ${points} 🪙 were donated. 🌟`;
         points = 0;
         document.getElementById('points').innerText = points;
       } catch (err) {
+        console.error(err);
         document.getElementById('donation-msg').innerText = "Error sending data. Try again later.";
       }
     }
@@ -171,14 +204,23 @@
     function updateLeaderboard() {
       const list = document.getElementById('leaderboard-list');
       list.innerHTML = '';
+      if (leaderboard.length === 0) {
+        list.innerHTML = '<li>No donations yet.</li>';
+        return;
+      }
       leaderboard.forEach((entry, i) => {
         const li = document.createElement('li');
-        li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
+        li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙 (on ${entry.date})`;
         list.appendChild(li);
       });
     }
 
+    // Initialize app
     showQuestion();
+    loadLeaderboard();
+
+    // Optional: Refresh leaderboard every 60 seconds for real-time updates
+    setInterval(loadLeaderboard, 60000);
   </script>
 </body>
 </html>
