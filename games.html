@@ -2,110 +2,134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bitcoin Pound Quiz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Charity Game - DRF Wallet</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f9f9f9;
-      color: #333;
+      margin: 0;
       padding: 20px;
-      text-align: center;
+      background: #f0f4f8;
+      color: #333;
     }
-    .card {
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
       background: white;
       padding: 20px;
-      margin: 10px auto;
-      max-width: 400px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
     }
-    button {
-      padding: 10px 20px;
-      margin-top: 10px;
-      background: #0077cc;
-      color: white;
+    h1, h2 {
+      text-align: center;
+    }
+    .answers button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
       border: none;
-      border-radius: 5px;
+      background: #007BFF;
+      color: white;
+      border-radius: 8px;
       cursor: pointer;
     }
-    button:hover {
-      background: #005fa3;
+    .answers button:hover {
+      background: #0056b3;
     }
-    #donation-msg {
-      color: green;
-      margin-top: 10px;
+    .donation-section {
+      margin-top: 30px;
+      padding: 15px;
+      background: #e9f5e9;
+      border: 1px solid #c6e2c6;
+      border-radius: 8px;
     }
-    ul {
+    .leaderboard {
+      margin-top: 30px;
+    }
+    .leaderboard ul {
       padding: 0;
       list-style: none;
     }
-    li {
-      background: #efefef;
-      margin: 5px;
-      padding: 8px;
-      border-radius: 5px;
+    .leaderboard li {
+      background: #f8f9fa;
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h1>🪙 Bitcoin Pound Quiz</h1>
-  <div class="card" id="quiz-card">
-    <h3 id="question">Loading question...</h3>
-    <div id="answers"></div>
-  </div>
+  <div class="container">
+    <h1>🤲 Charity Challenge</h1>
+    <p>Answer questions, earn Bitcoin Pound coin 🪙, and donate to help orphans and the needy. ❤️</p>
 
-  <div class="card">
-    <p><strong>Your Bitcoin Pound coin 🪙: <span id="points">0</span></strong></p>
-    <button onclick="donatePoints()">Donate Points to Charity Wallet</button>
-    <div id="donation-msg"></div>
-  </div>
+    <div class="question">
+      <h2 id="question-text">Loading question...</h2>
+      <div class="answers" id="answer-buttons"></div>
+    </div>
 
-  <div class="card">
-    <h3>🌟 Leaderboard</h3>
-    <ul id="leaderboard-list"><li>Loading...</li></ul>
+    <div class="donation-section">
+      <h3>Your Bitcoin Pound coin 🪙: <span id="points">0</span></h3>
+      <button onclick="donatePoints()">Donate Points to Charity Wallet</button>
+      <p id="donation-msg"></p>
+    </div>
+
+    <div class="leaderboard">
+      <h3>🌟 Leaderboard</h3>
+      <ul id="leaderboard-list"></ul>
+    </div>
   </div>
 
   <script>
-    let questions = [
-      { q: "What does BTC stand for?", a: ["Bitcoin", "Bitcash", "Block Trade Coin"], c: 0 },
-      { q: "Which country first adopted Bitcoin as legal tender?", a: ["El Salvador", "USA", "Japan"], c: 0 },
-      { q: "Who is the creator of Bitcoin?", a: ["Satoshi Nakamoto", "Vitalik Buterin", "Charles Hoskinson"], c: 0 },
-      { q: "What is the max supply of Bitcoin?", a: ["21 million", "100 million", "1 billion"], c: 0 },
-      { q: "What is a blockchain?", a: ["Distributed ledger", "File system", "Game engine"], c: 0 }
+    const scriptURL = "YOUR_DEPLOYED_SCRIPT_URL_HERE";
+    const questions = [
+      {
+        question: "What is the best deed in Islam?",
+        answers: ["Charity", "Fasting", "Hajj", "Reading"],
+        correct: 0,
+      },
+      {
+        question: "Which month is known for fasting?",
+        answers: ["Muharram", "Ramadan", "Shawwal", "Dhul Hijjah"],
+        correct: 1,
+      },
+      {
+        question: "How many daily prayers are there?",
+        answers: ["3", "4", "5", "6"],
+        correct: 2,
+      },
     ];
 
-    let current = 0;
+    let currentQuestionIndex = 0;
     let points = 0;
-    let leaderboard = [];
 
     function showQuestion() {
-      if (current >= questions.length) {
-        document.getElementById("quiz-card").innerHTML = `<h3>🎉 Quiz completed!</h3><p>Total Coins: ${points}</p>`;
-        return;
-      }
-
-      const q = questions[current];
-      document.getElementById("question").innerText = q.q;
-
-      const answersDiv = document.getElementById("answers");
-      answersDiv.innerHTML = "";
-
-      q.a.forEach((option, i) => {
-        const btn = document.createElement("button");
-        btn.textContent = option;
-        btn.onclick = () => checkAnswer(i);
-        answersDiv.appendChild(btn);
+      const q = questions[currentQuestionIndex];
+      document.getElementById('question-text').innerText = q.question;
+      const btnContainer = document.getElementById('answer-buttons');
+      btnContainer.innerHTML = '';
+      q.answers.forEach((text, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = text;
+        btn.onclick = () => handleAnswer(i);
+        btnContainer.appendChild(btn);
       });
     }
 
-    function checkAnswer(selected) {
-      if (selected === questions[current].c) {
-        points += 2;
-        document.getElementById("points").innerText = points;
+    function handleAnswer(selectedIndex) {
+      const correct = questions[currentQuestionIndex].correct;
+      if (selectedIndex === correct) {
+        points += 10;
+        document.getElementById('points').innerText = points;
       }
-      current++;
-      showQuestion();
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questions.length) {
+        showQuestion();
+      } else {
+        document.getElementById('question-text').innerText = "You've completed all questions! 🎉";
+        document.getElementById('answer-buttons').innerHTML = '';
+      }
     }
 
     async function donatePoints() {
@@ -118,53 +142,49 @@
       if (!name) return;
 
       try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec", {
+        const response = await fetch(scriptURL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, points })
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, points }),
         });
-
         const result = await response.json();
-
-        if (result.success === false) {
-          document.getElementById('donation-msg').innerText = result.message || "Already donated today.";
-        } else {
+        if (result.success) {
           document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your points were donated. 🌟`;
           points = 0;
           document.getElementById('points').innerText = points;
-          fetchLeaderboard();
+          loadLeaderboard();
+        } else {
+          document.getElementById('donation-msg').innerText = result.message || "Donation failed.";
         }
-
       } catch (err) {
-        console.error(err);
         document.getElementById('donation-msg').innerText = "Error sending data. Try again later.";
       }
     }
 
-    async function fetchLeaderboard() {
+    async function loadLeaderboard() {
       try {
-        const res = await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec?action=getLeaderboard");
+        const res = await fetch(scriptURL);
         const data = await res.json();
-        leaderboard = data.sort((a, b) => b.points - a.points);
-        updateLeaderboard();
-      } catch (err) {
-        console.error("Failed to load leaderboard", err);
+        const list = document.getElementById('leaderboard-list');
+        list.innerHTML = '';
+        if (data.success && data.leaderboard) {
+          data.leaderboard.forEach((entry, i) => {
+            const li = document.createElement('li');
+            li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
+            list.appendChild(li);
+          });
+        } else {
+          list.innerHTML = "<li>Failed to load leaderboard</li>";
+        }
+      } catch {
         document.getElementById('leaderboard-list').innerHTML = "<li>Failed to load leaderboard</li>";
       }
     }
 
-    function updateLeaderboard() {
-      const ul = document.getElementById('leaderboard-list');
-      ul.innerHTML = "";
-      leaderboard.forEach(entry => {
-        const li = document.createElement("li");
-        li.innerText = `${entry.name}: ${entry.points} 🪙`;
-        ul.appendChild(li);
-      });
-    }
-
     showQuestion();
-    fetchLeaderboard();
+    loadLeaderboard();
   </script>
 </body>
 </html>
