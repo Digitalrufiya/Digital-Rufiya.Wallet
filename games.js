@@ -18,12 +18,6 @@ const questions = [
 
 let currentQuestionIndex = 0;
 let points = 0;
-const scriptURL = "https://script.google.com/macros/s/AKfycbxg3KZHRr_KYRn1I5_d3LK76ACw8-RXpOugfy3EGM3IcbHkm5IOVoGlzYIRTNSZstH4/exec";
-
-document.addEventListener("DOMContentLoaded", () => {
-  showQuestion();
-  loadLeaderboard();
-});
 
 function showQuestion() {
   const q = questions[currentQuestionIndex];
@@ -48,59 +42,49 @@ function handleAnswer(selectedIndex) {
   if (currentQuestionIndex < questions.length) {
     showQuestion();
   } else {
-    document.getElementById('question-text').innerText = "You've completed all questions! 🎉";
+    document.getElementById('question-text').innerText = "🎉 You've completed all questions!";
     document.getElementById('answer-buttons').innerHTML = '';
   }
 }
 
-async function donatePoints() {
+function donatePoints() {
   if (points === 0) {
-    document.getElementById('donation-msg').innerText = "You have no Bitcoin Pound coin 🪙 to donate.";
+    document.getElementById('donation-msg').innerText = "⚠️ You have no Bitcoin Pound coin 🪙 to donate.";
     return;
   }
 
   const name = prompt("Enter your name or wallet address:");
   if (!name) return;
 
-  try {
-    const response = await fetch(scriptURL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, points }),
-    });
-    const result = await response.json();
-    if (result.success) {
-      document.getElementById('donation-msg').innerText = `✅ Thank you, ${name}! Your donation of ${points} 🪙 was successful.`;
-      points = 0;
-      document.getElementById('points').innerText = points;
-      loadLeaderboard();
-    } else {
-      document.getElementById('donation-msg').innerText = `❌ ${result.message || "Donation failed."}`;
-    }
-  } catch (err) {
-    document.getElementById('donation-msg').innerText = "❌ Error sending data. Try again later.";
-  }
+  submitToGoogleForm(name, points);
+  document.getElementById('donation-msg').innerText = `✅ Thank you, ${name}! Your donation of ${points} 🪙 was submitted.`;
+  points = 0;
+  document.getElementById('points').innerText = points;
 }
 
-async function loadLeaderboard() {
-  try {
-    const res = await fetch(scriptURL);
-    const data = await res.json();
-    const list = document.getElementById('leaderboard-list');
-    list.innerHTML = '';
+function submitToGoogleForm(name, points) {
+  const today = new Date().toLocaleDateString("en-GB");
 
-    if (data.success && data.leaderboard.length > 0) {
-      data.leaderboard.forEach((entry, i) => {
-        const li = document.createElement('li');
-        li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
-        list.appendChild(li);
-      });
-    } else {
-      list.innerHTML = '<li>No donations yet.</li>';
-    }
-  } catch (err) {
-    document.getElementById('leaderboard-list').innerHTML = '<li>Failed to load leaderboard</li>';
-  }
+  const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLSfLFzzlK5EcWZqGFyHynTXjF8gI6D4eRB5zSbMeGtfdsQ5QVA/formResponse";
+
+  const formData = new URLSearchParams();
+  formData.append("entry.417627887", name);         // Name / Wallet
+  formData.append("entry.1355155876", points);       // Points
+  formData.append("entry.1341601281", today);        // Date
+
+  fetch(formBaseURL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
+  }).then(() => {
+    console.log("Submitted to Google Form");
+  }).catch((error) => {
+    console.error("Google Form Error:", error);
+  });
 }
+
+// Initialize
+document.addEventListener('DOMContentLoaded', showQuestion);
