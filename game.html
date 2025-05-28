@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charity Quiz Game - DRF Wallet</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
+    .container { background: #fff; border-radius: 10px; padding: 30px; max-width: 500px; margin: auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+    h1 { color: #2d89e5; }
+    button { padding: 10px 20px; margin-top: 20px; background: #2d89e5; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    .question { font-size: 18px; margin: 20px 0; }
+    .score, .donated { font-weight: bold; color: #27ae60; }
+    .leaderboard { margin-top: 30px; }
+    .leaderboard ul { list-style: none; padding: 0; }
+    .leaderboard li { padding: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌍 Charity Quiz Game</h1>
+    <p class="question" id="question">Loading...</p>
+    <div id="answers"></div>
+    <p class="score">Points: <span id="score">0</span></p>
+    <button onclick="donatePoints()">Donate Points</button>
+    <p class="donated">Total Donated: <span id="donated">0</span></p>
+
+    <div class="leaderboard">
+      <h3>🏆 Leaderboard</h3>
+      <ul id="leaderboard">
+        <li>Ali - 150 pts</li>
+        <li>Fatima - 100 pts</li>
+        <li>Omar - 70 pts</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      { q: "What is the Islamic term for charity?", a: ["Zakat", "Salah", "Hajj", "Sawm"], correct: 0 },
+      { q: "Who do we give Zakat to?", a: ["Only family", "Only neighbors", "The needy", "Business partners"], correct: 2 },
+      { q: "What is the reward for feeding an orphan?", a: ["Jannah", "Money", "Fame", "Land"], correct: 0 }
+    ];
+
+    let score = 0;
+    let donated = 0;
+    let currentQ = 0;
+
+    function loadQuestion() {
+      const q = questions[currentQ];
+      document.getElementById("question").innerText = q.q;
+      const answersDiv = document.getElementById("answers");
+      answersDiv.innerHTML = "";
+      q.a.forEach((option, i) => {
+        const btn = document.createElement("button");
+        btn.innerText = option;
+        btn.onclick = () => checkAnswer(i);
+        answersDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(index) {
+      if (index === questions[currentQ].correct) {
+        score += 10;
+        document.getElementById("score").innerText = score;
+        alert("Correct! +10 points");
+      } else {
+        alert("Wrong answer. Try the next one.");
+      }
+      currentQ++;
+      if (currentQ < questions.length) {
+        loadQuestion();
+      } else {
+        alert("Quiz complete!");
+      }
+    }
+
+    function donatePoints() {
+      if (score === 0) return alert("You have no points to donate.");
+      donated += score;
+      document.getElementById("donated").innerText = donated;
+      score = 0;
+      document.getElementById("score").innerText = score;
+      alert("Thank you for donating your points! JazakAllah Khair.");
+    }
+
+    loadQuestion();
+  </script>
+</body>
+</html>
