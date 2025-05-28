@@ -1,91 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Charity Quiz Game - DRF Wallet</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Charity Game - DRF Wallet</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; text-align: center; }
-    .container { background: #fff; border-radius: 10px; padding: 30px; max-width: 500px; margin: auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-    h1 { color: #2d89e5; }
-    button { padding: 10px 20px; margin-top: 20px; background: #2d89e5; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-    .question { font-size: 18px; margin: 20px 0; }
-    .score, .donated { font-weight: bold; color: #27ae60; }
-    .leaderboard { margin-top: 30px; }
-    .leaderboard ul { list-style: none; padding: 0; }
-    .leaderboard li { padding: 5px 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f0f4f8;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .question {
+      margin: 20px 0;
+    }
+    .answers button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      background: #007BFF;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .answers button:hover {
+      background: #0056b3;
+    }
+    .donation-section {
+      margin-top: 30px;
+      padding: 15px;
+      background: #e9f5e9;
+      border: 1px solid #c6e2c6;
+      border-radius: 8px;
+    }
+    .leaderboard {
+      margin-top: 30px;
+    }
+    .leaderboard ul {
+      padding: 0;
+      list-style: none;
+    }
+    .leaderboard li {
+      background: #f8f9fa;
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🌍 Charity Quiz Game</h1>
-    <p class="question" id="question">Loading...</p>
-    <div id="answers"></div>
-    <p class="score">Points: <span id="score">0</span></p>
-    <button onclick="donatePoints()">Donate Points</button>
-    <p class="donated">Total Donated: <span id="donated">0</span></p>
+    <h1>🤲 Charity Challenge</h1>
+    <p>Answer questions, earn BitcoinPound points 🪙, and donate to help orphans and the needy. ❤️</p>
+
+    <div class="question">
+      <h2 id="question-text">Loading question...</h2>
+      <div class="answers" id="answer-buttons"></div>
+    </div>
+
+    <div class="donation-section">
+      <h3>Your Points: <span id="points">0</span> 🪙</h3>
+      <button onclick="donatePoints()">Donate Points to Charity Wallet</button>
+      <p id="donation-msg"></p>
+    </div>
 
     <div class="leaderboard">
-      <h3>🏆 Leaderboard</h3>
-      <ul id="leaderboard">
-        <li>Ali - 150 pts</li>
-        <li>Fatima - 100 pts</li>
-        <li>Omar - 70 pts</li>
-      </ul>
+      <h3>🌟 Leaderboard</h3>
+      <ul id="leaderboard-list"></ul>
     </div>
   </div>
 
   <script>
     const questions = [
-      { q: "What is the Islamic term for charity?", a: ["Zakat", "Salah", "Hajj", "Sawm"], correct: 0 },
-      { q: "Who do we give Zakat to?", a: ["Only family", "Only neighbors", "The needy", "Business partners"], correct: 2 },
-      { q: "What is the reward for feeding an orphan?", a: ["Jannah", "Money", "Fame", "Land"], correct: 0 }
+      {
+        question: "What is the best deed in Islam?",
+        answers: ["Charity", "Fasting", "Hajj", "Reading"],
+        correct: 0,
+      },
+      {
+        question: "Which month is known for fasting?",
+        answers: ["Muharram", "Ramadan", "Shawwal", "Dhul Hijjah"],
+        correct: 1,
+      },
+      {
+        question: "How many daily prayers are there?",
+        answers: ["3", "4", "5", "6"],
+        correct: 2,
+      },
     ];
 
-    let score = 0;
-    let donated = 0;
-    let currentQ = 0;
+    let currentQuestionIndex = 0;
+    let points = 0;
+    let leaderboard = [];
 
-    function loadQuestion() {
-      const q = questions[currentQ];
-      document.getElementById("question").innerText = q.q;
-      const answersDiv = document.getElementById("answers");
-      answersDiv.innerHTML = "";
-      q.a.forEach((option, i) => {
-        const btn = document.createElement("button");
-        btn.innerText = option;
-        btn.onclick = () => checkAnswer(i);
-        answersDiv.appendChild(btn);
+    function showQuestion() {
+      const q = questions[currentQuestionIndex];
+      document.getElementById('question-text').innerText = q.question;
+      const btnContainer = document.getElementById('answer-buttons');
+      btnContainer.innerHTML = '';
+      q.answers.forEach((text, i) => {
+        const btn = document.createElement('button');
+        btn.innerText = text;
+        btn.onclick = () => handleAnswer(i);
+        btnContainer.appendChild(btn);
       });
     }
 
-    function checkAnswer(index) {
-      if (index === questions[currentQ].correct) {
-        score += 10;
-        document.getElementById("score").innerText = score;
-        alert("Correct! +10 points");
-      } else {
-        alert("Wrong answer. Try the next one.");
+    function handleAnswer(selectedIndex) {
+      const correct = questions[currentQuestionIndex].correct;
+      if (selectedIndex === correct) {
+        points += 10;
+        document.getElementById('points').innerText = points;
       }
-      currentQ++;
-      if (currentQ < questions.length) {
-        loadQuestion();
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questions.length) {
+        showQuestion();
       } else {
-        alert("Quiz complete!");
+        document.getElementById('question-text').innerText = "You've completed all questions! 🎉";
+        document.getElementById('answer-buttons').innerHTML = '';
       }
     }
 
-    function donatePoints() {
-      if (score === 0) return alert("You have no points to donate.");
-      donated += score;
-      document.getElementById("donated").innerText = donated;
-      score = 0;
-      document.getElementById("score").innerText = score;
-      alert("Thank you for donating your points! JazakAllah Khair.");
+    async function donatePoints() {
+      if (points === 0) {
+        document.getElementById('donation-msg').innerText = "You have no points to donate.";
+        return;
+      }
+
+      const name = prompt("Enter your name or wallet address:");
+      if (!name) return;
+
+      // Send to Google Apps Script
+      try {
+        await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec", {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, points }),
+        });
+
+        // Update local leaderboard
+        leaderboard.push({ name, points });
+        leaderboard.sort((a, b) => b.points - a.points);
+        updateLeaderboard();
+
+        document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your points were donated. 🌟`;
+        points = 0;
+        document.getElementById('points').innerText = points;
+      } catch (err) {
+        document.getElementById('donation-msg').innerText = "Error sending data. Try again later.";
+      }
     }
 
-    loadQuestion();
+    function updateLeaderboard() {
+      const list = document.getElementById('leaderboard-list');
+      list.innerHTML = '';
+      leaderboard.forEach((entry, i) => {
+        const li = document.createElement('li');
+        li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
+        list.appendChild(li);
+      });
+    }
+
+    showQuestion();
   </script>
 </body>
 </html>
