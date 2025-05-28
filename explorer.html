@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DRF Token Explorer</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { padding: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>DRF Token Explorer</h2>
+  <p>Enter your BSC wallet address to check your DRF token balance and eligibility.</p>
+  
+  <input type="text" id="wallet" placeholder="Enter BSC Wallet Address" />
+  <button onclick="checkWallet()">Check</button>
+
+  <div id="result" style="margin-top:20px;"></div>
+
+  <script>
+    async function checkWallet() {
+      const address = document.getElementById("wallet").value.trim();
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "Checking...";
+
+      const apiKey = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
+      const contractAddress = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+
+      const url = `https://api.bscscan.com/api?module=account&action=tokenbalance&contractaddress=${contractAddress}&address=${address}&tag=latest&apikey=${apiKey}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "1") {
+          const balance = parseFloat(data.result) / (10 ** 18);
+          resultDiv.innerHTML = `<b>Wallet:</b> ${address}<br><b>DRF Balance:</b> ${balance} DRF`;
+          
+          // Reward check example
+          if (balance >= 1000) {
+            resultDiv.innerHTML += `<br><span style="color:green;">✅ Eligible for DRF Rewards</span>`;
+          } else {
+            resultDiv.innerHTML += `<br><span style="color:red;">❌ Not eligible for rewards</span>`;
+          }
+
+        } else {
+          resultDiv.innerHTML = "❌ Error fetching data from BscScan.";
+        }
+
+      } catch (err) {
+        resultDiv.innerHTML = "❌ Network or API error.";
+      }
+    }
+  </script>
+</body>
+</html>
