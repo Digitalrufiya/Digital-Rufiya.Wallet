@@ -20,7 +20,7 @@
       border-radius: 12px;
       box-shadow: 0 0 12px rgba(0, 0, 0, 0.05);
     }
-    h1, h2 {
+    h1, h2, h3 {
       text-align: center;
     }
     .question {
@@ -60,6 +60,15 @@
       padding: 10px;
       border-radius: 6px;
     }
+    #donation-msg {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+      color: green;
+    }
+    #donation-msg.error {
+      color: red;
+    }
   </style>
 </head>
 <body>
@@ -74,19 +83,19 @@
 
     <div class="donation-section">
       <h3>Your Bitcoin Pound coin 🪙: <span id="points">0</span></h3>
-      <button onclick="donatePoints()">Donate Points to Charity Wallet</button>
+      <button id="donate-btn">Donate Points to Charity Wallet</button>
       <p id="donation-msg"></p>
     </div>
 
     <div class="leaderboard">
       <h3>🌟 Leaderboard</h3>
-      <ul id="leaderboard-list">Loading leaderboard...</ul>
+      <ul id="leaderboard-list">
+        <li>Loading leaderboard...</li>
+      </ul>
     </div>
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec";
-
     const questions = [
       {
         question: "What is the best deed in Islam?",
@@ -108,27 +117,6 @@
     let currentQuestionIndex = 0;
     let points = 0;
     let leaderboard = [];
-
-    // Load leaderboard entries from Google Sheet via Apps Script
-    async function loadLeaderboard() {
-      try {
-        const response = await fetch(SCRIPT_URL + "?action=getLeaderboard");
-        if (!response.ok) throw new Error("Failed to fetch leaderboard");
-
-        const data = await response.json();
-        // Data format assumed: [{name: 'Alice', points: 30, date: '2025-05-28'}, ...]
-        leaderboard = data;
-
-        // Sort by points desc
-        leaderboard.sort((a, b) => b.points - a.points);
-
-        updateLeaderboard();
-      } catch (e) {
-        console.error("Error loading leaderboard:", e);
-        const list = document.getElementById('leaderboard-list');
-        list.innerHTML = "<li>Failed to load leaderboard</li>";
-      }
-    }
 
     function showQuestion() {
       const q = questions[currentQuestionIndex];
@@ -158,69 +146,96 @@
       }
     }
 
+    async function loadLeaderboard() {
+      const leaderboardList = document.getElementById('leaderboard-list');
+      leaderboardList.innerHTML = '<li>Loading leaderboard...</li>';
+
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec?action=getLeaderboard");
+        if (!response.ok) throw new Error("Network response was not ok");
+        const data = await response.json();
+
+        // data should be an array of {name, points, date} or similar
+        leaderboard = data || [];
+
+        if (leaderboard.length === 0) {
+          leaderboardList.innerHTML = '<li>No donations yet.</li>';
+          return;
+        }
+
+        // Sort by points descending
+        leaderboard.sort((a, b) => b.points - a.points);
+
+        leaderboardList.innerHTML = '';
+        leaderboard.forEach((entry, i) => {
+          const li = document.createElement('li');
+          li.textContent = `${i + 1}. ${entry.name} - ${entry.points} 🪙`;
+          leaderboardList.appendChild(li);
+        });
+      } catch (error) {
+        leaderboardList.innerHTML = '<li class="error">Failed to load leaderboard.</li>';
+        console.error("Failed to load leaderboard:", error);
+      }
+    }
+
     async function donatePoints() {
+      const donationMsg = document.getElementById('donation-msg');
+      donationMsg.innerText = '';
+      donationMsg.classList.remove('error');
+
       if (points === 0) {
-        document.getElementById('donation-msg').innerText = "You have no points to donate.";
+        donationMsg.innerText = "You have no points to donate.";
+        donationMsg.classList.add('error');
         return;
       }
 
       const name = prompt("Enter your name or wallet address:");
       if (!name) return;
 
-      // Check if user already donated today
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      const hasDonatedToday = leaderboard.some(
-        entry => entry.name.toLowerCase() === name.toLowerCase() && entry.date === today
-      );
-      if (hasDonatedToday) {
-        document.getElementById('donation-msg').innerText = "You have already donated today. Try again tomorrow.";
+      // Check if user already donated today (client-side check)
+      const today = new Date().toISOString().slice(0,10);
+      const alreadyDonated = leaderboard.some(entry => entry.name.toLowerCase() === name.toLowerCase() && entry.date === today);
+      if (alreadyDonated) {
+        donationMsg.innerText = "You can only donate once per day. Please come back tomorrow!";
+        donationMsg.classList.add('error');
         return;
       }
 
-      // Send donation to Google Apps Script
       try {
-        const response = await fetch(SCRIPT_URL, {
+        // POST donation data to Google Apps Script
+        const response = await fetch("https://script.google.com/macros/s/AKfycbx-oH3Xu7FiUQ-_ku8Hu_eHlMfcESlIJwgNXVWlc6HkfG70Cgi_uZH6-bs3rgq-f892/exec", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json"
           },
-          body: JSON.stringify({ name, points }),
+          body: JSON.stringify({ name, points })
         });
 
-        if (!response.ok) throw new Error("Failed to submit donation");
+        if (!response.ok) throw new Error("Failed to send data");
 
-        // Refresh leaderboard from server to get latest data
-        await loadLeaderboard();
-
-        document.getElementById('donation-msg').innerText = `Thank you, ${name}! Your ${points} 🪙 were donated. 🌟`;
+        // Reset points
         points = 0;
         document.getElementById('points').innerText = points;
+
+        // Reload leaderboard from server for fresh data
+        await loadLeaderboard();
+
+        donationMsg.innerText = `Thank you, ${name}! Your points were donated. 🌟`;
       } catch (err) {
-        console.error(err);
-        document.getElementById('donation-msg').innerText = "Error sending data. Try again later.";
+        donationMsg.innerText = "Error sending data. Try again later.";
+        donationMsg.classList.add('error');
+        console.error("Donation error:", err);
       }
     }
 
-    function updateLeaderboard() {
-      const list = document.getElementById('leaderboard-list');
-      list.innerHTML = '';
-      if (leaderboard.length === 0) {
-        list.innerHTML = '<li>No donations yet.</li>';
-        return;
-      }
-      leaderboard.forEach((entry, i) => {
-        const li = document.createElement('li');
-        li.innerText = `${i + 1}. ${entry.name} - ${entry.points} 🪙 (on ${entry.date})`;
-        list.appendChild(li);
-      });
-    }
+    document.getElementById('donate-btn').addEventListener('click', donatePoints);
 
-    // Initialize app
     showQuestion();
     loadLeaderboard();
 
-    // Optional: Refresh leaderboard every 60 seconds for real-time updates
-    setInterval(loadLeaderboard, 60000);
+    // Optional: Refresh leaderboard every 30 seconds for real-time updates
+    setInterval(loadLeaderboard, 30000);
+
   </script>
 </body>
 </html>
