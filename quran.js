@@ -1,10 +1,33 @@
-// quran.js
-
 const quranData = [
-  { surah: 27, ayah: 1, arabic: "طٰسٓ", english: "Ta, Seen." },
-  { surah: 27, ayah: 2, arabic: "تِلْكَ اٰيٰتُ الْقُرْاٰ نِ وَكِتَا بٍ مُّبِيْنٍ", english: "These are the verses of the Qur'an and a clear Book" },
-  { surah: 27, ayah: 3, arabic: "الَّذِيْنَ يُقِيْمُوْنَ الصَّلٰوةَ وَيُؤْتُوْنَ الزَّكٰوةَ وَ هُمْ بِا لْاٰ خِرَةِ هُمْ يُوْقِنُوْنَ", english: "Who establish prayer and give zakah, and of the Hereafter they are certain [in faith]." },
-  { surah: 101, ayah: 2, arabic: "مَا الْقَا رِعَةُ", english: "What is the Striking Calamity?" },
-  { surah: 101, ayah: 3, arabic: "وَمَآ اَدْرٰىكَ مَا الْقَا رِعَةُ", english: "And what can make you know what is the Striking Calamity?" },
-  // add more verses here or load full Quran JSON data
+    {
+        surah: "Al-Fatihah",
+        verse: 1,
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        english: "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+    },
+    {
+        surah: "Al-Fatihah",
+        verse: 2,
+        arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        english: "All praise is [due] to Allah, Lord of the worlds."
+    },
+    {
+        surah: "Ya-Sin",
+        verse: 1,
+        arabic: "يس",
+        english: "Ya, Seen."
+    },
+    {
+        surah: "Al-Baqarah",
+        verse: 255,
+        arabic: "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ...",
+        english: "Allah – there is no deity except Him, the Ever-Living, the Sustainer of [all] existence..."
+    },
+    {
+        surah: "Al-Ikhlas",
+        verse: 1,
+        arabic: "قُلْ هُوَ اللَّهُ أَحَدٌ",
+        english: "Say, He is Allah, [who is] One."
+    }
+    // Add more verses here or load a full dataset
 ];
