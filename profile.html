@@ -2,36 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Social - Profile</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="profile.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Media - Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script src="app.js"></script>
+  <script src="abi.js"></script>
 </head>
-<body>
-  <h1>My Profile</h1>
+<body class="bg-gray-100 text-gray-900">
+  <nav class="bg-white shadow p-4 flex justify-between">
+    <h1 class="text-xl font-bold">DRF Media</h1>
+    <button id="connectBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Connect Wallet</button>
+  </nav>
 
-  <button onclick="connectWallet()">Connect Wallet</button>
-  <p id="walletAddress">Not connected</p>
+  <main class="max-w-4xl mx-auto mt-6 p-4 bg-white rounded shadow">
+    <h2 class="text-2xl font-semibold mb-4">Your Profile</h2>
 
-  <h2>Update Profile</h2>
-  <form id="profileForm">
-    <input type="text" id="displayName" placeholder="Display Name" required><br>
-    <textarea id="bio" placeholder="Bio"></textarea><br>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block mb-1">Display Name</label>
+        <input id="displayName" class="w-full border px-3 py-2 rounded" type="text" placeholder="Your name" />
+      </div>
 
-    <label>Profile Photo:</label><br>
-    <input type="file" id="profilePhoto" accept="image/*" required><br>
+      <div>
+        <label class="block mb-1">Bio</label>
+        <textarea id="bio" class="w-full border px-3 py-2 rounded" placeholder="Tell us about yourself..."></textarea>
+      </div>
 
-    <label>Cover Photo:</label><br>
-    <input type="file" id="coverPhoto" accept="image/*" required><br>
+      <div>
+        <label class="block mb-1">Profile Photo CID</label>
+        <input id="profilePhoto" class="w-full border px-3 py-2 rounded" type="text" placeholder="IPFS CID" />
+      </div>
 
-    <button type="submit">Save Profile</button>
-  </form>
+      <div>
+        <label class="block mb-1">Cover Photo CID</label>
+        <input id="coverPhoto" class="w-full border px-3 py-2 rounded" type="text" placeholder="IPFS CID" />
+      </div>
+    </div>
 
-  <p id="status"></p>
+    <button onclick="saveProfile()" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded">Save Profile</button>
+  </main>
 
-  <h2>Profile Preview</h2>
-  <p><strong>Name:</strong> <span id="namePreview"></span></p>
-  <p><strong>Bio:</strong> <span id="bioPreview"></span></p>
-  <img id="profilePreview" src="" alt="Profile Photo" width="100">
-  <img id="coverPreview" src="" alt="Cover Photo" width="200">
+  <script>
+    async function saveProfile() {
+      const name = document.getElementById('displayName').value;
+      const bio = document.getElementById('bio').value;
+      const photo = document.getElementById('profilePhoto').value;
+      const cover = document.getElementById('coverPhoto').value;
+
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      const web3 = new Web3(window.ethereum);
+      const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+
+      try {
+        await contract.methods.setProfile(name, bio, photo, cover).send({ from: accounts[0] });
+        alert('Profile updated successfully!');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to update profile.');
+      }
+    }
+  </script>
 </body>
 </html>
