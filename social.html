@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFMedia Social</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f2f5;
+    }
+    header {
+      background: #4267B2;
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 1.5rem;
+    }
+    .container {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .sidebar, .feed, .rightbar {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .sidebar {
+      flex: 1;
+    }
+    .feed {
+      flex: 2;
+    }
+    .rightbar {
+      flex: 1;
+    }
+    .post, .donation, .comment {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .post img, .profile-photo {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      background: #4267B2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #365899;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DRFMedia</h1>
+    <button onclick="connectWallet()">Connect Wallet</button>
+  </header>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Your Profile</h2>
+      <img class="profile-photo" id="profilePhoto" src="" alt="Profile Photo">
+      <p><strong>Name:</strong> <span id="displayName"></span></p>
+      <p><strong>Bio:</strong> <span id="bio"></span></p>
+      <button onclick="editProfile()">Edit Profile</button>
+    </div>
+
+    <!-- Feed -->
+    <div class="feed">
+      <h2>Create Post</h2>
+      <input type="text" id="postIPFS" placeholder="IPFS Hash">
+      <input type="text" id="postMediaType" placeholder="Media Type (image/video/text)">
+      <button onclick="createPost()">Post</button>
+
+      <h2>Posts</h2>
+      <div id="postList"></div>
+    </div>
+
+    <!-- Rightbar -->
+    <div class="rightbar">
+      <h2>Request Donation</h2>
+      <textarea id="donationDesc" placeholder="Why do you need a donation?"></textarea>
+      <input type="number" id="donationAmount" placeholder="Amount Requested">
+      <button onclick="requestDonation()">Request</button>
+
+      <h2>Donation Requests</h2>
+      <div id="donationList"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script>
+    let web3;
+    let contract;
+    const contractAddress = "<REPLACE_WITH_YOUR_CONTRACT_ADDRESS>";
+    const abi = <REPLACE_WITH_CONTRACT_ABI>;
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        web3 = new Web3(window.ethereum);
+        const accounts = await web3.eth.getAccounts();
+        contract = new web3.eth.Contract(abi, contractAddress);
+        alert('Connected: ' + accounts[0]);
+      } else {
+        alert('Install MetaMask!');
+      }
+    }
+
+    async function createPost() {
+      const ipfs = document.getElementById('postIPFS').value;
+      const media = document.getElementById('postMediaType').value;
+      const accounts = await web3.eth.getAccounts();
+      await contract.methods.post(ipfs, media).send({ from: accounts[0] });
+    }
+
+    async function requestDonation() {
+      const desc = document.getElementById('donationDesc').value;
+      const amount = document.getElementById('donationAmount').value;
+      const accounts = await web3.eth.getAccounts();
+      await contract.methods.createDonationRequest(desc, web3.utils.toWei(amount, 'ether')).send({ from: accounts[0] });
+    }
+
+    function editProfile() {
+      const name = prompt("Enter display name:");
+      const bio = prompt("Enter bio:");
+      const photo = prompt("Enter IPFS hash for profile photo:");
+      const cover = "";
+      contract.methods.setProfile(name, bio, photo, cover).send({ from: ethereum.selectedAddress });
+    }
+  </script>
+</body>
+</html>
