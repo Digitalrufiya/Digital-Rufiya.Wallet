@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DRF Social Post</title>
+</head>
+<body>
+  <button id="connect">Connect Wallet</button><br/><br/>
+  <input id="ipfsHash" placeholder="IPFS Hash" />
+  <select id="mediaType">
+    <option value="image">Image</option>
+    <option value="video">Video</option>
+  </select>
+  <input id="caption" placeholder="Enter caption or description" />
+  <button id="sendPost">Send Post</button>
+  <p id="status"></p>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <script>
+    const CONTRACT_ADDRESS = "YOUR_DEPLOYED_CONTRACT_ADDRESS";
+    const ABI = [
+      "function post(string ipfsHash, string mediaType) external"
+    ];
+
+    let provider, signer, contract;
+
+    document.getElementById('connect').onclick = async () => {
+      if(window.ethereum){
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+        document.getElementById('status').innerText = "Wallet connected";
+      } else {
+        alert("Please install MetaMask!");
+      }
+    };
+
+    function isClean(text) {
+      const bannedWords = ["gay", "lesbian", "sex", "porn", "nude"];
+      return !bannedWords.some(word => text.toLowerCase().includes(word));
+    }
+
+    document.getElementById('sendPost').onclick = async () => {
+      const ipfsHash = document.getElementById('ipfsHash').value.trim();
+      const mediaType = document.getElementById('mediaType').value;
+      const caption = document.getElementById('caption').value.trim();
+
+      if (!ipfsHash) {
+        alert("Please enter IPFS hash");
+        return;
+      }
+
+      if (!isClean(caption)) {
+        alert("Your content may contain inappropriate or restricted language.");
+        return;
+      }
+
+      try {
+        const tx = await contract.post(ipfsHash, mediaType);
+        document.getElementById('status').innerText = "Transaction sent. Waiting for confirmation...";
+        await tx.wait();
+        document.getElementById('status').innerText = "Post successfully saved on blockchain!";
+      } catch(e) {
+        console.error(e);
+        document.getElementById('status').innerText = "Transaction failed: " + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
