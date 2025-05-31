@@ -4,38 +4,42 @@ pragma solidity ^0.8.19;
 /**
  * @title DRFTube Token (DRFT)
  * @dev BEP20 token with fixed supply, burn on comment, reward on like/share/subscribe,
- * hidden zakat/jizya wallets, and annual zakat distribution.
- * Ownership renounce enabled for decentralization.
+ * hidden zakat/jizya wallets, annual zakat distribution, and new upload payment logic.
  */
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract DRFTube is ERC20, Ownable {
-    // Fixed supply: 1,000,000,000,000,000 DRFT (1 quadrillion)
     uint256 private constant INITIAL_SUPPLY = 1_000_000_000_000_000 * 10**18;
 
-    // Addresses to hold hidden zakat and jizya balances (internal use)
     address private zakatWallet;
     address private jizyaWallet;
 
-    // Events for burning and rewarding
     event CommentBurn(address indexed user, uint256 amount);
     event LikeReward(address indexed user, uint256 amount);
     event ShareReward(address indexed user, uint256 amount);
     event SubscribeReward(address indexed user, uint256 amount);
     event ZakatDistributed(uint256 totalDistributed, uint256 timestamp);
 
-    // Burn and reward amounts (example values, can be updated by owner if needed)
-    uint256 public burnPerComment = 10 * 10**18;    // 10 DRFT burned per comment
-    uint256 public rewardPerLike = 5 * 10**18;      // 5 DRFT rewarded per like
-    uint256 public rewardPerShare = 20 * 10**18;    // 20 DRFT rewarded per share
-    uint256 public rewardPerSubscribe = 50 * 10**18;// 50 DRFT rewarded per subscribe
+    event UploadPaid(address indexed user, uint256 totalAmount, bool withEditing);
+    event UserTypeSet(address indexed user, bool isBeliever);
 
-    // Track if contract is active (can pause if needed)
+    uint256 public burnPerComment = 10 * 10**18;
+    uint256 public rewardPerLike = 5 * 10**18;
+    uint256 public rewardPerShare = 20 * 10**18;
+    uint256 public rewardPerSubscribe = 50 * 10**18;
+
     bool public active = true;
 
-    // Modifier to check active state
+    // Fees in DRFT tokens
+    uint256 public believerUploadFee = 30 * 10**18;
+    uint256 public disbelieverUploadFee = 60 * 10**18;
+    uint256 public editableFee = 10 * 10**18;
+
+    // Track user types: true = believer, false = disbeliever
+    mapping(address => bool) public isBeliever;
+
     modifier onlyActive() {
         require(active, "DRFTube: Contract is paused");
         _;
@@ -46,38 +50,31 @@ contract DRFTube is ERC20, Ownable {
         zakatWallet = _zakatWallet;
         jizyaWallet = _jizyaWallet;
 
-        // Mint fixed supply to owner initially
         _mint(msg.sender, INITIAL_SUPPLY);
     }
 
-    // === Core user interactions ===
-
-    // User comments: burns fixed amount of tokens from user balance
+    // === User interaction ===
     function comment() external onlyActive {
         _burn(msg.sender, burnPerComment);
         emit CommentBurn(msg.sender, burnPerComment);
     }
 
-    // Like reward: platform calls this to reward user on like
     function rewardLike(address user) external onlyOwner onlyActive {
         _transfer(jizyaWallet, user, rewardPerLike);
         emit LikeReward(user, rewardPerLike);
     }
 
-    // Share reward: platform calls this to reward user on share
     function rewardShare(address user) external onlyOwner onlyActive {
         _transfer(jizyaWallet, user, rewardPerShare);
         emit ShareReward(user, rewardPerShare);
     }
 
-    // Subscribe reward: platform calls this to reward user on subscribe
     function rewardSubscribe(address user) external onlyOwner onlyActive {
         _transfer(jizyaWallet, user, rewardPerSubscribe);
         emit SubscribeReward(user, rewardPerSubscribe);
     }
 
-    // === Annual zakat distribution ===
-    // Distributes all zakatWallet tokens equally to a list of user addresses
+    // === Zakat distribution ===
     function distributeZakat(address[] calldata users) external onlyOwner onlyActive {
         uint256 balance = balanceOf(zakatWallet);
         require(balance > 0, "No zakat tokens to distribute");
@@ -91,9 +88,33 @@ contract DRFTube is ERC20, Ownable {
         emit ZakatDistributed(balance, block.timestamp);
     }
 
-    // === Admin controls ===
+    // === New: Upload payment with editable option ===
+    function setUserType(address user, bool believer) external onlyOwner {
+        isBeliever[user] = believer;
+        emit UserTypeSet(user, believer);
+    }
 
-    // Owner can update burn/reward amounts as needed
+    function payForUpload(bool withEditing) external onlyActive {
+        uint256 baseFee = isBeliever[msg.sender] ? believerUploadFee : disbelieverUploadFee;
+        uint256 totalFee = baseFee;
+
+        if (withEditing) {
+            totalFee += editableFee;
+        }
+
+        require(balanceOf(msg.sender) >= totalFee, "Insufficient balance");
+        require(allowance(msg.sender, address(this)) >= totalFee, "Allowance too low");
+
+        uint256 zakatPart = totalFee / 2;
+        uint256 jizyaPart = totalFee - zakatPart;
+
+        _transfer(msg.sender, zakatWallet, zakatPart);
+        _transfer(msg.sender, jizyaWallet, jizyaPart);
+
+        emit UploadPaid(msg.sender, totalFee, withEditing);
+    }
+
+    // === Admin controls ===
     function setBurnAndRewards(
         uint256 _burnComment,
         uint256 _rewardLike,
@@ -106,12 +127,10 @@ contract DRFTube is ERC20, Ownable {
         rewardPerSubscribe = _rewardSubscribe;
     }
 
-    // Pause or unpause contract activity (emergency use)
     function setActive(bool _active) external onlyOwner {
         active = _active;
     }
 
-    // Change zakat and jizya wallets (only if necessary)
     function setZakatWallet(address _wallet) external onlyOwner {
         require(_wallet != address(0), "Invalid address");
         zakatWallet = _wallet;
@@ -122,12 +141,22 @@ contract DRFTube is ERC20, Ownable {
         jizyaWallet = _wallet;
     }
 
-    // To renounce ownership for decentralization once ready
+    function setBelieverUploadFee(uint256 fee) external onlyOwner {
+        believerUploadFee = fee;
+    }
+
+    function setDisbelieverUploadFee(uint256 fee) external onlyOwner {
+        disbelieverUploadFee = fee;
+    }
+
+    function setEditableFee(uint256 fee) external onlyOwner {
+        editableFee = fee;
+    }
+
     function renounceOwnership() public override onlyOwner {
         super.renounceOwnership();
     }
 
-    // View zakat and jizya wallet addresses (no direct balances exposed publicly)
     function getZakatWallet() external view onlyOwner returns (address) {
         return zakatWallet;
     }
