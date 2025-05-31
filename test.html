@@ -1,227 +1,209 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>متصفح DRF - DRF Browser</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
-  <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
+  <title>DRF Media dApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js" crossorigin="anonymous"></script>
   <style>
     body {
-      font-family: 'Amiri', serif, sans-serif;
-      margin: 0;
-      padding: 1rem;
-      background: #f4f4f4;
-      direction: rtl;
-      text-align: right;
+      font-family: Arial, sans-serif;
+      padding: 20px;
     }
-
-    .tauheed-banner {
-      background-color: black;
-      color: white;
-      padding: 15px 30px;
-      font-size: 28px;
+    #connectBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #walletAddress {
+      margin-top: 10px;
       font-weight: bold;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.8);
-      font-family: 'Amiri', 'Scheherazade New', serif, 'Arial', sans-serif;
-      max-width: 90%;
-      user-select: none;
-      cursor: default;
-      line-height: 1.5;
-      margin: 20px auto;
-      direction: rtl;
-      text-align: center;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 1rem;
-    }
-
-    .icon {
-      background: white;
-      border-radius: 1rem;
-      padding: 1rem;
-      text-align: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      transition: transform 0.2s;
-      user-select: none;
-    }
-
-    .icon:hover {
-      transform: scale(1.05);
-    }
-
-    .bookmark-section {
-      margin-top: 2rem;
-      text-align: right;
-    }
-
-    .bookmark {
-      background: #fff;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .bookmark a {
-      text-decoration: none;
-      color: #333;
-      direction: rtl;
-    }
-
-    .remove {
-      color: red;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    input[type="search"] {
-      width: 100%;
-      padding: 0.75rem;
-      margin: 1rem 0;
-      font-size: 1.2rem;
-      border-radius: 0.5rem;
-      border: 1px solid #ccc;
-      direction: rtl;
-      font-family: 'Amiri', serif, sans-serif;
-      text-align: right;
-    }
-
-    #quranVerse {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 1rem;
-      margin-top: 1rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      font-size: 1.2rem;
-      direction: rtl;
-      text-align: right;
-      font-family: 'Amiri', serif, sans-serif;
-    }
-
-    #searchFrame {
-      width: 100%;
-      height: 500px;
-      display: none;
-      margin-top: 20px;
-      border-radius: 10px;
-      border: 2px solid #ccc;
     }
   </style>
 </head>
 <body>
 
-  <div class="tauheed-banner" title="لا إله إلا الله محمد رسول الله">
-    لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ
-  </div>
-
-  <h1>🕋 متصفح DRF - DRF Ecosystem Browser</h1>
-
-  <input type="search" id="drfSearch" placeholder="ابحث في DuckDuckGo أو اكتب وحدة DRF..." onkeydown="handleSearch(event)" autocomplete="on" />
-
-  <iframe id="searchFrame" sandbox="allow-scripts allow-same-origin"></iframe>
-
-  <div class="grid">
-    <div class="icon" onclick="navigateTo('wallet.html')">💼 المحفظة</div>
-    <div class="icon" onclick="navigateTo('university.html')">🎓 جامعة DRF</div>
-    <div class="icon" onclick="navigateTo('donate.html')">💖 خيرية DRF</div>
-    <div class="icon" onclick="navigateTo('game.html')">🕹️ الألعاب</div>
-    <div class="icon" onclick="navigateTo('social.html')">🌐 تواصل DRF</div>
-    <div class="icon" onclick="navigateTo('robo.html')">🤖 روبو DRF</div>
-    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ مستكشف DRF</div>
-    <div class="icon" onclick="navigateTo('quranic.html')">📚 متصفح المعرفة القرآنية</div>
-  </div>
-
-  <h2 class="bookmark-section">🔖 العلامات المرجعية</h2>
-  <div id="bookmarkList"></div>
-
-  <h3>📖 تذكير قرآني يومي</h3>
-  <div id="quranVerse">...جاري تحميل الآية...</div>
+  <button id="connectBtn">Connect Wallet</button>
+  <div id="walletAddress"></div>
 
   <script>
-    function navigateTo(url) {
-      const title = prompt('أضف عنوان العلامة المرجعية (اختياري):', url);
-      if (title !== null) {
-        const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-        bookmarks.push({ title: title || url, url });
-        localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
-        renderBookmarks();
+    const contractABI = [
+      {
+        "inputs": [
+          { "internalType": "string", "name": "name", "type": "string" },
+          { "internalType": "string", "name": "bio", "type": "string" },
+          { "internalType": "string", "name": "photoCID", "type": "string" },
+          { "internalType": "string", "name": "coverCID", "type": "string" }
+        ],
+        "name": "setProfile",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+        "name": "profiles",
+        "outputs": [
+          { "internalType": "string", "name": "name", "type": "string" },
+          { "internalType": "string", "name": "bio", "type": "string" },
+          { "internalType": "string", "name": "photoCID", "type": "string" },
+          { "internalType": "string", "name": "coverCID", "type": "string" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "ipfsHash", "type": "string" },
+          { "internalType": "uint8", "name": "mediaType", "type": "uint8" }
+        ],
+        "name": "post",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalPosts",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }],
+        "name": "getPost",
+        "outputs": [
+          { "internalType": "address", "name": "author", "type": "address" },
+          { "internalType": "string", "name": "ipfsHash", "type": "string" },
+          { "internalType": "uint8", "name": "mediaType", "type": "uint8" },
+          { "internalType": "uint256", "name": "likes", "type": "uint256" },
+          { "internalType": "bool", "name": "flagged", "type": "bool" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
+        "name": "likePost",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "postId", "type": "uint256" },
+          { "internalType": "string", "name": "message", "type": "string" }
+        ],
+        "name": "commentOnPost",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
+        "name": "getComments",
+        "outputs": [
+          {
+            "components": [
+              { "internalType": "address", "name": "author", "type": "address" },
+              { "internalType": "string", "name": "message", "type": "string" }
+            ],
+            "internalType": "struct DRFMedia.Comment[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "string", "name": "description", "type": "string" },
+          { "internalType": "uint256", "name": "amount", "type": "uint256" }
+        ],
+        "name": "createDonationRequest",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "totalDonationRequests",
+        "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }],
+        "name": "getDonationRequest",
+        "outputs": [
+          { "internalType": "address", "name": "creator", "type": "address" },
+          { "internalType": "string", "name": "description", "type": "string" },
+          { "internalType": "uint256", "name": "amount", "type": "uint256" },
+          { "internalType": "uint256", "name": "raised", "type": "uint256" }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          { "internalType": "uint256", "name": "requestId", "type": "uint256" },
+          { "internalType": "uint256", "name": "amount", "type": "uint256" }
+        ],
+        "name": "donateToRequest",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
+        "name": "flagPost",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
+        "name": "unflagPost",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
       }
-      window.location.href = url;
-    }
+    ];
 
-    function removeBookmark(index) {
-      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-      bookmarks.splice(index, 1);
-      localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
-      renderBookmarks();
-    }
+    const contractAddress = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
 
-    function renderBookmarks() {
-      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-      bookmarkList.innerHTML = '';
-      bookmarks.forEach((b, i) => {
-        const div = document.createElement('div');
-        div.className = 'bookmark';
-        div.innerHTML = `<a href="${b.url}">${b.title}</a> <span class="remove" onclick="removeBookmark(${i})">🗑️</span>`;
-        bookmarkList.appendChild(div);
-      });
-    }
+    let provider;
+    let signer;
+    let contract;
 
-    function handleSearch(e) {
-      if (e.key === 'Enter') {
-        const query = e.target.value.trim();
-        const frame = document.getElementById('searchFrame');
+    const connectBtn = document.getElementById('connectBtn');
+    const walletAddressDiv = document.getElementById('walletAddress');
 
-        if (!query) return;
-
-        // If user enters a full URL, go directly to it
-        if (query.startsWith('http') || query.endsWith('.html')) {
-          window.location.href = query;
-        } else {
-          // Search DuckDuckGo with the query
-          frame.src = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-          frame.style.display = 'block';
-        }
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('MetaMask is not installed. Please install it to use this dApp.');
+        return;
       }
-    }
 
-    async function loadQuranVerse() {
       try {
-        const res = await fetch('https://api.alquran.cloud/v1/ayah/random');
-        const data = await res.json();
-        if (data.status === 'OK') {
-          const verse = data.data;
-          document.getElementById('quranVerse').innerHTML =
-            `<strong>${verse.surah.name} [${verse.numberInSurah}]</strong><br>${verse.text}`;
-        } else {
-          throw new Error("Failed to fetch verse.");
-        }
-      } catch (err) {
-        document.getElementById('quranVerse').innerText = "فشل تحميل الآية.";
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        const address = await signer.getAddress();
+
+        walletAddressDiv.textContent = `Connected: ${address}`;
+        connectBtn.textContent = 'Wallet Connected';
+        connectBtn.disabled = true;
+
+        contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+      } catch (error) {
+        console.error(error);
+        alert('Failed to connect wallet.');
       }
     }
 
-    renderBookmarks();
-    loadQuranVerse();
+    connectBtn.addEventListener('click', connectWallet);
   </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('✅ تم تسجيل خدمة العامل'))
-        .catch(err => console.warn('⚠️ فشل تسجيل خدمة العامل', err));
-    }
-  </script>
-
 </body>
 </html>
