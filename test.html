@@ -1,18 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Browser</title>
+  <title>متصفح DRF - DRF Browser</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Amiri', serif, sans-serif;
       margin: 0;
       padding: 1rem;
       background: #f4f4f4;
+      direction: rtl;
+      text-align: right;
     }
 
     .tauheed-banner {
@@ -47,6 +49,7 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
       cursor: pointer;
       transition: transform 0.2s;
+      user-select: none;
     }
 
     .icon:hover {
@@ -55,6 +58,7 @@
 
     .bookmark-section {
       margin-top: 2rem;
+      text-align: right;
     }
 
     .bookmark {
@@ -71,20 +75,25 @@
     .bookmark a {
       text-decoration: none;
       color: #333;
+      direction: rtl;
     }
 
     .remove {
       color: red;
       cursor: pointer;
+      user-select: none;
     }
 
     input[type="search"] {
       width: 100%;
       padding: 0.75rem;
       margin: 1rem 0;
-      font-size: 1rem;
+      font-size: 1.2rem;
       border-radius: 0.5rem;
       border: 1px solid #ccc;
+      direction: rtl;
+      font-family: 'Amiri', serif, sans-serif;
+      text-align: right;
     }
 
     #quranVerse {
@@ -93,6 +102,10 @@
       border-radius: 1rem;
       margin-top: 1rem;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      font-size: 1.2rem;
+      direction: rtl;
+      text-align: right;
+      font-family: 'Amiri', serif, sans-serif;
     }
 
     #searchFrame {
@@ -107,36 +120,36 @@
 </head>
 <body>
 
-  <div class="tauheed-banner" title="The banner of Tauheed: Allah’s Oneness and Mercy encompasses all creation. Islam is the religion pleasing to Allah.">
+  <div class="tauheed-banner" title="لا إله إلا الله محمد رسول الله">
     لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ
   </div>
 
-  <h1>🕋 DRF Ecosystem Browser</h1>
+  <h1>🕋 متصفح DRF - DRF Ecosystem Browser</h1>
 
-  <input type="search" id="drfSearch" placeholder="Search DuckDuckGo or type a DRF module..." onkeydown="handleSearch(event)" />
+  <input type="search" id="drfSearch" placeholder="ابحث في DuckDuckGo أو اكتب وحدة DRF..." onkeydown="handleSearch(event)" autocomplete="on" />
 
-  <iframe id="searchFrame"></iframe>
+  <iframe id="searchFrame" sandbox="allow-scripts allow-same-origin"></iframe>
 
   <div class="grid">
-    <div class="icon" onclick="navigateTo('wallet.html')">💼 Wallet</div>
-    <div class="icon" onclick="navigateTo('university.html')">🎓 DRF University</div>
-    <div class="icon" onclick="navigateTo('donate.html')">💖 DRF Charity</div>
-    <div class="icon" onclick="navigateTo('game.html')">🕹️ Game</div>
-    <div class="icon" onclick="navigateTo('social.html')">🌐 DRF Social Media</div>
-    <div class="icon" onclick="navigateTo('robo.html')">🤖 DRF Robo</div>
-    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ DRF Explorer</div>
-    <div class="icon" onclick="navigateTo('quranic.html')">📚 Quranic Knowledge Browser</div>
+    <div class="icon" onclick="navigateTo('wallet.html')">💼 المحفظة</div>
+    <div class="icon" onclick="navigateTo('university.html')">🎓 جامعة DRF</div>
+    <div class="icon" onclick="navigateTo('donate.html')">💖 خيرية DRF</div>
+    <div class="icon" onclick="navigateTo('game.html')">🕹️ الألعاب</div>
+    <div class="icon" onclick="navigateTo('social.html')">🌐 تواصل DRF</div>
+    <div class="icon" onclick="navigateTo('robo.html')">🤖 روبو DRF</div>
+    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ مستكشف DRF</div>
+    <div class="icon" onclick="navigateTo('quranic.html')">📚 متصفح المعرفة القرآنية</div>
   </div>
 
-  <h2 class="bookmark-section">🔖 Bookmarks</h2>
+  <h2 class="bookmark-section">🔖 العلامات المرجعية</h2>
   <div id="bookmarkList"></div>
 
-  <h3>📖 Daily Quran Reminder</h3>
-  <div id="quranVerse">Loading Quran verse...</div>
+  <h3>📖 تذكير قرآني يومي</h3>
+  <div id="quranVerse">...جاري تحميل الآية...</div>
 
   <script>
     function navigateTo(url) {
-      const title = prompt('Add Bookmark Title (optional):', url);
+      const title = prompt('أضف عنوان العلامة المرجعية (اختياري):', url);
       if (title !== null) {
         const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
         bookmarks.push({ title: title || url, url });
@@ -171,9 +184,11 @@
 
         if (!query) return;
 
+        // If user enters a full URL, go directly to it
         if (query.startsWith('http') || query.endsWith('.html')) {
           window.location.href = query;
         } else {
+          // Search DuckDuckGo with the query
           frame.src = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
           frame.style.display = 'block';
         }
@@ -192,7 +207,7 @@
           throw new Error("Failed to fetch verse.");
         }
       } catch (err) {
-        document.getElementById('quranVerse').innerText = "Failed to load verse.";
+        document.getElementById('quranVerse').innerText = "فشل تحميل الآية.";
       }
     }
 
@@ -203,8 +218,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('✅ Service Worker registered'))
-        .catch(err => console.warn('⚠️ Service Worker failed', err));
+        .then(() => console.log('✅ تم تسجيل خدمة العامل'))
+        .catch(err => console.warn('⚠️ فشل تسجيل خدمة العامل', err));
     }
   </script>
 
