@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Browser</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f0f0f0;
+      text-align: center;
+      color: #333;
+    }
+
+    .tauheed-banner {
+      background-color: black;
+      color: white;
+      padding: 15px 30px;
+      font-size: 28px;
+      font-weight: bold;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.8);
+      font-family: 'Scheherazade New', serif, 'Arial', sans-serif;
+      max-width: 90%;
+      user-select: none;
+      cursor: default;
+      line-height: 1.5;
+      margin: 30px auto;
+      direction: rtl;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .icon {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .icon:hover {
+      transform: scale(1.05);
+    }
+
+    .bookmark-section {
+      margin-top: 2rem;
+    }
+
+    .bookmark {
+      background: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .bookmark a {
+      text-decoration: none;
+      color: #333;
+    }
+
+    .remove {
+      color: red;
+      cursor: pointer;
+    }
+
+    input[type="search"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 1rem 0;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+    }
+
+    #quranVerse {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-top: 1rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="tauheed-banner" title="The banner of Tauheed: Allah’s Oneness and Mercy encompasses all creation. Islam is the religion pleasing to Allah.">
+    لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ
+  </div>
+
+  <h1>🕋 DRF Ecosystem Browser</h1>
+
+  <input type="search" id="drfSearch" placeholder="Search Google or type a DRF module..." onkeydown="handleSearch(event)" />
+
+  <div class="grid">
+    <div class="icon" onclick="navigateTo('wallet.html')">💼 Wallet</div>
+    <div class="icon" onclick="navigateTo('university.html')">🎓 DRF University</div>
+    <div class="icon" onclick="navigateTo('donate.html')">💖 DRF Charity</div>
+    <div class="icon" onclick="navigateTo('game.html')">🕹️ Game</div>
+    <div class="icon" onclick="navigateTo('social.html')">🌐 DRF Social Media</div>
+    <div class="icon" onclick="navigateTo('robo.html')">🤖 DRF Robo</div>
+    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ DRF Explorer</div>
+  </div>
+
+  <h2 class="bookmark-section">🔖 Bookmarks</h2>
+  <div id="bookmarkList"></div>
+
+  <h3>📖 Daily Quran Reminder</h3>
+  <div id="quranVerse">Loading Quran verse...</div>
+
+  <script>
+    function navigateTo(url) {
+      const title = prompt('Add Bookmark Title (optional):', url);
+      if (title !== null) {
+        const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
+        bookmarks.push({ title: title || url, url });
+        localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
+        renderBookmarks();
+      }
+      window.location.href = url;
+    }
+
+    function removeBookmark(index) {
+      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
+      bookmarks.splice(index, 1);
+      localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
+      renderBookmarks();
+    }
+
+    function renderBookmarks() {
+      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
+      bookmarkList.innerHTML = '';
+      bookmarks.forEach((b, i) => {
+        const div = document.createElement('div');
+        div.className = 'bookmark';
+        div.innerHTML = `<a href="${b.url}">${b.title}</a> <span class="remove" onclick="removeBookmark(${i})">🗑️</span>`;
+        bookmarkList.appendChild(div);
+      });
+    }
+
+    function handleSearch(e) {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (!query) return;
+        if (query.startsWith('http') || query.endsWith('.html')) {
+          window.location.href = query;
+        } else {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+        }
+      }
+    }
+
+    async function loadQuranVerse() {
+      try {
+        const res = await fetch('https://api.alquran.cloud/v1/ayah/random');
+        const data = await res.json();
+        if (data.status === 'OK') {
+          const verse = data.data;
+          document.getElementById('quranVerse').innerHTML =
+            `<strong>${verse.surah.name} [${verse.numberInSurah}]</strong><br>${verse.text}`;
+        } else {
+          throw new Error("Failed to fetch verse.");
+        }
+      } catch (err) {
+        document.getElementById('quranVerse').innerText = "Failed to load verse.";
+      }
+    }
+
+    renderBookmarks();
+    loadQuranVerse();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.warn('⚠️ Service Worker failed', err));
+    }
+  </script>
+</body>
+</html>
