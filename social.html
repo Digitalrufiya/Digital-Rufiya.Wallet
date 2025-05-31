@@ -49,9 +49,10 @@
       border-radius: 8px;
       margin-bottom: 1rem;
     }
-    .post img, .profile-photo {
+    .post img, .post video, .profile-photo {
       max-width: 100%;
       border-radius: 8px;
+      margin-top: 0.5rem;
     }
     button {
       padding: 0.5rem 1rem;
@@ -71,6 +72,17 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+    .reaction-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+    }
+    .reaction-bar button {
+      background: transparent;
+      color: #4267B2;
+      border: none;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -83,17 +95,17 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <h2>Your Profile</h2>
-      <img class="profile-photo" id="profilePhoto" src="" alt="Profile Photo">
-      <p><strong>Name:</strong> <span id="displayName"></span></p>
-      <p><strong>Bio:</strong> <span id="bio"></span></p>
+      <img class="profile-photo" id="profilePhoto" src="https://via.placeholder.com/150" alt="Profile Photo">
+      <p><strong>Name:</strong> <span id="displayName">Anonymous</span></p>
+      <p><strong>Bio:</strong> <span id="bio">No bio yet.</span></p>
       <button onclick="editProfile()">Edit Profile</button>
     </div>
 
     <!-- Feed -->
     <div class="feed">
       <h2>Create Post</h2>
-      <input type="text" id="postIPFS" placeholder="IPFS Hash">
-      <input type="text" id="postMediaType" placeholder="Media Type (image/video/text)">
+      <textarea id="postText" placeholder="What's on your mind?"></textarea>
+      <input type="file" id="postMedia" accept="image/*,video/*">
       <button onclick="createPost()">Post</button>
 
       <h2>Posts</h2>
@@ -104,7 +116,7 @@
     <div class="rightbar">
       <h2>Request Donation</h2>
       <textarea id="donationDesc" placeholder="Why do you need a donation?"></textarea>
-      <input type="number" id="donationAmount" placeholder="Amount Requested">
+      <input type="number" id="donationAmount" placeholder="Amount Requested in DRFM">
       <button onclick="requestDonation()">Request</button>
 
       <h2>Donation Requests</h2>
@@ -127,30 +139,109 @@
         contract = new web3.eth.Contract(abi, contractAddress);
         alert('Connected: ' + accounts[0]);
       } else {
-        alert('Install MetaMask!');
+        alert('Please install MetaMask to use DRFMedia.');
       }
-    }
-
-    async function createPost() {
-      const ipfs = document.getElementById('postIPFS').value;
-      const media = document.getElementById('postMediaType').value;
-      const accounts = await web3.eth.getAccounts();
-      await contract.methods.post(ipfs, media).send({ from: accounts[0] });
-    }
-
-    async function requestDonation() {
-      const desc = document.getElementById('donationDesc').value;
-      const amount = document.getElementById('donationAmount').value;
-      const accounts = await web3.eth.getAccounts();
-      await contract.methods.createDonationRequest(desc, web3.utils.toWei(amount, 'ether')).send({ from: accounts[0] });
     }
 
     function editProfile() {
       const name = prompt("Enter display name:");
       const bio = prompt("Enter bio:");
-      const photo = prompt("Enter IPFS hash for profile photo:");
-      const cover = "";
-      contract.methods.setProfile(name, bio, photo, cover).send({ from: ethereum.selectedAddress });
+      const photo = prompt("Enter image URL for profile photo:");
+      document.getElementById('displayName').innerText = name;
+      document.getElementById('bio').innerText = bio;
+      document.getElementById('profilePhoto').src = photo;
+    }
+
+    function createPost() {
+      const postText = document.getElementById('postText').value;
+      const mediaInput = document.getElementById('postMedia');
+      const postList = document.getElementById('postList');
+
+      if (!postText && mediaInput.files.length === 0) {
+        alert("Post cannot be empty.");
+        return;
+      }
+
+      const postDiv = document.createElement('div');
+      postDiv.className = 'post';
+      postDiv.innerHTML = `<p><strong>${document.getElementById('displayName').innerText}:</strong> ${postText}</p>`;
+
+      if (mediaInput.files.length > 0) {
+        const file = mediaInput.files[0];
+        const url = URL.createObjectURL(file);
+        if (file.type.startsWith('image/')) {
+          postDiv.innerHTML += `<img src="${url}" alt="Post Image">`;
+        } else if (file.type.startsWith('video/')) {
+          postDiv.innerHTML += `<video controls><source src="${url}" type="${file.type}"></video>`;
+        }
+      }
+
+      postDiv.innerHTML += `
+        <div class="reaction-bar">
+          <button onclick="likePost(this)"><i class="fa fa-thumbs-up"></i> Like</button>
+          <button onclick="commentPost(this)">Comment</button>
+        </div>
+        <div class="comment-box" style="display:none;">
+          <input type="text" placeholder="Write a comment..." onkeydown="submitComment(event, this)">
+        </div>
+      `;
+
+      postList.prepend(postDiv);
+
+      // Placeholder: Trigger reward system
+      console.log("Reward this user DRFM token for posting");
+    }
+
+    function likePost(button) {
+      const currentText = button.innerHTML;
+      if (currentText.includes("Like")) {
+        button.innerHTML = `<i class="fa fa-thumbs-up"></i> Liked`;
+        button.style.color = "#065fe6";
+      } else {
+        button.innerHTML = `<i class="fa fa-thumbs-up"></i> Like`;
+        button.style.color = "#4267B2";
+      }
+    }
+
+    function commentPost(button) {
+      const commentBox = button.closest('.post').querySelector('.comment-box');
+      commentBox.style.display = commentBox.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function submitComment(event, input) {
+      if (event.key === 'Enter') {
+        const commentText = input.value.trim();
+        if (commentText) {
+          const comment = document.createElement('div');
+          comment.className = 'comment';
+          comment.innerText = `${document.getElementById('displayName').innerText}: ${commentText}`;
+          input.parentElement.appendChild(comment);
+          input.value = '';
+        }
+      }
+    }
+
+    async function requestDonation() {
+      const desc = document.getElementById('donationDesc').value;
+      const amount = document.getElementById('donationAmount').value;
+      const donationList = document.getElementById('donationList');
+
+      if (!desc || !amount) {
+        alert("Please fill both fields.");
+        return;
+      }
+
+      const donationDiv = document.createElement('div');
+      donationDiv.className = 'donation';
+      donationDiv.innerHTML = `<p><strong>${document.getElementById('displayName').innerText}</strong> is requesting <strong>${amount} DRFM</strong></p><p>${desc}</p>`;
+      donationList.prepend(donationDiv);
+
+      try {
+        const accounts = await web3.eth.getAccounts();
+        await contract.methods.createDonationRequest(desc, web3.utils.toWei(amount, 'ether')).send({ from: accounts[0] });
+      } catch (err) {
+        console.error("Blockchain error:", err);
+      }
     }
   </script>
 </body>
