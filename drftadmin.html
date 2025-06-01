@@ -1,50 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>DRFTube Watch & Share</title>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .share-box { margin-top: 20px; background: #f0f0f0; padding: 15px; border-radius: 8px; }
-    .btn { padding: 10px 20px; margin: 10px 5px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFTube Admin Dashboard</title>
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #121212;
+    color: #fff;
+    margin: 0; padding: 0;
+  }
+  header {
+    background: #202020;
+    padding: 15px 20px;
+    font-weight: 700;
+    font-size: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  main {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #333;
+    text-align: left;
+  }
+  th {
+    background: #282828;
+  }
+  tr:hover {
+    background: #333;
+  }
+  button {
+    cursor: pointer;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: background 0.3s;
+  }
+  button.flag-btn {
+    background: #ff9800;
+    color: #000;
+  }
+  button.flag-btn:hover {
+    background: #e68a00;
+  }
+  button.delete-btn {
+    background: #e62117;
+    color: #fff;
+  }
+  button.delete-btn:hover {
+    background: #b3150d;
+  }
+  button.hide-btn {
+    background: #555;
+    color: #ddd;
+  }
+  button.hide-btn:hover {
+    background: #777;
+  }
+  .status-flagged {
+    color: #ff9800;
+    font-weight: 700;
+  }
+  .status-hidden {
+    color: #999;
+    font-style: italic;
+  }
+  .no-videos {
+    margin-top: 30px;
+    font-size: 18px;
+    text-align: center;
+    color: #888;
+  }
+</style>
 </head>
 <body>
 
-  <h1>🎥 DRFTube Video Title</h1>
-  <video src="yourvideo.mp4" width="600" controls></video>
+<header>
+  DRFTube Admin Dashboard
+  <button id="refresh-btn" title="Reload data">⟳ Refresh</button>
+</header>
 
-  <div class="share-box">
-    <h3>📤 Share to Earn DRFT</h3>
-    <p>Your referral link:</p>
-    <input type="text" id="refLink" readonly style="width: 100%; padding: 10px;" />
-    <button class="btn" onclick="copyLink()">Copy Link</button>
-    <p>🔗 Anyone who watches using this link will earn YOU DRFT</p>
-  </div>
+<main>
+  <table id="videos-table">
+    <thead>
+      <tr>
+        <th>Video ID</th>
+        <th>Title</th>
+        <th>Channel</th>
+        <th>Views</th>
+        <th>Flagged</th>
+        <th>Hidden</th>
+        <th>Shares (F/T/W)</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="videos-tbody">
+      <!-- dynamically populated -->
+    </tbody>
+  </table>
+  <div id="no-videos-msg" class="no-videos" style="display:none;">No videos found.</div>
+</main>
 
-  <script>
-    async function init() {
-      if (window.ethereum) {
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-        const wallet = accounts[0];
-        const url = new URL(window.location.href);
-        const videoId = url.searchParams.get("v") || "default";
-        const shareLink = `https://drftube.com/watch.html?v=${videoId}&ref=${wallet}`;
-        document.getElementById('refLink').value = shareLink;
-      } else {
-        alert("Please install MetaMask!");
-      }
+<script>
+  // Sample video data (could come from API or backend)
+  let videos = [
+    { id: "dQw4w9WgXcQ", title: "Never Gonna Give You Up", channel: "Rick Astley", views: "1B", flagged: false, hidden: false },
+    { id: "s7L2PVdrb_8", title: "Big Buck Bunny", channel: "Blender Foundation", views: "60M", flagged: false, hidden: false },
+    { id: "kxopViU98Xo", title: "Cat Jump Fail Compilation", channel: "Funny Cats", views: "100M", flagged: false, hidden: false },
+  ];
+
+  // Load saved video state from localStorage (flags + hidden)
+  function loadVideoState() {
+    const saved = localStorage.getItem('drft_videos_state');
+    if(saved) {
+      const savedState = JSON.parse(saved);
+      videos.forEach(video => {
+        const savedVideo = savedState.find(v => v.id === video.id);
+        if(savedVideo) {
+          video.flagged = savedVideo.flagged;
+          video.hidden = savedVideo.hidden;
+        }
+      });
+    }
+  }
+
+  // Save video state to localStorage
+  function saveVideoState() {
+    const stateToSave = videos.map(v => ({ id: v.id, flagged: v.flagged, hidden: v.hidden }));
+    localStorage.setItem('drft_videos_state', JSON.stringify(stateToSave));
+  }
+
+  // Get share counts from localStorage (same keys as watch.html)
+  function getShareCounts(videoId) {
+    const platforms = ['facebook', 'twitter', 'whatsapp'];
+    let counts = {};
+    platforms.forEach(platform => {
+      const key = `drft_share_${platform}_${videoId}`;
+      let count = localStorage.getItem(key);
+      counts[platform] = count ? parseInt(count) : 0;
+    });
+    return counts;
+  }
+
+  // Update shares count for a given video and platform (for demo only)
+  function incrementShareCount(videoId, platform) {
+    const key = `drft_share_${platform}_${videoId}`;
+    let count = localStorage.getItem(key);
+    count = count ? parseInt(count) : 0;
+    localStorage.setItem(key, count + 1);
+  }
+
+  // Render video table rows
+  function renderVideos() {
+    const tbody = document.getElementById('videos-tbody');
+    tbody.innerHTML = '';
+    if(videos.length === 0) {
+      document.getElementById('no-videos-msg').style.display = 'block';
+      return;
+    } else {
+      document.getElementById('no-videos-msg').style.display = 'none';
     }
 
-    function copyLink() {
-      const link = document.getElementById('refLink');
-      link.select();
-      document.execCommand("copy");
-      alert("Link copied! Share it to earn rewards.");
-    }
+    videos.forEach(video => {
+      const counts = getShareCounts(video.id);
+      const tr = document.createElement('tr');
+      if(video.hidden) tr.style.opacity = '0.4';
 
-    window.onload = init;
-  </script>
+      tr.innerHTML = `
+        <td>${video.id}</td>
+        <td>${video.title}</td>
+        <td>${video.channel}</td>
+        <td>${video.views}</td>
+        <td class="${video.flagged ? 'status-flagged' : ''}">${video.flagged ? 'Yes' : 'No'}</td>
+        <td class="${video.hidden ? 'status-hidden' : ''}">${video.hidden ? 'Yes' : 'No'}</td>
+        <td>F: ${counts.facebook} / T: ${counts.twitter} / W: ${counts.whatsapp}</td>
+        <td>
+          <button class="flag-btn" data-id="${video.id}">${video.flagged ? 'Unflag' : 'Flag'}</button>
+          <button class="hide-btn" data-id="${video.id}">${video.hidden ? 'Unhide' : 'Hide'}</button>
+          <button class="delete-btn" data-id="${video.id}">Delete</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // Attach event listeners to buttons
+    document.querySelectorAll('button.flag-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleFlag(btn.dataset.id));
+    });
+    document.querySelectorAll('button.hide-btn').forEach(btn => {
+      btn.addEventListener('click', () => toggleHide(btn.dataset.id));
+    });
+    document.querySelectorAll('button.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteVideo(btn.dataset.id));
+    });
+  }
+
+  function toggleFlag(id) {
+    const video = videos.find(v => v.id === id);
+    if(video) {
+      video.flagged = !video.flagged;
+      saveVideoState();
+      renderVideos();
+    }
+  }
+
+  function toggleHide(id) {
+    const video = videos.find(v => v.id === id);
+    if(video) {
+      video.hidden = !video.hidden;
+      saveVideoState();
+      renderVideos();
+    }
+  }
+
+  function deleteVideo(id) {
+    if(confirm('Are you sure you want to DELETE this video? This action cannot be undone.')) {
+      videos = videos.filter(v => v.id !== id);
+      saveVideoState();
+      renderVideos();
+    }
+  }
+
+  // On page load
+  loadVideoState();
+  renderVideos();
+
+  // Refresh button reloads from localStorage (to reset UI)
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    loadVideoState();
+    renderVideos();
+  });
+</script>
+
 </body>
 </html>
