@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MyVideo Platform</title>
-  <link rel="stylesheet" href="style.css" />
   <style>
     * {
       box-sizing: border-box;
@@ -42,6 +41,7 @@
       border: 1px solid #ccc;
       border-right: none;
       border-radius: 4px 0 0 4px;
+      font-size: 16px;
     }
 
     .search-bar button {
@@ -51,6 +51,7 @@
       border-left: none;
       border-radius: 0 4px 4px 0;
       cursor: pointer;
+      font-size: 16px;
     }
 
     .container {
@@ -67,6 +68,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      overflow-y: auto;
     }
 
     .sidebar button {
@@ -77,6 +79,12 @@
       cursor: pointer;
       font-size: 16px;
       color: #333;
+      transition: background 0.2s;
+    }
+
+    .sidebar button:hover {
+      background: #f0f0f0;
+      border-radius: 4px;
     }
 
     .main-content {
@@ -87,7 +95,7 @@
 
     .main-video {
       width: 100%;
-      height: 400px;
+      aspect-ratio: 16/9;
       background: #000;
       margin-bottom: 20px;
       display: flex;
@@ -95,6 +103,7 @@
       justify-content: center;
       color: white;
       font-size: 24px;
+      border-radius: 8px;
     }
 
     .timeline {
@@ -123,18 +132,97 @@
       color: #555;
     }
 
+    /* Bottom Navigation Bar */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px 0;
+      z-index: 100;
+    }
+
+    .bottom-nav button {
+      background: none;
+      border: none;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .bottom-nav button span {
+      font-size: 20px;
+      margin-bottom: 2px;
+    }
+
+    /* Responsive Mobile Enhancements */
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
       }
+
       .sidebar {
         flex-direction: row;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        width: 100%;
+        padding: 10px;
+        gap: 8px;
         border-right: none;
         border-bottom: 1px solid #ddd;
+        white-space: nowrap;
+        scrollbar-width: none;
       }
+
+      .sidebar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .sidebar button {
+        white-space: nowrap;
+        padding: 10px 12px;
+        font-size: 14px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 5px;
+        flex-shrink: 0;
+      }
+
+      .main-content {
+        padding: 10px;
+        margin-bottom: 60px; /* Space for bottom nav */
+      }
+
       .timeline {
         display: none;
+      }
+
+      .bottom-nav {
+        display: flex;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .search-bar input {
+        font-size: 14px;
+      }
+
+      .search-bar button {
+        font-size: 14px;
+      }
+
+      .sidebar button {
+        font-size: 13px;
+        padding: 8px 10px;
       }
     }
   </style>
@@ -162,7 +250,6 @@
       <div class="main-video">
         Main Video Area (Player goes here)
       </div>
-      <!-- More player details or description can be added -->
     </main>
 
     <aside class="timeline">
@@ -174,8 +261,16 @@
         <h4>Video Title 2</h4>
         <p>Uploader • 1 hour ago</p>
       </div>
-      <!-- More video cards -->
     </aside>
   </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button><span>🏠</span>Home</button>
+    <button><span>🔥</span>Trending</button>
+    <button><span>📺</span>Subs</button>
+    <button><span>📚</span>Library</button>
+    <button><span>⬆️</span>Upload</button>
+  </nav>
 </body>
 </html>
