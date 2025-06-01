@@ -1,40 +1,32 @@
-// DRFT.js - Core functionality for DRFTube frontend
+// wallet-connect.js
 
-// Wallet connection
+let userAddress = "";
+
 async function connectWallet() {
   if (window.ethereum) {
     try {
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      const walletAddress = accounts[0];
-      document.getElementById("wallet-address").innerText = `Connected: ${walletAddress}`;
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      userAddress = accounts[0];
+      document.getElementById("connectWallet").innerText = shortenAddress(userAddress);
     } catch (err) {
-      console.error("User denied wallet connection", err);
+      alert("🛑 Wallet connection failed.");
     }
   } else {
-    alert("Please install MetaMask to use DRFTube.");
+    alert("🔌 Please install MetaMask or another Web3 wallet.");
   }
 }
 
-// Share video and reward
-function rewardShare(userAddress, videoId) {
-  // Simulate backend reward logic or smart contract call
-  console.log(`Rewarding ${userAddress} for sharing video ${videoId}`);
-  // Here you would integrate with smart contract or backend logic
+function shortenAddress(addr) {
+  return addr.slice(0, 6) + "..." + addr.slice(-4);
 }
 
-// Handle video upload (simplified)
-function handleVideoUpload() {
-  const input = document.getElementById("video-input");
-  const file = input.files[0];
-  if (file) {
-    alert("Video uploaded and sent to Filecoin via IPFS (simulated)");
-    // Simulate backend logic / IPFS integration
-  } else {
-    alert("No video selected.");
+// Auto-connect if already connected
+window.addEventListener("DOMContentLoaded", async () => {
+  if (window.ethereum && window.ethereum.selectedAddress) {
+    userAddress = window.ethereum.selectedAddress;
+    document.getElementById("connectWallet").innerText = shortenAddress(userAddress);
   }
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  document.getElementById("connect-btn").addEventListener("click", connectWallet);
-  document.getElementById("upload-btn").addEventListener("click", handleVideoUpload);
+  document.getElementById("connectWallet").addEventListener("click", connectWallet);
 });
+
+export { userAddress };
