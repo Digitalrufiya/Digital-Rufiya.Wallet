@@ -1,63 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Islamic Audio Timeline | DRFM</title>
-  <link rel="stylesheet" href="mp3.css" />
+  <meta charset="UTF-8">
+  <title>📻 DRFM Audio Timeline</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f9fafb; }
+    .audio-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .title { font-size: 1.2rem; font-weight: bold; }
+    .actions { margin-top: 0.5rem; }
+    button {
+      padding: 8px 14px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    a { text-decoration: none; color: #2563eb; margin-left: 1rem; }
+  </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h2>🎧 DRFM Audio</h2>
-    <ul>
-      <li><a href="mp3upload.html">Upload Audio</a></li>
-      <li><a href="mp3.html" class="active">Audio Timeline</a></li>
-      <li><a href="mp3player.html">Offline Player</a></li>
-    </ul>
-  </div>
 
-  <div class="main">
-    <h1>📻 Islamic Audio Timeline</h1>
-    <div id="audioList" class="audio-list">
-      <!-- Dynamic audios loaded here -->
-    </div>
-  </div>
+  <h2>📢 Public Islamic Audio Timeline</h2>
+  <div id="timeline"></div>
 
   <script>
-    const audioList = document.getElementById('audioList');
-
-    // Sample placeholder data until connected to backend/IPFS
-    const audios = [
+    const sampleUploads = [
       {
-        title: "Beautiful Nasheed - 1",
-        description: "Emotional Islamic Nasheed",
-        url: "https://ipfs.io/ipfs/QmSampleAudio1"
+        cid: "bafybeigdyrztjpj3dvc2bq4bxhxhlvwlvf7slxhl3vbhjol2lsmx5pj7qq",
+        name: "Beautiful Nasheed.mp3"
       },
       {
-        title: "Motivational Islamic Talk",
-        description: "By Sheikh Omar",
-        url: "https://ipfs.io/ipfs/QmSampleAudio2"
+        cid: "bafybeidcug3jvfuqqthavmuubgu7sk7kqcswhjlftrf2deu3mrocczrfli",
+        name: "Islamic Reminder.mp3"
       }
     ];
 
-    // Load each audio dynamically
-    audios.forEach(audio => {
-      const audioCard = document.createElement('div');
-      audioCard.className = 'audio-card';
+    const timelineEl = document.getElementById("timeline");
 
-      audioCard.innerHTML = `
-        <h3>${audio.title}</h3>
-        <p>${audio.description}</p>
-        <audio controls>
-          <source src="${audio.url}" type="audio/mpeg" />
-          Your browser does not support the audio element.
-        </audio>
-        <br/>
-        <a href="mp3player.html?url=${encodeURIComponent(audio.url)}&title=${encodeURIComponent(audio.title)}" class="play-link">🎵 Open in Full Player</a>
-      `;
-      
-      audioList.appendChild(audioCard);
-    });
+    function renderTimeline(data) {
+      data.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "audio-card";
+        card.innerHTML = `
+          <div class="title">${item.name}</div>
+          <div class="actions">
+            <button onclick="playAudio('${item.cid}')">▶️ Play</button>
+            <a href="https://ipfs.io/ipfs/${item.cid}" target="_blank">🔗 IPFS</a>
+          </div>
+        `;
+        timelineEl.appendChild(card);
+      });
+    }
+
+    function playAudio(cid) {
+      window.location.href = `mp3player.html?cid=${cid}`;
+    }
+
+    // Simulate loading from IPFS (later: fetch from JSON metadata)
+    window.onload = () => {
+      renderTimeline(sampleUploads);
+
+      // In future: Load dynamic from backend or IPFS directory
+      const userUploads = JSON.parse(localStorage.getItem('uploadedList') || '[]');
+      if (userUploads.length > 0) renderTimeline(userUploads);
+    };
   </script>
+
 </body>
 </html>
