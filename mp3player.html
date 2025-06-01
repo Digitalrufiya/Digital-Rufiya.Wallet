@@ -2,40 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Audio Player | DRFM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFM Audio Player</title>
   <link rel="stylesheet" href="mp3.css" />
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <div class="player-container">
-    <h1 id="audioTitle">Loading...</h1>
-    <audio id="audioPlayer" controls autoplay>
-      Your browser does not support the audio element.
-    </audio>
-    <p>🎵 This audio is cached for offline listening</p>
-    <a href="mp3.html" class="back-btn">⬅ Back to Timeline</a>
+  <div class="container">
+    <h1 class="title">🎵 DRFM Islamic Audio Player</h1>
+    
+    <div id="audio-container" class="player-box">
+      <audio id="audio-player" controls></audio>
+      <p id="audio-status">Loading audio from IPFS...</p>
+    </div>
+
+    <a href="mp3.html" class="back-link">⬅ Back to Audio Timeline</a>
   </div>
 
   <script>
-    // Extract URL and title from query parameters
     const params = new URLSearchParams(window.location.search);
-    const audioURL = params.get('url');
-    const audioTitle = params.get('title');
+    const cid = params.get("cid");
 
-    if (audioURL && audioTitle) {
-      document.getElementById('audioTitle').textContent = audioTitle;
-      const audioPlayer = document.getElementById('audioPlayer');
-      audioPlayer.src = audioURL;
+    const audio = document.getElementById("audio-player");
+    const status = document.getElementById("audio-status");
+
+    if (cid) {
+      const ipfsUrl = `https://ipfs.io/ipfs/${cid}`;
+      audio.src = ipfsUrl;
+      status.textContent = "🔊 Ready to play!";
     } else {
-      document.getElementById('audioTitle').textContent = "Audio not found";
+      status.textContent = "❌ No CID found in URL. Example: ?cid=yourCID";
     }
-  </script>
 
-  <script>
+    // Register Service Worker for offline support
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('mp3-sw.js')
-        .then(reg => console.log('Service Worker registered ✅'))
-        .catch(err => console.log('Service Worker error ❌', err));
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('✅ Service Worker Registered'))
+        .catch(err => console.error('❌ Service Worker registration failed:', err));
     }
   </script>
 </body>
