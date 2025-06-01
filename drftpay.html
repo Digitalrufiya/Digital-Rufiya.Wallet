@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Business Upload & Boost</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      max-width: 480px;
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgb(0 0 0 / 0.1);
+      padding: 24px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #cc0000;
+      text-align: center;
+      font-weight: 700;
+    }
+    .step {
+      display: none;
+    }
+    .step.active {
+      display: block;
+    }
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    button {
+      background: #cc0000;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      font-size: 1rem;
+      min-width: 120px;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background: #a30000;
+    }
+    input[type="text"], select, input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    label {
+      font-weight: 600;
+      margin-top: 16px;
+      display: block;
+      color: #333;
+    }
+    .price {
+      font-weight: 700;
+      text-align: center;
+      margin-top: 12px;
+      font-size: 1.2rem;
+      color: #cc0000;
+    }
+    .error {
+      color: #cc0000;
+      margin-top: 8px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .confirmation {
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: green;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Business Upload & Boost</h2>
+
+    <!-- Step 1: Are you Muslim? -->
+    <div class="step active" id="step1">
+      <p>Are you Muslim?</p>
+      <div class="btn-group">
+        <button id="muslimYesBtn">Yes</button>
+        <button id="muslimNoBtn">No</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Proof of belief -->
+    <div class="step" id="step2">
+      <label for="proofInput">Please type the declaration exactly:</label>
+      <input type="text" id="proofInput" placeholder="La ilaha illa Allah Muhammad Rasoolullah" />
+      <div class="error" id="proofError"></div>
+      <div class="btn-group">
+        <button id="proofBackBtn">Back</button>
+        <button id="proofNextBtn" disabled>Next</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Choose Upload Type -->
+    <div class="step" id="step3">
+      <p>Select Upload Type:</p>
+      <select id="uploadTypeSelect">
+        <option value="upload">Business Upload (Upload + Boost)</option>
+        <option value="editupload">Business Edit & Upload (Edit + Upload + Boost)</option>
+      </select>
+      <div class="price" id="priceDisplay">$0.00</div>
+      <div class="btn-group">
+        <button id="uploadBackBtn">Back</button>
+        <button id="uploadNextBtn">Next</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Payment Method -->
+    <div class="step" id="step4">
+      <p>Select Payment Method:</p>
+      <select id="paymentMethodSelect">
+        <option value="" disabled selected>Select a payment method</option>
+        <option value="creditcard">Credit Card</option>
+        <option value="paypal">PayPal</option>
+        <option value="wallet">Wallet</option>
+        <option value="banktransfer">Bank Transfer</option>
+      </select>
+      <div class="btn-group">
+        <button id="paymentBackBtn">Back</button>
+        <button id="paymentNextBtn" disabled>Proceed to Pay</button>
+      </div>
+    </div>
+
+    <!-- Step 5: Confirmation & Pay -->
+    <div class="step" id="step5">
+      <p>Please confirm your details and pay:</p>
+      <ul>
+        <li><strong>Belief:</strong> <span id="confirmBelief"></span></li>
+        <li><strong>Upload Type:</strong> <span id="confirmUploadType"></span></li>
+        <li><strong>Price:</strong> <span id="confirmPrice"></span></li>
+        <li><strong>Payment Method:</strong> <span id="confirmPaymentMethod"></span></li>
+      </ul>
+      <div class="btn-group">
+        <button id="confirmBackBtn">Back</button>
+        <button id="confirmPayBtn">Pay Now</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Upload Form -->
+    <div class="step" id="step6">
+      <p>Upload your video and instructions:</p>
+      <label for="videoFile">Select Video File:</label>
+      <input type="file" id="videoFile" accept="video/*" />
+      <label for="editInstructions">Editing Instructions (optional):</label>
+      <textarea id="editInstructions" rows="4" placeholder="Enter any editing instructions here..."></textarea>
+      <div class="btn-group">
+        <button id="uploadFormBackBtn">Back</button>
+        <button id="uploadFormSubmitBtn" disabled>Submit Upload</button>
+      </div>
+      <div class="error" id="uploadError"></div>
+    </div>
+
+    <!-- Final Confirmation -->
+    <div class="step" id="step7">
+      <p class="confirmation">Thank you! Your payment and upload are received.<br/>We will review and process your video shortly.</p>
+    </div>
+
+  </div>
+
+  <script>
+    const steps = document.querySelectorAll('.step');
+    const showStep = (stepId) => {
+      steps.forEach(s => s.classList.remove('active'));
+      document.getElementById(stepId).classList.add('active');
+    };
+
+    // Step 1 buttons
+    const muslimYesBtn = document.getElementById('muslimYesBtn');
+    const muslimNoBtn = document.getElementById('muslimNoBtn');
+
+    // Step 2 elements
+    const proofInput = document.getElementById('proofInput');
+    const proofError = document.getElementById('proofError');
+    const proofNextBtn = document.getElementById('proofNextBtn');
+    const proofBackBtn = document.getElementById('proofBackBtn');
+
+    // Step 3 elements
+    const uploadTypeSelect = document.getElementById('uploadTypeSelect');
+    const priceDisplay = document.getElementById('priceDisplay');
+    const uploadBackBtn = document.getElementById('uploadBackBtn');
+    const uploadNextBtn = document.getElementById('uploadNextBtn');
+
+    // Step 4 elements
+    const paymentMethodSelect = document.getElementById('paymentMethodSelect');
+    const paymentNextBtn = document.getElementById('paymentNextBtn');
+    const paymentBackBtn = document.getElementById('paymentBackBtn');
+
+    // Step 5 elements
+    const confirmBelief = document.getElementById('confirmBelief');
+    const confirmUploadType = document.getElementById('confirmUploadType');
+    const confirmPrice = document.getElementById('confirmPrice');
+    const confirmPaymentMethod = document.getElementById('confirmPaymentMethod');
+    const confirmBackBtn = document.getElementById('confirmBackBtn');
+    const confirmPayBtn = document.getElementById('confirmPayBtn');
+
+    // Step 6 elements
+    const videoFile = document.getElementById('videoFile');
+    const editInstructions = document.getElementById('editInstructions');
+    const uploadFormBackBtn = document.getElementById('uploadFormBackBtn');
+    const uploadFormSubmitBtn = document.getElementById('uploadFormSubmitBtn');
+    const uploadError = document.getElementById('uploadError');
+
+    // Data store
+    let isMuslim = null;
+    let beliefProofValid = false;
+    let uploadType = '';
+    let paymentMethod = '';
+    let price = 0;
+
+    // Pricing rules
+    // Muslim prices: upload $30, edit upload $40 (30 + 10)
+    // Non-Muslim prices: upload $60, edit upload $70 (60 + 10)
+    const pricing = {
+      muslim: { upload: 30, editupload: 40 },
+      nonMuslim: { upload: 60, editupload: 70 }
+    };
+
+    // Step 1 handlers
+    muslimYesBtn.addEventListener('click', () => {
+      isMuslim = true;
+      showStep('step2');
+      proofInput.value = '';
+      proofError.textContent = '';
+      proofNextBtn.disabled = true;
+    });
+    muslimNoBtn.addEventListener('click', () => {
+      isMuslim = false;
+      showStep('step3');
+      updatePrice();
+    });
+
+    // Step 2 handlers
+    proofInput.addEventListener('input', () => {
+      const val = proofInput.value.trim().toLowerCase();
+      const correct = "la ilaha illa allah muhammad rasoolullah";
+      if (val === correct) {
+        proofError.textContent = '';
+        proofNextBtn.disabled = false;
+        beliefProofValid = true;
+      } else {
+        proofError.textContent = 'Declaration does not match exactly.';
+        proofNextBtn.disabled = true;
+        beliefProofValid = false;
+      }
+    });
+    proofBackBtn.addEventListener('click', () => {
+      showStep('step1');
+    });
+    proofNextBtn.addEventListener('click', () => {
+      if (!beliefProofValid) return;
+      showStep('step3');
+      updatePrice();
+    });
+
+    // Step 3 handlers
+    uploadTypeSelect.addEventListener('change', () => {
+      updatePrice();
+    });
+    uploadBackBtn.addEventListener('click', () => {
+      if (isMuslim === true) {
+        showStep('step2');
+      } else {
+        showStep('step1');
+      }
+    });
+    uploadNextBtn.addEventListener('click', () => {
+      uploadType = uploadTypeSelect.value;
+      showStep('step4');
+      paymentNextBtn.disabled = true;
+      paymentMethodSelect.value = '';
+    });
+
+    // Update price display
+    function updatePrice() {
+      let beliefKey = isMuslim ? 'muslim' : 'nonMuslim';
+      let typeKey = uploadTypeSelect.value;
+      price = pricing[beliefKey][typeKey];
+      priceDisplay.textContent = `$${price.toFixed(2)}`;
+    }
+    updatePrice(); // Initial price set
+
+    // Step 4 handlers
+    paymentMethodSelect.addEventListener('change', () => {
+      paymentNextBtn.disabled = !paymentMethodSelect.value;
+    });
+    paymentBackBtn.addEventListener('click', () => {
+      showStep('step3');
+    });
+    paymentNextBtn.addEventListener('click', () => {
+      paymentMethod = paymentMethodSelect.value;
+      // Show confirmation step with details
+      confirmBelief.textContent = isMuslim ? 'Believer of Allah' : 'Disbeliever of Allah';
+      confirmUploadType.textContent = uploadTypeSelect.options[uploadTypeSelect.selectedIndex].text;
+      confirmPrice.textContent = `$${price.toFixed(2)}`;
+      confirmPaymentMethod.textContent = paymentMethodSelect.options[paymentMethodSelect.selectedIndex].text;
+      showStep('step5');
+    });
+
+    // Step 5 handlers
+    confirmBackBtn.addEventListener('click', () => {
+      showStep('step4');
+    });
+    confirmPayBtn.addEventListener('click', () => {
+      // Simulate payment success instantly for demo
+      alert('Payment Successful! Proceed to upload.');
+      showStep('step6');
+      uploadFormSubmitBtn.disabled = true;
+      videoFile.value = '';
+      editInstructions.value = '';
+      uploadError.textContent = '';
+    });
+
+    // Step 6 handlers
+    videoFile.addEventListener('change', () => {
+      uploadError.textContent = '';
+      uploadFormSubmitBtn.disabled = !videoFile.files.length;
+    });
+    uploadFormBackBtn.addEventListener('click', () => {
+      showStep('step5');
+    });
+    uploadFormSubmitBtn.addEventListener('click', () => {
+      if (!videoFile.files.length) {
+        uploadError.textContent = 'Please select a video file to upload.';
+        return;
+      }
+      uploadError.textContent = '';
+      // Here you'd implement the actual upload logic with backend or storage integration
+      // For now just show confirmation
+      showStep('step7');
+    });
+  </script>
+</body>
+</html>
