@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRFTube Admin Panel</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #00ffd5;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #1e1e1e;
+      border-radius: 10px;
+    }
+    input, button, select {
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #00ffd5;
+      color: #000;
+      cursor: pointer;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛡️ DRFTube Admin Panel</h1>
+
+  <div class="section">
+    <h2>🔑 Connect Wallet</h2>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="adminAddress"></p>
+  </div>
+
+  <div class="section">
+    <h2>🧑‍⚖️ Set User Type</h2>
+    <label>User Address:</label>
+    <input type="text" id="userAddress" placeholder="0x..." />
+    <select id="userType">
+      <option value="true">Believer</option>
+      <option value="false">Disbeliever</option>
+    </select>
+    <button onclick="setUserType()">Set User Type</button>
+  </div>
+
+  <div class="section">
+    <h2>🎁 Reward Users</h2>
+    <input type="text" id="rewardUser" placeholder="0x..." />
+    <button onclick="reward('like')">Like</button>
+    <button onclick="reward('share')">Share</button>
+    <button onclick="reward('subscribe')">Subscribe</button>
+  </div>
+
+  <div class="section">
+    <h2>📦 Distribute Zakat</h2>
+    <label>Enter comma-separated wallet addresses:</label>
+    <textarea id="zakatAddresses" rows="4" cols="50" placeholder="0x...,0x..."></textarea>
+    <button onclick="distributeZakat()">Distribute</button>
+  </div>
+
+  <script>
+    const contractAddress = "YOUR_CONTRACT_ADDRESS"; // <-- Replace this
+    const contractABI = YOUR_CONTRACT_ABI_HERE; // <-- Paste ABI array
+
+    let web3;
+    let contract;
+    let accounts;
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        contract = new web3.eth.Contract(contractABI, contractAddress);
+        document.getElementById("adminAddress").innerText = "Connected: " + accounts[0];
+      } else {
+        alert("Please install MetaMask");
+      }
+    }
+
+    async function setUserType() {
+      const address = document.getElementById("userAddress").value;
+      const isBeliever = document.getElementById("userType").value === "true";
+      await contract.methods.setUserType(address, isBeliever).send({ from: accounts[0] });
+      alert("User type set successfully!");
+    }
+
+    async function reward(type) {
+      const user = document.getElementById("rewardUser").value;
+      if (type === "like") {
+        await contract.methods.rewardLike(user).send({ from: accounts[0] });
+      } else if (type === "share") {
+        await contract.methods.rewardShare(user).send({ from: accounts[0] });
+      } else if (type === "subscribe") {
+        await contract.methods.rewardSubscribe(user).send({ from: accounts[0] });
+      }
+      alert("Reward sent!");
+    }
+
+    async function distributeZakat() {
+      const rawInput = document.getElementById("zakatAddresses").value;
+      const users = rawInput.split(",").map(addr => addr.trim());
+      await contract.methods.distributeZakat(users).send({ from: accounts[0] });
+      alert("Zakat distributed successfully.");
+    }
+  </script>
+</body>
+</html>
