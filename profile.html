@@ -2,241 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Profile with Pinata</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFM Profile | Update</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f0f2f5;
+      background: #e9ebee;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      color: #4267B2;
-    }
-    .profile-photo {
-      width: 150px;
-      height: 150px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #4267B2;
-      cursor: pointer;
-    }
-    .drag-drop-area {
-      margin: 10px 0 20px;
-      padding: 20px;
-      border: 2px dashed #4267B2;
-      border-radius: 8px;
+    .header {
+      background: #4267b2;
+      color: #fff;
+      padding: 15px;
       text-align: center;
-      color: #4267B2;
-      cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
     }
-    input[type="text"], textarea {
+    .container {
+      max-width: 500px;
+      background: #fff;
+      margin: 30px auto;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .container h2 {
+      text-align: center;
+      color: #333;
+    }
+    input, textarea, button {
       width: 100%;
-      max-width: 400px;
-      padding: 8px;
-      margin-bottom: 15px;
-      border-radius: 4px;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
       font-size: 16px;
     }
     button {
-      background: #4267B2;
-      color: white;
+      background: #4267b2;
+      color: #fff;
       border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      font-size: 16px;
       cursor: pointer;
     }
-    button:disabled {
-      background: #888;
-      cursor: not-allowed;
+    button:hover {
+      background: #365899;
     }
     .status {
       margin-top: 10px;
+      text-align: center;
+      color: green;
       font-weight: bold;
-      color: #065fe6;
     }
   </style>
 </head>
 <body>
-
-  <h1>DRFMedia Profile Setup</h1>
-
-  <div>
-    <img id="profilePhoto" class="profile-photo" src="https://via.placeholder.com/150" alt="Profile Photo" />
-    <div id="dragDropArea" class="drag-drop-area">Drag & Drop or Click to Upload Profile Photo</div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+  <div class="header">DRFM Profile Update</div>
+  <div class="container">
+    <h2>Update Your Profile</h2>
+    <input type="text" id="userName" placeholder="Your Name" required />
+    <textarea id="userBio" placeholder="Your Bio"></textarea>
+    <input type="text" id="walletAddress" placeholder="Your DRFM Wallet Address" required />
+    <input type="file" id="userImage" accept="image/*" />
+    <button onclick="uploadToIPFS()">Submit Profile</button>
+    <div class="status" id="status"></div>
   </div>
-
-  <div>
-    <input type="text" id="nameInput" placeholder="Your Display Name" />
-  </div>
-
-  <div>
-    <textarea id="bioInput" placeholder="Your Bio" rows="4"></textarea>
-  </div>
-
-  <button id="saveProfileBtn" disabled>Save Profile to IPFS</button>
-  <div id="status" class="status"></div>
 
   <script>
-    const PINATA_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA';
+    async function uploadToIPFS() {
+      const name = document.getElementById('userName').value;
+      const bio = document.getElementById('userBio').value;
+      const wallet = document.getElementById('walletAddress').value;
+      const file = document.getElementById('userImage').files[0];
+      const status = document.getElementById('status');
 
-    const dragDropArea = document.getElementById('dragDropArea');
-    const fileInput = document.getElementById('fileInput');
-    const profilePhoto = document.getElementById('profilePhoto');
-    const nameInput = document.getElementById('nameInput');
-    const bioInput = document.getElementById('bioInput');
-    const saveProfileBtn = document.getElementById('saveProfileBtn');
-    const status = document.getElementById('status');
-
-    let selectedFile = null;
-
-    // Load saved profile from localStorage
-    window.onload = () => {
-      const savedMetadataCid = localStorage.getItem('profileMetadataCid');
-      if (savedMetadataCid) {
-        status.textContent = 'Loading profile from IPFS...';
-        fetch(`https://gateway.pinata.cloud/ipfs/${savedMetadataCid}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.name) nameInput.value = data.name;
-            if (data.bio) bioInput.value = data.bio;
-            if (data.image) profilePhoto.src = data.image;
-            status.textContent = 'Profile loaded.';
-            saveProfileBtn.disabled = false;
-          })
-          .catch(() => {
-            status.textContent = '';
-          });
-      }
-    };
-
-    // Drag & drop handlers
-    dragDropArea.addEventListener('click', () => fileInput.click());
-
-    dragDropArea.addEventListener('dragover', e => {
-      e.preventDefault();
-      dragDropArea.style.background = '#d0e6ff';
-    });
-
-    dragDropArea.addEventListener('dragleave', e => {
-      e.preventDefault();
-      dragDropArea.style.background = '';
-    });
-
-    dragDropArea.addEventListener('drop', e => {
-      e.preventDefault();
-      dragDropArea.style.background = '';
-      if (e.dataTransfer.files.length > 0) {
-        handleFile(e.dataTransfer.files[0]);
-      }
-    });
-
-    fileInput.addEventListener('change', e => {
-      if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-      }
-    });
-
-    function handleFile(file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Only image files are allowed!');
+      if (!name || !wallet) {
+        status.textContent = 'Name and Wallet Address are required.';
         return;
       }
-      selectedFile = file;
+
+      status.textContent = 'Uploading...';
+
+      // Convert image to base64
       const reader = new FileReader();
-      reader.onload = e => {
-        profilePhoto.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-      saveProfileBtn.disabled = false;
-    }
+      reader.onloadend = async () => {
+        const imageBase64 = reader.result;
 
-    // Upload file to Pinata via JWT Auth
-    async function uploadFileToPinata(file) {
-      const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Pinata file upload failed: ${res.statusText}`);
-      }
-      const data = await res.json();
-      return data.IpfsHash;
-    }
-
-    // Upload JSON metadata to Pinata via JWT Auth
-    async function uploadJSONToPinata(json) {
-      const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
-
-      const res = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(json),
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${PINATA_JWT}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Pinata JSON upload failed: ${res.statusText}`);
-      }
-      const data = await res.json();
-      return data.IpfsHash;
-    }
-
-    saveProfileBtn.addEventListener('click', async () => {
-      if (!nameInput.value.trim()) {
-        alert('Display Name is required');
-        return;
-      }
-      if (!selectedFile) {
-        alert('Please upload a profile photo');
-        return;
-      }
-
-      saveProfileBtn.disabled = true;
-      status.textContent = 'Uploading photo to IPFS...';
-
-      try {
-        // 1. Upload image
-        const imageCID = await uploadFileToPinata(selectedFile);
-        const imageURL = `https://gateway.pinata.cloud/ipfs/${imageCID}`;
-
-        status.textContent = 'Uploading profile metadata...';
-
-        // 2. Prepare metadata JSON
-        const profileMetadata = {
-          name: nameInput.value.trim(),
-          bio: bioInput.value.trim(),
-          image: imageURL,
+        const metadata = {
+          name,
+          bio,
+          wallet,
+          image: imageBase64
         };
 
-        // 3. Upload metadata JSON
-        const metadataCID = await uploadJSONToPinata(profileMetadata);
+        const blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+        const formData = new FormData();
+        formData.append('file', blob);
 
-        // 4. Save metadata CID locally for future edits/loading
-        localStorage.setItem('profileMetadataCid', metadataCID);
+        try {
+          const res = await fetch('https://ipfs.infura.io:5001/api/v0/add', {
+            method: 'POST',
+            body: formData
+          });
+          const text = await res.text();
+          const cid = text.match(/Hash\":\"(.*?)\"/)[1];
 
-        status.textContent = `Profile saved! Metadata CID: ${metadataCID}`;
-        saveProfileBtn.disabled = false;
-      } catch (error) {
-        status.textContent = '';
-        alert('Error uploading to Pinata: ' + error.message);
-        saveProfileBtn.disabled = false;
+          // Save to downloadable text
+          const log = `Profile CID: ${cid}\nWallet: ${wallet}\nName: ${name}\n`; 
+          const blobLog = new Blob([log], { type: 'text/plain' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blobLog);
+          a.download = `profile_${name.replace(/\s+/g, '_')}.txt`;
+          a.click();
+
+          status.textContent = 'Profile uploaded! CID: ' + cid;
+        } catch (err) {
+          status.textContent = 'Upload failed.';
+          console.error(err);
+        }
+      };
+
+      if (file) {
+        reader.readAsDataURL(file);
+      } else {
+        reader.onloadend();
       }
-    });
+    }
   </script>
 </body>
 </html>
