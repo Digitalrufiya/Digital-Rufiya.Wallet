@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMEDIA Profile Setup</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -23,16 +23,27 @@
     h2 {
       text-align: center;
       color: #1877f2;
+      margin-bottom: 10px;
+      font-weight: 700;
     }
-    input, textarea {
+    .logo {
+      display: block;
+      margin: 0 auto 20px auto;
+      width: 140px;
+    }
+    input,
+    textarea {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
       border-radius: 6px;
       border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
     }
     input[type="file"] {
       border: none;
+      padding: 5px 0;
     }
     button {
       width: 100%;
@@ -43,30 +54,41 @@
       font-size: 16px;
       border-radius: 6px;
       cursor: pointer;
+      font-weight: 700;
+    }
+    button:hover {
+      background: #155db2;
     }
     .success {
       color: green;
       font-weight: bold;
       text-align: center;
+      margin-top: 12px;
+      word-break: break-word;
     }
     #downloadLog {
-      margin-top: 10px;
+      margin-top: 15px;
       background: #28a745;
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <img
+      class="logo"
+      src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
+      alt="DRFMedia Upload Logo"
+    />
     <h2><i class="fa-brands fa-facebook"></i> DRFMEDIA Profile Setup</h2>
-    
+
     <input type="text" id="name" placeholder="Enter your name" required />
     <textarea id="bio" placeholder="Your bio" rows="3"></textarea>
     <input type="text" id="wallet" placeholder="Enter your DRFM wallet address" required />
     <input type="file" id="photo" accept="image/*" required />
-    
+
     <button onclick="uploadProfile()">Submit & Upload</button>
     <p class="success" id="statusMsg"></p>
-    
+
     <button id="downloadLog" style="display:none;" onclick="downloadLogFile()">Download Profile Log</button>
   </div>
 
@@ -86,26 +108,33 @@
       const formData = new FormData();
       formData.append("file", file);
 
+      // Pinata API credentials
+      const pinataApiKey = "3d87f9ed904df892654c";
+      const pinataSecretApiKey = "a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f";
+
       try {
-        const res = await fetch("https://ipfs.io/api/v0/add?pin=true", {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${pinataSecretApiKey}`
+          },
           body: formData
         });
 
-        const text = await res.text();
-        const cidMatch = text.match(/"Hash":"(.*?)"/);
-        if (!cidMatch) throw new Error("IPFS CID not found");
+        if (!res.ok) {
+          throw new Error(`Pinata upload failed: ${res.status} ${res.statusText}`);
+        }
 
-        const cid = cidMatch[1];
+        const data = await res.json();
+        const cid = data.IpfsHash;
         const timestamp = new Date().toLocaleString();
 
-        document.getElementById("statusMsg").innerText = "Profile saved! CID: " + cid;
+        document.getElementById("statusMsg").innerText = `Profile saved! Metadata CID: ${cid}`;
 
-        // Save data for download
+        // Prepare profile metadata to save/download
         const content = `Name: ${name}\nBio: ${bio}\nWallet: ${wallet}\nCID: ${cid}\nTime: ${timestamp}`;
         localStorage.setItem("drf_profile_log", content);
         document.getElementById("downloadLog").style.display = "block";
-
       } catch (err) {
         alert("Upload failed: " + err.message);
         console.error(err);
@@ -123,3 +152,4 @@
   </script>
 </body>
 </html>
+n
