@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>DRF Wallet Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    /* Sidebar styles */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+    }
+    #sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      width: 220px;
+      background: #1a1a2e;
+      color: white;
+      padding-top: 20px;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+    #sidebar.closed {
+      transform: translateX(-220px);
+    }
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #sidebar ul li {
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      transition: background 0.3s, border-left 0.3s;
+    }
+    #sidebar ul li:hover {
+      background: #16213e;
+      border-left: 4px solid #00adb5;
+    }
+    #sidebar ul li.active {
+      background: #0f3460;
+      border-left: 4px solid #00adb5;
+    }
+    #sidebar ul li img {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      filter: invert(1);
+    }
+    #sidebar ul li span {
+      font-size: 14px;
+    }
+    #content {
+      margin-left: 220px;
+      padding: 20px;
+      flex: 1;
+      background: #f4f9fb;
+      min-height: 100vh;
+    }
+    /* Mobile */
+    @media (max-width: 768px) {
+      #sidebar {
+        transform: translateX(-220px);
+        position: fixed;
+        z-index: 1500;
+      }
+      #sidebar.open {
+        transform: translateX(0);
+      }
+      #content {
+        margin-left: 0;
+        padding: 20px 10px;
+      }
+      #menu-toggle {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        background: #00adb5;
+        border: none;
+        padding: 8px 10px;
+        border-radius: 4px;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        z-index: 1600;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sidebar -->
+  <nav id="sidebar" class="closed" aria-label="Main Navigation">
+    <ul>
+      <li class="active" onclick="navigateTo('drftubedashboard.html')">
+        <img src="icon/dashboard.png" alt="Dashboard Icon" />
+        <span>Dashboard</span>
+      </li>
+      <li onclick="navigateTo('drftubeupload.html')">
+        <img src="icon/upload.png" alt="Upload Icon" />
+        <span>Upload</span>
+      </li>
+      <li onclick="navigateTo('drftube.html')">
+        <img src="icon/watch.png" alt="Watch Icon" />
+        <span>Watch</span>
+      </li>
+      <li onclick="navigateTo('drftprofile.html')">
+        <img src="icon/profile.png" alt="Profile Icon" />
+        <span>Profile</span>
+      </li>
+      <li onclick="navigateTo('drftpay.html')">
+        <img src="icon/pay.png" alt="Business Icon" />
+        <span>Business Promote</span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Toggle button for mobile -->
+  <button id="menu-toggle" aria-label="Toggle menu">☰</button>
+
+  <!-- Main content -->
+  <div id="content">
+    <header style="display: flex; justify-content: flex-end; align-items: center;">
+      <a href="settings.html" style="font-size: 14px; text-decoration: none;">⚙️ Settings</a>
+    </header>
+
+    <div>
+      <h3>Total Portfolio Value: <span id="totalValue">0.00</span> USD</h3>
+      <p id="walletAddress" style="font-weight: bold;"></p>
+    </div>
+
+    <div style="max-width: 400px; margin: auto; padding: 20px; background: #fff; border-radius: 10px;">
+      <h3>Balances</h3>
+      <p>BNB: <span id="bnbBalance">0</span></p>
+      <p>DRF: <span id="drfBalance">0</span> (<small id="drfPrice">—</small> USD)</p>
+      <p>USDC: <span id="usdcBalance">0</span> (<small id="usdcPrice">—</small> USD)</p>
+      <p>USDT: <span id="usdtBalance">0</span> (<small id="usdtPrice">—</small> USD)</p>
+    </div>
+
+    <!-- 🪙 RECEIVE SECTION -->
+    <h3 style="margin-top: 30px;">🔐 Receive Tokens</h3>
+    <div id="receiveSection" style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
+      <label for="token-select">Select Token:</label>
+      <select id="token-select" onchange="updateReceiveDisplay()" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+        <option value="DRF">DRF</option>
+        <option value="BNB">BNB</option>
+        <option value="USDT">USDT</option>
+        <option value="USDC">USDC</option>
+      </select>
+
+      <div id="qr-container" style="margin: 20px auto; text-align: center;"></div>
+
+      <p>Wallet Address:</p>
+      <input type="text" id="wallet-address-display" readonly style="width: 100%; padding: 10px;" />
+
+      <div style="margin-top: 10px;">
+        <button onclick="copyWalletAddress()" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 5px;">📋 Copy Address</button>
+        <a id="bscscan-link" href="#" target="_blank" style="margin-left: 15px; font-size: 14px;">🔗 View on BscScan</a>
+      </div>
+    </div>
+
+    <!-- SEND SECTION -->
+    <h3 style="margin-top: 30px;">📤 Send Tokens</h3>
+    <div style="max-width: 420px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px;">
+      <label>Select Token:</label>
+      <select id="send-token" style="width: 100%; padding: 10px;">
+        <option value="BNB">BNB</option>
+        <option value="DRF">DRF</option>
+        <option value="USDT">USDT</option>
+        <option value="USDC">USDC</option>
+      </select>
+
+      <label>Recipient Address:</label>
+      <input type="text" id="recipient" style="width: 100%; padding: 10px;" placeholder="0x...">
+
+      <label>Amount:</label>
+      <input type="number" id="amount" style="width: 100%; padding: 10px;" placeholder="0.0">
+
+      <button onclick="sendToken()" style="margin-top: 10px; padding: 10px; width: 100%; background: #28a745; color: white;">Send</button>
+    </div>
+
+    <footer style="text-align: center; margin-top: 30px;">
+      <p>2025 © DRF Wallet powered by AI technology and ChatGPT</p>
+    </footer>
+  </div>
+
+  <script>
+    // Sidebar toggle for mobile
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('menu-toggle');
+
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking outside on mobile
+    window.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768) {
+        if (!sidebar.contains(e.target) && e.target !== toggleBtn) {
+          sidebar.classList.remove('open');
+        }
+      }
+    });
+
+    function navigateTo(page) {
+      window.location.href = page;
+    }
+
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+    let userWallet;
+
+    async function setupWalletIfNeeded() {
+      if (!localStorage.getItem("drf_encrypted_wallet")) {
+        const wallet = ethers.Wallet.createRandom();
+        const password = prompt("Create a password to encrypt your new wallet:");
+        const encryptedJson = await wallet.encrypt(password);
+        localStorage.setItem("drf_encrypted_wallet", encryptedJson);
+        localStorage.setItem("isLoggedIn", true);
+        alert("Wallet created successfully. Please remember your password.");
+      }
+    }
+
+    async function initializeWallet() {
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) {
+        alert("No wallet found. Please create one.");
+        return;
+      }
+      const password = prompt("Enter password to unlock wallet:");
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
+        userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        userWallet = userWallet.connect(provider);
+        fetchBalances();
+        document.getElementById("wallet-address-display").value = userWallet.address;
+        document.getElementById("walletAddress").textContent = "Wallet: " + userWallet.address;
+        generateQRCode(userWallet.address);
+        updateReceiveDisplay();
+      } catch (error) {
+        alert("Incorrect password or error unlocking wallet.");
+      }
+    }
+
+    async function fetchBalances() {
+      if (!userWallet) return;
+
+      const provider = userWallet.provider;
+      const address = userWallet.address;
+
+      const bnbBalanceRaw = await provider.getBalance(address);
+      const bnbBalance = ethers.utils.formatEther(bnbBalanceRaw);
+      document.getElementById("bnbBalance").textContent = Number(bnbBalance).toFixed(4);
+
+      // DRF Token
+      const drfContract = new ethers.Contract(DRF_ADDRESS, ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"], provider);
+      const drfBalanceRaw = await drfContract.balanceOf(address);
+      const drfDecimals = await drfContract.decimals();
+      const drfBalance = Number(ethers.utils.formatUnits(drfBalanceRaw, drfDecimals));
+      document.getElementById("drfBalance").textContent = drfBalance.toFixed(4);
+
+      // USDT Token
+      const usdtContract = new ethers.Contract(USDT_ADDRESS, ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"], provider);
+      const usdtBalanceRaw = await usdtContract.balanceOf(address);
+      const usdtDecimals = await usdtContract.decimals();
+      const usdtBalance = Number(ethers.utils.formatUnits(usdtBalanceRaw, usdtDecimals));
+      document.getElementById("usdtBalance").textContent = usdtBalance.toFixed(4);
+
+      // USDC Token
+      const usdcContract = new ethers.Contract(USDC_ADDRESS, ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"], provider);
+      const usdcBalanceRaw = await usdcContract.balanceOf(address);
+      const usdcDecimals = await usdcContract.decimals();
+      const usdcBalance = Number(ethers.utils.formatUnits(usdcBalanceRaw, usdcDecimals));
+      document.getElementById("usdcBalance").textContent = usdcBalance.toFixed(4);
+
+      // Fetch token prices and update
+      fetchTokenPrices(drfBalance, usdtBalance, usdcBalance, bnbBalance);
+    }
+
+    async function fetchTokenPrices(drfBal, usdtBal, usdcBal, bnbBal) {
+      // Using CoinGecko API for prices
+      try {
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=binancecoin,tether,usd-coin&vs_currencies=usd");
+        const data = await res.json();
+        const bnbPrice = data.binancecoin.usd;
+        const usdtPrice = data.tether.usd;
+        const usdcPrice = data["usd-coin"].usd;
+        const drfPrice = 0.10; // Placeholder DRF price in USD (set your real source or hardcode)
+
+        document.getElementById("drfPrice").textContent = "$" + drfPrice.toFixed(4);
+        document.getElementById("usdtPrice").textContent = "$" + usdtPrice.toFixed(4);
+        document.getElementById("usdcPrice").textContent = "$" + usdcPrice.toFixed(4);
+
+        const totalValue =
+          drfBal * drfPrice +
+          usdtBal * usdtPrice +
+          usdcBal * usdcPrice +
+          bnbBal * bnbPrice;
+        document.getElementById("totalValue").textContent = totalValue.toFixed(2);
+      } catch (e) {
+        console.log("Price fetch error", e);
+      }
+    }
+
+    function generateQRCode(address) {
+      const qrContainer = document.getElementById("qr-container");
+      qrContainer.innerHTML = ""; // clear old
+      QRCode.toCanvas(address, { width: 180 }, (error, canvas) => {
+        if (error) console.error(error);
+        qrContainer.appendChild(canvas);
+      });
+    }
+
+    function updateReceiveDisplay() {
+      if (!userWallet) return;
+      const token = document.getElementById("token-select").value;
+      let address = userWallet.address;
+      let bscScanUrl = "https://bscscan.com/address/" + address;
+      document.getElementById("wallet-address-display").value = address;
+      document.getElementById("bscscan-link").href = bscScanUrl;
+      generateQRCode(address);
+    }
+
+    async function sendToken() {
+      if (!userWallet) {
+        alert("Unlock your wallet first.");
+        return;
+      }
+      const token = document.getElementById("send-token").value;
+      const recipient = document.getElementById("recipient").value.trim();
+      const amount = document.getElementById("amount").value.trim();
+
+      if (!ethers.utils.isAddress(recipient)) {
+        alert("Invalid recipient address");
+        return;
+      }
+      if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        alert("Enter a valid amount");
+        return;
+      }
+
+      const provider = userWallet.provider;
+      try {
+        if (token === "BNB") {
+          const tx = await userWallet.sendTransaction({
+            to: recipient,
+            value: ethers.utils.parseEther(amount),
+          });
+          alert("Transaction sent. Hash: " + tx.hash);
+        } else {
+          // ERC20 transfer
+          let tokenAddress;
+          if (token === "DRF") tokenAddress = DRF_ADDRESS;
+          else if (token === "USDT") tokenAddress = USDT_ADDRESS;
+          else if (token === "USDC") tokenAddress = USDC_ADDRESS;
+
+          const abi = ["function transfer(address to, uint amount) returns (bool)", "function decimals() view returns (uint8)"];
+          const contract = new ethers.Contract(tokenAddress, abi, userWallet);
+          const decimals = await contract.decimals();
+          const amountToSend = ethers.utils.parseUnits(amount, decimals);
+          const tx = await contract.transfer(recipient, amountToSend);
+          alert("Transaction sent. Hash: " + tx.hash);
+        }
+      } catch (error) {
+        alert("Error sending transaction: " + error.message);
+      }
+    }
+
+    // On page load
+    window.addEventListener('load', async () => {
+      await setupWalletIfNeeded();
+      await initializeWallet();
+    });
+
+    function copyWalletAddress() {
+      const copyText = document.getElementById("wallet-address-display");
+      copyText.select();
+      copyText.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("Copied wallet address: " + copyText.value);
+    }
+  </script>
+</body>
+</html>
