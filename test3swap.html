@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Swap</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    button {
+      background-color: #00c2cb;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+
+    .swap-container {
+      max-width: 420px;
+      margin: auto;
+      margin-top: 40px;
+      background: #111;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      color: white;
+      font-family: sans-serif;
+    }
+
+    .swap-container input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #333;
+      border-radius: 10px;
+      background: #222;
+      color: white;
+      font-size: 16px;
+    }
+
+    .swap-buttons {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="swap-container">
+    <h2>DRF Token Swap</h2>
+
+    <label for="amount">Amount to Swap</label>
+    <input type="number" id="amount" placeholder="Enter amount" />
+
+    <div class="swap-buttons">
+      <button id="connectButton">Connect Wallet</button>
+      <button id="swapButton" disabled>Swap</button>
+    </div>
+
+    <div class="status" id="statusMessage"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script>
+    let web3;
+    let selectedAccount;
+
+    const connectButton = document.getElementById("connectButton");
+    const swapButton = document.getElementById("swapButton");
+    const statusMessage = document.getElementById("statusMessage");
+
+    window.addEventListener("load", async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        try {
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            selectedAccount = accounts[0];
+            connectButton.textContent = "Connected";
+            swapButton.disabled = false;
+          }
+        } catch (error) {
+          console.error("Error checking connection:", error);
+        }
+      } else {
+        statusMessage.textContent = "Please install MetaMask.";
+      }
+    });
+
+    connectButton.addEventListener("click", async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+          selectedAccount = accounts[0];
+          connectButton.textContent = "Connected";
+          swapButton.disabled = false;
+        } catch (error) {
+          console.error("User denied account access");
+        }
+      } else {
+        alert("Please install MetaMask to use this DApp.");
+      }
+    });
+
+    swapButton.addEventListener("click", async () => {
+      const amount = document.getElementById("amount").value;
+      if (!amount || parseFloat(amount) <= 0) {
+        alert("Enter a valid amount");
+        return;
+      }
+
+      if (!selectedAccount) {
+        alert("Please connect your wallet first.");
+        return;
+      }
+
+      swapButton.disabled = true;
+      swapButton.textContent = "Swapping...";
+
+      try {
+        // Simulate token swap process
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        statusMessage.textContent = `Swapped ${amount} DRF successfully!`;
+      } catch (err) {
+        console.error("Swap failed:", err);
+        statusMessage.textContent = "Swap failed. Try again.";
+      }
+
+      swapButton.disabled = false;
+      swapButton.textContent = "Swap";
+    });
+  </script>
+</body>
+</html>
