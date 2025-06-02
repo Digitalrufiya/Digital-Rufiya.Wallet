@@ -2,132 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFM Profile | Update</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRFMEDIA Profile Setup</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #e9ebee;
+      background: #f0f2f5;
       margin: 0;
-      padding: 0;
-    }
-    .header {
-      background: #4267b2;
-      color: #fff;
-      padding: 15px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
     }
     .container {
+      width: 90%;
       max-width: 500px;
-      background: #fff;
       margin: 30px auto;
+      background: white;
+      border-radius: 10px;
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 10px #ccc;
     }
-    .container h2 {
+    h2 {
       text-align: center;
-      color: #333;
+      color: #1877f2;
     }
-    input, textarea, button {
+    input, textarea {
       width: 100%;
       padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
+      margin: 10px 0;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 16px;
+    }
+    input[type="file"] {
+      border: none;
     }
     button {
-      background: #4267b2;
-      color: #fff;
+      width: 100%;
+      padding: 12px;
       border: none;
+      background: #1877f2;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background: #365899;
-    }
-    .status {
-      margin-top: 10px;
-      text-align: center;
+    .success {
       color: green;
       font-weight: bold;
+      text-align: center;
+    }
+    #downloadLog {
+      margin-top: 10px;
+      background: #28a745;
     }
   </style>
 </head>
 <body>
-  <div class="header">DRFM Profile Update</div>
   <div class="container">
-    <h2>Update Your Profile</h2>
-    <input type="text" id="userName" placeholder="Your Name" required />
-    <textarea id="userBio" placeholder="Your Bio"></textarea>
-    <input type="text" id="walletAddress" placeholder="Your DRFM Wallet Address" required />
-    <input type="file" id="userImage" accept="image/*" />
-    <button onclick="uploadToIPFS()">Submit Profile</button>
-    <div class="status" id="status"></div>
+    <h2><i class="fa-brands fa-facebook"></i> DRFMEDIA Profile Setup</h2>
+    
+    <input type="text" id="name" placeholder="Enter your name" required />
+    <textarea id="bio" placeholder="Your bio" rows="3"></textarea>
+    <input type="text" id="wallet" placeholder="Enter your DRFM wallet address" required />
+    <input type="file" id="photo" accept="image/*" required />
+    
+    <button onclick="uploadProfile()">Submit & Upload</button>
+    <p class="success" id="statusMsg"></p>
+    
+    <button id="downloadLog" style="display:none;" onclick="downloadLogFile()">Download Profile Log</button>
   </div>
 
   <script>
-    async function uploadToIPFS() {
-      const name = document.getElementById('userName').value;
-      const bio = document.getElementById('userBio').value;
-      const wallet = document.getElementById('walletAddress').value;
-      const file = document.getElementById('userImage').files[0];
-      const status = document.getElementById('status');
+    async function uploadProfile() {
+      const name = document.getElementById("name").value.trim();
+      const bio = document.getElementById("bio").value.trim();
+      const wallet = document.getElementById("wallet").value.trim();
+      const photoInput = document.getElementById("photo");
 
-      if (!name || !wallet) {
-        status.textContent = 'Name and Wallet Address are required.';
+      if (!name || !wallet || !photoInput.files[0]) {
+        alert("Please fill all required fields.");
         return;
       }
 
-      status.textContent = 'Uploading...';
+      const file = photoInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
 
-      // Convert image to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const imageBase64 = reader.result;
+      try {
+        const res = await fetch("https://ipfs.io/api/v0/add?pin=true", {
+          method: "POST",
+          body: formData
+        });
 
-        const metadata = {
-          name,
-          bio,
-          wallet,
-          image: imageBase64
-        };
+        const text = await res.text();
+        const cidMatch = text.match(/"Hash":"(.*?)"/);
+        if (!cidMatch) throw new Error("IPFS CID not found");
 
-        const blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-        const formData = new FormData();
-        formData.append('file', blob);
+        const cid = cidMatch[1];
+        const timestamp = new Date().toLocaleString();
 
-        try {
-          const res = await fetch('https://ipfs.infura.io:5001/api/v0/add', {
-            method: 'POST',
-            body: formData
-          });
-          const text = await res.text();
-          const cid = text.match(/Hash\":\"(.*?)\"/)[1];
+        document.getElementById("statusMsg").innerText = "Profile saved! CID: " + cid;
 
-          // Save to downloadable text
-          const log = `Profile CID: ${cid}\nWallet: ${wallet}\nName: ${name}\n`; 
-          const blobLog = new Blob([log], { type: 'text/plain' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blobLog);
-          a.download = `profile_${name.replace(/\s+/g, '_')}.txt`;
-          a.click();
+        // Save data for download
+        const content = `Name: ${name}\nBio: ${bio}\nWallet: ${wallet}\nCID: ${cid}\nTime: ${timestamp}`;
+        localStorage.setItem("drf_profile_log", content);
+        document.getElementById("downloadLog").style.display = "block";
 
-          status.textContent = 'Profile uploaded! CID: ' + cid;
-        } catch (err) {
-          status.textContent = 'Upload failed.';
-          console.error(err);
-        }
-      };
-
-      if (file) {
-        reader.readAsDataURL(file);
-      } else {
-        reader.onloadend();
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+        console.error(err);
       }
+    }
+
+    function downloadLogFile() {
+      const content = localStorage.getItem("drf_profile_log");
+      const blob = new Blob([content], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "profile_log.txt";
+      link.click();
     }
   </script>
 </body>
