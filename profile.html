@@ -2,66 +2,241 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Media - Profile</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="app.js"></script>
-  <script src="abi.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Profile with Pinata</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+    h1 {
+      color: #4267B2;
+    }
+    .profile-photo {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #4267B2;
+      cursor: pointer;
+    }
+    .drag-drop-area {
+      margin: 10px 0 20px;
+      padding: 20px;
+      border: 2px dashed #4267B2;
+      border-radius: 8px;
+      text-align: center;
+      color: #4267B2;
+      cursor: pointer;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      background: #4267B2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #065fe6;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-  <nav class="bg-white shadow p-4 flex justify-between">
-    <h1 class="text-xl font-bold">DRF Media</h1>
-    <button id="connectBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Connect Wallet</button>
-  </nav>
+<body>
 
-  <main class="max-w-4xl mx-auto mt-6 p-4 bg-white rounded shadow">
-    <h2 class="text-2xl font-semibold mb-4">Your Profile</h2>
+  <h1>DRFMedia Profile Setup</h1>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block mb-1">Display Name</label>
-        <input id="displayName" class="w-full border px-3 py-2 rounded" type="text" placeholder="Your name" />
-      </div>
+  <div>
+    <img id="profilePhoto" class="profile-photo" src="https://via.placeholder.com/150" alt="Profile Photo" />
+    <div id="dragDropArea" class="drag-drop-area">Drag & Drop or Click to Upload Profile Photo</div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+  </div>
 
-      <div>
-        <label class="block mb-1">Bio</label>
-        <textarea id="bio" class="w-full border px-3 py-2 rounded" placeholder="Tell us about yourself..."></textarea>
-      </div>
+  <div>
+    <input type="text" id="nameInput" placeholder="Your Display Name" />
+  </div>
 
-      <div>
-        <label class="block mb-1">Profile Photo CID</label>
-        <input id="profilePhoto" class="w-full border px-3 py-2 rounded" type="text" placeholder="IPFS CID" />
-      </div>
+  <div>
+    <textarea id="bioInput" placeholder="Your Bio" rows="4"></textarea>
+  </div>
 
-      <div>
-        <label class="block mb-1">Cover Photo CID</label>
-        <input id="coverPhoto" class="w-full border px-3 py-2 rounded" type="text" placeholder="IPFS CID" />
-      </div>
-    </div>
-
-    <button onclick="saveProfile()" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded">Save Profile</button>
-  </main>
+  <button id="saveProfileBtn" disabled>Save Profile to IPFS</button>
+  <div id="status" class="status"></div>
 
   <script>
-    async function saveProfile() {
-      const name = document.getElementById('displayName').value;
-      const bio = document.getElementById('bio').value;
-      const photo = document.getElementById('profilePhoto').value;
-      const cover = document.getElementById('coverPhoto').value;
+    const PINATA_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA';
 
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      const web3 = new Web3(window.ethereum);
-      const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+    const dragDropArea = document.getElementById('dragDropArea');
+    const fileInput = document.getElementById('fileInput');
+    const profilePhoto = document.getElementById('profilePhoto');
+    const nameInput = document.getElementById('nameInput');
+    const bioInput = document.getElementById('bioInput');
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
+    const status = document.getElementById('status');
+
+    let selectedFile = null;
+
+    // Load saved profile from localStorage
+    window.onload = () => {
+      const savedMetadataCid = localStorage.getItem('profileMetadataCid');
+      if (savedMetadataCid) {
+        status.textContent = 'Loading profile from IPFS...';
+        fetch(`https://gateway.pinata.cloud/ipfs/${savedMetadataCid}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.name) nameInput.value = data.name;
+            if (data.bio) bioInput.value = data.bio;
+            if (data.image) profilePhoto.src = data.image;
+            status.textContent = 'Profile loaded.';
+            saveProfileBtn.disabled = false;
+          })
+          .catch(() => {
+            status.textContent = '';
+          });
+      }
+    };
+
+    // Drag & drop handlers
+    dragDropArea.addEventListener('click', () => fileInput.click());
+
+    dragDropArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      dragDropArea.style.background = '#d0e6ff';
+    });
+
+    dragDropArea.addEventListener('dragleave', e => {
+      e.preventDefault();
+      dragDropArea.style.background = '';
+    });
+
+    dragDropArea.addEventListener('drop', e => {
+      e.preventDefault();
+      dragDropArea.style.background = '';
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Only image files are allowed!');
+        return;
+      }
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        profilePhoto.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      saveProfileBtn.disabled = false;
+    }
+
+    // Upload file to Pinata via JWT Auth
+    async function uploadFileToPinata(file) {
+      const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Pinata file upload failed: ${res.statusText}`);
+      }
+      const data = await res.json();
+      return data.IpfsHash;
+    }
+
+    // Upload JSON metadata to Pinata via JWT Auth
+    async function uploadJSONToPinata(json) {
+      const url = 'https://api.pinata.cloud/pinning/pinJSONToIPFS';
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(json),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Pinata JSON upload failed: ${res.statusText}`);
+      }
+      const data = await res.json();
+      return data.IpfsHash;
+    }
+
+    saveProfileBtn.addEventListener('click', async () => {
+      if (!nameInput.value.trim()) {
+        alert('Display Name is required');
+        return;
+      }
+      if (!selectedFile) {
+        alert('Please upload a profile photo');
+        return;
+      }
+
+      saveProfileBtn.disabled = true;
+      status.textContent = 'Uploading photo to IPFS...';
 
       try {
-        await contract.methods.setProfile(name, bio, photo, cover).send({ from: accounts[0] });
-        alert('Profile updated successfully!');
-      } catch (err) {
-        console.error(err);
-        alert('Failed to update profile.');
+        // 1. Upload image
+        const imageCID = await uploadFileToPinata(selectedFile);
+        const imageURL = `https://gateway.pinata.cloud/ipfs/${imageCID}`;
+
+        status.textContent = 'Uploading profile metadata...';
+
+        // 2. Prepare metadata JSON
+        const profileMetadata = {
+          name: nameInput.value.trim(),
+          bio: bioInput.value.trim(),
+          image: imageURL,
+        };
+
+        // 3. Upload metadata JSON
+        const metadataCID = await uploadJSONToPinata(profileMetadata);
+
+        // 4. Save metadata CID locally for future edits/loading
+        localStorage.setItem('profileMetadataCid', metadataCID);
+
+        status.textContent = `Profile saved! Metadata CID: ${metadataCID}`;
+        saveProfileBtn.disabled = false;
+      } catch (error) {
+        status.textContent = '';
+        alert('Error uploading to Pinata: ' + error.message);
+        saveProfileBtn.disabled = false;
       }
-    }
+    });
   </script>
 </body>
 </html>
