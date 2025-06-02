@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRFM Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+    }
+
+    header {
+      background-color: #1877f2;
+      padding: 1rem;
+      color: white;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      background-color: #1877f2;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    button:hover {
+      background-color: #145dbf;
+    }
+
+    .media-preview {
+      margin-top: 1rem;
+    }
+
+    .media-preview img, .media-preview video {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .timeline-preview {
+      margin-top: 2rem;
+    }
+
+    .post {
+      background-color: #f9f9f9;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      border: 1px solid #ddd;
+    }
+
+    .post time {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .actions button {
+      flex: 1;
+    }
+
+    .footer-note {
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>DRFMedia Admin Panel</header>
+
+  <div class="container">
+    <div class="form-group">
+      <label for="cidInput">Enter IPFS CID</label>
+      <input type="text" id="cidInput" placeholder="e.g. Qm123ABC..." />
+    </div>
+
+    <div class="actions">
+      <button onclick="fetchMedia()">Fetch</button>
+      <button onclick="addToTimeline()">Post to Timeline</button>
+      <button onclick="downloadCID()">Download CID Info</button>
+    </div>
+
+    <div class="media-preview" id="mediaPreview"></div>
+
+    <div class="timeline-preview">
+      <h3>Preview: DRF Timeline</h3>
+      <div id="timelinePosts"></div>
+    </div>
+
+    <p class="footer-note">Powered by IPFS + DRF Drive. Admin access only.</p>
+  </div>
+
+  <script>
+    const timeline = [];
+
+    function fetchMedia() {
+      const cid = document.getElementById('cidInput').value.trim();
+      const preview = document.getElementById('mediaPreview');
+      preview.innerHTML = "";
+
+      if (!cid) {
+        alert("Please enter a valid CID.");
+        return;
+      }
+
+      const url = `https://ipfs.io/ipfs/${cid}`;
+      if (cid.endsWith(".mp4")) {
+        preview.innerHTML = `<video src="${url}" controls></video>`;
+      } else {
+        preview.innerHTML = `<img src="${url}" alt="Fetched from IPFS" />`;
+      }
+    }
+
+    function addToTimeline() {
+      const cid = document.getElementById('cidInput').value.trim();
+      if (!cid) {
+        alert("CID is empty.");
+        return;
+      }
+
+      const now = new Date().toLocaleString();
+      const url = `https://ipfs.io/ipfs/${cid}`;
+      timeline.unshift({ cid, time: now });
+
+      renderTimeline();
+      alert("Posted to DRF Timeline!");
+    }
+
+    function renderTimeline() {
+      const timelineDiv = document.getElementById("timelinePosts");
+      timelineDiv.innerHTML = "";
+      timeline.forEach(post => {
+        const url = `https://ipfs.io/ipfs/${post.cid}`;
+        timelineDiv.innerHTML += `
+          <div class="post">
+            <p><strong>CID:</strong> ${post.cid}</p>
+            <p><a href="${url}" target="_blank">${url}</a></p>
+            <time>${post.time}</time>
+          </div>
+        `;
+      });
+    }
+
+    function downloadCID() {
+      const cid = document.getElementById('cidInput').value.trim();
+      if (!cid) return alert("CID is empty.");
+
+      const blob = new Blob([`CID: ${cid}\nTime: ${new Date().toLocaleString()}`], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `drfmedia-cid-${Date.now()}.txt`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
