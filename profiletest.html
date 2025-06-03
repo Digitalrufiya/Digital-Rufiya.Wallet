@@ -8,55 +8,53 @@
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f0f0f0;
+      background: #f3f3f3;
       padding: 20px;
     }
     .container {
-      max-width: 400px;
+      max-width: 430px;
       margin: auto;
       background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
     .input-group {
       margin-bottom: 15px;
     }
     label {
       font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
     }
-    input {
+    input[type="text"],
+    input[type="email"],
+    input[type="file"] {
       width: 100%;
       padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
     button {
       width: 100%;
       padding: 12px;
-      background: #008000;
+      background: #007b00;
       color: white;
+      font-weight: bold;
       border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    .wallet-display {
-      font-weight: bold;
-      background: #f9f9f9;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 5px;
+    #message {
+      margin-top: 15px;
       text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Complete Your Profile</h2>
-
-    <div class="wallet-display" id="walletAddress">Connecting wallet...</div>
+    <h2 style="text-align:center;">Complete Your Profile</h2>
 
     <form id="profileForm">
       <div class="input-group">
@@ -67,40 +65,33 @@
         <label for="email">Email</label>
         <input type="email" id="email" required />
       </div>
-      <input type="hidden" id="wallet" name="wallet" required />
-
+      <div class="input-group">
+        <label for="wallet">Wallet Address (copy from dashboard)</label>
+        <input type="text" id="wallet" required placeholder="0x..." />
+      </div>
+      <div class="input-group">
+        <label for="photo">Profile Photo (optional)</label>
+        <input type="file" id="photo" accept="image/*" />
+      </div>
       <button type="submit">Save Profile</button>
     </form>
-    <div id="message" style="text-align:center; margin-top:10px;"></div>
+
+    <div id="message"></div>
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your deployed GAS URL
+    const GAS_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your actual script URL
 
-    async function connectWallet() {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const walletAddress = accounts[0];
-          document.getElementById("walletAddress").textContent = `Wallet: ${walletAddress}`;
-          document.getElementById("wallet").value = walletAddress;
-        } catch (error) {
-          document.getElementById("walletAddress").textContent = 'Wallet connection failed';
-        }
-      } else {
-        document.getElementById("walletAddress").textContent = 'No wallet found (MetaMask or Trust Wallet)';
-      }
-    }
-
-    document.getElementById("profileForm").addEventListener("submit", async function (e) {
+    document.getElementById("profileForm").addEventListener("submit", async function(e) {
       e.preventDefault();
 
       const name = document.getElementById("name").value.trim();
       const email = document.getElementById("email").value.trim();
       const wallet = document.getElementById("wallet").value.trim();
+      const photo = document.getElementById("photo").files[0];
 
       if (!wallet) {
-        alert("Wallet address is required. Please connect your wallet.");
+        alert("Wallet address is required to receive rewards.");
         return;
       }
 
@@ -108,6 +99,7 @@
       formData.append("name", name);
       formData.append("email", email);
       formData.append("wallet", wallet);
+      if (photo) formData.append("photo", photo);
 
       document.getElementById("message").innerText = "Saving...";
 
@@ -118,14 +110,12 @@
         });
 
         const result = await response.text();
-        document.getElementById("message").innerText = "Profile saved successfully ✅";
+        document.getElementById("message").innerText = "✅ Profile saved successfully!";
         document.getElementById("profileForm").reset();
       } catch (error) {
-        document.getElementById("message").innerText = "Error saving profile ❌";
+        document.getElementById("message").innerText = "❌ Error saving profile. Try again.";
       }
     });
-
-    connectWallet();
   </script>
 </body>
 </html>
