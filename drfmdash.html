@@ -20,6 +20,12 @@
           no-repeat center center fixed;
       background-size: cover;
       min-height: 100vh;
+      margin: 0;
+      padding: 2rem 1rem;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .like-btn {
@@ -36,11 +42,20 @@
       max-height: 80vh;
       overflow-y: auto;
     }
+
+    /* Custom scroll for modal content */
+    #profileModal > div::-webkit-scrollbar {
+      width: 8px;
+    }
+    #profileModal > div::-webkit-scrollbar-thumb {
+      background-color: #22d3ee;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 text-white">
 
-  <h1 class="text-4xl font-extrabold mb-8 text-cyan-400 drop-shadow-lg">
+  <h1 class="text-4xl font-extrabold mb-8 text-cyan-400 drop-shadow-lg text-center">
     DRFMedia Timeline
   </h1>
 
@@ -76,7 +91,7 @@
         <p class="text-sm text-cyan-300 break-words">
           <strong>Wallet:</strong> <span id="modalWallet"></span>
         </p>
-        <p class="text-xs text-cyan-400 italic mt-2">
+        <p class="text-xs text-cyan-400 italic mt-2 break-words">
           CID: <span id="modalCID"></span>
         </p>
       </div>
@@ -84,6 +99,7 @@
   </div>
 
   <script>
+    // Sample profiles (you can replace or load dynamically from IPFS later)
     const sampleProfiles = [
       {
         cid: "Qma2xRw2Zki2CsBZJVWTYksfCwQCvptmHhxWwmyHzXG4Ve",
@@ -111,14 +127,17 @@
       },
     ];
 
+    // Likes stored in localStorage by CID
     const likesKey = "drfmedia_likes";
     let likesData = JSON.parse(localStorage.getItem(likesKey)) || {};
 
+    // Shorten wallet address for display
     function shortWallet(addr) {
       if (!addr) return "";
       return addr.slice(0, 6) + "..." + addr.slice(-4);
     }
 
+    // Render all profiles on the page
     function renderProfiles() {
       const container = document.getElementById("profilesList");
       container.innerHTML = "";
@@ -159,6 +178,7 @@
       });
     }
 
+    // Show modal with profile info
     function openProfileModal(cid) {
       const profile = sampleProfiles.find((p) => p.cid === cid);
       if (!profile) return alert("Profile not found");
@@ -174,18 +194,21 @@
       modal.style.display = "flex";
     }
 
+    // Close modal
     document.getElementById("closeModalBtn").addEventListener("click", () => {
       const modal = document.getElementById("profileModal");
       modal.style.display = "none";
       modal.classList.add("hidden");
     });
 
+    // Like increment handler
     function incrementLike(cid) {
       likesData[cid] = (likesData[cid] || 0) + 1;
       localStorage.setItem(likesKey, JSON.stringify(likesData));
       document.getElementById(`likeCount-${cid}`).textContent = likesData[cid];
     }
 
+    // Initial render
     renderProfiles();
   </script>
 </body>
