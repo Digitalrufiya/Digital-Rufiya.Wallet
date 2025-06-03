@@ -17,10 +17,13 @@
     .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
     .post-caption { margin: 10px 0; font-size: 16px; }
     .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
-  <h1>DRF Media Timeline</h1>
+  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
 
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -32,9 +35,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-    // Firebase config - replace with your own config if needed
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -54,34 +56,23 @@
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
 
-    // Pinata JWT Token (keep it private in production!)
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+    const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace with real JWT
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
       const formData = new FormData();
       formData.append('file', file);
-
-      // Optional: add metadata
-      const metadata = JSON.stringify({
-        name: file.name,
-      });
-      formData.append('pinataMetadata', metadata);
+      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`
-        },
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error('Pinata upload failed');
-      }
-
+      if (!response.ok) throw new Error('Pinata upload failed');
       const data = await response.json();
-      return data.IpfsHash; // CID
+      return data.IpfsHash;
     }
 
     function getFileType(file) {
@@ -92,35 +83,29 @@
 
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || !caption) {
-        alert('Please select a file and enter a caption.');
-        return;
-      }
+      if (!file || !caption) return alert('Please select a file and caption.');
 
       try {
         uploadForm.querySelector('button').disabled = true;
         uploadForm.querySelector('button').textContent = 'Posting...';
 
-        // Upload to Pinata
         const cid = await uploadToPinata(file);
         const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
         const type = getFileType(file);
 
-        // Save metadata to Firebase
         await push(ref(db, 'posts'), {
           caption,
           fileUrl,
           type,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          likes: 0,
+          comments: []
         });
 
-        // Clear form
         mediaFileInput.value = '';
         captionInput.value = '';
-
       } catch (error) {
         alert('Upload failed: ' + error.message);
       } finally {
@@ -129,35 +114,57 @@
       }
     });
 
-    // Listen for posts changes and render
     const postsRef = ref(db, 'posts/');
     onValue(postsRef, (snapshot) => {
       postContainer.innerHTML = '';
-      snapshot.forEach((child) => {
-        const post = child.val();
+      const postsArray = [];
 
+      snapshot.forEach((child) => {
+        const postId = child.key;
+        const post = child.val();
+        post.id = postId;
+        postsArray.push(post);
+      });
+
+      postsArray.sort((a, b) => b.timestamp - a.timestamp); // Newest on top
+
+      postsArray.forEach((post) => {
         const postDiv = document.createElement('div');
         postDiv.classList.add('post-item');
 
-        let mediaHtml = '';
-        if(post.type === 'image') {
-          mediaHtml = `<img src="${post.fileUrl}" alt="Post Image" loading="lazy"/>`;
-        } else if(post.type === 'video') {
-          mediaHtml = `<video controls src="${post.fileUrl}" preload="metadata"></video>`;
-        } else {
-          mediaHtml = `<p>[Unsupported media type]</p>`;
-        }
+        let mediaHtml = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
 
         postDiv.innerHTML = `
           ${mediaHtml}
           <p class="post-caption">${post.caption}</p>
           <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
         `;
 
         postContainer.appendChild(postDiv);
       });
     });
 
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
+      update(postRef, { likes: current + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment received. Will be added in next version.");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
   </script>
 </body>
 </html>
