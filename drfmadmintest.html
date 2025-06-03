@@ -234,7 +234,18 @@
         const name = data.name || "N/A";
         const bio = data.bio || "N/A";
         const wallet = data.walletAddress || data.wallet || "N/A";
-        const photoCidOrUrl = data.photo || data.photoUrl || null;
+
+        // Properly handle image field, including ipfs:// prefix
+        const imageField = data.image || null;
+        let photoUrl = null;
+
+        if (imageField) {
+          if (imageField.startsWith("ipfs://")) {
+            photoUrl = "https://ipfs.io/ipfs/" + imageField.slice(7);
+          } else if (imageField.startsWith("http")) {
+            photoUrl = imageField;
+          }
+        }
 
         document.getElementById('profileName').textContent = name;
         document.getElementById('profileBio').textContent = bio;
@@ -245,9 +256,7 @@
         cidLink.textContent = cid;
 
         const photoImg = document.getElementById('profilePhoto');
-        if (photoCidOrUrl) {
-          // If photoCidOrUrl is an IPFS CID, convert to full gateway URL, else use as is
-          const photoUrl = photoCidOrUrl.startsWith('http') ? photoCidOrUrl : `https://ipfs.io/ipfs/${photoCidOrUrl}`;
+        if (photoUrl) {
           photoImg.src = photoUrl;
           photoImg.style.display = "block";
         } else {
@@ -300,13 +309,21 @@
 
     function downloadCID() {
       const cid = document.getElementById('cidInput').value.trim();
-      if (!cid) return alert("CID is empty.");
+      if (!cid) {
+        alert("Please enter a CID to download.");
+        return;
+      }
 
-      const blob = new Blob([`CID: ${cid}\nTime: ${new Date().toLocaleString()}`], { type: "text/plain" });
+      const data = { cid, timestamp: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `drfmedia-cid-${Date.now()}.txt`;
+      a.href = url;
+      a.download = `cid-info-${cid}.json`;
       a.click();
+
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
