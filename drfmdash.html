@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    body {
+      background: #f3f4f6;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .like-btn {
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .like-btn:hover {
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4">
+  <h1 class="text-3xl font-bold mb-6 text-blue-600">DRFMedia Timeline</h1>
+
+  <div id="profilesList" class="max-w-4xl w-full grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+  <!-- Profile Modal -->
+  <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
+      <button
+        id="closeModalBtn"
+        class="absolute top-3 right-3 text-gray-500 hover:text-gray-900 text-xl font-bold"
+        title="Close"
+      >&times;</button>
+      <div class="flex flex-col items-center space-y-4">
+        <img
+          id="modalPhoto"
+          src=""
+          alt="Profile Photo"
+          class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
+        />
+        <h2 id="modalName" class="text-2xl font-semibold"></h2>
+        <p id="modalBio" class="text-gray-700 text-center"></p>
+        <p class="text-sm text-gray-500 break-words"><strong>Wallet:</strong> <span id="modalWallet"></span></p>
+        <p class="text-xs text-gray-400 italic mt-2">CID: <span id="modalCID"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sample profiles data - in real app, fetch metadata JSON from IPFS CIDs
+    const sampleProfiles = [
+      {
+        cid: "Qma2xRw2Zki2CsBZJVWTYksfCwQCvptmHhxWwmyHzXG4Ve",
+        name: "Hassan Fayaz",
+        bio: "HASSN Fayaaz",
+        wallet: "0zahf9weh9fih94hf9ah498fhawhef98wfoafh9owafh90ftj098woef",
+        image: "https://ipfs.io/ipfs/QmYgCNEzXQr5TfHPDWvME4r1VjdLqRS9Kw6xNmXAYYCQ6P", // sample IPFS image link
+      },
+      {
+        cid: "QmXkE9VPx9DyGNg3DQUqMRzqfbFqjyNJrGTkqtEJipDbwp",
+        name: "Aisha K",
+        bio: "Digital artist & blockchain enthusiast",
+        wallet: "0xabc1234def5678ghijklmnopqrstuvwx",
+        image: "https://ipfs.io/ipfs/QmWf6VHLT4z5Mw5jTqLhvR8Z5UuRJwPiKaVuXoJj5xWfBq", // another image
+      },
+      {
+        cid: "QmQz1ZDg9rXjqM9vKjvX3sHpTphm8JDw2ZEdDpCQ7vJo4A",
+        name: "Omar Z",
+        bio: "Crypto trader & coder",
+        wallet: "0x9876543210fedcba09876543210fedcba",
+        image: "https://ipfs.io/ipfs/QmQmCy6LPhfEmHfKhQH2GHS8NwS2gVmW5B4MjaEqGmK5Rj", // another image
+      },
+    ];
+
+    // Likes stored in localStorage as {cid: likeCount}
+    const likesKey = "drfmedia_likes";
+    let likesData = JSON.parse(localStorage.getItem(likesKey)) || {};
+
+    // Format wallet address (shortened)
+    function shortWallet(addr) {
+      if (!addr) return "";
+      return addr.slice(0, 6) + "..." + addr.slice(-4);
+    }
+
+    // Render all profiles
+    function renderProfiles() {
+      const container = document.getElementById("profilesList");
+      container.innerHTML = "";
+
+      sampleProfiles.forEach(profile => {
+        const likeCount = likesData[profile.cid] || 0;
+
+        const card = document.createElement("div");
+        card.className =
+          "bg-white rounded-lg shadow p-5 flex flex-col items-center text-center";
+
+        card.innerHTML = `
+          <img
+            src="${profile.image}"
+            alt="${profile.name}'s photo"
+            class="w-28 h-28 rounded-full object-cover border-2 border-blue-500 mb-3"
+          />
+          <h3 class="text-xl font-semibold mb-1">${profile.name}</h3>
+          <p class="text-gray-600 mb-2 line-clamp-2">${profile.bio || ""}</p>
+          <p class="text-sm text-gray-500 mb-3 break-words">${shortWallet(profile.wallet)}</p>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-3 view-btn" data-cid="${profile.cid}">View Profile</button>
+          <div class="flex items-center space-x-2">
+            <button class="like-btn text-red-600 text-2xl" aria-label="Like" data-cid="${profile.cid}">❤️</button>
+            <span class="text-gray-700 font-medium" id="likeCount-${profile.cid}">${likeCount}</span>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      // Attach event listeners
+      document.querySelectorAll(".view-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const cid = btn.getAttribute("data-cid");
+          openProfileModal(cid);
+        });
+      });
+      document.querySelectorAll(".like-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const cid = btn.getAttribute("data-cid");
+          incrementLike(cid);
+        });
+      });
+    }
+
+    // Open modal with profile details
+    function openProfileModal(cid) {
+      const profile = sampleProfiles.find(p => p.cid === cid);
+      if (!profile) return alert("Profile not found");
+
+      document.getElementById("modalPhoto").src = profile.image;
+      document.getElementById("modalName").textContent = profile.name;
+      document.getElementById("modalBio").textContent = profile.bio || "(No bio)";
+      document.getElementById("modalWallet").textContent = profile.wallet;
+      document.getElementById("modalCID").textContent = cid;
+
+      const modal = document.getElementById("profileModal");
+      modal.classList.remove("hidden");
+      modal.style.display = "flex";
+    }
+
+    // Close modal
+    document.getElementById("closeModalBtn").addEventListener("click", () => {
+      const modal = document.getElementById("profileModal");
+      modal.style.display = "none";
+      modal.classList.add("hidden");
+    });
+
+    // Increment like count & save
+    function incrementLike(cid) {
+      likesData[cid] = (likesData[cid] || 0) + 1;
+      localStorage.setItem(likesKey, JSON.stringify(likesData));
+      document.getElementById(`likeCount-${cid}`).textContent = likesData[cid];
+    }
+
+    // Initialize
+    renderProfiles();
+  </script>
+</body>
+</html>
