@@ -92,10 +92,23 @@
       display: flex;
       gap: 1rem;
       margin-top: 1rem;
+      flex-wrap: wrap;
     }
 
     .actions button {
-      flex: 1;
+      flex: 1 1 150px;
+    }
+
+    .profile-display {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #eaf2ff;
+      border-radius: 8px;
+      border: 1px solid #a1c4fd;
+    }
+
+    .profile-display h3 {
+      margin-top: 0;
     }
 
     .footer-note {
@@ -116,12 +129,21 @@
     </div>
 
     <div class="actions">
-      <button onclick="fetchMedia()">Fetch</button>
+      <button onclick="fetchMedia()">Fetch Media</button>
+      <button onclick="fetchProfile()">Fetch Profile</button>
       <button onclick="addToTimeline()">Post to Timeline</button>
       <button onclick="downloadCID()">Download CID Info</button>
     </div>
 
     <div class="media-preview" id="mediaPreview"></div>
+
+    <div id="profileDisplay" class="profile-display" style="display:none;">
+      <h3>User Profile Info</h3>
+      <p><strong>Name:</strong> <span id="profileName"></span></p>
+      <p><strong>Bio:</strong> <span id="profileBio"></span></p>
+      <p><strong>Wallet Address:</strong> <span id="profileWallet"></span></p>
+      <p><strong>CID:</strong> <a href="" target="_blank" id="profileCIDLink"></a></p>
+    </div>
 
     <div class="timeline-preview">
       <h3>Preview: DRF Timeline</h3>
@@ -138,6 +160,7 @@
       const cid = document.getElementById('cidInput').value.trim();
       const preview = document.getElementById('mediaPreview');
       preview.innerHTML = "";
+      hideProfile();
 
       if (!cid) {
         alert("Please enter a valid CID.");
@@ -145,11 +168,53 @@
       }
 
       const url = `https://ipfs.io/ipfs/${cid}`;
+      // Assuming if CID ends with .mp4 show video else image
       if (cid.endsWith(".mp4")) {
         preview.innerHTML = `<video src="${url}" controls></video>`;
       } else {
         preview.innerHTML = `<img src="${url}" alt="Fetched from IPFS" />`;
       }
+    }
+
+    async function fetchProfile() {
+      const cid = document.getElementById('cidInput').value.trim();
+      const preview = document.getElementById('mediaPreview');
+      preview.innerHTML = "";
+      hideProfile();
+
+      if (!cid) {
+        alert("Please enter a valid CID.");
+        return;
+      }
+
+      try {
+        const url = `https://ipfs.io/ipfs/${cid}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch CID: ${response.status}`);
+
+        const data = await response.json();
+
+        // Expecting JSON with keys: name, bio, walletAddress (adjust keys if different)
+        const name = data.name || "N/A";
+        const bio = data.bio || "N/A";
+        const wallet = data.walletAddress || data.wallet || "N/A";
+
+        document.getElementById('profileName').textContent = name;
+        document.getElementById('profileBio').textContent = bio;
+        document.getElementById('profileWallet').textContent = wallet;
+        const cidLink = document.getElementById('profileCIDLink');
+        cidLink.href = url;
+        cidLink.textContent = cid;
+
+        document.getElementById('profileDisplay').style.display = "block";
+
+      } catch (err) {
+        alert("Error fetching profile data: " + err.message);
+      }
+    }
+
+    function hideProfile() {
+      document.getElementById('profileDisplay').style.display = "none";
     }
 
     function addToTimeline() {
@@ -160,7 +225,6 @@
       }
 
       const now = new Date().toLocaleString();
-      const url = `https://ipfs.io/ipfs/${cid}`;
       timeline.unshift({ cid, time: now });
 
       renderTimeline();
