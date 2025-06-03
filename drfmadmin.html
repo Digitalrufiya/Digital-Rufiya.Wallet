@@ -156,6 +156,7 @@
   <script>
     const timeline = [];
 
+    // NEW fetchMedia with content-type detection and JSON parsing only if valid
     function fetchMedia() {
       const cid = document.getElementById('cidInput').value.trim();
       const preview = document.getElementById('mediaPreview');
@@ -168,12 +169,31 @@
       }
 
       const url = `https://ipfs.io/ipfs/${cid}`;
-      // Assuming if CID ends with .mp4 show video else image
-      if (cid.endsWith(".mp4")) {
-        preview.innerHTML = `<video src="${url}" controls></video>`;
-      } else {
-        preview.innerHTML = `<img src="${url}" alt="Fetched from IPFS" />`;
-      }
+
+      fetch(url)
+        .then(res => {
+          const contentType = res.headers.get("content-type") || "";
+
+          if (contentType.includes("application/json")) {
+            // JSON: parse and show pretty JSON
+            return res.json().then(data => {
+              preview.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            });
+          } else if (contentType.startsWith("image/")) {
+            // Image: show <img>
+            preview.innerHTML = `<img src="${url}" alt="Image from IPFS" />`;
+          } else if (contentType.startsWith("video/")) {
+            // Video: show <video>
+            preview.innerHTML = `<video src="${url}" controls></video>`;
+          } else {
+            // Unknown: show link to open
+            preview.innerHTML = `<a href="${url}" target="_blank">Open media</a>`;
+          }
+        })
+        .catch(err => {
+          console.error("Error fetching media:", err);
+          alert("Failed to fetch or parse the data.");
+        });
     }
 
     async function fetchProfile() {
