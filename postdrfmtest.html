@@ -1,154 +1,89 @@
+<!-- profile.html + post.html merged and automated -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Post with Auto Upload & Profile Display</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-  <style>
-    .post { border: 1px solid #ccc; margin: 10px; padding: 10px; border-radius: 8px; }
-    .user-info { display: flex; align-items: center; margin-bottom: 10px; }
-    .user-info img { border-radius: 50%; width: 40px; height: 40px; margin-right: 10px; }
-    .media { max-width: 100%; max-height: 300px; margin-top: 10px; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Social - Auto Profile & Post</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
 </head>
 <body>
-  <h2>Create a Post</h2>
-  <form id="postForm">
-    <textarea id="postText" rows="3" cols="50" placeholder="Write something..."></textarea><br/>
-    <input type="file" id="mediaFile" accept="image/*,video/*" /><br/>
-    <button type="submit">Post</button>
-  </form>
+  <h2>Upload Profile Image</h2>
+  <input type="file" id="profileInput" accept="image/*">
+  <img id="profilePreview" width="200" style="display:none;" />
+  <p id="profileStatus"></p>
 
-  <h2>Posts Feed</h2>
-  <div id="postsFeed"></div>
+  <h2>Upload Post Image</h2>
+  <input type="file" id="postInput" accept="image/*">
+  <img id="postPreview" width="200" style="display:none;" />
+  <p id="postStatus"></p>
 
-  <script>
-    // --- Firebase config ---
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
     const firebaseConfig = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const storage = firebase.storage();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    // Simulated logged-in user info (you get this from your auth or wallet connect)
-    const currentUser = {
-      uid: "user123",            // user id
-      displayName: "John Doe",   // user name
-      photoURL: "https://randomuser.me/api/portraits/men/32.jpg",
-      wallet: "0xABCD1234EF567890"
-    };
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-    // Make sure user profile exists in Firestore (simulate on page load)
-    async function createUserProfileIfNotExists() {
-      const userRef = db.collection('users').doc(currentUser.uid);
-      const doc = await userRef.get();
-      if (!doc.exists) {
-        await userRef.set({
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          wallet: currentUser.wallet
-        });
-      }
-    }
+    async function uploadToPinata(file) {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    createUserProfileIfNotExists();
-
-    // Upload file to Firebase Storage, returns download URL
-    async function uploadMediaFile(file) {
-      const filePath = `posts/${currentUser.uid}/${Date.now()}_${file.name}`;
-      const storageRef = storage.ref(filePath);
-      await storageRef.put(file);
-      const url = await storageRef.getDownloadURL();
-      return url;
-    }
-
-    // Handle form submit to create a post
-    document.getElementById('postForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const text = document.getElementById('postText').value.trim();
-      const fileInput = document.getElementById('mediaFile');
-      let mediaURL = null;
-
-      if (!text && fileInput.files.length === 0) {
-        alert("Please write something or upload a file.");
-        return;
-      }
-
-      if (fileInput.files.length > 0) {
-        // Upload file and get media URL
-        try {
-          mediaURL = await uploadMediaFile(fileInput.files[0]);
-        } catch (err) {
-          alert("Media upload failed: " + err.message);
-          return;
-        }
-      }
-
-      // Save post document to Firestore
-      await db.collection('posts').add({
-        userId: currentUser.uid,
-        text,
-        mediaURL,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+        headers: {
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
       });
 
-      // Clear form
-      document.getElementById('postText').value = '';
-      fileInput.value = '';
-
-      alert('Post created!');
-    });
-
-    // Render posts feed
-    async function renderPosts() {
-      const postsFeed = document.getElementById('postsFeed');
-      postsFeed.innerHTML = "Loading posts...";
-
-      const snapshot = await db.collection('posts').orderBy('timestamp', 'desc').get();
-      postsFeed.innerHTML = "";
-
-      for (const doc of snapshot.docs) {
-        const post = doc.data();
-
-        // Get user profile for the post
-        const userDoc = await db.collection('users').doc(post.userId).get();
-        const user = userDoc.data();
-
-        // Create post HTML
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post');
-
-        postDiv.innerHTML = `
-          <div class="user-info">
-            <img src="${user.photoURL || 'https://via.placeholder.com/40'}" alt="User photo" />
-            <div>
-              <strong>${user.displayName || 'Unknown User'}</strong><br/>
-              <small>${user.wallet || ''}</small>
-            </div>
-          </div>
-          <div class="post-text">${post.text || ''}</div>
-          ${post.mediaURL ? (post.mediaURL.match(/\.(mp4|webm|ogg)$/i)
-            ? `<video controls class="media"><source src="${post.mediaURL}" type="video/mp4"></video>`
-            : `<img src="${post.mediaURL}" alt="Post media" class="media" />`) : ''}
-          <small>${post.timestamp ? post.timestamp.toDate().toLocaleString() : ''}</small>
-        `;
-
-        postsFeed.appendChild(postDiv);
-      }
+      return `https://gateway.pinata.cloud/ipfs/${res.data.IpfsHash}`;
     }
 
-    // Load posts initially and every 15 seconds
-    renderPosts();
-    setInterval(renderPosts, 15000);
+    async function handleUpload(inputId, previewId, statusId, firebasePath) {
+      const input = document.getElementById(inputId);
+      const preview = document.getElementById(previewId);
+      const status = document.getElementById(statusId);
+
+      input.addEventListener("change", async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        status.textContent = "Uploading to IPFS...";
+
+        try {
+          const ipfsURL = await uploadToPinata(file);
+          status.textContent = "Uploaded: " + ipfsURL;
+
+          const entryRef = push(ref(db, firebasePath));
+          await set(entryRef, {
+            ipfs: ipfsURL,
+            time: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error(err);
+          status.textContent = "Upload failed.";
+        }
+      });
+    }
+
+    handleUpload("profileInput", "profilePreview", "profileStatus", "drfsocial/profiles");
+    handleUpload("postInput", "postPreview", "postStatus", "drfsocial/posts");
   </script>
 </body>
 </html>
