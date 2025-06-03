@@ -1,246 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRF Profile Upload</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-    .profile-section { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .profile-preview { text-align: center; margin-top: 10px; }
-    .profile-preview img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    input, textarea {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:disabled {
+      background: #aaa;
+    }
   </style>
 </head>
 <body>
-  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
 
-  <div class="profile-section">
-    <h3>Set Your Profile</h3>
-    <input type="file" id="profilePic" accept="image/*" />
-    <input type="text" id="name" placeholder="Your name" />
-    <input type="text" id="wallet" placeholder="Your wallet address" />
-    <textarea id="bio" placeholder="Your bio"></textarea>
+  <div class="container">
+    <h2>Update Profile</h2>
+    <input type="text" id="name" placeholder="Enter your name" required>
+    <textarea id="bio" rows="4" placeholder="Enter your bio" required></textarea>
+    <input type="file" id="profilePic" accept="image/*" required>
     <button id="saveProfile">Save Profile</button>
-    <div class="profile-preview" id="profilePreview"></div>
   </div>
 
-  <form id="uploadForm">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-  </form>
+  <script>
+    const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-  <div id="postContainer"></div>
+    document.getElementById("saveProfile").addEventListener("click", async () => {
+      const name = document.getElementById("name").value.trim();
+      const bio = document.getElementById("bio").value.trim();
+      const profilePic = document.getElementById("profilePic").files[0];
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, set, get, child, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+      if (!name || !bio || !profilePic) {
+        alert("Please complete all fields.");
+        return;
+      }
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const PINATA_JWT = "<your_pinata_jwt_here>"; // 🔐 Replace with your JWT
-
-    const uploadForm = document.getElementById('uploadForm');
-    const mediaFileInput = document.getElementById('mediaFile');
-    const captionInput = document.getElementById('caption');
-    const postContainer = document.getElementById('postContainer');
-
-    const profilePicInput = document.getElementById('profilePic');
-    const nameInput = document.getElementById('name');
-    const walletInput = document.getElementById('wallet');
-    const bioInput = document.getElementById('bio');
-    const saveProfileBtn = document.getElementById('saveProfile');
-    const profilePreview = document.getElementById('profilePreview');
-
-    async function uploadToPinata(file) {
-      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append('pinataMetadata', metadata);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${PINATA_JWT}` },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Pinata upload failed');
-      const data = await response.json();
-      return data.IpfsHash;
-    }
-
-    function getFileType(file) {
-      if (file.type.startsWith('image/')) return 'image';
-      if (file.type.startsWith('video/')) return 'video';
-      return 'unknown';
-    }
-
-    async function saveProfile() {
-      const name = nameInput.value.trim();
-      const wallet = walletInput.value.trim();
-      const bio = bioInput.value.trim();
-      const file = profilePicInput.files[0];
-
-      if (!name || !wallet || !bio || !file) return alert("Fill all profile fields and select a photo.");
+      const button = document.getElementById("saveProfile");
+      button.disabled = true;
+      button.innerText = "Uploading...";
 
       try {
-        saveProfileBtn.disabled = true;
-        saveProfileBtn.textContent = "Saving...";
+        // Upload profile image to Pinata
+        const formData = new FormData();
+        formData.append("file", profilePic);
 
-        const picCID = await uploadToPinata(file);
-        const picUrl = `https://gateway.pinata.cloud/ipfs/${picCID}`;
-
-        const profileData = { name, wallet, bio, picUrl };
-        await set(ref(db, 'userProfile'), profileData);
-
-        profilePreview.innerHTML = `
-          <img src="${picUrl}" /><br/>
-          <strong>${name}</strong><br/>
-          <small>${wallet}</small><br/>
-          <em>${bio}</em>
-        `;
-      } catch (err) {
-        alert("Profile save failed: " + err.message);
-      } finally {
-        saveProfileBtn.disabled = false;
-        saveProfileBtn.textContent = "Save Profile";
-      }
-    }
-
-    async function loadProfile() {
-      const snap = await get(child(ref(db), 'userProfile'));
-      if (snap.exists()) {
-        const { name, wallet, bio, picUrl } = snap.val();
-        nameInput.value = name;
-        walletInput.value = wallet;
-        bioInput.value = bio;
-        profilePreview.innerHTML = `
-          <img src="${picUrl}" /><br/>
-          <strong>${name}</strong><br/>
-          <small>${wallet}</small><br/>
-          <em>${bio}</em>
-        `;
-        return snap.val();
-      }
-      return null;
-    }
-
-    saveProfileBtn.addEventListener('click', saveProfile);
-
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const file = mediaFileInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and caption.');
-
-      try {
-        const profile = await loadProfile();
-        if (!profile) return alert("Set your profile first.");
-
-        uploadForm.querySelector('button').disabled = true;
-        uploadForm.querySelector('button').textContent = 'Posting...';
-
-        const cid = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-        const type = getFileType(file);
-
-        await push(ref(db, 'posts'), {
-          caption,
-          fileUrl,
-          type,
-          timestamp: Date.now(),
-          likes: 0,
-          comments: [],
-          user: profile
+        const imageRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + jwt
+          },
+          body: formData
         });
 
-        mediaFileInput.value = '';
-        captionInput.value = '';
-      } catch (error) {
-        alert('Upload failed: ' + error.message);
-      } finally {
-        uploadForm.querySelector('button').disabled = false;
-        uploadForm.querySelector('button').textContent = 'Post';
+        const imageData = await imageRes.json();
+        const imageUrl = `https://gateway.pinata.cloud/ipfs/${imageData.IpfsHash}`;
+
+        // Upload profile metadata
+        const profileData = {
+          name,
+          bio,
+          image: imageUrl,
+          updated: new Date().toISOString()
+        };
+
+        const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + jwt
+          },
+          body: JSON.stringify(profileData)
+        });
+
+        const jsonData = await jsonRes.json();
+        const jsonUrl = `https://gateway.pinata.cloud/ipfs/${jsonData.IpfsHash}`;
+
+        console.log("✅ Image URL:", imageUrl);
+        console.log("✅ Metadata URL:", jsonUrl);
+        alert("Profile uploaded successfully!");
+
+      } catch (err) {
+        console.error("❌ Upload failed:", err);
+        alert("Upload failed. Please try again.");
       }
+
+      button.disabled = false;
+      button.innerText = "Save Profile";
     });
-
-    onValue(ref(db, 'posts/'), (snapshot) => {
-      postContainer.innerHTML = '';
-      snapshot.forEach((child) => {
-        const postId = child.key;
-        const post = child.val();
-        const user = post.user || {};
-
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
-
-        let mediaHtml = post.type === 'image'
-          ? `<img src="${post.fileUrl}" alt="Post Image" />`
-          : `<video controls src="${post.fileUrl}"></video>`;
-
-        postDiv.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-            <img src="${user.picUrl || ''}" width="40" height="40" style="border-radius:50%;object-fit:cover;" />
-            <div>
-              <strong>${user.name || 'Anonymous'}</strong><br/>
-              <small>${user.wallet || ''}</small>
-            </div>
-          </div>
-          ${mediaHtml}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-          <div class="post-actions">
-            <button onclick="likePost('${postId}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${postId}')">💬 Comment</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-          </div>
-        `;
-        postContainer.appendChild(postDiv);
-      });
-    });
-
-    window.likePost = async (postId) => {
-      const postRef = ref(db, `posts/${postId}`);
-      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
-      update(postRef, { likes: current + 1 });
-    };
-
-    window.commentPost = (postId) => {
-      const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment received. Will be added in next version.");
-    };
-
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
-    };
-
-    loadProfile(); // Auto-load profile
   </script>
+
 </body>
 </html>
