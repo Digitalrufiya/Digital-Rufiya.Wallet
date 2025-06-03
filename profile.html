@@ -4,14 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMEDIA Profile Setup</title>
-  <link
-    rel="icon"
-    href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-  />
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -94,38 +88,19 @@
   <div class="container">
     <h2><i class="fa-brands fa-facebook"></i> DRFMEDIA Profile Setup</h2>
 
-    <input
-      type="text"
-      id="name"
-      placeholder="Enter your name"
-      autocomplete="off"
-      required
-    />
-    <textarea
-      id="bio"
-      placeholder="Your bio (optional)"
-      rows="3"
-      autocomplete="off"
-    ></textarea>
-    <input
-      type="text"
-      id="wallet"
-      placeholder="Enter your DRFM wallet address"
-      autocomplete="off"
-      required
-    />
+    <input type="text" id="name" placeholder="Enter your name" autocomplete="off" required />
+    <textarea id="bio" placeholder="Your bio (optional)" rows="3" autocomplete="off"></textarea>
+    <input type="text" id="wallet" placeholder="Enter your DRFM wallet address" autocomplete="off" required />
     <input type="file" id="photo" accept="image/*" required />
 
-    <button onclick="uploadProfile()">Submit & Upload</button>
+    <button onclick="uploadProfile(event)">Submit & Upload</button>
     <p class="success" id="statusMsg"></p>
 
-    <button id="downloadLog" style="display:none;" onclick="downloadLogFile()">
-      Download Profile Log
-    </button>
+    <button id="downloadLog" style="display:none;" onclick="downloadLogFile()">Download Profile Log</button>
   </div>
 
   <script>
-    async function uploadProfile() {
+    async function uploadProfile(event) {
       const name = document.getElementById("name").value.trim();
       const bio = document.getElementById("bio").value.trim();
       const wallet = document.getElementById("wallet").value.trim();
@@ -136,33 +111,28 @@
         return;
       }
 
-      // Disable button during upload to prevent double submits
       const submitBtn = event.target;
       submitBtn.disabled = true;
       submitBtn.innerText = "Uploading...";
 
       try {
-        // Step 1: Upload photo file
+        // Upload photo to IPFS
         const photoFile = photoInput.files[0];
         const photoForm = new FormData();
         photoForm.append("file", photoFile);
 
-        const photoRes = await fetch(
-          "https://api.pinata.cloud/pinning/pinFileToIPFS",
-          {
-            method: "POST",
-            headers: {
-              Authorization:
-                "Bearer YOUR_PINATA_JWT_TOKEN_HERE"
-            },
-            body: photoForm,
-          }
-        );
+        const photoRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"
+          },
+          body: photoForm
+        });
 
         const photoData = await photoRes.json();
         if (!photoData.IpfsHash) throw new Error("Photo IPFS hash missing");
 
-        // Step 2: Prepare metadata JSON with image CID
+        // Upload metadata
         const metadata = {
           name,
           bio,
@@ -170,36 +140,27 @@
           image: `ipfs://${photoData.IpfsHash}`,
         };
 
-        // Step 3: Upload metadata JSON
-        const jsonRes = await fetch(
-          "https://api.pinata.cloud/pinning/pinJSONToIPFS",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization:
-                "Bearer YOUR_PINATA_JWT_TOKEN_HERE",
-            },
-            body: JSON.stringify(metadata),
-          }
-        );
+        const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"
+          },
+          body: JSON.stringify(metadata)
+        });
 
         const jsonData = await jsonRes.json();
-        if (!jsonData.IpfsHash)
-          throw new Error("Metadata IPFS hash missing");
+        if (!jsonData.IpfsHash) throw new Error("Metadata IPFS hash missing");
 
         const metadataCID = jsonData.IpfsHash;
         const timestamp = new Date().toLocaleString();
 
-        // Display success with metadata CID
-        document.getElementById(
-          "statusMsg"
-        ).innerText = `✅ Profile saved! Metadata CID:\n${metadataCID}`;
+        document.getElementById("statusMsg").innerText = `✅ Profile saved!\nMetadata CID:\n${metadataCID}`;
 
-        // Save profile log in localStorage
         const logContent = `Name: ${name}\nBio: ${bio}\nWallet: ${wallet}\nMetadata CID: ${metadataCID}\nTime: ${timestamp}`;
         localStorage.setItem("drf_profile_log", logContent);
         document.getElementById("downloadLog").style.display = "block";
+
       } catch (err) {
         alert("Upload failed: " + err.message);
         console.error(err);
