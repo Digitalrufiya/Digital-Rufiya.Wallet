@@ -2,40 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Profile | DRF Media</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
+    .profile { text-align: center; margin-bottom: 30px; }
+    .profile img { width: 100px; border-radius: 50%; }
+    .profile h2 { margin: 10px 0; }
     .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
     .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
     .post-caption { margin: 10px 0; font-size: 16px; }
     .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
-  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
+  <div class="profile" id="userProfile">
+    <img src="" id="userAvatar" alt="Avatar">
+    <h2 id="userName">Loading...</h2>
+  </div>
 
-  <form id="uploadForm">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-  </form>
-
-  <div id="postContainer"></div>
+  <div id="userPosts"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -50,121 +40,43 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    const userId = localStorage.getItem("drfUserId");
 
-    const postContainer = document.getElementById('postContainer');
-    const uploadForm = document.getElementById('uploadForm');
-    const mediaFileInput = document.getElementById('mediaFile');
-    const captionInput = document.getElementById('caption');
+    const userNameEl = document.getElementById("userName");
+    const userAvatarEl = document.getElementById("userAvatar");
+    const userPostsEl = document.getElementById("userPosts");
 
-    const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace with real JWT
-
-    async function uploadToPinata(file) {
-      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${PINATA_JWT}` },
-        body: formData,
+    if (!userId) {
+      userNameEl.textContent = "No profile found.";
+    } else {
+      const profileRef = ref(db, "profiles/" + userId);
+      onValue(profileRef, (snapshot) => {
+        const data = snapshot.val();
+        userNameEl.textContent = data?.name || "Anonymous";
+        userAvatarEl.src = data?.avatar || "https://via.placeholder.com/100";
       });
 
-      if (!response.ok) throw new Error('Pinata upload failed');
-      const data = await response.json();
-      return data.IpfsHash;
-    }
-
-    function getFileType(file) {
-      if (file.type.startsWith('image/')) return 'image';
-      if (file.type.startsWith('video/')) return 'video';
-      return 'unknown';
-    }
-
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const file = mediaFileInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and caption.');
-
-      try {
-        uploadForm.querySelector('button').disabled = true;
-        uploadForm.querySelector('button').textContent = 'Posting...';
-
-        const cid = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-        const type = getFileType(file);
-
-        await push(ref(db, 'posts'), {
-          caption,
-          fileUrl,
-          type,
-          timestamp: Date.now(),
-          likes: 0,
-          comments: []
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, (snapshot) => {
+        userPostsEl.innerHTML = "";
+        snapshot.forEach(child => {
+          const post = child.val();
+          if (post.userId === userId) {
+            const div = document.createElement("div");
+            div.className = "post-item";
+            let mediaHtml = post.type === "image"
+              ? `<img src="${post.fileUrl}" alt="Post Image">`
+              : `<video controls src="${post.fileUrl}"></video>`;
+            div.innerHTML = `
+              ${mediaHtml}
+              <p class="post-caption">${post.caption}</p>
+              <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+            `;
+            userPostsEl.appendChild(div);
+          }
         });
-
-        mediaFileInput.value = '';
-        captionInput.value = '';
-      } catch (error) {
-        alert('Upload failed: ' + error.message);
-      } finally {
-        uploadForm.querySelector('button').disabled = false;
-        uploadForm.querySelector('button').textContent = 'Post';
-      }
-    });
-
-    const postsRef = ref(db, 'posts/');
-    onValue(postsRef, (snapshot) => {
-      postContainer.innerHTML = '';
-      const postsArray = [];
-
-      snapshot.forEach((child) => {
-        const postId = child.key;
-        const post = child.val();
-        post.id = postId;
-        postsArray.push(post);
       });
-
-      postsArray.sort((a, b) => b.timestamp - a.timestamp); // Newest on top
-
-      postsArray.forEach((post) => {
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
-
-        let mediaHtml = post.type === 'image'
-          ? `<img src="${post.fileUrl}" alt="Post Image" />`
-          : `<video controls src="${post.fileUrl}"></video>`;
-
-        postDiv.innerHTML = `
-          ${mediaHtml}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-          <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${post.id}')">💬 Comment</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-          </div>
-        `;
-
-        postContainer.appendChild(postDiv);
-      });
-    });
-
-    window.likePost = async (postId) => {
-      const postRef = ref(db, `posts/${postId}`);
-      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
-      update(postRef, { likes: current + 1 });
-    };
-
-    window.commentPost = (postId) => {
-      const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment received. Will be added in next version.");
-    };
-
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
-    };
+    }
   </script>
 </body>
 </html>
