@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Post with Auto Upload & Profile Display</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <style>
+    .post { border: 1px solid #ccc; margin: 10px; padding: 10px; border-radius: 8px; }
+    .user-info { display: flex; align-items: center; margin-bottom: 10px; }
+    .user-info img { border-radius: 50%; width: 40px; height: 40px; margin-right: 10px; }
+    .media { max-width: 100%; max-height: 300px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Create a Post</h2>
+  <form id="postForm">
+    <textarea id="postText" rows="3" cols="50" placeholder="Write something..."></textarea><br/>
+    <input type="file" id="mediaFile" accept="image/*,video/*" /><br/>
+    <button type="submit">Post</button>
+  </form>
+
+  <h2>Posts Feed</h2>
+  <div id="postsFeed"></div>
+
+  <script>
+    // --- Firebase config ---
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Simulated logged-in user info (you get this from your auth or wallet connect)
+    const currentUser = {
+      uid: "user123",            // user id
+      displayName: "John Doe",   // user name
+      photoURL: "https://randomuser.me/api/portraits/men/32.jpg",
+      wallet: "0xABCD1234EF567890"
+    };
+
+    // Make sure user profile exists in Firestore (simulate on page load)
+    async function createUserProfileIfNotExists() {
+      const userRef = db.collection('users').doc(currentUser.uid);
+      const doc = await userRef.get();
+      if (!doc.exists) {
+        await userRef.set({
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          wallet: currentUser.wallet
+        });
+      }
+    }
+
+    createUserProfileIfNotExists();
+
+    // Upload file to Firebase Storage, returns download URL
+    async function uploadMediaFile(file) {
+      const filePath = `posts/${currentUser.uid}/${Date.now()}_${file.name}`;
+      const storageRef = storage.ref(filePath);
+      await storageRef.put(file);
+      const url = await storageRef.getDownloadURL();
+      return url;
+    }
+
+    // Handle form submit to create a post
+    document.getElementById('postForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = document.getElementById('postText').value.trim();
+      const fileInput = document.getElementById('mediaFile');
+      let mediaURL = null;
+
+      if (!text && fileInput.files.length === 0) {
+        alert("Please write something or upload a file.");
+        return;
+      }
+
+      if (fileInput.files.length > 0) {
+        // Upload file and get media URL
+        try {
+          mediaURL = await uploadMediaFile(fileInput.files[0]);
+        } catch (err) {
+          alert("Media upload failed: " + err.message);
+          return;
+        }
+      }
+
+      // Save post document to Firestore
+      await db.collection('posts').add({
+        userId: currentUser.uid,
+        text,
+        mediaURL,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Clear form
+      document.getElementById('postText').value = '';
+      fileInput.value = '';
+
+      alert('Post created!');
+    });
+
+    // Render posts feed
+    async function renderPosts() {
+      const postsFeed = document.getElementById('postsFeed');
+      postsFeed.innerHTML = "Loading posts...";
+
+      const snapshot = await db.collection('posts').orderBy('timestamp', 'desc').get();
+      postsFeed.innerHTML = "";
+
+      for (const doc of snapshot.docs) {
+        const post = doc.data();
+
+        // Get user profile for the post
+        const userDoc = await db.collection('users').doc(post.userId).get();
+        const user = userDoc.data();
+
+        // Create post HTML
+        const postDiv = document.createElement('div');
+        postDiv.classList.add('post');
+
+        postDiv.innerHTML = `
+          <div class="user-info">
+            <img src="${user.photoURL || 'https://via.placeholder.com/40'}" alt="User photo" />
+            <div>
+              <strong>${user.displayName || 'Unknown User'}</strong><br/>
+              <small>${user.wallet || ''}</small>
+            </div>
+          </div>
+          <div class="post-text">${post.text || ''}</div>
+          ${post.mediaURL ? (post.mediaURL.match(/\.(mp4|webm|ogg)$/i)
+            ? `<video controls class="media"><source src="${post.mediaURL}" type="video/mp4"></video>`
+            : `<img src="${post.mediaURL}" alt="Post media" class="media" />`) : ''}
+          <small>${post.timestamp ? post.timestamp.toDate().toLocaleString() : ''}</small>
+        `;
+
+        postsFeed.appendChild(postDiv);
+      }
+    }
+
+    // Load posts initially and every 15 seconds
+    renderPosts();
+    setInterval(renderPosts, 15000);
+  </script>
+</body>
+</html>
