@@ -3,119 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Profile</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>User Profile | DRF Media</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f3f3f3;
-      padding: 20px;
-    }
-    .container {
-      max-width: 430px;
-      margin: auto;
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .input-group {
-      margin-bottom: 15px;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 6px;
-    }
-    input[type="text"],
-    input[type="email"],
-    input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #007b00;
-      color: white;
-      font-weight: bold;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #message {
-      margin-top: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    .profile { text-align: center; margin-bottom: 30px; }
+    .profile img { width: 100px; border-radius: 50%; }
+    .profile h2 { margin: 10px 0; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2 style="text-align:center;">Complete Your Profile</h2>
-
-    <form id="profileForm">
-      <div class="input-group">
-        <label for="name">Full Name</label>
-        <input type="text" id="name" required />
-      </div>
-      <div class="input-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" required />
-      </div>
-      <div class="input-group">
-        <label for="wallet">Wallet Address (copy from dashboard)</label>
-        <input type="text" id="wallet" required placeholder="0x..." />
-      </div>
-      <div class="input-group">
-        <label for="photo">Profile Photo (optional)</label>
-        <input type="file" id="photo" accept="image/*" />
-      </div>
-      <button type="submit">Save Profile</button>
-    </form>
-
-    <div id="message"></div>
+  <div class="profile" id="userProfile">
+    <img src="" id="userAvatar" alt="Avatar">
+    <h2 id="userName">Loading...</h2>
   </div>
 
-  <script>
-    const GAS_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Replace with your actual script URL
+  <div id="userPosts"></div>
 
-    document.getElementById("profileForm").addEventListener("submit", async function(e) {
-      e.preventDefault();
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const wallet = document.getElementById("wallet").value.trim();
-      const photo = document.getElementById("photo").files[0];
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
 
-      if (!wallet) {
-        alert("Wallet address is required to receive rewards.");
-        return;
-      }
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const userId = localStorage.getItem("drfUserId");
 
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("email", email);
-      formData.append("wallet", wallet);
-      if (photo) formData.append("photo", photo);
+    const userNameEl = document.getElementById("userName");
+    const userAvatarEl = document.getElementById("userAvatar");
+    const userPostsEl = document.getElementById("userPosts");
 
-      document.getElementById("message").innerText = "Saving...";
+    if (!userId) {
+      userNameEl.textContent = "No profile found.";
+    } else {
+      const profileRef = ref(db, "profiles/" + userId);
+      onValue(profileRef, (snapshot) => {
+        const data = snapshot.val();
+        userNameEl.textContent = data?.name || "Anonymous";
+        userAvatarEl.src = data?.avatar || "https://via.placeholder.com/100";
+      });
 
-      try {
-        const response = await fetch(GAS_URL, {
-          method: "POST",
-          body: formData,
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, (snapshot) => {
+        userPostsEl.innerHTML = "";
+        snapshot.forEach(child => {
+          const post = child.val();
+          if (post.userId === userId) {
+            const div = document.createElement("div");
+            div.className = "post-item";
+            let mediaHtml = post.type === "image"
+              ? `<img src="${post.fileUrl}" alt="Post Image">`
+              : `<video controls src="${post.fileUrl}"></video>`;
+            div.innerHTML = `
+              ${mediaHtml}
+              <p class="post-caption">${post.caption}</p>
+              <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+            `;
+            userPostsEl.appendChild(div);
+          }
         });
-
-        const result = await response.text();
-        document.getElementById("message").innerText = "✅ Profile saved successfully!";
-        document.getElementById("profileForm").reset();
-      } catch (error) {
-        document.getElementById("message").innerText = "❌ Error saving profile. Try again.";
-      }
-    });
+      });
+    }
   </script>
 </body>
 </html>
