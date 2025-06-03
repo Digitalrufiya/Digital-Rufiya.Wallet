@@ -1,31 +1,29 @@
+<!-- profile.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Profile | DRF Media</title>
+  <title>DRF User Profile</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    .profile { text-align: center; margin-bottom: 30px; }
-    .profile img { width: 100px; border-radius: 50%; }
-    .profile h2 { margin: 10px 0; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
+    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
+    h2 { text-align: center; }
+    form { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; }
+    img { display: block; max-width: 100px; margin: auto; border-radius: 50%; }
   </style>
 </head>
 <body>
-  <div class="profile" id="userProfile">
-    <img src="" id="userAvatar" alt="Avatar">
-    <h2 id="userName">Loading...</h2>
-  </div>
-
-  <div id="userPosts"></div>
+  <h2>Create Your Profile</h2>
+  <form id="profileForm">
+    <input type="text" id="username" placeholder="Your Name" required />
+    <input type="text" id="wallet" placeholder="DRF Wallet Address" required />
+    <input type="file" id="profileImage" accept="image/*" required />
+    <button type="submit">Save Profile</button>
+  </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -34,49 +32,55 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const userId = localStorage.getItem("drfUserId");
 
-    const userNameEl = document.getElementById("userName");
-    const userAvatarEl = document.getElementById("userAvatar");
-    const userPostsEl = document.getElementById("userPosts");
+    const form = document.getElementById('profileForm');
+    const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace with your JWT
 
-    if (!userId) {
-      userNameEl.textContent = "No profile found.";
-    } else {
-      const profileRef = ref(db, "profiles/" + userId);
-      onValue(profileRef, (snapshot) => {
-        const data = snapshot.val();
-        userNameEl.textContent = data?.name || "Anonymous";
-        userAvatarEl.src = data?.avatar || "https://via.placeholder.com/100";
-      });
-
-      const postsRef = ref(db, "posts");
-      onValue(postsRef, (snapshot) => {
-        userPostsEl.innerHTML = "";
-        snapshot.forEach(child => {
-          const post = child.val();
-          if (post.userId === userId) {
-            const div = document.createElement("div");
-            div.className = "post-item";
-            let mediaHtml = post.type === "image"
-              ? `<img src="${post.fileUrl}" alt="Post Image">`
-              : `<video controls src="${post.fileUrl}"></video>`;
-            div.innerHTML = `
-              ${mediaHtml}
-              <p class="post-caption">${post.caption}</p>
-              <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-            `;
-            userPostsEl.appendChild(div);
-          }
-        });
-      });
+    function getDeviceId() {
+      if (!localStorage.deviceId) localStorage.deviceId = crypto.randomUUID();
+      return localStorage.deviceId;
     }
+
+    async function uploadProfileImage(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      const data = await response.json();
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const wallet = document.getElementById('wallet').value.trim();
+      const file = document.getElementById('profileImage').files[0];
+      if (!username || !wallet || !file) return alert("Please complete all fields.");
+
+      try {
+        const imageUrl = await uploadProfileImage(file);
+        const deviceId = getDeviceId();
+        await set(ref(db, `profiles/${deviceId}`), {
+          username,
+          wallet,
+          imageUrl
+        });
+        alert("Profile saved!");
+      } catch (err) {
+        alert("Failed: " + err.message);
+      }
+    });
   </script>
 </body>
 </html>
