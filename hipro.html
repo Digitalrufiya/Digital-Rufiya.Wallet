@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>User Profile with Pinata Upload & Edit</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
+  .profile { display: flex; align-items: center; gap: 1rem; }
+  img { border-radius: 50%; width: 80px; height: 80px; object-fit: cover; }
+  input[type="file"] { margin-top: 1rem; }
+  label { font-weight: bold; display: block; margin-top: 1rem; }
+  .edit-section { margin-top: 2rem; }
+  button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>User Profile</h1>
+
+<div class="profile">
+  <img id="profilePhoto" src="https://via.placeholder.com/80?text=No+Photo" alt="Profile Photo" />
+  <div>
+    <div><strong>Name:</strong> <span id="userName">Loading...</span></div>
+    <div><strong>Email:</strong> <span id="userEmail">Loading...</span></div>
+    <div><strong>User ID:</strong> <span id="userId">Loading...</span></div>
+  </div>
+</div>
+
+<div class="edit-section">
+  <label for="nameInput">Edit Name:</label>
+  <input type="text" id="nameInput" placeholder="Enter your name" />
+
+  <label for="photoInput">Change Profile Photo:</label>
+  <input type="file" id="photoInput" accept="image/*" />
+
+  <button id="saveBtn">Save Changes</button>
+</div>
+
+<script>
+  // === Pinata JWT Token ===
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  // === Simulated user data storage (could be from DB or localStorage) ===
+  let user = {
+    id: "801f0017-8b6d-46b6-8b0f-8ccdee971882",
+    name: "DigitalRufiya",
+    email: "digitalrufiya@gmail.com",
+    profilePhoto: null, // will store IPFS URL
+  };
+
+  // Load user info on page
+  function loadUser() {
+    document.getElementById('userName').textContent = user.name;
+    document.getElementById('userEmail').textContent = user.email;
+    document.getElementById('userId').textContent = user.id;
+
+    if (user.profilePhoto) {
+      document.getElementById('profilePhoto').src = user.profilePhoto;
+    } else {
+      document.getElementById('profilePhoto').src = "https://via.placeholder.com/80?text=No+Photo";
+    }
+
+    document.getElementById('nameInput').value = user.name;
+  }
+
+  // Upload image file to Pinata IPFS and return IPFS gateway URL
+  async function uploadToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error('Pinata upload failed: ' + res.statusText);
+    }
+    const data = await res.json();
+    // Return a gateway URL so it can be loaded in img tag easily
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
+
+  // Handle save changes button click
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const newName = document.getElementById('nameInput').value.trim();
+    const fileInput = document.getElementById('photoInput');
+    try {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        // Upload new profile photo to Pinata
+        const uploadedUrl = await uploadToPinata(file);
+        user.profilePhoto = uploadedUrl;
+      }
+      if (newName) user.name = newName;
+
+      // Simulate saving user to DB here
+      // e.g. await saveUser(user);
+
+      loadUser();
+      alert("Profile updated successfully!");
+    } catch (err) {
+      alert("Error updating profile: " + err.message);
+    }
+  });
+
+  // Initialize
+  loadUser();
+</script>
+
+</body>
+</html>
