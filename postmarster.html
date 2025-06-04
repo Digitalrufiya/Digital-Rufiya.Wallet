@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Upload to IPFS & Firebase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Upload File to IPFS (Pinata) & Save Hash to Firebase</h2>
+    <input type="file" id="fileInput" />
+    <button id="uploadBtn">Upload</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+    import { getDatabase, ref, push, set } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Replace this with your full JWT
+
+    uploadBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select a file.");
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      status.textContent = "Uploading to IPFS...";
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${PINATA_JWT}`
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+        const ipfsHash = data.IpfsHash;
+        const timestamp = new Date().toISOString();
+
+        const fileRef = push(ref(database, 'uploads'));
+        await set(fileRef, {
+          fileName: file.name,
+          ipfsHash,
+          timestamp
+        });
+
+        status.textContent = `✅ File uploaded successfully! IPFS Hash: ${ipfsHash}`;
+        uploadBtn.disabled = false;
+      } catch (error) {
+        console.error(error);
+        status.textContent = "❌ Upload failed. Check console for details.";
+        uploadBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
