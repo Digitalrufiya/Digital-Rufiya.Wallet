@@ -3,23 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Public Profile</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>DRF Profile</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-    .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
-    button { padding: 10px 15px; border: none; border-radius: 6px; background: #007bff; color: #fff; cursor: pointer; }
-    img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; margin: 10px auto; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, select { width: 100%; padding: 10px; margin: 10px 0; }
+    button { background: #007bff; color: white; padding: 10px; border: none; cursor: pointer; width: 100%; border-radius: 5px; }
+    button:hover { background: #0056b3; }
+    img { max-width: 100%; border-radius: 50%; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Public Profile</h2>
-    <img id="profilePicPreview" src="" alt="Profile Photo" style="display:none" />
-    <input type="file" id="profilePic" accept="image/*" />
-    <input type="text" id="name" placeholder="Your Name" />
-    <input type="text" id="wallet" placeholder="Wallet Address (Required)" required />
+    <input type="text" id="name" placeholder="Name" />
+    <input type="text" id="wallet" placeholder="Wallet Address (required)" required />
     <input type="text" id="country" placeholder="Country" />
     <select id="gender">
       <option value="">Select Gender</option>
@@ -28,12 +26,15 @@
       <option value="Other">Other</option>
     </select>
     <input type="number" id="age" placeholder="Age" />
+    <input type="file" id="photo" accept="image/*" />
+    <img id="preview" src="" alt="Profile Preview" style="display:none;" />
     <button onclick="saveProfile()">Save Profile</button>
   </div>
 
+  <!-- Firebase SDK -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-    import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -42,60 +43,68 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Replace with full JWT securely
-
-    document.getElementById('profilePic').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        document.getElementById('profilePicPreview').src = reader.result;
-        document.getElementById('profilePicPreview').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    });
+    const database = getDatabase(app);
 
     async function uploadToPinata(file) {
       const formData = new FormData();
       formData.append("file", file);
 
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append("pinataMetadata", metadata);
+
+      const options = JSON.stringify({ cidVersion: 0 });
+      formData.append("pinataOptions", options);
+
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
-        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`
+        },
         body: formData
       });
+
       const data = await res.json();
       return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
     }
 
-    async function saveProfile() {
-      const name = document.getElementById('name').value;
-      const wallet = document.getElementById('wallet').value;
-      const country = document.getElementById('country').value;
-      const gender = document.getElementById('gender').value;
-      const age = document.getElementById('age').value;
-      const file = document.getElementById('profilePic').files[0];
+    window.saveProfile = async function () {
+      const name = document.getElementById("name").value;
+      const wallet = document.getElementById("wallet").value;
+      const country = document.getElementById("country").value;
+      const gender = document.getElementById("gender").value;
+      const age = document.getElementById("age").value;
+      const photoFile = document.getElementById("photo").files[0];
 
-      if (!wallet) {
-        alert("Wallet address is required");
-        return;
+      if (!wallet) return alert("Wallet address is required");
+
+      let photoURL = "";
+      if (photoFile) {
+        try {
+          photoURL = await uploadToPinata(photoFile);
+          document.getElementById("preview").src = photoURL;
+          document.getElementById("preview").style.display = "block";
+        } catch (err) {
+          alert("Failed to upload photo to IPFS");
+          console.error(err);
+          return;
+        }
       }
 
-      let imageUrl = "";
-      if (file) {
-        imageUrl = await uploadToPinata(file);
+      const profileData = { name, wallet, country, gender, age, photoURL };
+
+      try {
+        await set(ref(database, 'profiles/' + wallet), profileData);
+        alert("Profile saved successfully!");
+      } catch (err) {
+        alert("Failed to save profile");
+        console.error(err);
       }
-
-      const profileData = { name, wallet, country, gender, age, imageUrl };
-
-      await set(ref(db, 'profiles/' + wallet), profileData);
-      alert("Profile saved!");
-    }
+    };
   </script>
 </body>
 </html>
