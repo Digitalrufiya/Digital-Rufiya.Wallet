@@ -1,112 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>User Profile</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
-  .profile { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-  img { border-radius: 50%; width: 80px; height: 80px; object-fit: cover; }
-  label { font-weight: bold; display: block; margin-top: 1rem; }
-  input[type="text"], select, input[type="number"] {
-    margin-top: 0.3rem; padding: 0.4rem; font-size: 1rem; width: 100%;
-  }
-  button {
-    margin-top: 1.5rem; padding: 0.7rem 1.2rem; font-size: 1rem; cursor: pointer;
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>DRFMedia - Profile</title>
 </head>
 <body>
+  <h2>User Profile</h2>
+  <form id="profileForm">
+    <input type="text" id="name" placeholder="Full Name"><br>
+    <input type="text" id="photoURL" placeholder="Profile Photo URL"><br>
+    <input type="text" id="wallet" placeholder="Wallet Address"><br>
+    <input type="text" id="country" placeholder="Country"><br>
+    <select id="gender">
+      <option value="">Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+      <option value="Other">Other</option>
+    </select><br>
+    <input type="number" id="age" placeholder="Age"><br>
+    <button type="submit">Save Profile</button>
+  </form>
 
-<h1>User Profile</h1>
+  <p id="status"></p>
 
-<div class="profile">
-  <img id="profilePhoto" src="https://via.placeholder.com/80?text=No+Photo" alt="Profile Photo" />
-  <input type="file" id="photoInput" accept="image/*" />
-</div>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-<div>
-  <label for="nameInput">Name:</label>
-  <input type="text" id="nameInput" placeholder="Enter your name" />
-
-  <label for="emailInput">Email (read-only):</label>
-  <input type="text" id="emailInput" readonly />
-
-  <label for="walletInput">Wallet Address:</label>
-  <input type="text" id="walletInput" placeholder="Enter your wallet address" />
-
-  <label for="countryInput">Country:</label>
-  <input type="text" id="countryInput" placeholder="Enter your country" />
-
-  <label for="genderInput">Gender:</label>
-  <select id="genderInput">
-    <option value="">Select gender</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-    <option value="Other">Other</option>
-  </select>
-
-  <label for="ageInput">Age:</label>
-  <input type="number" id="ageInput" min="1" max="120" placeholder="Enter your age" />
-</div>
-
-<button id="saveBtn">Save Changes</button>
-
-<script>
-  // Simulated logged-in user data (replace with real user data fetching)
-  let user = JSON.parse(localStorage.getItem('drfUser')) || {
-    email: "digitalrufiya@gmail.com",
-    name: "",
-    wallet: "",
-    country: "",
-    gender: "",
-    age: "",
-    profilePhoto: null
-  };
-
-  // Load user data into form
-  function loadUser() {
-    document.getElementById('emailInput').value = user.email || "";
-    document.getElementById('nameInput').value = user.name || "";
-    document.getElementById('walletInput').value = user.wallet || "";
-    document.getElementById('countryInput').value = user.country || "";
-    document.getElementById('genderInput').value = user.gender || "";
-    document.getElementById('ageInput').value = user.age || "";
-    document.getElementById('profilePhoto').src = user.profilePhoto || "https://via.placeholder.com/80?text=No+Photo";
-  }
-
-  // Preview uploaded photo
-  document.getElementById('photoInput').addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('profilePhoto').src = e.target.result;
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
     };
-    reader.readAsDataURL(file);
-  });
 
-  // Save changes (here just saving to localStorage, you replace this with real API/DB)
-  document.getElementById('saveBtn').addEventListener('click', () => {
-    user.name = document.getElementById('nameInput').value.trim();
-    user.wallet = document.getElementById('walletInput').value.trim();
-    user.country = document.getElementById('countryInput').value.trim();
-    user.gender = document.getElementById('genderInput').value;
-    user.age = document.getElementById('ageInput').value;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-    // Save photo if changed (using base64 preview)
-    const photoSrc = document.getElementById('profilePhoto').src;
-    if (photoSrc && !photoSrc.startsWith('https://via.placeholder.com')) {
-      user.profilePhoto = photoSrc;
-    }
+    const name = document.getElementById("name");
+    const photoURL = document.getElementById("photoURL");
+    const wallet = document.getElementById("wallet");
+    const country = document.getElementById("country");
+    const gender = document.getElementById("gender");
+    const age = document.getElementById("age");
+    const status = document.getElementById("status");
 
-    localStorage.setItem('drfUser', JSON.stringify(user));
-    alert('Profile saved locally! (replace this with server save)');
-  });
+    let currentUser = null;
 
-  loadUser();
-</script>
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          name.value = data.name || "";
+          photoURL.value = data.photoURL || "";
+          wallet.value = data.wallet || "";
+          country.value = data.country || "";
+          gender.value = data.gender || "";
+          age.value = data.age || "";
+          status.textContent = "Profile loaded.";
+        } else {
+          status.textContent = "Profile not found. Please fill it.";
+        }
+      } else {
+        status.textContent = "You are not logged in.";
+      }
+    });
 
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentUser) {
+        alert("Login first to save your profile.");
+        return;
+      }
+
+      const userData = {
+        name: name.value,
+        photoURL: photoURL.value,
+        wallet: wallet.value,
+        country: country.value,
+        gender: gender.value,
+        age: parseInt(age.value)
+      };
+
+      try {
+        await setDoc(doc(db, "users", currentUser.uid), userData, { merge: true });
+        status.textContent = "✅ Profile saved to server.";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Error saving profile.";
+      }
+    });
+  </script>
 </body>
 </html>
