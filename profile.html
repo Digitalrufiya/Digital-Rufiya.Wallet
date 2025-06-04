@@ -2,109 +2,125 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Social - Public Profile</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, select { width: 100%; padding: 10px; margin: 10px 0; }
-    button { background: #007bff; color: white; padding: 10px; border: none; cursor: pointer; width: 100%; border-radius: 5px; }
-    button:hover { background: #0056b3; }
-    img { max-width: 100%; border-radius: 50%; margin-top: 10px; }
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    .profile-container { background: white; padding: 20px; border-radius: 10px; max-width: 500px; margin: auto; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; }
+    img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Public Profile</h2>
-    <input type="text" id="name" placeholder="Name" />
-    <input type="text" id="wallet" placeholder="Wallet Address (required)" required />
-    <input type="text" id="country" placeholder="Country" />
-    <select id="gender">
-      <option value="">Select Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select>
-    <input type="number" id="age" placeholder="Age" />
-    <input type="file" id="photo" accept="image/*" />
-    <img id="preview" src="" alt="Profile Preview" style="display:none;" />
-    <button onclick="saveProfile()">Save Profile</button>
-  </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+<div class="profile-container">
+  <h2>Public Profile</h2>
+  <img id="profilePicPreview" src="https://via.placeholder.com/100" alt="Profile Picture" />
+  <input type="file" id="profilePic" accept="image/*" />
+  <input type="text" id="name" placeholder="Name" />
+  <input type="text" id="wallet" placeholder="Wallet Address (required)" required />
+  <input type="text" id="country" placeholder="Country" />
+  <select id="gender">
+    <option value="">Select Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+    <option>Other</option>
+  </select>
+  <input type="number" id="age" placeholder="Age" />
+  <button id="saveProfile">Save Profile</button>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
 
-    async function uploadToPinata(file) {
-      const formData = new FormData();
-      formData.append("file", file);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append("pinataMetadata", metadata);
+  const profilePicInput = document.getElementById('profilePic');
+  const preview = document.getElementById('profilePicPreview');
+  let imageIPFSUrl = "";
 
-      const options = JSON.stringify({ cidVersion: 0 });
-      formData.append("pinataOptions", options);
+  profilePicInput.addEventListener('change', async () => {
+    const file = profilePicInput.files[0];
+    if (!file) return;
 
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const metadata = JSON.stringify({
+      name: file.name,
+    });
+    formData.append("pinataMetadata", metadata);
+
+    const options = JSON.stringify({
+      cidVersion: 0,
+    });
+    formData.append("pinataOptions", options);
+
+    try {
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"
         },
-        body: formData
+        body: formData,
       });
 
-      const data = await res.json();
-      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+      const result = await res.json();
+      imageIPFSUrl = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+      preview.src = imageIPFSUrl;
+
+    } catch (err) {
+      alert("Failed to upload image.");
+      console.error(err);
     }
+  });
 
-    window.saveProfile = async function () {
-      const name = document.getElementById("name").value;
-      const wallet = document.getElementById("wallet").value;
-      const country = document.getElementById("country").value;
-      const gender = document.getElementById("gender").value;
-      const age = document.getElementById("age").value;
-      const photoFile = document.getElementById("photo").files[0];
+  document.getElementById("saveProfile").addEventListener("click", async () => {
+    const wallet = document.getElementById("wallet").value.trim();
+    if (!wallet) return alert("Wallet Address is required.");
 
-      if (!wallet) return alert("Wallet address is required");
-
-      let photoURL = "";
-      if (photoFile) {
-        try {
-          photoURL = await uploadToPinata(photoFile);
-          document.getElementById("preview").src = photoURL;
-          document.getElementById("preview").style.display = "block";
-        } catch (err) {
-          alert("Failed to upload photo to IPFS");
-          console.error(err);
-          return;
-        }
-      }
-
-      const profileData = { name, wallet, country, gender, age, photoURL };
-
-      try {
-        await set(ref(database, 'profiles/' + wallet), profileData);
-        alert("Profile saved successfully!");
-      } catch (err) {
-        alert("Failed to save profile");
-        console.error(err);
-      }
+    const profile = {
+      name: document.getElementById("name").value,
+      wallet,
+      country: document.getElementById("country").value,
+      gender: document.getElementById("gender").value,
+      age: document.getElementById("age").value,
+      photo: imageIPFSUrl || preview.src
     };
-  </script>
+
+    await set(ref(db, "profiles/" + wallet), profile);
+    alert("Profile saved!");
+  });
+
+  // Auto-load profile if already exists
+  window.onload = async () => {
+    const wallet = document.getElementById("wallet").value;
+    if (!wallet) return;
+    const snapshot = await get(child(ref(db), "profiles/" + wallet));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      document.getElementById("name").value = data.name || "";
+      document.getElementById("country").value = data.country || "";
+      document.getElementById("gender").value = data.gender || "";
+      document.getElementById("age").value = data.age || "";
+      preview.src = data.photo || preview.src;
+    }
+  };
+</script>
+
 </body>
 </html>
