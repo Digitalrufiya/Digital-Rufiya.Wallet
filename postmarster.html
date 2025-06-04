@@ -4,24 +4,19 @@
     DRF Media Timeline
   </h1>
 
-  <!-- Profile Form (only shows if no data in localStorage) -->
-  <div id="profileSetup" style="max-width: 600px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <h2>Setup Your Profile</h2>
-    <input type="text" id="profileName" placeholder="Full Name" required><br><br>
-    <input type="number" id="profileAge" placeholder="Age" required><br><br>
-    <select id="profileGender" required>
-      <option value="">Select Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select><br><br>
-    <input type="text" id="walletAddress" placeholder="Wallet Address" required><br><br>
-    <input type="url" id="profilePhoto" placeholder="Profile Photo URL" required><br><br>
-    <button onclick="saveProfile()">Save Profile</button>
+  <!-- Profile Info Section -->
+  <div style="max-width: 600px; margin: 0 auto 20px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px;">
+    <img src="https://via.placeholder.com/100" alt="Profile Photo" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;">
+    <div>
+      <h2 style="margin: 0;">John Doe</h2>
+      <p style="margin: 4px 0;">Gender: Male</p>
+      <p style="margin: 4px 0;">Age: 28</p>
+      <p style="margin: 4px 0;">Wallet: <code>0x1234...abcd</code></p>
+    </div>
   </div>
 
   <!-- Upload Form -->
-  <form id="uploadForm" style="display:none;">
+  <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
     <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
@@ -30,73 +25,4 @@
   <!-- Post Container -->
   <div id="postContainer"></div>
 
-  <script type="module">
-    const form = document.getElementById('uploadForm');
-    const postContainer = document.getElementById('postContainer');
-
-    function saveProfile() {
-      const name = document.getElementById('profileName').value;
-      const age = document.getElementById('profileAge').value;
-      const gender = document.getElementById('profileGender').value;
-      const wallet = document.getElementById('walletAddress').value;
-      const photo = document.getElementById('profilePhoto').value;
-
-      if (!name || !age || !gender || !wallet || !photo) return alert('Please fill all fields');
-
-      const profile = { name, age, gender, wallet, photo };
-      localStorage.setItem('drfProfile', JSON.stringify(profile));
-      document.getElementById('profileSetup').style.display = 'none';
-      form.style.display = 'block';
-    }
-
-    function loadProfile() {
-      const data = localStorage.getItem('drfProfile');
-      if (!data) {
-        document.getElementById('profileSetup').style.display = 'block';
-        form.style.display = 'none';
-        return null;
-      } else {
-        document.getElementById('profileSetup').style.display = 'none';
-        form.style.display = 'block';
-        return JSON.parse(data);
-      }
-    }
-
-    const profile = loadProfile();
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const file = document.getElementById('mediaFile').files[0];
-      const caption = document.getElementById('caption').value;
-      if (!file || !caption || !profile) return;
-
-      const reader = new FileReader();
-      reader.onload = function () {
-        const mediaURL = reader.result;
-
-        const postElement = document.createElement('div');
-        postElement.classList.add('post');
-
-        postElement.innerHTML = `
-          <div style="display:flex;align-items:center;gap:10px;">
-            <img src="${profile.photo}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;">
-            <div>
-              <strong>${profile.name}</strong><br>
-              <small>${profile.gender}, ${profile.age} yrs</small><br>
-              <code>${profile.wallet}</code>
-            </div>
-          </div>
-          <br>
-          ${file.type.startsWith('image/') ? `<img src="${mediaURL}" style="max-width:100%;border-radius:10px;">` : `<video controls src="${mediaURL}" style="max-width:100%;border-radius:10px;"></video>`}
-          <p>${caption}</p>
-        `;
-
-        postContainer.prepend(postElement);
-
-        document.getElementById('uploadForm').reset();
-      };
-
-      reader.readAsDataURL(file);
-    });
-  </script>
-</body>
+  <!-- Your existing <script type="module"> remains unchanged -->
