@@ -20,27 +20,22 @@
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
     .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
     .post-actions span { font-weight: bold; margin-left: 4px; }
-    .user-info {
-      display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;
-    }
-    .user-info img {
-      width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
-      border: 2px solid #0066cc;
-    }
-    .user-info div {
-      font-weight: bold; color: #0066cc;
-    }
-    #filterInfo {
-      max-width: 700px; margin: 10px auto; background: #e0f0ff; padding: 10px; border-radius: 8px; font-size: 14px;
-      text-align: center;
-    }
-    #filterInfo button {
-      margin-left: 10px; padding: 4px 8px; font-size: 12px;
-    }
+    .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .user-info img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .user-name { font-weight: bold; }
   </style>
 </head>
 <body>
   <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
+
+  <!-- Let's assume user info is hardcoded or fetched from auth session -->
+  <script>
+    // Simulate logged-in user profile info
+    const currentUser = {
+      username: "digitalrufiya",
+      profilePic: "https://i.pravatar.cc/150?img=3" // Example profile pic URL (replace with actual user photo URL)
+    };
+  </script>
 
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -48,16 +43,11 @@
     <button type="submit">Post</button>
   </form>
 
-  <div id="filterInfo" style="display:none;">
-    Showing posts by <span id="filterUserName"></span>
-    <button id="clearFilterBtn">Show All</button>
-  </div>
-
   <div id="postContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -73,29 +63,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // PINATA_JWT from your original code (keep safe)
     const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
     const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
-    const filterInfo = document.getElementById('filterInfo');
-    const filterUserNameSpan = document.getElementById('filterUserName');
-    const clearFilterBtn = document.getElementById('clearFilterBtn');
-
-    // --- MOCK CURRENT USER (replace with real auth user ID in your app)
-    const currentUserId = "user123"; 
-
-    // Mock current user info - in real app, load from Firebase DB 'users/{userId}'
-    const currentUserInfo = {
-      id: currentUserId,
-      name: "John Doe",
-      photoURL: "https://randomuser.me/api/portraits/men/32.jpg",
-      country: "USA",
-      age: 30,
-      walletAddress: "0x123...abc"
-    };
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -119,12 +92,97 @@
       return 'unknown';
     }
 
-    // Store posts in an array to filter
-    let allPosts = [];
-    let filteredUserId = null;
-
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file ||
+      if (!file || !caption) return alert('Please select a file and caption.');
+
+      const button = uploadForm.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Posting...';
+
+      try {
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+
+        // Attach currentUser profile info here:
+        const postData = {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: [],
+          user: {
+            username: currentUser.username,
+            profilePic: currentUser.profilePic
+          }
+        };
+
+        await push(ref(db, 'posts'), postData);
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Post';
+      }
+    });
+
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, (snapshot) => {
+      postContainer.innerHTML = '';
+      const posts = [];
+
+      snapshot.forEach((child) => {
+        const post = child.val();
+        post.id = child.key;
+        posts.push(post);
+      });
+
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      posts.forEach((post) => {
+        const div = document.createElement('div');
+        div.className = 'post-item';
+
+        // user profile html
+        const userProfileHTML = post.user ? `
+          <div class="user-info">
+            <img src="${post.user.profilePic}" alt="${post.user.username} profile picture" />
+            <div class="user-name">${post.user.username}</div>
+          </div>
+        ` : '';
+
+        const mediaHTML = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        div.innerHTML = `
+          ${userProfileHTML}
+          ${mediaHTML}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button class="like-btn">👍 <span>${post.likes || 0}</span></button>
+            <button class="comment-btn">💬 <span>${post.comments?.length || 0}</span></button>
+          </div>
+        `;
+
+        // Like button functionality
+        const likeBtn = div.querySelector('.like-btn');
+        likeBtn.addEventListener('click', async () => {
+          const newLikes = (post.likes || 0) + 1;
+          await update(ref(db, 'posts/' + post.id), { likes: newLikes });
+        });
+
+        postContainer.appendChild(div);
+      });
+    });
+  </script>
+</body>
+</html>
