@@ -3,337 +3,145 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Profile & Post with Pinata + Firebase</title>
+<title>Post with Pinata + Firebase</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-  input, textarea { width: 100%; margin: 6px 0; padding: 8px; }
-  button { padding: 8px 12px; margin-top: 10px; cursor: pointer; }
-  img.profile-photo, img.post-photo { max-width: 150px; border-radius: 50%; }
-  .post { border: 1px solid #ccc; margin: 12px 0; padding: 12px; border-radius: 8px; }
-  .post img { max-width: 300px; border-radius: 8px; margin-top: 8px; }
-  .reaction { cursor: pointer; margin-right: 10px; user-select: none; }
-  .comments { margin-top: 8px; font-size: 0.9em; }
-  .comment-input { width: 90%; }
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+  textarea { width: 100%; height: 80px; }
+  img.post-img { max-width: 100%; max-height: 300px; margin-top: 10px; }
+  .post { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+  .post img { max-width: 100%; max-height: 200px; }
+  .post-time { font-size: 0.8em; color: #666; }
 </style>
 </head>
 <body>
 
-<h2>Your Profile</h2>
-<div>
-  <img id="profilePhotoPreview" class="profile-photo" src="" alt="Profile Photo" />
-  <br/>
-  <input type="file" id="profilePhotoInput" accept="image/*" />
-  <input type="text" id="nameInput" placeholder="Your Name" />
-  <textarea id="bioInput" rows="3" placeholder="Bio"></textarea>
-  <input type="text" id="walletInput" placeholder="Your Wallet Address" />
-  <button id="saveProfileBtn">Save Profile</button>
-  <div id="profileStatus"></div>
-</div>
-
-<hr />
-
 <h2>Create a Post</h2>
-<div>
-  <textarea id="postTextInput" rows="3" placeholder="What's on your mind?"></textarea><br/>
-  <input type="file" id="postImageInput" accept="image/*" />
-  <br/>
-  <button id="postSubmitBtn">Post</button>
-  <div id="postStatus"></div>
-</div>
 
-<hr />
+<textarea id="postText" placeholder="Write your post..."></textarea><br />
+<input type="file" id="imageFile" accept="image/*" /><br /><br />
+<button id="submitBtn">Post</button>
 
-<h2>Posts Feed</h2>
-<div id="postsFeed"></div>
+<h2>Posts</h2>
+<div id="postsContainer"></div>
 
 <script type="module">
-// === Firebase Setup ===
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  addDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  updateDoc,
-  arrayUnion
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.firebasestorage.app",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-  measurementId: "G-W6VHMP77YR"
-};
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-// === Pinata Config ===
-const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+  // Your provided Pinata JWT token (Secret Access Token)
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-// === Utility to upload file to Pinata ===
-async function uploadToPinata(file) {
-  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-  const formData = new FormData();
-  formData.append("file", file);
+  // Upload file to Pinata
+  async function uploadFileToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${PINATA_JWT}`
-    },
-    body: formData
-  });
-
-  if (!response.ok) throw new Error("Pinata upload failed");
-
-  const data = await response.json();
-  return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-}
-
-// === Elements ===
-const profilePhotoInput = document.getElementById("profilePhotoInput");
-const profilePhotoPreview = document.getElementById("profilePhotoPreview");
-const nameInput = document.getElementById("nameInput");
-const bioInput = document.getElementById("bioInput");
-const walletInput = document.getElementById("walletInput");
-const saveProfileBtn = document.getElementById("saveProfileBtn");
-const profileStatus = document.getElementById("profileStatus");
-
-const postTextInput = document.getElementById("postTextInput");
-const postImageInput = document.getElementById("postImageInput");
-const postSubmitBtn = document.getElementById("postSubmitBtn");
-const postStatus = document.getElementById("postStatus");
-const postsFeed = document.getElementById("postsFeed");
-
-// === State ===
-let currentProfile = null;
-let currentWallet = "";
-
-// === Load Profile if wallet exists ===
-async function loadProfile(wallet) {
-  if (!wallet) return;
-  const docRef = doc(db, "users", wallet);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    currentProfile = docSnap.data();
-    nameInput.value = currentProfile.name || "";
-    bioInput.value = currentProfile.bio || "";
-    walletInput.value = wallet;
-    if(currentProfile.photoUrl) {
-      profilePhotoPreview.src = currentProfile.photoUrl;
-    } else {
-      profilePhotoPreview.src = "";
-    }
-  } else {
-    currentProfile = null;
-    nameInput.value = "";
-    bioInput.value = "";
-    walletInput.value = wallet;
-    profilePhotoPreview.src = "";
-  }
-}
-
-// === Save Profile ===
-saveProfileBtn.addEventListener("click", async () => {
-  profileStatus.textContent = "Saving profile...";
-  try {
-    if (!walletInput.value.trim()) throw new Error("Wallet address required");
-
-    let photoUrl = currentProfile?.photoUrl || "";
-    if (profilePhotoInput.files.length > 0) {
-      photoUrl = await uploadToPinata(profilePhotoInput.files[0]);
-    }
-
-    const userDoc = {
-      name: nameInput.value.trim(),
-      bio: bioInput.value.trim(),
-      wallet: walletInput.value.trim(),
-      photoUrl,
-      updatedAt: new Date()
-    };
-
-    await setDoc(doc(db, "users", userDoc.wallet), userDoc);
-    currentProfile = userDoc;
-    profilePhotoPreview.src = photoUrl;
-    profileStatus.textContent = "Profile saved!";
-  } catch (err) {
-    profileStatus.textContent = "Error: " + err.message;
-  }
-});
-
-// === Create Post ===
-postSubmitBtn.addEventListener("click", async () => {
-  postStatus.textContent = "Posting...";
-  try {
-    if (!walletInput.value.trim()) throw new Error("Fill profile wallet first");
-
-    const postText = postTextInput.value.trim();
-    if (!postText && postImageInput.files.length === 0) {
-      throw new Error("Post text or image required");
-    }
-
-    let postImageUrl = "";
-    if (postImageInput.files.length > 0) {
-      postImageUrl = await uploadToPinata(postImageInput.files[0]);
-    }
-
-    const postDoc = {
-      wallet: walletInput.value.trim(),
-      name: currentProfile?.name || "Anonymous",
-      photoUrl: currentProfile?.photoUrl || "",
-      text: postText,
-      imageUrl: postImageUrl,
-      createdAt: new Date(),
-      likes: [],
-      comments: []
-    };
-
-    await addDoc(collection(db, "posts"), postDoc);
-    postStatus.textContent = "Post created!";
-    postTextInput.value = "";
-    postImageInput.value = "";
-  } catch (err) {
-    postStatus.textContent = "Error: " + err.message;
-  }
-});
-
-// === Render Posts ===
-function renderPosts(posts) {
-  postsFeed.innerHTML = "";
-  posts.forEach((post) => {
-    const div = document.createElement("div");
-    div.classList.add("post");
-
-    // Post header with user info
-    div.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        <img src="${post.photoUrl || "https://via.placeholder.com/50"}" alt="User" style="width:50px; height:50px; border-radius:50%;" />
-        <div>
-          <b>${post.name || "Anonymous"}</b><br/>
-          <small>${new Date(post.createdAt.seconds ? post.createdAt.seconds * 1000 : post.createdAt).toLocaleString()}</small>
-        </div>
-      </div>
-      <p>${post.text ? post.text.replace(/\n/g,"<br>") : ""}</p>
-      ${post.imageUrl ? `<img class="post-photo" src="${post.imageUrl}" />` : ""}
-      <div>
-        <span class="reaction like-btn" style="color:${post.likes.includes(currentWallet) ? 'red' : 'gray'};">
-          ❤️ ${post.likes.length}
-        </span>
-        <span class="reaction comment-btn">💬 ${post.comments.length}</span>
-        <span class="reaction share-btn">🔗 Share</span>
-      </div>
-      <div class="comments" style="display:none;">
-        <div class="comments-list"></div>
-        <input type="text" class="comment-input" placeholder="Write a comment..." />
-        <button class="comment-submit-btn">Submit</button>
-      </div>
-    `;
-
-    // Like button event
-    const likeBtn = div.querySelector(".like-btn");
-    likeBtn.onclick = async () => {
-      const postRef = doc(db, "posts", post.id);
-      if (post.likes.includes(currentWallet)) {
-        // Unlike
-        await updateDoc(postRef, {
-          likes: post.likes.filter(w => w !== currentWallet)
-        });
-      } else {
-        // Like
-        await updateDoc(postRef, {
-          likes: arrayUnion(currentWallet)
-        });
-      }
-    };
-
-    // Comment button toggle
-    const commentBtn = div.querySelector(".comment-btn");
-    const commentsDiv = div.querySelector(".comments");
-    commentBtn.onclick = () => {
-      commentsDiv.style.display = commentsDiv.style.display === "none" ? "block" : "none";
-      if(commentsDiv.style.display === "block") {
-        renderComments();
-      }
-    };
-
-    // Render comments
-    function renderComments() {
-      const commentsList = commentsDiv.querySelector(".comments-list");
-      commentsList.innerHTML = "";
-      post.comments.forEach(cmt => {
-        const cmtDiv = document.createElement("div");
-        cmtDiv.textContent = `${cmt.user}: ${cmt.text}`;
-        commentsList.appendChild(cmtDiv);
-      });
-    }
-
-    // Submit comment
-    const commentSubmitBtn = div.querySelector(".comment-submit-btn");
-    const commentInput = div.querySelector(".comment-input");
-    commentSubmitBtn.onclick = async () => {
-      const text = commentInput.value.trim();
-      if (!text) return alert("Comment cannot be empty");
-      const postRef = doc(db, "posts", post.id);
-      await updateDoc(postRef, {
-        comments: arrayUnion({ user: currentWallet, text })
-      });
-      commentInput.value = "";
-    };
-
-    // Share button (copies post link)
-    const shareBtn = div.querySelector(".share-btn");
-    shareBtn.onclick = () => {
-      const postLink = `${window.location.origin}${window.location.pathname}?postId=${post.id}`;
-      navigator.clipboard.writeText(postLink);
-      alert("Post link copied!");
-    };
-
-    postsFeed.appendChild(div);
-  });
-}
-
-// === Listen to posts realtime ===
-function listenToPosts() {
-  const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-  onSnapshot(postsQuery, (snapshot) => {
-    const posts = [];
-    snapshot.forEach((doc) => {
-      posts.push({ id: doc.id, ...doc.data() });
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+      body: formData,
     });
-    renderPosts(posts);
-  });
-}
 
-// === On load ===
-window.onload = async () => {
-  // You can pre-fill walletInput if you get wallet address elsewhere
-  // For demo, let user input wallet manually first
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error("Pinata upload failed: " + errorText);
+    }
 
-  // Save wallet for sessionStorage persistence
-  if(sessionStorage.getItem("wallet")) {
-    walletInput.value = sessionStorage.getItem("wallet");
-    currentWallet = walletInput.value.trim();
-    await loadProfile(currentWallet);
-    listenToPosts();
+    const data = await response.json();
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
   }
-};
 
-walletInput.addEventListener("change", async () => {
-  currentWallet = walletInput.value.trim();
-  sessionStorage.setItem("wallet", currentWallet);
-  await loadProfile(currentWallet);
-});
+  // Save post to Firestore
+  async function savePost(text, imageUrl = null) {
+    try {
+      await addDoc(collection(db, "posts"), {
+        text,
+        imageUrl,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error adding document: ", error);
+    }
+  }
 
+  // Listen for posts realtime
+  function listenPosts() {
+    const postsContainer = document.getElementById("postsContainer");
+    const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+
+    onSnapshot(postsQuery, (snapshot) => {
+      postsContainer.innerHTML = ""; // clear container
+
+      snapshot.forEach((doc) => {
+        const post = doc.data();
+
+        let timeText = "";
+        if (post.createdAt && post.createdAt.toDate) {
+          timeText = new Date(post.createdAt.toDate()).toLocaleString();
+        }
+
+        const div = document.createElement("div");
+        div.classList.add("post");
+        div.innerHTML = `
+          <p>${post.text ? post.text : ''}</p>
+          ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-img" />` : ""}
+          <div class="post-time">${timeText}</div>
+        `;
+
+        postsContainer.appendChild(div);
+      });
+    });
+  }
+
+  // Handle submit
+  document.getElementById("submitBtn").addEventListener("click", async () => {
+    const text = document.getElementById("postText").value.trim();
+    const fileInput = document.getElementById("imageFile");
+    const file = fileInput.files[0];
+
+    if (!text && !file) {
+      alert("Write something or upload an image.");
+      return;
+    }
+
+    let imageUrl = null;
+
+    if (file) {
+      try {
+        imageUrl = await uploadFileToPinata(file);
+      } catch (error) {
+        alert("Image upload failed: " + error.message);
+        return;
+      }
+    }
+
+    await savePost(text, imageUrl);
+
+    // Clear form
+    document.getElementById("postText").value = "";
+    fileInput.value = "";
+  });
+
+  // Start listening for posts
+  listenPosts();
 </script>
 
 </body>
