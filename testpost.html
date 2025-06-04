@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Social Auto Post</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .post-box { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Create Post</h2>
+  <input type="file" id="mediaFile" accept="image/*,video/*" /><br /><br />
+  <textarea id="caption" placeholder="Write a caption..."></textarea><br /><br />
+  <button onclick="uploadPost()">Post</button>
+
+  <h2>Post Feed</h2>
+  <div id="postFeed"></div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onChildAdded } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const jwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...`; // <-- SHORTENED for privacy, replace with full token
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        return accounts[0];
+      } else {
+        alert('Please install MetaMask');
+        throw new Error('No wallet');
+      }
+    }
+
+    async function uploadPost() {
+      const file = document.getElementById('mediaFile').files[0];
+      const caption = document.getElementById('caption').value;
+      if (!file) return alert("Select a file");
+
+      const wallet = await connectWallet();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
+      formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
+
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${jwt}` },
+        body: formData
+      });
+
+      const data = await res.json();
+      const ipfsHash = data.IpfsHash;
+      const mediaURL = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+      const post = {
+        user: wallet,
+        caption: caption,
+        mediaType: file.type.startsWith('video') ? 'video' : 'image',
+        mediaURL: mediaURL,
+        timestamp: Date.now()
+      };
+
+      const postsRef = ref(db, 'posts');
+      const newPostRef = push(postsRef);
+      await set(newPostRef, post);
+
+      alert("Posted successfully!");
+    }
+
+    function renderPost(post) {
+      const el = document.createElement('div');
+      el.className = 'post-box';
+      el.innerHTML = `
+        <p><strong>${post.user}</strong></p>
+        <p>${post.caption || ''}</p>
+        ${post.mediaType === 'image' ? `<img src="${post.mediaURL}" width="100%">` : ''}
+        ${post.mediaType === 'video' ? `<video controls src="${post.mediaURL}" width="100%"></video>` : ''}
+        <p><small>${new Date(post.timestamp).toLocaleString()}</small></p>
+      `;
+      document.getElementById('postFeed').prepend(el);
+    }
+
+    function loadPosts() {
+      const postsRef = ref(db, 'posts');
+      onChildAdded(postsRef, (snapshot) => {
+        const post = snapshot.val();
+        renderPost(post);
+      });
+    }
+
+    loadPosts();
+  </script>
+</body>
+</html>
