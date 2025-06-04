@@ -35,7 +35,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -56,11 +56,7 @@
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
 
-    // IMPORTANT: Replace with your Pinata JWT
-    const PINATA_JWT = "<your_pinata_jwt_here>";
-    if (PINATA_JWT === "<your_pinata_jwt_here>") {
-      alert("Please replace PINATA_JWT with your actual Pinata JWT token.");
-    }
+    const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace with real JWT
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -89,7 +85,7 @@
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and enter a caption.');
+      if (!file || !caption) return alert('Please select a file and caption.');
 
       try {
         uploadForm.querySelector('button').disabled = true;
@@ -121,10 +117,18 @@
     const postsRef = ref(db, 'posts/');
     onValue(postsRef, (snapshot) => {
       postContainer.innerHTML = '';
+      const postsArray = [];
+
       snapshot.forEach((child) => {
         const postId = child.key;
         const post = child.val();
+        post.id = postId;
+        postsArray.push(post);
+      });
 
+      postsArray.sort((a, b) => b.timestamp - a.timestamp); // Newest on top
+
+      postsArray.forEach((post) => {
         const postDiv = document.createElement('div');
         postDiv.classList.add('post-item');
 
@@ -137,47 +141,30 @@
           <p class="post-caption">${post.caption}</p>
           <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
           <div class="post-actions">
-            <button id="likeBtn-${postId}">👍 Like <span>${post.likes || 0}</span></button>
-            <button id="commentBtn-${postId}">💬 Comment</button>
-            <button id="shareBtn-${postId}">🔗 Share</button>
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
           </div>
         `;
 
         postContainer.appendChild(postDiv);
-
-        document.getElementById(`likeBtn-${postId}`).onclick = async () => {
-          try {
-            const postRef = ref(db, `posts/${postId}`);
-            const snapshot = await get(postRef);
-            const currentLikes = snapshot.val()?.likes || 0;
-            await update(postRef, { likes: currentLikes + 1 });
-          } catch (err) {
-            alert('Failed to update like: ' + err.message);
-          }
-        };
-
-        document.getElementById(`commentBtn-${postId}`).onclick = async () => {
-          const comment = prompt("Enter your comment:");
-          if (!comment) return;
-          try {
-            const postRef = ref(db, `posts/${postId}/comments`);
-            await push(postRef, {
-              text: comment,
-              timestamp: Date.now()
-            });
-            alert("Comment added!");
-          } catch {
-            alert("Failed to add comment.");
-          }
-        };
-
-        document.getElementById(`shareBtn-${postId}`).onclick = () => {
-          navigator.clipboard.writeText(post.fileUrl).then(() => {
-            alert("Post link copied!");
-          });
-        };
       });
     });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
+      update(postRef, { likes: current + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment received. Will be added in next version.");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
   </script>
 </body>
 </html>
