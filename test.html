@@ -2,232 +2,182 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Browser</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Timeline</title>
   <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      padding: 1rem;
-      background: #f0f0f0;
-      text-align: center;
-      color: #333;
-    }
-
-    .tauheed-banner {
-      background-color: black;
-      color: white;
-      padding: 15px 30px;
-      font-size: 28px;
-      font-weight: bold;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.8);
-      font-family: 'Scheherazade New', serif, 'Arial', sans-serif;
-      max-width: 90%;
-      user-select: none;
-      cursor: default;
-      line-height: 1.5;
-      margin: 30px auto;
-      direction: rtl;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-
-    .icon {
-      background: white;
-      border-radius: 1rem;
-      padding: 1rem;
-      text-align: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .icon:hover {
-      transform: scale(1.05);
-    }
-
-    /* Styles for the 5 new buttons container */
-    .five-buttons {
-      margin-top: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      max-width: 400px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .five-buttons button {
-      background-color: #007bff;
-      border: none;
-      color: white;
-      padding: 15px 20px;
-      font-size: 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      width: 100%;
-      font-weight: 600;
-    }
-
-    .five-buttons button:hover {
-      background-color: #0056b3;
-    }
-
-    .bookmark-section {
-      margin-top: 2rem;
-    }
-
-    .bookmark {
-      background: #fff;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .bookmark a {
-      text-decoration: none;
-      color: #333;
-    }
-
-    .remove {
-      color: red;
-      cursor: pointer;
-    }
-
-    input[type="search"] {
-      width: 100%;
-      padding: 0.75rem;
-      margin: 1rem 0;
-      font-size: 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid #ccc;
-    }
-
-    #quranVerse {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 1rem;
-      margin-top: 1rem;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
+  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
 
-  <div class="tauheed-banner" title="The banner of Tauheed: Allah’s Oneness and Mercy encompasses all creation. Islam is the religion pleasing to Allah.">
-    لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ
-  </div>
+  <form id="uploadForm">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
 
-  <h1>🕋 DRF Ecosystem Browser</h1>
+  <div id="postContainer"></div>
 
-  <input type="search" id="drfSearch" placeholder="Search Google or type a DRF module..." onkeydown="handleSearch(event)" />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  <div class="grid">
-    <div class="icon" onclick="navigateTo('wallet.html')">💼 Wallet</div>
-    <div class="icon" onclick="navigateTo('university.html')">🎓 DRF University</div>
-    <div class="icon" onclick="navigateTo('donate.html')">💖 DRF Charity</div>
-    <div class="icon" onclick="navigateTo('game.html')">🕹️ Game</div>
-    <div class="icon" onclick="navigateTo('social.html')">🌐 DRF Social Media</div>
-    <div class="icon" onclick="navigateTo('robo.html')">🤖 DRF Robo</div>
-    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ DRF Explorer</div>
-  </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
 
-  <!-- Your requested 5 buttons -->
-  <div class="five-buttons">
-    <button onclick="window.location.href='quran.html'">Quranic Intelligence System</button>
-    <button onclick="window.location.href='drftube.html'">DRFTube</button>
-    <button onclick="window.location.href='mp3.html'">DRFM MP3 Player Offline</button>
-    <button onclick="window.location.href='drfinteligence.html'">DRF Intelligence</button>
-    <button onclick="window.location.href='drfknowledge.html'">DRF Knowledge Base</button>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  <h2 class="bookmark-section">🔖 Bookmarks</h2>
-  <div id="bookmarkList"></div>
+    const postContainer = document.getElementById('postContainer');
+    const uploadForm = document.getElementById('uploadForm');
+    const mediaFileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
 
-  <h3>📖 Daily Quran Reminder</h3>
-  <div id="quranVerse">Loading Quran verse...</div>
-
-  <script>
-    function navigateTo(url) {
-      const title = prompt('Add Bookmark Title (optional):', url);
-      if (title !== null) {
-        const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-        bookmarks.push({ title: title || url, url });
-        localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
-        renderBookmarks();
-      }
-      window.location.href = url;
+    // IMPORTANT: Replace with your Pinata JWT
+    const PINATA_JWT = "<your_pinata_jwt_here>";
+    if (PINATA_JWT === "<your_pinata_jwt_here>") {
+      alert("Please replace PINATA_JWT with your actual Pinata JWT token.");
     }
 
-    function removeBookmark(index) {
-      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-      bookmarks.splice(index, 1);
-      localStorage.setItem('drfBookmarks', JSON.stringify(bookmarks));
-      renderBookmarks();
-    }
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
 
-    function renderBookmarks() {
-      const bookmarks = JSON.parse(localStorage.getItem('drfBookmarks') || '[]');
-      bookmarkList.innerHTML = '';
-      bookmarks.forEach((b, i) => {
-        const div = document.createElement('div');
-        div.className = 'bookmark';
-        div.innerHTML = `<a href="${b.url}">${b.title}</a> <span class="remove" onclick="removeBookmark(${i})">🗑️</span>`;
-        bookmarkList.appendChild(div);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData,
       });
+
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
     }
 
-    function handleSearch(e) {
-      if (e.key === 'Enter') {
-        const query = e.target.value.trim();
-        if (!query) return;
-        if (query.startsWith('http') || query.endsWith('.html')) {
-          window.location.href = query;
-        } else {
-          window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
-        }
-      }
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
     }
 
-    async function loadQuranVerse() {
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) return alert('Please select a file and enter a caption.');
+
       try {
-        const res = await fetch('https://api.alquran.cloud/v1/ayah/random');
-        const data = await res.json();
-        if (data.status === 'OK') {
-          const verse = data.data;
-          document.getElementById('quranVerse').innerHTML =
-            `<strong>${verse.surah.name} [${verse.numberInSurah}]</strong><br>${verse.text}`;
-        } else {
-          throw new Error("Failed to fetch verse.");
-        }
-      } catch (err) {
-        document.getElementById('quranVerse').innerText = "Failed to load verse.";
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
+
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: []
+        });
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
       }
-    }
+    });
 
-    renderBookmarks();
-    loadQuranVerse();
-  </script>
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, (snapshot) => {
+      postContainer.innerHTML = '';
+      snapshot.forEach((child) => {
+        const postId = child.key;
+        const post = child.val();
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log('✅ Service Worker registered'))
-        .catch(err => console.warn('⚠️ Service Worker failed', err));
-    }
+        const postDiv = document.createElement('div');
+        postDiv.classList.add('post-item');
+
+        let mediaHtml = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        postDiv.innerHTML = `
+          ${mediaHtml}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button id="likeBtn-${postId}">👍 Like <span>${post.likes || 0}</span></button>
+            <button id="commentBtn-${postId}">💬 Comment</button>
+            <button id="shareBtn-${postId}">🔗 Share</button>
+          </div>
+        `;
+
+        postContainer.appendChild(postDiv);
+
+        document.getElementById(`likeBtn-${postId}`).onclick = async () => {
+          try {
+            const postRef = ref(db, `posts/${postId}`);
+            const snapshot = await get(postRef);
+            const currentLikes = snapshot.val()?.likes || 0;
+            await update(postRef, { likes: currentLikes + 1 });
+          } catch (err) {
+            alert('Failed to update like: ' + err.message);
+          }
+        };
+
+        document.getElementById(`commentBtn-${postId}`).onclick = async () => {
+          const comment = prompt("Enter your comment:");
+          if (!comment) return;
+          try {
+            const postRef = ref(db, `posts/${postId}/comments`);
+            await push(postRef, {
+              text: comment,
+              timestamp: Date.now()
+            });
+            alert("Comment added!");
+          } catch {
+            alert("Failed to add comment.");
+          }
+        };
+
+        document.getElementById(`shareBtn-${postId}`).onclick = () => {
+          navigator.clipboard.writeText(post.fileUrl).then(() => {
+            alert("Post link copied!");
+          });
+        };
+      });
+    });
   </script>
 </body>
 </html>
