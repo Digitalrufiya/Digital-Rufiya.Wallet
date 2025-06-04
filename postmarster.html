@@ -1,127 +1,280 @@
-<!-- drf-social.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Social App</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const pinataJwt = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`;
-
-    const connectWallet = async () => {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        document.getElementById('userAddress').innerText = accounts[0];
-        return accounts[0];
-      } else {
-        alert("Install MetaMask or DRF Wallet.");
-      }
-    };
-
-    const uploadToPinata = async (file) => {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: {
-          Authorization: pinataJwt,
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-    };
-
-    document.getElementById("profileForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("name").value;
-      const bio = document.getElementById("bio").value;
-      const file = document.getElementById("profilePic").files[0];
-      const wallet = await connectWallet();
-
-      let imageUrl = "";
-      if (file) imageUrl = await uploadToPinata(file);
-
-      set(ref(db, 'profiles/' + wallet), { name, bio, imageUrl });
-      alert("Profile saved!");
-    });
-
-    document.getElementById("postForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const caption = document.getElementById("caption").value;
-      const file = document.getElementById("media").files[0];
-      const wallet = await connectWallet();
-
-      let mediaUrl = "";
-      if (file) mediaUrl = await uploadToPinata(file);
-
-      push(ref(db, 'posts'), {
-        wallet,
-        caption,
-        mediaUrl,
-        timestamp: Date.now()
-      });
-      alert("Post uploaded!");
-    });
-
-    // Auto-fetch posts
-    const postsRef = ref(db, 'posts');
-    onValue(postsRef, (snapshot) => {
-      const container = document.getElementById("feed");
-      container.innerHTML = "";
-      snapshot.forEach(postSnap => {
-        const post = postSnap.val();
-        const card = document.createElement("div");
-        card.innerHTML = `
-          <div><b>${post.wallet}</b></div>
-          <div>${post.caption}</div>
-          <img src="${post.mediaUrl}" width="200" />
-          <hr/>
-        `;
-        container.prepend(card);
-      });
-    });
-
-    window.addEventListener('load', connectWallet);
-  </script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Social - Profile & Posts</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
+  h1, h2 { text-align: center; }
+  label { display: block; margin: 10px 0 5px; }
+  input[type="text"], input[type="file"] { width: 100%; }
+  img.avatar-preview { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin-top: 10px; }
+  button { padding: 10px 20px; margin-top: 10px; cursor: pointer; }
+  .post-item { border: 1px solid #ddd; padding: 10px; margin: 15px 0; border-radius: 8px; }
+  .post-caption { margin-top: 10px; }
+  .post-time { font-size: 0.8em; color: gray; margin-top: 5px; }
+  .post-actions button { margin-right: 10px; }
+  video { max-width: 100%; border-radius: 8px; }
+  img.post-media { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+</style>
 </head>
 <body>
-  <h2>Welcome, <span id="userAddress">[Not connected]</span></h2>
-  <h3>Update Profile</h3>
-  <form id="profileForm">
-    <input type="text" id="name" placeholder="Name" required><br>
-    <input type="text" id="bio" placeholder="Bio" required><br>
-    <input type="file" id="profilePic" accept="image/*"><br>
+
+<h1>DRF Social</h1>
+
+<section id="profile-section">
+  <h2>Update Profile</h2>
+  <form id="profile-form">
+    <label for="profile-name">Display Name</label>
+    <input type="text" id="profile-name" placeholder="Enter your display name" required />
+    
+    <label for="profile-avatar">Avatar Image (optional)</label>
+    <input type="file" id="profile-avatar" accept="image/*" />
+    <img id="avatar-preview" class="avatar-preview" src="https://via.placeholder.com/60" alt="Avatar Preview" />
+    
     <button type="submit">Save Profile</button>
   </form>
+</section>
 
-  <h3>Create Post</h3>
-  <form id="postForm">
-    <textarea id="caption" placeholder="Say something..." required></textarea><br>
-    <input type="file" id="media" accept="image/*,video/*"><br>
+<hr />
+
+<section id="post-section">
+  <h2>Create Post</h2>
+  <form id="upload-form">
+    <label for="post-caption">Caption</label>
+    <input type="text" id="post-caption" placeholder="Write something..." required />
+    
+    <label for="media-file">Upload Image or Video</label>
+    <input type="file" id="media-file" accept="image/*,video/*" required />
+    
     <button type="submit">Post</button>
   </form>
+</section>
 
-  <h3>📸 Feed</h3>
-  <div id="feed"></div>
+<hr />
+
+<section id="posts-list">
+  <h2>Posts</h2>
+  <div id="post-container">Loading posts...</div>
+</section>
+
+<!-- Firebase SDK and your config -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, onValue, update, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+  // Your Firebase config from your message
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.firebasestorage.app",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Pinata API JWT from your message (BE CAREFUL TO NOT SHARE THIS PUBLICLY IN REAL APPS!)
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  // Fake user ID (for demo, store in localStorage so it persists on reload)
+  let currentUserId = localStorage.getItem("drfUserId");
+  if (!currentUserId) {
+    currentUserId = "user_" + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem("drfUserId", currentUserId);
+  }
+
+  // DOM elements
+  const profileForm = document.getElementById("profile-form");
+  const profileNameInput = document.getElementById("profile-name");
+  const avatarFileInput = document.getElementById("profile-avatar");
+  const profileAvatarPreview = document.getElementById("avatar-preview");
+
+  const uploadForm = document.getElementById("upload-form");
+  const captionInput = document.getElementById("post-caption");
+  const mediaFileInput = document.getElementById("media-file");
+
+  const postContainer = document.getElementById("post-container");
+
+  // Load profile from Firebase
+  async function loadProfile() {
+    const userRef = ref(db, "users/" + currentUserId);
+    const snapshot = await get(userRef);
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      profileNameInput.value = data.name || "";
+      profileAvatarPreview.src = data.avatarUrl || "https://via.placeholder.com/60";
+    }
+  }
+  loadProfile();
+
+  // Preview avatar before upload
+  avatarFileInput.addEventListener("change", () => {
+    const file = avatarFileInput.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        profileAvatarPreview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Upload a file to Pinata
+  async function uploadToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(url, {
+      method: "POST",
+      body: formData,
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Pinata upload failed");
+
+    const data = await res.json();
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
+
+  // Save profile data
+  profileForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = profileNameInput.value.trim();
+    if (!name) return alert("Please enter your display name.");
+
+    let avatarUrl = profileAvatarPreview.src;
+    if (avatarFileInput.files.length > 0) {
+      try {
+        avatarUrl = await uploadToPinata(avatarFileInput.files[0]);
+      } catch (err) {
+        alert("Avatar upload failed: " + err.message);
+        return;
+      }
+    }
+
+    const userRef = ref(db, "users/" + currentUserId);
+    await update(userRef, { name, avatarUrl });
+    alert("Profile saved!");
+  });
+
+  // Create post in Firebase
+  async function createPost(caption, mediaUrl, mediaType) {
+    const postsRef = ref(db, "posts");
+    const userRef = ref(db, "users/" + currentUserId);
+    const userSnap = await get(userRef);
+    const profileData = userSnap.exists()
+      ? userSnap.val()
+      : { name: "Anonymous", avatarUrl: "https://via.placeholder.com/60" };
+
+    const newPost = {
+      caption,
+      mediaUrl,
+      mediaType,
+      createdAt: Date.now(),
+      userId: currentUserId,
+      userName: profileData.name,
+      userAvatar: profileData.avatarUrl,
+      likes: 0,
+      dislikes: 0,
+    };
+    await push(postsRef, newPost);
+  }
+
+  // Render posts
+  function renderPosts(posts) {
+    postContainer.innerHTML = "";
+    const postsArray = Object.entries(posts).sort((a, b) => b[1].createdAt - a[1].createdAt);
+    postsArray.forEach(([id, post]) => {
+      const postDiv = document.createElement("div");
+      postDiv.className = "post-item";
+
+      const profileHTML = `
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <img src="${post.userAvatar || "https://via.placeholder.com/60"}" alt="Avatar" style="width:40px; height:40px; border-radius:50%; object-fit:cover;" />
+          <strong>${post.userName || "Anonymous"}</strong>
+        </div>
+      `;
+
+      let mediaHTML = "";
+      if (post.mediaUrl) {
+        if (post.mediaType.startsWith("video")) {
+          mediaHTML = `<video src="${post.mediaUrl}" controls></video>`;
+        } else {
+          mediaHTML = `<img src="${post.mediaUrl}" class="post-media" alt="Post media" />`;
+        }
+      }
+
+      const captionHTML = `<p class="post-caption">${post.caption}</p>`;
+      const timeHTML = `<p class="post-time">${new Date(post.createdAt).toLocaleString()}</p>`;
+
+      const actionsHTML = `
+        <div class="post-actions">
+          <button class="like-btn" data-id="${id}">👍 <span>${post.likes || 0}</span></button>
+          <button class="dislike-btn" data-id="${id}">👎 <span>${post.dislikes || 0}</span></button>
+        </div>
+      `;
+
+      postDiv.innerHTML = profileHTML + mediaHTML + captionHTML + timeHTML + actionsHTML;
+      postContainer.appendChild(postDiv);
+    });
+
+    // Attach event listeners for likes/dislikes
+    document.querySelectorAll(".like-btn").forEach((btn) => {
+      btn.addEventListener("click", () => updateLikesDislikes(btn.dataset.id, "likes"));
+    });
+    document.querySelectorAll(".dislike-btn").forEach((btn) => {
+      btn.addEventListener("click", () => updateLikesDislikes(btn.dataset.id, "dislikes"));
+    });
+  }
+
+  // Update likes or dislikes count
+  async function updateLikesDislikes(postId, type) {
+    const postRef = ref(db, "posts/" + postId + "/" + type);
+    const snap = await get(postRef);
+    const currentCount = snap.exists() ? snap.val() : 0;
+    await update(ref(db, "posts/" + postId), { [type]: currentCount + 1 });
+  }
+
+  // Listen for posts updates
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, (snapshot) => {
+    const posts = snapshot.val() || {};
+    renderPosts(posts);
+  });
+
+  // Handle post submission
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const caption = captionInput.value.trim();
+    const file = mediaFileInput.files[0];
+
+    if (!caption) return alert("Please enter a caption.");
+    if (!file) return alert("Please select an image or video.");
+
+    // Upload media to Pinata
+    let mediaUrl;
+    try {
+      mediaUrl = await uploadToPinata(file);
+    } catch (err) {
+      alert("Media upload failed: " + err.message);
+      return;
+    }
+
+    await createPost(caption, mediaUrl, file.type);
+
+    // Reset form
+    captionInput.value = "";
+    mediaFileInput.value = "";
+  });
+</script>
 </body>
 </html>
