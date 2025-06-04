@@ -1,200 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Create / Update Profile</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto; }
-  label { display: block; margin-top: 15px; }
-  input, select { width: 100%; padding: 8px; margin-top: 5px; }
-  button { margin-top: 20px; padding: 10px 20px; }
-  img#preview { margin-top: 10px; max-width: 150px; max-height: 150px; object-fit: cover; border-radius: 50%; }
-  .message { margin-top: 15px; color: green; }
-  .error { color: red; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Profile & Post</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    input, textarea { width: 100%; margin-bottom: 10px; padding: 8px; }
+    button { padding: 10px 15px; }
+    img { max-width: 100px; border-radius: 50%; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"></script>
 </head>
 <body>
+  <h2>User Profile</h2>
+  <input type="text" id="username" placeholder="Username">
+  <textarea id="bio" placeholder="Bio"></textarea>
+  <input type="text" id="wallet" placeholder="Wallet Address">
+  <input type="file" id="profileImage">
+  <button onclick="saveProfile()">Save Profile</button>
+  <hr>
+  <h3>Current Profile</h3>
+  <img id="profileImg" src="" alt="" />
+  <p><strong>Name:</strong> <span id="displayName"></span></p>
+  <p><strong>Bio:</strong> <span id="displayBio"></span></p>
+  <p><strong>Wallet:</strong> <span id="displayWallet"></span></p>
 
-<h2>Create / Update Profile</h2>
+  <hr>
+  <h2>New Post</h2>
+  <textarea id="postText" placeholder="Write something..."></textarea>
+  <button onclick="submitPost()">Post</button>
+  <hr>
+  <div id="posts"></div>
 
-<form id="profileForm">
-  <label>Profile Photo (jpg/png):</label>
-  <input type="file" id="photoInput" accept="image/*" required />
-  <img id="preview" src="" alt="Profile Preview" style="display:none;" />
-
-  <label>Name:</label>
-  <input type="text" id="nameInput" required />
-
-  <label>Wallet Address (required):</label>
-  <input type="text" id="walletInput" placeholder="0x..." pattern="0x[a-fA-F0-9]{40}" required />
-
-  <label>Country:</label>
-  <input type="text" id="countryInput" />
-
-  <label>Gender:</label>
-  <select id="genderInput">
-    <option value="">Select gender</option>
-    <option>Male</option>
-    <option>Female</option>
-    <option>Other</option>
-  </select>
-
-  <label>Age:</label>
-  <input type="number" id="ageInput" min="1" max="120" />
-
-  <button type="submit">Save Profile</button>
-</form>
-
-<div class="message" id="message"></div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.firebasestorage.app",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-    measurementId: "G-W6VHMP77YR"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // Pinata JWT Token (put your own here)
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-
-  const photoInput = document.getElementById("photoInput");
-  const previewImg = document.getElementById("preview");
-  const nameInput = document.getElementById("nameInput");
-  const walletInput = document.getElementById("walletInput");
-  const countryInput = document.getElementById("countryInput");
-  const genderInput = document.getElementById("genderInput");
-  const ageInput = document.getElementById("ageInput");
-  const messageDiv = document.getElementById("message");
-
-  // Preview uploaded photo
-  photoInput.addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) {
-      previewImg.style.display = "none";
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      previewImg.src = ev.target.result;
-      previewImg.style.display = "block";
+  <script>
+    // Firebase Config (Replace with your own)
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_FIREBASE_AUTH",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
-    reader.readAsDataURL(file);
-  });
 
-  // Upload photo to Pinata
-  async function uploadPhotoToPinata(file) {
-    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    const data = new FormData();
-    data.append("file", file);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`
-      },
-      body: data
-    });
+    const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // your JWT
 
-    if (!res.ok) throw new Error("Pinata upload failed");
-    const json = await res.json();
-    return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
-  }
+    async function saveProfile() {
+      const username = document.getElementById('username').value;
+      const bio = document.getElementById('bio').value;
+      const wallet = document.getElementById('wallet').value;
+      const file = document.getElementById('profileImage').files[0];
+      if (!file || !wallet) return alert("Please provide wallet and image");
 
-  // Save profile data to Firebase DB
-  async function saveProfile(profile) {
-    const walletKey = profile.wallet.toLowerCase();
-    await set(ref(db, `profiles/${walletKey}`), profile);
-  }
+      const formData = new FormData();
+      formData.append("file", file);
 
-  // Load profile if exists
-  async function loadProfile(wallet) {
-    const snapshot = await get(child(ref(db), `profiles/${wallet.toLowerCase()}`));
-    if (snapshot.exists()) {
-      return snapshot.val();
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${pinataJWT}` },
+        body: formData
+      });
+      const data = await res.json();
+      const photoHash = data.IpfsHash;
+
+      await db.collection("profiles").doc(wallet).set({
+        username, bio, wallet, photoHash
+      });
+
+      localStorage.setItem("walletAddress", wallet);
+      loadProfile(wallet);
     }
-    return null;
-  }
 
-  // On form submit
-  document.getElementById("profileForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    messageDiv.textContent = "";
-    try {
-      if (!walletInput.value.match(/^0x[a-fA-F0-9]{40}$/)) {
-        messageDiv.textContent = "Invalid wallet address format.";
-        messageDiv.className = "error";
-        return;
+    async function loadProfile(wallet) {
+      const doc = await db.collection("profiles").doc(wallet).get();
+      if (doc.exists) {
+        const profile = doc.data();
+        document.getElementById("profileImg").src = `https://gateway.pinata.cloud/ipfs/${profile.photoHash}`;
+        document.getElementById("displayName").innerText = profile.username;
+        document.getElementById("displayBio").innerText = profile.bio;
+        document.getElementById("displayWallet").innerText = profile.wallet;
       }
-      messageDiv.textContent = "Uploading photo...";
+    }
 
-      const file = photoInput.files[0];
-      if (!file) {
-        messageDiv.textContent = "Please select a profile photo.";
-        messageDiv.className = "error";
-        return;
+    async function submitPost() {
+      const text = document.getElementById("postText").value;
+      const wallet = localStorage.getItem("walletAddress");
+      if (!wallet) return alert("No wallet found. Set up profile first.");
+
+      const profileDoc = await db.collection("profiles").doc(wallet).get();
+      if (!profileDoc.exists) return alert("Profile not found.");
+      const profile = profileDoc.data();
+
+      await db.collection("posts").add({
+        text,
+        wallet,
+        username: profile.username,
+        photoHash: profile.photoHash,
+        timestamp: Date.now()
+      });
+
+      document.getElementById("postText").value = "";
+      loadPosts();
+    }
+
+    async function loadPosts() {
+      const postsDiv = document.getElementById("posts");
+      postsDiv.innerHTML = "";
+      const postsSnap = await db.collection("posts").orderBy("timestamp", "desc").get();
+      postsSnap.forEach(doc => {
+        const post = doc.data();
+        postsDiv.innerHTML += `
+          <div style="border:1px solid #ccc; padding:10px; margin:10px 0">
+            <img src="https://gateway.pinata.cloud/ipfs/${post.photoHash}" width="40" />
+            <strong>${post.username}</strong><br>
+            <p>${post.text}</p>
+          </div>`;
+      });
+    }
+
+    window.onload = async () => {
+      const wallet = localStorage.getItem("walletAddress");
+      if (wallet) {
+        await loadProfile(wallet);
+        await loadPosts();
       }
-      const photoUrl = await uploadPhotoToPinata(file);
-
-      const profileData = {
-        photoUrl,
-        name: nameInput.value.trim(),
-        wallet: walletInput.value.trim().toLowerCase(),
-        country: countryInput.value.trim(),
-        gender: genderInput.value,
-        age: ageInput.value ? parseInt(ageInput.value) : null,
-        updatedAt: Date.now()
-      };
-
-      await saveProfile(profileData);
-      messageDiv.textContent = "Profile successfully saved!";
-      messageDiv.className = "message";
-    } catch (error) {
-      messageDiv.textContent = "Error: " + error.message;
-      messageDiv.className = "error";
     }
-  });
-
-  // Auto-fill form if wallet entered and profile exists
-  walletInput.addEventListener("blur", async () => {
-    const wallet = walletInput.value.trim().toLowerCase();
-    if (!wallet.match(/^0x[a-fA-F0-9]{40}$/)) return;
-
-    messageDiv.textContent = "Loading profile...";
-    const profile = await loadProfile(wallet);
-    if (profile) {
-      nameInput.value = profile.name || "";
-      countryInput.value = profile.country || "";
-      genderInput.value = profile.gender || "";
-      ageInput.value = profile.age || "";
-      previewImg.src = profile.photoUrl || "";
-      previewImg.style.display = profile.photoUrl ? "block" : "none";
-      messageDiv.textContent = "Profile loaded. You can update now.";
-      messageDiv.className = "message";
-    } else {
-      messageDiv.textContent = "No profile found. You can create a new one.";
-      messageDiv.className = "";
-      previewImg.style.display = "none";
-      nameInput.value = "";
-      countryInput.value = "";
-      genderInput.value = "";
-      ageInput.value = "";
-    }
-  });
-</script>
-
+  </script>
 </body>
 </html>
