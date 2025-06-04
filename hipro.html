@@ -1,62 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My DRF Profile</title>
+  <meta charset="UTF-8">
+  <title>User Profile - DRF Wallet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
     .profile-card {
-      border: 1px solid #ccc;
-      padding: 20px;
+      background: white;
       border-radius: 12px;
-      max-width: 400px;
-      margin: auto;
-      background-color: #f9f9f9;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      padding: 30px;
+      width: 90%;
+      max-width: 420px;
+      text-align: center;
     }
-    .wallet-address {
-      font-size: 1.2em;
+    h2 {
+      margin-bottom: 10px;
+    }
+    .wallet {
+      font-weight: bold;
+      color: #444;
       word-break: break-all;
+      margin: 10px 0;
     }
-    #logoutBtn {
-      background: #d9534f;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
+    #status {
       margin-top: 10px;
+      color: green;
+    }
+    .btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    .btn:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
 
-  <div class="profile-card" id="profile" style="display: none;">
-    <h2>DRF Wallet Profile</h2>
-    <p><strong>Wallet Address:</strong></p>
-    <p class="wallet-address" id="walletAddr"></p>
-    <button id="logoutBtn">Logout</button>
-  </div>
+<div class="profile-card">
+  <h2>DRF Wallet Profile</h2>
+  <div id="wallet-status">Checking wallet...</div>
+  <div class="wallet" id="wallet-address">No wallet connected</div>
+  <button class="btn" onclick="connectWallet()">Connect Wallet</button>
+</div>
 
-  <div id="notLoggedIn" style="text-align:center; display: none;">
-    <p>You are not logged in. Please go to the main wallet to connect.</p>
-  </div>
-
-  <script>
-    const walletAddress = localStorage.getItem("drf_wallet");
-
-    if (walletAddress) {
-      document.getElementById("walletAddr").textContent = walletAddress;
-      document.getElementById("profile").style.display = "block";
+<script>
+  async function connectWallet() {
+    if (window.ethereum) {
+      try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          const walletAddress = accounts[0];
+          document.getElementById("wallet-status").innerText = "✅ Wallet connected";
+          document.getElementById("wallet-address").innerText = walletAddress;
+          localStorage.setItem("connectedWallet", walletAddress);
+        } else {
+          document.getElementById("wallet-status").innerText = "❌ No wallet connected";
+        }
+      } catch (error) {
+        console.error("Error connecting wallet:", error);
+        document.getElementById("wallet-status").innerText = "⚠️ Connection rejected";
+      }
     } else {
-      document.getElementById("notLoggedIn").style.display = "block";
+      document.getElementById("wallet-status").innerText = "❌ MetaMask not found";
     }
+  }
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("drf_wallet");
-      alert("Logged out.");
-      location.reload();
-    });
-  </script>
+  window.addEventListener("load", () => {
+    const savedWallet = localStorage.getItem("connectedWallet");
+    if (savedWallet) {
+      document.getElementById("wallet-status").innerText = "✅ Wallet connected (cached)";
+      document.getElementById("wallet-address").innerText = savedWallet;
+    } else {
+      document.getElementById("wallet-status").innerText = "👋 Please connect your wallet";
+    }
+  });
+</script>
+
 </body>
 </html>
+
