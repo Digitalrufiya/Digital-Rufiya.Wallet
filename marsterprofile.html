@@ -1,127 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Upload to Pinata + Save URL in Firestore</title>
-<style>
-  body { font-family: Arial, sans-serif; padding: 20px; }
-  #status { margin-top: 10px; color: green; }
-  #error { margin-top: 10px; color: red; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Pinata Upload Test</title>
 </head>
 <body>
+  <h2>Pinata File Upload Test</h2>
+  <input type="file" id="fileInput" />
+  <button id="uploadBtn">Upload to Pinata</button>
 
-<h2>Upload Profile Photo</h2>
-<input type="file" id="fileInput" accept="image/*" />
-<button id="uploadBtn" disabled>Upload & Save</button>
+  <script>
+    const apiKey = '3d87f9ed904df892654c';       // Replace with your Pinata API Key
+    const apiSecret = 'a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f';  // Replace with your Pinata API Secret
 
-<div id="status"></div>
-<div id="error"></div>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.firebasestorage.app",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-    measurementId: "G-W6VHMP77YR"
-  };
-
-  const PINATA_JWT = "YOUR_FULL_PINATA_JWT_HERE";
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  const fileInput = document.getElementById('fileInput');
-  const uploadBtn = document.getElementById('uploadBtn');
-  const statusDiv = document.getElementById('status');
-  const errorDiv = document.getElementById('error');
-
-  fileInput.addEventListener('change', () => {
-    uploadBtn.disabled = !fileInput.files.length;
-    statusDiv.textContent = '';
-    errorDiv.textContent = '';
-  });
-
-  uploadBtn.addEventListener('click', async () => {
-    errorDiv.textContent = '';
-    statusDiv.textContent = 'Uploading image to Pinata...';
-    uploadBtn.disabled = true;
-
-    const file = fileInput.files[0];
-    if (!file) {
-      errorDiv.textContent = 'Please select a file first.';
-      uploadBtn.disabled = false;
-      return;
-    }
-
-    try {
-      const ipfsURL = await uploadFileToPinata(file);
-      statusDiv.textContent = `Upload successful! IPFS URL: ${ipfsURL}`;
-
-      const user = await waitForUser();
-      if (!user) {
-        errorDiv.textContent = 'You must be signed in to save the URL.';
-        uploadBtn.disabled = false;
+    document.getElementById('uploadBtn').onclick = async () => {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        alert('Please select a file first');
         return;
       }
 
-      // Save the IPFS URL under the user's document in Firestore
-      await setDoc(doc(db, "users", user.uid), { profilePhotoURL: ipfsURL }, { merge: true });
-      statusDiv.textContent += ' — Saved to Firestore!';
-    } catch (err) {
-      errorDiv.textContent = 'Error: ' + err.message;
-    } finally {
-      uploadBtn.disabled = false;
-    }
-  });
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
 
-  async function uploadFileToPinata(file) {
-    const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-    const formData = new FormData();
-    formData.append('file', file);
+      try {
+        const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+          method: 'POST',
+          headers: {
+            'pinata_api_key': apiKey,
+            'pinata_secret_api_key': apiSecret,
+          },
+          body: formData,
+        });
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`
-      },
-      body: formData
-    });
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Pinata upload error:', errorData);
+          alert('Upload failed: ' + (errorData.error?.reason || response.statusText));
+          return;
+        }
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error('Pinata upload failed: ' + errorText);
-    }
-
-    const data = await res.json();
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-  }
-
-  function waitForUser() {
-    return new Promise((resolve) => {
-      const unsubscribe = onAuthStateChanged(auth, user => {
-        unsubscribe();
-        resolve(user);
-      });
-      // Timeout after 10s
-      setTimeout(() => {
-        unsubscribe();
-        resolve(null);
-      }, 10000);
-    });
-  }
-</script>
-
+        const result = await response.json();
+        console.log('Upload successful! IPFS hash:', result.IpfsHash);
+        alert('Upload successful! IPFS hash:\n' + result.IpfsHash);
+      } catch (error) {
+        console.error('Error uploading to Pinata:', error);
+        alert('Upload failed: ' + error.message);
+      }
+    };
+  </script>
 </body>
 </html>
