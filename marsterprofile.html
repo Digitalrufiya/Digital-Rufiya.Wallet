@@ -1,101 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Public Profile Form</title>
+  <title>Public Profile Uploader</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, select, button { display: block; margin: 10px 0; padding: 10px; width: 100%; max-width: 400px; }
-    .profile-card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-    img { max-width: 100px; border-radius: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+      background: #f8f8f8;
+    }
+    h2 {
+      text-align: center;
+    }
+    input, select, button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    img {
+      margin-top: 10px;
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+    }
+    .profile {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
-  <h2>Create Public Profile</h2>
+  <h2>Public Profile</h2>
+
   <input type="text" id="name" placeholder="Full Name" required />
-  <input type="text" id="wallet" placeholder="Wallet Address" required />
+  <input type="text" id="wallet" placeholder="Wallet Address (0x...)" required />
   <select id="gender">
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
+    <option value="male">Male</option>
+    <option value="female">Female</option>
   </select>
   <input type="file" id="photo" accept="image/*" required />
-  <button onclick="submitProfile()">Submit Profile</button>
 
+  <button onclick="uploadProfile()">Submit Profile</button>
+
+  <div id="message"></div>
+  <hr>
   <h3>Public Profiles</h3>
   <div id="profiles"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  <script>
+    const pinataApiKey = "3d87f9ed904df892654c";
+    const pinataSecretApiKey = "a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f";
+    const firebaseUrl = "https://drfsocial-23a06-default-rtdb.firebaseio.com/profiles.json";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
+    async function uploadProfile() {
+      const name = document.getElementById("name").value;
+      const wallet = document.getElementById("wallet").value;
+      const gender = document.getElementById("gender").value;
+      const photoFile = document.getElementById("photo").files[0];
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = ref(db, "publicProfiles");
+      if (!name || !wallet || !photoFile) {
+        alert("Please fill in all fields and select a photo.");
+        return;
+      }
 
-    async function uploadToPinata(file) {
+      document.getElementById("message").innerText = "Uploading photo to IPFS...";
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", photoFile);
 
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
         headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`
+          pinata_api_key: pinataApiKey,
+          pinata_secret_api_key: pinataSecretApiKey,
         },
-        body: formData
+        body: formData,
       });
 
-      const result = await res.json();
-      return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
-    }
+      const data = await res.json();
 
-    async function submitProfile() {
-      const name = document.getElementById("name").value.trim();
-      const wallet = document.getElementById("wallet").value.trim();
-      const gender = document.getElementById("gender").value;
-      const file = document.getElementById("photo").files[0];
+      if (data.IpfsHash) {
+        const imageUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
 
-      if (!name || !wallet || !file) return alert("Please fill all fields");
+        const profileData = {
+          name,
+          wallet,
+          gender,
+          image: imageUrl,
+          timestamp: Date.now()
+        };
 
-      try {
-        const imageUrl = await uploadToPinata(file);
-        await push(dbRef, { name, wallet, gender, imageUrl });
-        alert("Profile submitted!");
-        document.getElementById("name").value = "";
-        document.getElementById("wallet").value = "";
-        document.getElementById("photo").value = "";
-      } catch (err) {
-        console.error(err);
-        alert("Upload failed");
+        await fetch(firebaseUrl, {
+          method: "POST",
+          body: JSON.stringify(profileData),
+          headers: { "Content-Type": "application/json" }
+        });
+
+        document.getElementById("message").innerText = "✅ Profile saved!";
+        loadProfiles();
+      } else {
+        document.getElementById("message").innerText = "❌ Upload failed!";
       }
     }
 
-    onValue(dbRef, (snapshot) => {
-      const container = document.getElementById("profiles");
-      container.innerHTML = "";
-      snapshot.forEach(child => {
-        const { name, wallet, gender, imageUrl } = child.val();
-        container.innerHTML += `
-          <div class="profile-card">
-            <img src="${imageUrl}" alt="photo" />
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Wallet:</strong> ${wallet}</p>
-            <p><strong>Gender:</strong> ${gender}</p>
-          </div>
-        `;
-      });
-    });
+    async function loadProfiles() {
+      const res = await fetch(firebaseUrl);
+      const data = await res.json();
+      const output = document.getElementById("profiles");
+      output.innerHTML = "";
+
+      if (data) {
+        Object.values(data)
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .forEach(profile => {
+            const div = document.createElement("div");
+            div.className = "profile";
+            div.innerHTML = `
+              <img src="${profile.image}" alt="Profile Photo" />
+              <strong>Name:</strong> ${profile.name}<br>
+              <strong>Wallet:</strong> ${profile.wallet}<br>
+              <strong>Gender:</strong> ${profile.gender}
+            `;
+            output.appendChild(div);
+          });
+      }
+    }
+
+    loadProfiles();
   </script>
 </body>
 </html>
