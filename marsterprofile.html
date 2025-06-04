@@ -1,286 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Profile Upload with Firebase</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f3f3;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-    }
-    input, textarea {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #007bff;
-      color: #fff;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      font-size: 18px;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-    button:disabled {
-      background: #aaa;
-    }
-    .profile-display {
-      max-width: 500px;
-      margin: 20px auto;
-      background: #fff;
-      padding: 15px 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px #bbb;
-      text-align: center;
-    }
-    .profile-display img {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 15px;
-    }
-    .profile-display h2 {
-      margin: 5px 0;
-    }
-    .profile-display p {
-      margin: 3px 0;
-      font-size: 16px;
-      color: #555;
-      word-break: break-word;
-    }
-    .edit-btn {
-      background: #28a745;
-      margin-top: 15px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upload Image to Pinata + Save URL to Firebase</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  #status { margin-top: 10px; color: green; }
+  #error { margin-top: 10px; color: red; }
+</style>
 </head>
 <body>
 
-  <div class="container" id="profileFormContainer">
-    <h2>Update Profile</h2>
-    <input type="text" id="name" placeholder="Enter your name" required />
-    <textarea id="bio" rows="3" placeholder="Enter your bio" required></textarea>
-    <input type="text" id="wallet" placeholder="Enter your wallet address" required />
-    <input type="file" id="profilePic" accept="image/*" />
-    <button id="saveProfile">Save Profile</button>
-  </div>
+<h2>Upload Profile Photo</h2>
+<input type="file" id="fileInput" accept="image/*" />
+<button id="uploadBtn" disabled>Upload to Pinata & Save</button>
 
-  <div class="profile-display" id="profileDisplay" style="display:none;">
-    <img id="displayImage" src="" alt="Profile Picture" />
-    <h2 id="displayName"></h2>
-    <p id="displayBio"></p>
-    <p><strong>Wallet:</strong> <span id="displayWallet"></span></p>
-    <button id="editProfile" class="edit-btn">Edit Profile</button>
-  </div>
+<div id="status"></div>
+<div id="error"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
+<script>
+  // TODO: Replace this config with your Firebase project config
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+    projectId: "YOUR_FIREBASE_PROJECT_ID",
+    storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getFirestore(app);
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-    const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+  // Pinata JWT (replace with your JWT token)
+  const PINATA_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // truncated for safety, paste your full token here
 
-    const formContainer = document.getElementById('profileFormContainer');
-    const profileDisplay = document.getElementById('profileDisplay');
-    const saveBtn = document.getElementById('saveProfile');
-    const editBtn = document.getElementById('editProfile');
+  const fileInput = document.getElementById('fileInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const statusDiv = document.getElementById('status');
+  const errorDiv = document.getElementById('error');
 
-    // Inputs
-    const nameInput = document.getElementById('name');
-    const bioInput = document.getElementById('bio');
-    const walletInput = document.getElementById('wallet');
-    const profilePicInput = document.getElementById('profilePic');
+  // Enable upload button only when file is selected
+  fileInput.addEventListener('change', () => {
+    uploadBtn.disabled = !fileInput.files.length;
+    statusDiv.textContent = '';
+    errorDiv.textContent = '';
+  });
 
-    // Display elements
-    const displayImage = document.getElementById('displayImage');
-    const displayName = document.getElementById('displayName');
-    const displayBio = document.getElementById('displayBio');
-    const displayWallet = document.getElementById('displayWallet');
+  uploadBtn.addEventListener('click', async () => {
+    errorDiv.textContent = '';
+    statusDiv.textContent = 'Uploading image to Pinata...';
+    uploadBtn.disabled = true;
 
-    // Save profile to Firestore
-    async function saveProfileToFirestore(profileData) {
-      try {
-        await setDoc(doc(db, "profiles", profileData.wallet), profileData);
-        console.log("Profile saved to Firestore!");
-      } catch (error) {
-        console.error("Error saving profile to Firestore: ", error);
-      }
+    const file = fileInput.files[0];
+    if (!file) {
+      errorDiv.textContent = 'Please select an image file first.';
+      uploadBtn.disabled = false;
+      return;
     }
 
-    // Load profile from Firestore by wallet
-    async function loadProfileFromFirestore(wallet) {
-      try {
-        const docRef = doc(db, "profiles", wallet);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          console.log("Profile loaded from Firestore:", docSnap.data());
-          return docSnap.data();
-        } else {
-          console.log("No profile found in Firestore for wallet:", wallet);
-          return null;
-        }
-      } catch (error) {
-        console.error("Error loading profile from Firestore:", error);
-        return null;
-      }
-    }
+    try {
+      const ipfsURL = await uploadFileToPinata(file);
+      statusDiv.textContent = `Upload successful! IPFS URL: ${ipfsURL}`;
 
-    // Load profile on page load
-    async function loadProfile() {
-      // Try to get wallet address from localStorage first
-      let profile = null;
-      const storedProfile = localStorage.getItem('drfUserProfile');
-
-      if (storedProfile) {
-        profile = JSON.parse(storedProfile);
-        // Try loading from Firestore for latest data
-        const firestoreProfile = await loadProfileFromFirestore(profile.wallet);
-        if (firestoreProfile) {
-          profile = firestoreProfile;
-          localStorage.setItem('drfUserProfile', JSON.stringify(profile)); // update local copy
-        }
-      }
-
-      if (profile) {
-        showProfile(profile);
-      } else {
-        formContainer.style.display = 'block';
-        profileDisplay.style.display = 'none';
-      }
-    }
-
-    // Show profile on screen
-    function showProfile(profile) {
-      displayName.textContent = profile.name || '';
-      displayBio.textContent = profile.bio || '';
-      displayWallet.textContent = profile.wallet || '';
-      displayImage.src = profile.imageUrl || 'https://via.placeholder.com/120?text=No+Image';
-
-      formContainer.style.display = 'none';
-      profileDisplay.style.display = 'block';
-    }
-
-    // Upload image to Pinata
-    async function uploadToPinata(file) {
-      const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            Authorization: 'Bearer ' + jwt
-          }
-        });
-        if (!res.ok) throw new Error('Pinata upload failed');
-
-        const data = await res.json();
-        return 'https://gateway.pinata.cloud/ipfs/' + data.IpfsHash;
-      } catch (error) {
-        console.error("Pinata upload error:", error);
-        return null;
-      }
-    }
-
-    saveBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
-      const bio = bioInput.value.trim();
-      const wallet = walletInput.value.trim();
-      const file = profilePicInput.files[0];
-
-      if (!name || !bio || !wallet) {
-        alert('Please fill in all required fields.');
+      // Wait for user auth state
+      const user = await waitForUser();
+      if (!user) {
+        errorDiv.textContent = 'User not signed in. Cannot save to Firestore.';
+        uploadBtn.disabled = false;
         return;
       }
 
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
+      // Save URL to Firestore under user's document
+      await db.collection('users').doc(user.uid).set(
+        { profilePhotoURL: ipfsURL },
+        { merge: true }
+      );
 
-      let imageUrl = null;
-      if (file) {
-        imageUrl = await uploadToPinata(file);
-        if (!imageUrl) {
-          alert('Image upload failed. Please try again.');
-          saveBtn.disabled = false;
-          saveBtn.textContent = 'Save Profile';
-          return;
-        }
-      }
+      statusDiv.textContent += ' — Saved to Firestore!';
+    } catch (err) {
+      errorDiv.textContent = 'Error: ' + err.message;
+    } finally {
+      uploadBtn.disabled = false;
+    }
+  });
 
-      // Build profile object
-      const profileData = {
-        name,
-        bio,
-        wallet,
-        imageUrl: imageUrl || (JSON.parse(localStorage.getItem('drfUserProfile'))?.imageUrl || ''),
-        updatedAt: new Date().toISOString()
-      };
+  // Upload file to Pinata and return IPFS URL
+  async function uploadFileToPinata(file) {
+    const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+    const formData = new FormData();
+    formData.append('file', file);
 
-      // Save to Firestore
-      await saveProfileToFirestore(profileData);
-
-      // Save to localStorage for offline use/fallback
-      localStorage.setItem('drfUserProfile', JSON.stringify(profileData));
-
-      showProfile(profileData);
-
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Profile';
-
-      alert('Profile saved successfully!');
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
     });
 
-    editBtn.addEventListener('click', () => {
-      const storedProfile = localStorage.getItem('drfUserProfile');
-      if (!storedProfile) return;
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error('Pinata upload failed: ' + errorText);
+    }
 
-      const profile = JSON.parse(storedProfile);
-      nameInput.value = profile.name || '';
-      bioInput.value = profile.bio || '';
-      walletInput.value = profile.wallet || '';
-      profilePicInput.value = '';
+    const data = await res.json();
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
 
-      profileDisplay.style.display = 'none';
-      formContainer.style.display = 'block';
+  // Wait for Firebase user auth state, or timeout after 10 seconds
+  function waitForUser() {
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 10000);
+      const unsubscribe = auth.onAuthStateChanged(user => {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(user);
+      });
     });
-
-    // On load
-    window.addEventListener('load', loadProfile);
-
-  </script>
+  }
+</script>
 
 </body>
 </html>
