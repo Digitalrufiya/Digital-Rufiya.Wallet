@@ -2,99 +2,387 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Public Profile & Posts - DRF Social</title>
-  <link rel="stylesheet" href="style.css" />
-  <script type="module" src="firebase-config.js"></script>
-  <script type="module" src="app.js" defer></script>
+  <title>Profile & Timeline</title>
+  <style>
+    body { max-width: 600px; margin: auto; font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+    label { display: block; margin-top: 15px; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    button { margin-top: 15px; padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    .post { background: white; padding: 10px; margin-top: 20px; border-radius: 6px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    .post img, .post video { max-width: 100%; max-height: 300px; display: block; margin-top: 10px; border-radius: 6px; }
+    .profile-photo { max-width: 150px; border-radius: 50%; }
+  </style>
 </head>
 <body>
-  <h1>DRF Public Profile & Posts</h1>
 
-  <div id="profile-container">
-    <section id="profile-form-section">
-      <h2>Create / Edit Profile</h2>
-      <form id="profile-form">
-        <label>
-          Profile Photo (jpg/png):
-          <input type="file" id="profilePhoto" accept="image/*" />
-        </label><br/>
+  <h1>Profile</h1>
 
-        <label>
-          Name:
-          <input type="text" id="name" required />
-        </label><br/>
+  <section id="profileFormSection">
+    <form id="profileForm">
+      <label>
+        Profile Photo (optional):
+        <input type="file" id="profilePhoto" accept="image/*" />
+      </label>
+      <label>
+        Name:
+        <input type="text" id="name" required />
+      </label>
+      <label>
+        Wallet Address (must enter):
+        <input type="text" id="wallet" required placeholder="0x..." />
+      </label>
+      <label>
+        Country:
+        <input type="text" id="country" />
+      </label>
+      <label>
+        Gender:
+        <select id="gender">
+          <option value="">Select</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <label>
+        Age:
+        <input type="number" id="age" min="1" max="120" />
+      </label>
+      <button type="submit">Save Profile</button>
+    </form>
+  </section>
 
-        <label>
-          Wallet Address (required):
-          <input type="text" id="wallet" required />
-        </label><br/>
+  <section id="profileDisplaySection" style="display:none;">
+    <h2 id="profileName"></h2>
+    <img id="profilePhotoDisplay" class="profile-photo" src="" alt="Profile Photo" style="display:none;" />
+    <p><strong>Wallet:</strong> <span id="profileWallet"></span></p>
+    <p><strong>Country:</strong> <span id="profileCountry"></span></p>
+    <p><strong>Gender:</strong> <span id="profileGender"></span></p>
+    <p><strong>Age:</strong> <span id="profileAge"></span></p>
+  </section>
 
-        <label>
-          Country:
-          <input type="text" id="country" />
-        </label><br/>
+  <hr />
 
-        <label>
-          Gender:
-          <select id="gender">
-            <option value="">Select</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-        </label><br/>
+  <h2>New Post</h2>
+  <section id="postFormSection">
+    <form id="postForm">
+      <label>
+        Text:
+        <textarea id="postText" rows="3" placeholder="Write something..."></textarea>
+      </label>
+      <label>
+        Photo or Video:
+        <input type="file" id="postMedia" accept="image/*,video/*" />
+      </label>
+      <button type="submit">Post</button>
+    </form>
+  </section>
 
-        <label>
-          Age:
-          <input type="number" id="age" min="0" max="120" />
-        </label><br/>
-
-        <button type="submit">Save Profile</button>
-      </form>
-    </section>
-
-    <section id="profile-display-section" style="display:none;">
-      <h2>Public Profile</h2>
-      <img id="profilePhotoDisplay" src="" alt="Profile Photo" style="max-width:150px; max-height:150px;" />
-      <p><strong>Name:</strong> <span id="displayName"></span></p>
-      <p><strong>Wallet:</strong> <span id="displayWallet"></span></p>
-      <p><strong>Country:</strong> <span id="displayCountry"></span></p>
-      <p><strong>Gender:</strong> <span id="displayGender"></span></p>
-      <p><strong>Age:</strong> <span id="displayAge"></span></p>
-    </section>
-  </div>
-
-  <hr/>
-
-  <div id="posts-container" style="display:none;">
-    <h2>Posts Timeline</h2>
-
-    <section id="post-form-section">
-      <h3>Create a Post</h3>
-      <form id="post-form">
-        <label>
-          Text:
-          <textarea id="postText" rows="3" maxlength="500" placeholder="Write something..."></textarea>
-        </label><br/>
-
-        <label>
-          Image/Video (optional):
-          <input type="file" id="postMedia" accept="image/*,video/*" />
-        </label><br/>
-
-        <button type="submit">Post</button>
-      </form>
-    </section>
-
-    <section id="posts-list">
-      <!-- Posts will be rendered here -->
-    </section>
-  </div>
+  <h2>Timeline</h2>
+  <section id="postsContainer"></section>
 
   <script type="module">
-    import { appInit } from './app.js';
-    appInit();
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, get, set, push, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Pinata API info
+    const PINATA_API_KEY = "3d87f9ed904df892654c";
+    const PINATA_SECRET_API_KEY = "a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f";
+
+    // Elements
+    const profileFormSection = document.getElementById("profileFormSection");
+    const profileForm = document.getElementById("profileForm");
+    const profilePhotoInput = document.getElementById("profilePhoto");
+    const nameInput = document.getElementById("name");
+    const walletInput = document.getElementById("wallet");
+    const countryInput = document.getElementById("country");
+    const genderInput = document.getElementById("gender");
+    const ageInput = document.getElementById("age");
+
+    const profileDisplaySection = document.getElementById("profileDisplaySection");
+    const profileName = document.getElementById("profileName");
+    const profilePhotoDisplay = document.getElementById("profilePhotoDisplay");
+    const profileWallet = document.getElementById("profileWallet");
+    const profileCountry = document.getElementById("profileCountry");
+    const profileGender = document.getElementById("profileGender");
+    const profileAge = document.getElementById("profileAge");
+
+    const postForm = document.getElementById("postForm");
+    const postTextInput = document.getElementById("postText");
+    const postMediaInput = document.getElementById("postMedia");
+    const postsContainer = document.getElementById("postsContainer");
+
+    // Utility: upload file to Pinata and return gateway URL
+    async function uploadFileToPinata(file) {
+      const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          pinata_api_key: PINATA_API_KEY,
+          pinata_secret_api_key: PINATA_SECRET_API_KEY,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error(`Pinata upload failed: ${res.statusText}`);
+      const data = await res.json();
+      // Return public gateway URL:
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    }
+
+    // Save profile to Firebase DB under "profiles/{wallet}"
+    async function saveProfile(profile) {
+      const profileRef = ref(db, "profiles/" + profile.wallet.toLowerCase());
+      await set(profileRef, profile);
+    }
+
+    // Load profile by wallet address
+    async function loadProfile(wallet) {
+      if (!wallet) return null;
+      const profileRef = ref(db, "profiles/" + wallet.toLowerCase());
+      const snapshot = await get(profileRef);
+      if (snapshot.exists()) return snapshot.val();
+      return null;
+    }
+
+    // Save post under "posts/{wallet}/{postId}"
+    async function savePost(wallet, post) {
+      const postsRef = ref(db, "posts/" + wallet.toLowerCase());
+      const newPostRef = push(postsRef);
+      await set(newPostRef, post);
+    }
+
+    // Load posts by wallet, ordered by timestamp descending
+    async function loadPosts(wallet) {
+      if (!wallet) return [];
+      const postsRef = ref(db, "posts/" + wallet.toLowerCase());
+      const snapshot = await get(postsRef);
+      if (!snapshot.exists()) return [];
+      const posts = snapshot.val();
+      // Convert posts object to array, sort desc by timestamp
+      return Object.values(posts).sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    // Show profile info in display section
+    function renderProfile(profile) {
+      profileName.textContent = profile.name || "No name";
+      if(profile.photoURL){
+        profilePhotoDisplay.src = profile.photoURL;
+        profilePhotoDisplay.style.display = "block";
+      } else {
+        profilePhotoDisplay.style.display = "none";
+      }
+      profileWallet.textContent = profile.wallet || "";
+      profileCountry.textContent = profile.country || "";
+      profileGender.textContent = profile.gender || "";
+      profileAge.textContent = profile.age || "";
+    }
+
+    // Render posts timeline
+    function renderPosts(posts) {
+      postsContainer.innerHTML = "";
+      if(posts.length === 0){
+        postsContainer.innerHTML = "<p>No posts yet.</p>";
+        return;
+      }
+      posts.forEach(post => {
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+
+        let mediaHTML = "";
+        if(post.mediaURL){
+          if(post.mediaType === "video"){
+            mediaHTML = `<video controls src="${post.mediaURL}"></video>`;
+          } else {
+            mediaHTML = `<img src="${post.mediaURL}" alt="Post media" />`;
+          }
+        }
+
+        const timeStr = new Date(post.timestamp).toLocaleString();
+
+        postEl.innerHTML = `
+          <p>${escapeHtml(post.text)}</p>
+          ${mediaHTML}
+          <small>Posted on: ${timeStr}</small>
+        `;
+
+        postsContainer.appendChild(postEl);
+      });
+    }
+
+    // Escape text to prevent XSS
+    function escapeHtml(text) {
+      if(!text) return "";
+      return text.replace(/[&<>"']/g, m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[m]);
+    }
+
+    // Check URL query for public profile wallet
+    const urlParams = new URLSearchParams(window.location.search);
+    const publicWallet = urlParams.get("wallet")?.toLowerCase();
+
+    if(publicWallet){
+      // Show public profile + posts, hide form
+      profileFormSection.style.display = "none";
+      profileDisplaySection.style.display = "block";
+      postForm.style.display = "none";
+
+      (async () => {
+        const profile = await loadProfile(publicWallet);
+        if(profile){
+          renderProfile(profile);
+          const posts = await loadPosts(publicWallet);
+          renderPosts(posts);
+        } else {
+          profileDisplaySection.innerHTML = "<p>Profile not found.</p>";
+          postsContainer.innerHTML = "";
+        }
+      })();
+
+    } else {
+      // Show profile creation form and post form
+      profileFormSection.style.display = "block";
+      profileDisplaySection.style.display = "none";
+      postForm.style.display = "block";
+
+      // Prefill wallet if saved in localStorage
+      const savedWallet = localStorage.getItem("userWallet");
+      if(savedWallet) walletInput.value = savedWallet;
+
+      // Profile form submission
+      profileForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const wallet = walletInput.value.trim().toLowerCase();
+        if(!wallet){
+          alert("Wallet address is required");
+          return;
+        }
+
+        let photoURL = "";
+        if(profilePhotoInput.files.length > 0){
+          try {
+            photoURL = await uploadFileToPinata(profilePhotoInput.files[0]);
+          } catch(err) {
+            alert("Failed to upload profile photo: " + err.message);
+            return;
+          }
+        } else {
+          // Try keep existing photo if profile exists
+          const existing = await loadProfile(wallet);
+          if(existing && existing.photoURL) photoURL = existing.photoURL;
+        }
+
+        const profile = {
+          name: nameInput.value.trim(),
+          wallet,
+          country: countryInput.value.trim(),
+          gender: genderInput.value,
+          age: ageInput.value ? Number(ageInput.value) : "",
+          photoURL,
+          updatedAt: Date.now(),
+        };
+
+        try {
+          await saveProfile(profile);
+          localStorage.setItem("userWallet", wallet);
+          alert("Profile saved!");
+        } catch(err){
+          alert("Failed to save profile: " + err.message);
+        }
+      });
+
+      // Post form submission
+      postForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const wallet = walletInput.value.trim().toLowerCase();
+        if(!wallet){
+          alert("Enter your wallet address above first");
+          return;
+        }
+
+        const text = postTextInput.value.trim();
+        if(!text && postMediaInput.files.length === 0){
+          alert("Post must have text or media");
+          return;
+        }
+
+        let mediaURL = "";
+        let mediaType = "";
+        if(postMediaInput.files.length > 0){
+          try {
+            mediaURL = await uploadFileToPinata(postMediaInput.files[0]);
+            const type = postMediaInput.files[0].type;
+            if(type.startsWith("video/")){
+              mediaType = "video";
+            } else {
+              mediaType = "image";
+            }
+          } catch(err) {
+            alert("Failed to upload post media: " + err.message);
+            return;
+          }
+        }
+
+        const post = {
+          text,
+          mediaURL,
+          mediaType,
+          timestamp: Date.now(),
+        };
+
+        try {
+          await savePost(wallet, post);
+          alert("Post saved!");
+          postTextInput.value = "";
+          postMediaInput.value = "";
+          // Optionally reload posts in realtime - for simplicity reload whole page here:
+          window.location.reload();
+        } catch(err){
+          alert("Failed to save post: " + err.message);
+        }
+      });
+
+      // Optional: load profile if wallet exists to prefill fields
+      walletInput.addEventListener("change", async () => {
+        const wallet = walletInput.value.trim().toLowerCase();
+        if(!wallet) return;
+
+        const profile = await loadProfile(wallet);
+        if(profile){
+          nameInput.value = profile.name || "";
+          countryInput.value = profile.country || "";
+          genderInput.value = profile.gender || "";
+          ageInput.value = profile.age || "";
+          // No preview for existing profile photo for simplicity
+        }
+      });
+    }
   </script>
 </body>
 </html>
