@@ -1,140 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Public Profile Uploader</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 500px;
-      margin: auto;
-      background: #f8f8f8;
-    }
-    h2 {
-      text-align: center;
-    }
-    input, select, button {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    img {
-      margin-top: 10px;
-      max-width: 100%;
-      height: auto;
-      border-radius: 10px;
-    }
-    .profile {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Edit Profile</title>
 </head>
 <body>
-  <h2>Public Profile</h2>
+  <h2>🚀 Public Profile</h2>
 
-  <input type="text" id="name" placeholder="Full Name" required />
-  <input type="text" id="wallet" placeholder="Wallet Address (0x...)" required />
-  <select id="gender">
-    <option value="male">Male</option>
-    <option value="female">Female</option>
-  </select>
-  <input type="file" id="photo" accept="image/*" required />
+  <div id="profile">
+    <img id="profile-pic" src="" width="120"><br>
+    <p><strong>Name:</strong> <span id="name"></span></p>
+    <p><strong>Gender:</strong> <span id="gender"></span></p>
+    <p><strong>Wallet:</strong> <span id="wallet"></span></p>
+    <button onclick="showEditForm()">✏️ Edit Profile</button>
+  </div>
 
-  <button onclick="uploadProfile()">Submit Profile</button>
+  <div id="edit-form" style="display:none; margin-top:20px;">
+    <h3>Edit Your Profile</h3>
+    <input type="text" id="edit-name" placeholder="Enter new name"><br><br>
+    <select id="edit-gender">
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select><br><br>
+    <input type="file" id="edit-photo"><br><br>
+    <button onclick="updateProfile()">✅ Save Changes</button>
+    <button onclick="cancelEdit()">❌ Cancel</button>
+  </div>
 
-  <div id="message"></div>
-  <hr>
-  <h3>Public Profiles</h3>
-  <div id="profiles"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  <script>
-    const pinataApiKey = "3d87f9ed904df892654c";
-    const pinataSecretApiKey = "a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f";
-    const firebaseUrl = "https://drfsocial-23a06-default-rtdb.firebaseio.com/profiles.json";
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
 
-    async function uploadProfile() {
-      const name = document.getElementById("name").value;
-      const wallet = document.getElementById("wallet").value;
-      const gender = document.getElementById("gender").value;
-      const photoFile = document.getElementById("photo").files[0];
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-      if (!name || !wallet || !photoFile) {
-        alert("Please fill in all fields and select a photo.");
-        return;
+    // Replace with real wallet logic
+    const wallet = localStorage.getItem("wallet") || "demo-wallet-address";
+    document.getElementById("wallet").innerText = wallet;
+
+    async function loadProfile() {
+      const snapshot = await get(ref(db, "users/" + wallet));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("name").innerText = data.name || "";
+        document.getElementById("gender").innerText = data.gender || "";
+        document.getElementById("profile-pic").src = data.photo || "";
       }
+    }
 
-      document.getElementById("message").innerText = "Uploading photo to IPFS...";
+    window.showEditForm = async function () {
+      const snapshot = await get(ref(db, "users/" + wallet));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("edit-name").value = data.name || "";
+        document.getElementById("edit-gender").value = data.gender || "";
+      }
+      document.getElementById("edit-form").style.display = "block";
+    };
 
+    window.cancelEdit = function () {
+      document.getElementById("edit-form").style.display = "none";
+    };
+
+    async function uploadToIPFS(file) {
       const formData = new FormData();
-      formData.append("file", photoFile);
+      formData.append("file", file);
 
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
         headers: {
-          pinata_api_key: pinataApiKey,
-          pinata_secret_api_key: pinataSecretApiKey,
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"
         },
-        body: formData,
+        body: formData
       });
 
-      const data = await res.json();
-
-      if (data.IpfsHash) {
-        const imageUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-
-        const profileData = {
-          name,
-          wallet,
-          gender,
-          image: imageUrl,
-          timestamp: Date.now()
-        };
-
-        await fetch(firebaseUrl, {
-          method: "POST",
-          body: JSON.stringify(profileData),
-          headers: { "Content-Type": "application/json" }
-        });
-
-        document.getElementById("message").innerText = "✅ Profile saved!";
-        loadProfiles();
-      } else {
-        document.getElementById("message").innerText = "❌ Upload failed!";
-      }
+      if (!res.ok) throw new Error("Upload failed");
+      const json = await res.json();
+      return "https://gateway.pinata.cloud/ipfs/" + json.IpfsHash;
     }
 
-    async function loadProfiles() {
-      const res = await fetch(firebaseUrl);
-      const data = await res.json();
-      const output = document.getElementById("profiles");
-      output.innerHTML = "";
+    window.updateProfile = async function () {
+      const name = document.getElementById("edit-name").value;
+      const gender = document.getElementById("edit-gender").value;
+      const photoInput = document.getElementById("edit-photo");
 
-      if (data) {
-        Object.values(data)
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .forEach(profile => {
-            const div = document.createElement("div");
-            div.className = "profile";
-            div.innerHTML = `
-              <img src="${profile.image}" alt="Profile Photo" />
-              <strong>Name:</strong> ${profile.name}<br>
-              <strong>Wallet:</strong> ${profile.wallet}<br>
-              <strong>Gender:</strong> ${profile.gender}
-            `;
-            output.appendChild(div);
-          });
+      let updates = { name, gender };
+
+      if (photoInput.files.length > 0) {
+        const ipfsUrl = await uploadToIPFS(photoInput.files[0]);
+        updates.photo = ipfsUrl;
       }
-    }
 
-    loadProfiles();
+      await update(ref(db, "users/" + wallet), updates);
+      alert("✅ Profile updated!");
+      document.getElementById("edit-form").style.display = "none";
+      loadProfile();
+    };
+
+    loadProfile();
   </script>
 </body>
 </html>
