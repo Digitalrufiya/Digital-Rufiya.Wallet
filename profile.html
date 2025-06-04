@@ -7,10 +7,40 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    form { 
+      max-width: 600px; 
+      margin: 0 auto 30px; 
+      background: white; 
+      padding: 20px; 
+      border-radius: 10px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }
+    input[type="file"] { 
+      display: block; 
+      margin-bottom: 15px; 
+    }
+    textarea { 
+      width: 100%; 
+      height: 60px; 
+      margin-bottom: 15px; 
+      padding: 10px; 
+      border-radius: 5px; 
+      border: 1px solid #ccc; 
+      resize: none; 
+    }
+    button { 
+      padding: 10px 20px; 
+      border: none; 
+      background: #0066cc; 
+      color: white; 
+      border-radius: 5px; 
+      cursor: pointer; 
+      align-self: flex-start;
+      margin-top: 10px;
+      z-index: 10;
+    }
     button:disabled { background: #999; cursor: not-allowed; }
     #postContainer { max-width: 700px; margin: 0 auto; }
     .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
@@ -20,102 +50,10 @@
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
     .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
     .post-actions span { font-weight: bold; margin-left: 4px; }
-
-    /* ======= Profile Section Styling ======= */
-    #profileSection {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 240px;
-      background: white;
-      padding: 15px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      font-size: 14px;
-      z-index: 1000;
-    }
-    #profileSection h2 {
-      margin: 0 0 12px 0;
-      font-size: 18px;
-      text-align: center;
-    }
-    #profilePhoto {
-      display: block;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin: 0 auto 12px auto;
-      cursor: pointer;
-      border: 2px solid #0066cc;
-    }
-    #profilePhotoInput {
-      display: none;
-    }
-    #profileName, #walletAddress {
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 12px;
-      font-size: 14px;
-      border: 1px solid #ccc;
-      text-align: center;
-      background: #f9f9f9;
-      user-select: text;
-    }
-    #profileName[readonly], #walletAddress[readonly] {
-      border-color: transparent;
-      background: transparent;
-      cursor: default;
-    }
-    #walletAddress {
-      font-family: monospace;
-      color: #444;
-    }
-    #profileButtons {
-      text-align: center;
-    }
-    #editProfileBtn, #saveProfileBtn, #cancelEditBtn {
-      margin: 0 5px;
-      padding: 6px 12px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-    }
-    #editProfileBtn {
-      background: #0066cc;
-      color: white;
-    }
-    #saveProfileBtn {
-      background: #28a745;
-      color: white;
-      display: none;
-    }
-    #cancelEditBtn {
-      background: #dc3545;
-      color: white;
-      display: none;
-    }
   </style>
 </head>
 <body>
   <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
-
-  <!-- Profile Section -->
-  <section id="profileSection">
-    <h2>Your Profile</h2>
-    <img id="profilePhoto" src="https://via.placeholder.com/80?text=Profile" alt="Profile Photo" title="Click to change photo" />
-    <input type="file" id="profilePhotoInput" accept="image/*" />
-    <input type="text" id="profileName" placeholder="Your name" readonly />
-    <input type="text" id="walletAddress" readonly title="Wallet address" />
-    <div id="profileButtons">
-      <button id="editProfileBtn">Edit</button>
-      <button id="saveProfileBtn">Save</button>
-      <button id="cancelEditBtn">Cancel</button>
-    </div>
-  </section>
 
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -143,86 +81,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // ====== Profile Section JS =======
-    const profilePhoto = document.getElementById('profilePhoto');
-    const profilePhotoInput = document.getElementById('profilePhotoInput');
-    const profileName = document.getElementById('profileName');
-    const walletAddress = document.getElementById('walletAddress');
-    const editBtn = document.getElementById('editProfileBtn');
-    const saveBtn = document.getElementById('saveProfileBtn');
-    const cancelBtn = document.getElementById('cancelEditBtn');
-
-    // Dummy wallet address - replace with real wallet from your app logic
-    const USER_WALLET_ADDRESS = '0x1234...ABCD5678EFGH';
-
-    // Load saved profile from localStorage (name and photo)
-    function loadProfile() {
-      const savedName = localStorage.getItem('profileName') || '';
-      const savedPhoto = localStorage.getItem('profilePhoto') || '';
-      profileName.value = savedName;
-      if (savedPhoto) profilePhoto.src = savedPhoto;
-      walletAddress.value = USER_WALLET_ADDRESS;
-      disableEditing();
-    }
-
-    // Enable editing (name input editable, photo clickable)
-    function enableEditing() {
-      profileName.readOnly = false;
-      profileName.style.background = 'white';
-      profilePhoto.style.cursor = 'pointer';
-      editBtn.style.display = 'none';
-      saveBtn.style.display = 'inline-block';
-      cancelBtn.style.display = 'inline-block';
-    }
-
-    // Disable editing (readonly inputs, photo not clickable)
-    function disableEditing() {
-      profileName.readOnly = true;
-      profileName.style.background = '#f9f9f9';
-      profilePhoto.style.cursor = 'default';
-      editBtn.style.display = 'inline-block';
-      saveBtn.style.display = 'none';
-      cancelBtn.style.display = 'none';
-    }
-
-    // Handle profile photo change
-    profilePhoto.addEventListener('click', () => {
-      if (!profileName.readOnly) { // only allow if editing
-        profilePhotoInput.click();
-      }
-    });
-
-    profilePhotoInput.addEventListener('change', () => {
-      const file = profilePhotoInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          profilePhoto.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    editBtn.addEventListener('click', () => {
-      enableEditing();
-      profileName.focus();
-    });
-
-    cancelBtn.addEventListener('click', () => {
-      loadProfile(); // reload saved data
-    });
-
-    saveBtn.addEventListener('click', () => {
-      // Save to localStorage
-      localStorage.setItem('profileName', profileName.value.trim());
-      localStorage.setItem('profilePhoto', profilePhoto.src);
-      disableEditing();
-      alert('Profile saved!');
-    });
-
-    loadProfile();
-
-    // ===== Existing post upload and display logic =====
     const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
