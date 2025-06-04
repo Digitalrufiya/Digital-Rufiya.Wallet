@@ -20,10 +20,102 @@
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
     .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
     .post-actions span { font-weight: bold; margin-left: 4px; }
+
+    /* ======= Profile Section Styling ======= */
+    #profileSection {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 240px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      font-size: 14px;
+      z-index: 1000;
+    }
+    #profileSection h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      text-align: center;
+    }
+    #profilePhoto {
+      display: block;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 12px auto;
+      cursor: pointer;
+      border: 2px solid #0066cc;
+    }
+    #profilePhotoInput {
+      display: none;
+    }
+    #profileName, #walletAddress {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      text-align: center;
+      background: #f9f9f9;
+      user-select: text;
+    }
+    #profileName[readonly], #walletAddress[readonly] {
+      border-color: transparent;
+      background: transparent;
+      cursor: default;
+    }
+    #walletAddress {
+      font-family: monospace;
+      color: #444;
+    }
+    #profileButtons {
+      text-align: center;
+    }
+    #editProfileBtn, #saveProfileBtn, #cancelEditBtn {
+      margin: 0 5px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+    #editProfileBtn {
+      background: #0066cc;
+      color: white;
+    }
+    #saveProfileBtn {
+      background: #28a745;
+      color: white;
+      display: none;
+    }
+    #cancelEditBtn {
+      background: #dc3545;
+      color: white;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
+
+  <!-- Profile Section -->
+  <section id="profileSection">
+    <h2>Your Profile</h2>
+    <img id="profilePhoto" src="https://via.placeholder.com/80?text=Profile" alt="Profile Photo" title="Click to change photo" />
+    <input type="file" id="profilePhotoInput" accept="image/*" />
+    <input type="text" id="profileName" placeholder="Your name" readonly />
+    <input type="text" id="walletAddress" readonly title="Wallet address" />
+    <div id="profileButtons">
+      <button id="editProfileBtn">Edit</button>
+      <button id="saveProfileBtn">Save</button>
+      <button id="cancelEditBtn">Cancel</button>
+    </div>
+  </section>
 
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -35,7 +127,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -51,13 +143,92 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // ====== Profile Section JS =======
+    const profilePhoto = document.getElementById('profilePhoto');
+    const profilePhotoInput = document.getElementById('profilePhotoInput');
+    const profileName = document.getElementById('profileName');
+    const walletAddress = document.getElementById('walletAddress');
+    const editBtn = document.getElementById('editProfileBtn');
+    const saveBtn = document.getElementById('saveProfileBtn');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+
+    // Dummy wallet address - replace with real wallet from your app logic
+    const USER_WALLET_ADDRESS = '0x1234...ABCD5678EFGH';
+
+    // Load saved profile from localStorage (name and photo)
+    function loadProfile() {
+      const savedName = localStorage.getItem('profileName') || '';
+      const savedPhoto = localStorage.getItem('profilePhoto') || '';
+      profileName.value = savedName;
+      if (savedPhoto) profilePhoto.src = savedPhoto;
+      walletAddress.value = USER_WALLET_ADDRESS;
+      disableEditing();
+    }
+
+    // Enable editing (name input editable, photo clickable)
+    function enableEditing() {
+      profileName.readOnly = false;
+      profileName.style.background = 'white';
+      profilePhoto.style.cursor = 'pointer';
+      editBtn.style.display = 'none';
+      saveBtn.style.display = 'inline-block';
+      cancelBtn.style.display = 'inline-block';
+    }
+
+    // Disable editing (readonly inputs, photo not clickable)
+    function disableEditing() {
+      profileName.readOnly = true;
+      profileName.style.background = '#f9f9f9';
+      profilePhoto.style.cursor = 'default';
+      editBtn.style.display = 'inline-block';
+      saveBtn.style.display = 'none';
+      cancelBtn.style.display = 'none';
+    }
+
+    // Handle profile photo change
+    profilePhoto.addEventListener('click', () => {
+      if (!profileName.readOnly) { // only allow if editing
+        profilePhotoInput.click();
+      }
+    });
+
+    profilePhotoInput.addEventListener('change', () => {
+      const file = profilePhotoInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          profilePhoto.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    editBtn.addEventListener('click', () => {
+      enableEditing();
+      profileName.focus();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      loadProfile(); // reload saved data
+    });
+
+    saveBtn.addEventListener('click', () => {
+      // Save to localStorage
+      localStorage.setItem('profileName', profileName.value.trim());
+      localStorage.setItem('profilePhoto', profilePhoto.src);
+      disableEditing();
+      alert('Profile saved!');
+    });
+
+    loadProfile();
+
+    // ===== Existing post upload and display logic =====
     const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
 
-    // Your Pinata JWT token (put your actual token here)
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+    const PINATA_JWT = "<your_pinata_jwt_here>"; // Use securely in production
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -120,12 +291,46 @@
     const postsRef = ref(db, 'posts/');
     onValue(postsRef, (snapshot) => {
       postContainer.innerHTML = '';
-      if (!snapshot.exists()) {
-        postContainer.innerHTML = '<p>No posts yet.</p>';
-        return;
-      }
       snapshot.forEach((child) => {
         const postId = child.key;
         const post = child.val();
 
-        const postDiv
+        const postDiv = document.createElement('div');
+        postDiv.classList.add('post-item');
+
+        let mediaHtml = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        postDiv.innerHTML = `
+          ${mediaHtml}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button onclick="likePost('${postId}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${postId}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
+        `;
+
+        postContainer.appendChild(postDiv);
+      });
+    });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
+      update(postRef, { likes: current + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment received. Will be added in next version with real database storage.");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
+  </script>
+</body>
+</html>
