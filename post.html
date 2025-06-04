@@ -2,44 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRF Media Timeline</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; color: #333; }
-    header { background: #101820; padding: 15px; color: #fff; text-align: center; }
-    h1 { margin: 0; font-size: 24px; }
-
-    .profile { text-align: center; padding: 20px; background: white; margin-bottom: 20px; }
-    .profile img { width: 100px; height: 100px; border-radius: 50%; }
-    .profile h2 { margin: 10px 0 5px; }
-    .profile p { margin: 3px 0; font-size: 14px; }
-
-    form { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    textarea, input[type="file"] { width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-
-    #postContainer { max-width: 700px; margin: 30px auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>DRF Media Timeline</h1>
-  </header>
-
-  <div class="profile" id="userProfile">
-    <img src="https://avatars.dicebear.com/api/bottts/DRF.svg" alt="User Avatar" id="userAvatar" />
-    <h2 id="userName">DRF User</h2>
-    <p><strong>Wallet:</strong> <span id="walletAddress">0x...abc</span></p>
-    <p><strong>Total Posts:</strong> <span id="postCount">0</span></p>
-  </div>
+  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
 
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption..." required></textarea>
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
   </form>
 
@@ -56,19 +44,19 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const PINATA_JWT = "Bearer YOUR_PINATA_JWT";
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
+    const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
-    const postContainer = document.getElementById('postContainer');
-    const postCountSpan = document.getElementById('postCount');
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -77,11 +65,11 @@
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: PINATA_JWT },
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) throw new Error('Pinata upload failed');
       const data = await response.json();
       return data.IpfsHash;
     }
@@ -96,56 +84,66 @@
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('File and caption required.');
+      if (!file || !caption) return alert('Please select a file and caption.');
 
-      const btn = uploadForm.querySelector('button');
-      btn.disabled = true;
-      btn.textContent = 'Posting...';
+      const button = uploadForm.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Posting...';
 
       try {
-        const hash = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
         const type = getFileType(file);
 
-        const post = { caption, fileUrl, type, timestamp: Date.now(), likes: 0 };
-        await push(ref(db, 'posts'), post);
+        const postData = {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: []
+        };
+
+        await push(ref(db, 'posts'), postData);
 
         mediaFileInput.value = '';
         captionInput.value = '';
-      } catch (err) {
-        alert('Error: ' + err.message);
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Post';
+        button.disabled = false;
+        button.textContent = 'Post';
       }
     });
 
-    onValue(ref(db, 'posts'), (snapshot) => {
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, (snapshot) => {
       postContainer.innerHTML = '';
       const posts = [];
-      snapshot.forEach(child => {
+
+      snapshot.forEach((child) => {
         const post = child.val();
         post.id = child.key;
         posts.push(post);
       });
-      posts.sort((a, b) => b.timestamp - a.timestamp);
-      postCountSpan.textContent = posts.length;
 
-      posts.forEach(post => {
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      posts.forEach((post) => {
         const div = document.createElement('div');
         div.className = 'post-item';
-
         const media = post.type === 'image'
-          ? `<img src="${post.fileUrl}" alt="Post" />`
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
           : `<video controls src="${post.fileUrl}"></video>`;
 
         div.innerHTML = `
           ${media}
-          <p>${post.caption}</p>
-          <small>${new Date(post.timestamp).toLocaleString()}</small>
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
           <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 <span>${post.likes || 0}</span></button>
-            <button onclick="navigator.clipboard.writeText('${post.fileUrl}')">🔗 Share</button>
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
           </div>
         `;
         postContainer.appendChild(div);
@@ -154,12 +152,20 @@
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
-      const data = await res.json();
-      update(postRef, { likes: (data.likes || 0) + 1 });
+      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const post = await response.json();
+      const currentLikes = post.likes || 0;
+      update(postRef, { likes: currentLikes + 1 });
     };
 
-    document.getElementById("walletAddress").textContent = "0x34c...e9AF";
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment saved (feature coming soon)");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
+    };
   </script>
 </body>
 </html>
