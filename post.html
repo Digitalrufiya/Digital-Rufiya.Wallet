@@ -2,52 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Media Timeline</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f8; color: #333; }
-    h1 { text-align: center; margin-bottom: 10px; }
-    .profile { text-align: center; margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .profile img { border-radius: 50%; width: 100px; height: 100px; object-fit: cover; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; color: #333; }
+    header { background: #101820; padding: 15px; color: #fff; text-align: center; }
+    h1 { margin: 0; font-size: 24px; }
+
+    .profile { text-align: center; padding: 20px; background: white; margin-bottom: 20px; }
+    .profile img { width: 100px; height: 100px; border-radius: 50%; }
     .profile h2 { margin: 10px 0 5px; }
-    .profile p { margin: 4px 0; font-size: 14px; color: #666; }
+    .profile p { margin: 3px 0; font-size: 14px; }
 
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
+    form { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    textarea, input[type="file"] { width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
 
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
+    #postContainer { max-width: 700px; margin: 30px auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { width: 100%; border-radius: 10px; margin-bottom: 10px; }
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
+    .post-actions button { background: none; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>DRF Media Timeline</h1>
+  </header>
 
-  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
-
-  <!-- Profile Section -->
   <div class="profile" id="userProfile">
-    <img src="https://via.placeholder.com/100" id="userAvatar" alt="User Avatar" />
+    <img src="https://avatars.dicebear.com/api/bottts/DRF.svg" alt="User Avatar" id="userAvatar" />
     <h2 id="userName">DRF User</h2>
     <p><strong>Wallet:</strong> <span id="walletAddress">0x...abc</span></p>
     <p><strong>Total Posts:</strong> <span id="postCount">0</span></p>
   </div>
 
-  <!-- Upload Form -->
   <form id="uploadForm">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <textarea id="caption" placeholder="Write your caption..." required></textarea>
     <button type="submit">Post</button>
   </form>
 
-  <!-- Post Timeline -->
   <div id="postContainer"></div>
 
   <script type="module">
@@ -61,19 +56,18 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...<YOUR_REMAINING_TOKEN>";
+    const PINATA_JWT = "Bearer YOUR_PINATA_JWT";
 
-    const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
+    const postContainer = document.getElementById('postContainer');
     const postCountSpan = document.getElementById('postCount');
 
     async function uploadToPinata(file) {
@@ -83,11 +77,11 @@
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        headers: { Authorization: PINATA_JWT },
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Pinata upload failed');
+      if (!response.ok) throw new Error('Upload failed');
       const data = await response.json();
       return data.IpfsHash;
     }
@@ -102,68 +96,56 @@
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and caption.');
+      if (!file || !caption) return alert('File and caption required.');
 
-      const button = uploadForm.querySelector('button');
-      button.disabled = true;
-      button.textContent = 'Posting...';
+      const btn = uploadForm.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Posting...';
 
       try {
-        const cid = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const hash = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
         const type = getFileType(file);
 
-        const postData = {
-          caption,
-          fileUrl,
-          type,
-          timestamp: Date.now(),
-          likes: 0,
-          comments: []
-        };
-
-        await push(ref(db, 'posts'), postData);
+        const post = { caption, fileUrl, type, timestamp: Date.now(), likes: 0 };
+        await push(ref(db, 'posts'), post);
 
         mediaFileInput.value = '';
         captionInput.value = '';
-      } catch (error) {
-        alert('Upload failed: ' + error.message);
+      } catch (err) {
+        alert('Error: ' + err.message);
       } finally {
-        button.disabled = false;
-        button.textContent = 'Post';
+        btn.disabled = false;
+        btn.textContent = 'Post';
       }
     });
 
-    const postsRef = ref(db, 'posts/');
-    onValue(postsRef, (snapshot) => {
+    onValue(ref(db, 'posts'), (snapshot) => {
       postContainer.innerHTML = '';
       const posts = [];
-
-      snapshot.forEach((child) => {
+      snapshot.forEach(child => {
         const post = child.val();
         post.id = child.key;
         posts.push(post);
       });
-
       posts.sort((a, b) => b.timestamp - a.timestamp);
-
       postCountSpan.textContent = posts.length;
 
-      posts.forEach((post) => {
+      posts.forEach(post => {
         const div = document.createElement('div');
         div.className = 'post-item';
+
         const media = post.type === 'image'
-          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          ? `<img src="${post.fileUrl}" alt="Post" />`
           : `<video controls src="${post.fileUrl}"></video>`;
 
         div.innerHTML = `
           ${media}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <p>${post.caption}</p>
+          <small>${new Date(post.timestamp).toLocaleString()}</small>
           <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${post.id}')">💬 Comment</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+            <button onclick="likePost('${post.id}')">👍 <span>${post.likes || 0}</span></button>
+            <button onclick="navigator.clipboard.writeText('${post.fileUrl}')">🔗 Share</button>
           </div>
         `;
         postContainer.appendChild(div);
@@ -172,24 +154,12 @@
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
-      const post = await response.json();
-      const currentLikes = post.likes || 0;
-      update(postRef, { likes: currentLikes + 1 });
+      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const data = await res.json();
+      update(postRef, { likes: (data.likes || 0) + 1 });
     };
 
-    window.commentPost = (postId) => {
-      const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment saved (feature coming soon)");
-    };
-
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
-    };
-
-    // Simulate Wallet + Avatar
-    document.getElementById("userAvatar").src = "https://avatars.dicebear.com/api/bottts/DRF.svg";
-    document.getElementById("walletAddress").textContent = "0x34c...e9AF"; // you can use real address if connected
+    document.getElementById("walletAddress").textContent = "0x34c...e9AF";
   </script>
 </body>
 </html>
