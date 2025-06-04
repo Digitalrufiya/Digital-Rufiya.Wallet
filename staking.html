@@ -1,83 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stake DRF | Digital Rufiya</title>
+  <meta charset="UTF-8">
+  <title>DRF Staking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f2027;
-      background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .box {
-      background: #1e2a38;
-      padding: 25px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 0 15px rgba(0,0,0,0.4);
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-    button {
-      background-color: #00c9a7;
-      color: white;
-      cursor: pointer;
-    }
-    .message {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #ffd700;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #444; }
+    input, button, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+    button { background-color: #4CAF50; color: white; cursor: pointer; }
+    button:hover { background-color: #45a049; }
+    .success { color: green; text-align: center; margin-top: 10px; }
+    .error { color: red; text-align: center; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>Stake Your DRF</h2>
-    <input type="text" id="wallet" placeholder="Enter your DRF wallet address" required />
-    <input type="number" id="amount" placeholder="Amount to Stake" required />
-    <button onclick="generateRequest()">Submit Stake Request</button>
-    <div class="message" id="message"></div>
-  </div>
 
-  <script>
-    function generateRequest() {
-      const wallet = document.getElementById("wallet").value.trim();
-      const amount = document.getElementById("amount").value.trim();
-      const message = document.getElementById("message");
+<div class="container">
+  <h2>Stake Your DRF Tokens</h2>
+  <form id="stakeForm">
+    <input type="text" id="wallet" placeholder="Your DRF Wallet Address" required>
+    <input type="number" id="amount" placeholder="Amount to Stake" required>
+    <input type="email" id="email" placeholder="Your Email (for receipt)" required>
+    <button type="submit">Submit Staking Request</button>
+  </form>
+  <div id="message" class="success" style="display:none;">Staking request submitted successfully!</div>
+  <div id="error" class="error" style="display:none;">Submission failed. Try again.</div>
+</div>
 
-      if (!wallet || !amount) {
-        message.style.color = "#f66";
-        message.textContent = "Please fill in both fields.";
-        return;
-      }
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-      const data = `Wallet Address: ${wallet}\nAmount: ${amount} DRF\nDate: ${new Date().toLocaleString()}`;
-      const blob = new Blob([data], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `staking_request_${Date.now()}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      message.style.color = "#0f0";
-      message.textContent = "Request file downloaded. Send it to admin manually.";
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const form = document.getElementById('stakeForm');
+  const successMsg = document.getElementById('message');
+  const errorMsg = document.getElementById('error');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    successMsg.style.display = "none";
+    errorMsg.style.display = "none";
+
+    const wallet = document.getElementById('wallet').value.trim();
+    const amount = document.getElementById('amount').value.trim();
+    const email = document.getElementById('email').value.trim();
+
+    if (!wallet || !amount || !email) {
+      errorMsg.textContent = "Please fill in all fields.";
+      errorMsg.style.display = "block";
+      return;
     }
-  </script>
+
+    try {
+      const timestamp = new Date().toISOString();
+      const requestData = { wallet, amount, email, timestamp };
+
+      // Upload JSON to IPFS via Pinata
+      const pinataJWT = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
+
+      const pinResponse = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${pinataJWT}`
+        },
+        body: JSON.stringify({
+          pinataMetadata: {
+            name: `DRF_Stake_${wallet}_${Date.now()}`
+          },
+          pinataContent: requestData
+        })
+      });
+
+      const pinResult = await pinResponse.json();
+      const ipfsHash = pinResult.IpfsHash;
+
+      // Save to Firebase DB with IPFS hash
+      await push(ref(db, 'stakingRequests'), {
+        ...requestData,
+        ipfsHash
+      });
+
+      successMsg.style.display = "block";
+      form.reset();
+    } catch (error) {
+      console.error("Submission error:", error);
+      errorMsg.textContent = "Failed to submit. Try again.";
+      errorMsg.style.display = "block";
+    }
+  });
+</script>
+
 </body>
 </html>
