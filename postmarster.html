@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <title>DRF Media Timeline with Profile</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     h1 { text-align: center; margin-bottom: 20px; }
     form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"], input[type="text"], input[type="number"], select { display: block; width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    input, select, textarea { width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
     button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
     button:disabled { background: #999; cursor: not-allowed; }
     #postContainer { max-width: 700px; margin: 0 auto; }
@@ -19,30 +18,25 @@
     .post-time { font-size: 12px; color: #555; }
     .post-actions { display: flex; gap: 10px; margin-top: 10px; }
     .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-    .profile-info { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
-    .profile-info img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; }
+    .profile-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .profile-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
   </style>
 </head>
 <body>
-  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
+  <h1>📸 DRF Media Timeline with Profile</h1>
 
   <form id="profileForm">
-    <h3>Setup Profile</h3>
+    <h3>👤 Profile Setup</h3>
     <input type="text" id="name" placeholder="Name" required>
-    <select id="gender" required>
-      <option value="">Select Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select>
+    <input type="text" id="gender" placeholder="Gender" required>
     <input type="number" id="age" placeholder="Age" required>
     <input type="text" id="wallet" placeholder="Wallet Address" required>
     <input type="file" id="profilePhoto" accept="image/*" required>
     <button type="submit">Save Profile</button>
   </form>
 
-  <form id="uploadForm" style="display:none">
+  <form id="uploadForm">
+    <h3>📝 Create Post</h3>
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
     <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
@@ -52,7 +46,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -67,60 +61,58 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Shortened for brevity
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // shorten for space
 
     const profileForm = document.getElementById('profileForm');
     const uploadForm = document.getElementById('uploadForm');
+    const mediaFileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
     const postContainer = document.getElementById('postContainer');
 
-    const profileKey = 'drfProfile';
+    let currentUser = null;
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${PINATA_JWT}` },
-        body: formData,
+        body: formData
       });
-
-      if (!response.ok) throw new Error('Pinata upload failed');
-      const data = await response.json();
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
       return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
     }
 
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('name').value.trim();
+      const name = document.getElementById('name').value;
       const gender = document.getElementById('gender').value;
-      const age = document.getElementById('age').value.trim();
-      const wallet = document.getElementById('wallet').value.trim();
-      const photo = document.getElementById('profilePhoto').files[0];
+      const age = document.getElementById('age').value;
+      const wallet = document.getElementById('wallet').value;
+      const file = document.getElementById('profilePhoto').files[0];
 
-      if (!name || !gender || !age || !wallet || !photo) return alert("All fields required");
+      if (!name || !gender || !age || !wallet || !file) return alert('Please complete all fields');
 
-      const photoUrl = await uploadToPinata(photo);
-
-      const profile = { name, gender, age, wallet, photoUrl };
-      localStorage.setItem(profileKey, JSON.stringify(profile));
-
-      profileForm.style.display = 'none';
-      uploadForm.style.display = 'block';
+      try {
+        const photoUrl = await uploadToPinata(file);
+        currentUser = { name, gender, age, wallet, photoUrl };
+        await set(ref(db, 'users/' + wallet), currentUser);
+        alert('Profile saved successfully');
+      } catch (err) {
+        alert('Failed to save profile: ' + err.message);
+      }
     });
-
-    const profile = JSON.parse(localStorage.getItem(profileKey));
-    if (profile) {
-      profileForm.style.display = 'none';
-      uploadForm.style.display = 'block';
-    }
 
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const file = document.getElementById('mediaFile').files[0];
-      const caption = document.getElementById('caption').value.trim();
-      if (!file || !caption) return alert("File and caption required");
+      if (!currentUser) return alert('Please complete your profile first.');
+
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) return alert('Select file and caption.');
 
       const button = uploadForm.querySelector('button');
       button.disabled = true;
@@ -130,21 +122,21 @@
         const fileUrl = await uploadToPinata(file);
         const type = file.type.startsWith('image/') ? 'image' : 'video';
 
-        const postData = {
+        const post = {
+          ...currentUser,
           caption,
           fileUrl,
           type,
           timestamp: Date.now(),
           likes: 0,
-          comments: [],
-          profile
+          comments: []
         };
 
-        await push(ref(db, 'posts'), postData);
-        document.getElementById('mediaFile').value = '';
-        document.getElementById('caption').value = '';
-      } catch (error) {
-        alert("Upload failed: " + error.message);
+        await push(ref(db, 'posts'), post);
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (err) {
+        alert('Post failed: ' + err.message);
       } finally {
         button.disabled = false;
         button.textContent = 'Post';
@@ -161,25 +153,19 @@
         posts.push(post);
       });
       posts.sort((a, b) => b.timestamp - a.timestamp);
+
       posts.forEach((post) => {
         const div = document.createElement('div');
         div.className = 'post-item';
         const media = post.type === 'image'
           ? `<img src="${post.fileUrl}" alt="Post Image" />`
           : `<video controls src="${post.fileUrl}"></video>`;
-        const profileHtml = post.profile ? `
-          <div class="profile-info">
-            <img src="${post.profile.photoUrl}" alt="User Photo">
-            <div>
-              <strong>${post.profile.name}</strong><br>
-              ${post.profile.gender}, ${post.profile.age}<br>
-              <small>${post.profile.wallet}</small>
-            </div>
-          </div>
-        ` : '';
 
         div.innerHTML = `
-          ${profileHtml}
+          <div class="profile-header">
+            <img src="${post.photoUrl}" alt="Profile Photo" />
+            <div><strong>${post.name}</strong><br><small>${post.gender}, ${post.age}</small><br><small>${post.wallet}</small></div>
+          </div>
           ${media}
           <p class="post-caption">${post.caption}</p>
           <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
@@ -195,10 +181,10 @@
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
-      const post = await response.json();
-      const currentLikes = post.likes || 0;
-      update(postRef, { likes: currentLikes + 1 });
+      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const post = await res.json();
+      const likes = post.likes || 0;
+      update(postRef, { likes: likes + 1 });
     };
 
     window.commentPost = (postId) => {
