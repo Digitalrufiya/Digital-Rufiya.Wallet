@@ -1,293 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Profile Upload with Age & Gender Detection</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f3f3;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-    }
-    input, textarea {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #007bff;
-      color: #fff;
-      border: none;
-      padding: 12px;
-      width: 100%;
-      font-size: 18px;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
-    button:disabled {
-      background: #aaa;
-    }
-    .profile-display {
-      max-width: 500px;
-      margin: 20px auto;
-      background: #fff;
-      padding: 15px 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 8px #bbb;
-      text-align: center;
-    }
-    .profile-display img {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 15px;
-    }
-    .profile-display h2 {
-      margin: 5px 0;
-    }
-    .profile-display p {
-      margin: 3px 0;
-      font-size: 16px;
-      color: #555;
-      word-break: break-word;
-    }
-    .edit-btn {
-      background: #28a745;
-      margin-top: 15px;
-    }
-  </style>
-
-  <!-- Load face-api.js -->
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>User Profile</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
+  .profile { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  img { border-radius: 50%; width: 80px; height: 80px; object-fit: cover; }
+  label { font-weight: bold; display: block; margin-top: 1rem; }
+  input[type="text"], select, input[type="number"] {
+    margin-top: 0.3rem; padding: 0.4rem; font-size: 1rem; width: 100%;
+  }
+  button {
+    margin-top: 1.5rem; padding: 0.7rem 1.2rem; font-size: 1rem; cursor: pointer;
+  }
+</style>
 </head>
 <body>
 
-  <div class="container" id="profileFormContainer">
-    <h2>Update Profile</h2>
-    <input type="text" id="name" placeholder="Enter your name" required />
-    <textarea id="bio" rows="3" placeholder="Enter your bio" required></textarea>
-    <input type="text" id="wallet" placeholder="Enter your wallet address" required />
-    <input type="file" id="profilePic" accept="image/*" />
-    <button id="saveProfile">Save Profile</button>
-  </div>
+<h1>User Profile</h1>
 
-  <div class="profile-display" id="profileDisplay" style="display:none;">
-    <img id="displayImage" src="" alt="Profile Picture" />
-    <h2 id="displayName"></h2>
-    <p id="displayBio"></p>
-    <p><strong>Wallet:</strong> <span id="displayWallet"></span></p>
-    <!-- Age & Gender will appear here -->
-    <p id="ageGenderDisplay" style="font-weight:bold; margin-top:10px;"></p>
-    <button id="editProfile" class="edit-btn">Edit Profile</button>
-  </div>
+<div class="profile">
+  <img id="profilePhoto" src="https://via.placeholder.com/80?text=No+Photo" alt="Profile Photo" />
+  <input type="file" id="photoInput" accept="image/*" />
+</div>
 
-  <script>
-    const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+<div>
+  <label for="nameInput">Name:</label>
+  <input type="text" id="nameInput" placeholder="Enter your name" />
 
-    const formContainer = document.getElementById('profileFormContainer');
-    const profileDisplay = document.getElementById('profileDisplay');
-    const saveBtn = document.getElementById('saveProfile');
-    const editBtn = document.getElementById('editProfile');
+  <label for="emailInput">Email (read-only):</label>
+  <input type="text" id="emailInput" readonly />
 
-    // Inputs
-    const nameInput = document.getElementById('name');
-    const bioInput = document.getElementById('bio');
-    const walletInput = document.getElementById('wallet');
-    const profilePicInput = document.getElementById('profilePic');
+  <label for="walletInput">Wallet Address:</label>
+  <input type="text" id="walletInput" placeholder="Enter your wallet address" />
 
-    // Display elements
-    const displayImage = document.getElementById('displayImage');
-    const displayName = document.getElementById('displayName');
-    const displayBio = document.getElementById('displayBio');
-    const displayWallet = document.getElementById('displayWallet');
-    const ageGenderDisplay = document.getElementById('ageGenderDisplay');
+  <label for="countryInput">Country:</label>
+  <input type="text" id="countryInput" placeholder="Enter your country" />
 
-    // Load face-api.js models
-    async function loadModels() {
-      const modelUrl = 'https://cdn.jsdelivr.net/npm/face-api.js/weights';
-      await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
-      await faceapi.nets.ageGenderNet.loadFromUri(modelUrl);
-    }
+  <label for="genderInput">Gender:</label>
+  <select id="genderInput">
+    <option value="">Select gender</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+    <option value="Other">Other</option>
+  </select>
 
-    // Detect age & gender from an image file
-    async function detectAgeGender(file) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = async () => {
-          try {
-            const detections = await faceapi
-              .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-              .withAgeAndGender();
+  <label for="ageInput">Age:</label>
+  <input type="number" id="ageInput" min="1" max="120" placeholder="Enter your age" />
+</div>
 
-            if (!detections) {
-              resolve({ age: null, gender: null });
-              return;
-            }
-            resolve({
-              age: Math.round(detections.age),
-              gender: detections.gender
-            });
-          } catch (err) {
-            resolve({ age: null, gender: null });
-          }
-        };
-        img.onerror = () => resolve({ age: null, gender: null });
-        img.src = URL.createObjectURL(file);
-      });
-    }
+<button id="saveBtn">Save Changes</button>
 
-    // Load profile from localStorage if exists
-    function loadProfile() {
-      const storedProfile = localStorage.getItem('drfUserProfile');
-      if (storedProfile) {
-        const profile = JSON.parse(storedProfile);
-        showProfile(profile);
-      } else {
-        formContainer.style.display = 'block';
-        profileDisplay.style.display = 'none';
-      }
-    }
+<script>
+  // Simulated logged-in user data (replace with real user data fetching)
+  let user = JSON.parse(localStorage.getItem('drfUser')) || {
+    email: "digitalrufiya@gmail.com",
+    name: "",
+    wallet: "",
+    country: "",
+    gender: "",
+    age: "",
+    profilePhoto: null
+  };
 
-    // Show profile display and hide form
-    function showProfile(profile) {
-      displayImage.src = profile.image || '';
-      displayName.innerText = profile.name || '';
-      displayBio.innerText = profile.bio || '';
-      displayWallet.innerText = profile.wallet || '';
-      if (profile.age !== null && profile.gender) {
-        ageGenderDisplay.innerText = `Age: ${profile.age}, Gender: ${profile.gender}`;
-      } else {
-        ageGenderDisplay.innerText = '';
-      }
-      profileDisplay.style.display = 'block';
-      formContainer.style.display = 'none';
-    }
+  // Load user data into form
+  function loadUser() {
+    document.getElementById('emailInput').value = user.email || "";
+    document.getElementById('nameInput').value = user.name || "";
+    document.getElementById('walletInput').value = user.wallet || "";
+    document.getElementById('countryInput').value = user.country || "";
+    document.getElementById('genderInput').value = user.gender || "";
+    document.getElementById('ageInput').value = user.age || "";
+    document.getElementById('profilePhoto').src = user.profilePhoto || "https://via.placeholder.com/80?text=No+Photo";
+  }
 
-    // Prefill form for editing
-    function fillForm(profile) {
-      nameInput.value = profile.name || '';
-      bioInput.value = profile.bio || '';
-      walletInput.value = profile.wallet || '';
-      profilePicInput.value = "";
-    }
-
-    // Edit button click
-    editBtn.addEventListener('click', () => {
-      const storedProfile = localStorage.getItem('drfUserProfile');
-      if (storedProfile) {
-        const profile = JSON.parse(storedProfile);
-        fillForm(profile);
-      }
-      formContainer.style.display = 'block';
-      profileDisplay.style.display = 'none';
-    });
-
-    // Save Profile click
-    saveBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
-      const bio = bioInput.value.trim();
-      const wallet = walletInput.value.trim();
-      const profilePic = profilePicInput.files[0];
-
-      if (!name || !bio || !wallet) {
-        alert("Please fill in all required fields (name, bio, wallet).");
-        return;
-      }
-
-      saveBtn.disabled = true;
-      saveBtn.innerText = "Uploading...";
-
-      try {
-        let imageUrl;
-        let age = null;
-        let gender = null;
-
-        if (profilePic) {
-          // Detect age & gender from image
-          const detection = await detectAgeGender(profilePic);
-          age = detection.age;
-          gender = detection.gender;
-
-          // Upload profile image to Pinata
-          const formData = new FormData();
-          formData.append("file", profilePic);
-
-          const imageRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-            method: "POST",
-            headers: {
-              Authorization: "Bearer " + jwt
-            },
-            body: formData
-          });
-
-          const imageData = await imageRes.json();
-          if (!imageRes.ok) throw new Error(imageData.error || "Image upload failed");
-          imageUrl = `https://gateway.pinata.cloud/ipfs/${imageData.IpfsHash}`;
-        } else {
-          // No new pic uploaded, try keep previous pic url if exists
-          const storedProfile = localStorage.getItem('drfUserProfile');
-          if (storedProfile) {
-            imageUrl = JSON.parse(storedProfile).image || '';
-          } else {
-            imageUrl = '';
-          }
-        }
-
-        // Prepare JSON metadata for Pinata
-        const profileData = {
-          name,
-          bio,
-          wallet,
-          image: imageUrl,
-          age,
-          gender,
-          updated: new Date().toISOString()
-        };
-
-        const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + jwt
-          },
-          body: JSON.stringify(profileData)
-        });
-
-        const jsonData = await jsonRes.json();
-        if (!jsonRes.ok) throw new Error(jsonData.error || "Profile metadata upload failed");
-
-        // Save locally for display
-        localStorage.setItem("drfUserProfile", JSON.stringify(profileData));
-        showProfile(profileData);
-        alert("Profile saved successfully!");
-      } catch (err) {
-        alert("Error: " + err.message);
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerText = "Save Profile";
-      }
-    });
-
-    // Load models and profile on page load
-    window.onload = async () => {
-      await loadModels();
-      loadProfile();
+  // Preview uploaded photo
+  document.getElementById('photoInput').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('profilePhoto').src = e.target.result;
     };
-  </script>
+    reader.readAsDataURL(file);
+  });
+
+  // Save changes (here just saving to localStorage, you replace this with real API/DB)
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    user.name = document.getElementById('nameInput').value.trim();
+    user.wallet = document.getElementById('walletInput').value.trim();
+    user.country = document.getElementById('countryInput').value.trim();
+    user.gender = document.getElementById('genderInput').value;
+    user.age = document.getElementById('ageInput').value;
+
+    // Save photo if changed (using base64 preview)
+    const photoSrc = document.getElementById('profilePhoto').src;
+    if (photoSrc && !photoSrc.startsWith('https://via.placeholder.com')) {
+      user.profilePhoto = photoSrc;
+    }
+
+    localStorage.setItem('drfUser', JSON.stringify(user));
+    alert('Profile saved locally! (replace this with server save)');
+  });
+
+  loadUser();
+</script>
 
 </body>
 </html>
