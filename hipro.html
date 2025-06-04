@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>User Profile with Pinata Upload & Edit</title>
+<title>User Profile with Wallet Address</title>
 <style>
   body { font-family: Arial, sans-serif; max-width: 600px; margin: 2rem auto; }
   .profile { display: flex; align-items: center; gap: 1rem; }
   img { border-radius: 50%; width: 80px; height: 80px; object-fit: cover; }
-  input[type="file"] { margin-top: 1rem; }
+  input[type="file"], input[type="text"] { margin-top: 0.3rem; padding: 0.3rem; font-size: 1rem; width: 100%; }
   label { font-weight: bold; display: block; margin-top: 1rem; }
   .edit-section { margin-top: 2rem; }
   button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
@@ -24,12 +24,16 @@
     <div><strong>Name:</strong> <span id="userName">Loading...</span></div>
     <div><strong>Email:</strong> <span id="userEmail">Loading...</span></div>
     <div><strong>User ID:</strong> <span id="userId">Loading...</span></div>
+    <div><strong>Wallet Address:</strong> <span id="userWallet">Loading...</span></div>
   </div>
 </div>
 
 <div class="edit-section">
   <label for="nameInput">Edit Name:</label>
   <input type="text" id="nameInput" placeholder="Enter your name" />
+
+  <label for="walletInput">Edit Wallet Address:</label>
+  <input type="text" id="walletInput" placeholder="Enter your wallet address" />
 
   <label for="photoInput">Change Profile Photo:</label>
   <input type="file" id="photoInput" accept="image/*" />
@@ -46,6 +50,7 @@
     id: "801f0017-8b6d-46b6-8b0f-8ccdee971882",
     name: "DigitalRufiya",
     email: "digitalrufiya@gmail.com",
+    wallet: "0x1234567890abcdef1234567890abcdef12345678", // Example wallet
     profilePhoto: null, // will store IPFS URL
   };
 
@@ -54,6 +59,7 @@
     document.getElementById('userName').textContent = user.name;
     document.getElementById('userEmail').textContent = user.email;
     document.getElementById('userId').textContent = user.id;
+    document.getElementById('userWallet').textContent = user.wallet;
 
     if (user.profilePhoto) {
       document.getElementById('profilePhoto').src = user.profilePhoto;
@@ -62,6 +68,7 @@
     }
 
     document.getElementById('nameInput').value = user.name;
+    document.getElementById('walletInput').value = user.wallet;
   }
 
   // Upload image file to Pinata IPFS and return IPFS gateway URL
@@ -82,13 +89,13 @@
       throw new Error('Pinata upload failed: ' + res.statusText);
     }
     const data = await res.json();
-    // Return a gateway URL so it can be loaded in img tag easily
     return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
   }
 
   // Handle save changes button click
   document.getElementById('saveBtn').addEventListener('click', async () => {
     const newName = document.getElementById('nameInput').value.trim();
+    const newWallet = document.getElementById('walletInput').value.trim();
     const fileInput = document.getElementById('photoInput');
     try {
       if (fileInput.files.length > 0) {
@@ -98,6 +105,7 @@
         user.profilePhoto = uploadedUrl;
       }
       if (newName) user.name = newName;
+      if (newWallet) user.wallet = newWallet;
 
       // Simulate saving user to DB here
       // e.g. await saveUser(user);
