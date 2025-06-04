@@ -1,22 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Post with Pinata + Firebase</title>
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pinata + Firebase Debug Post</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+  body { font-family: Arial,sans-serif; max-width: 600px; margin: auto; padding: 20px; }
   textarea { width: 100%; height: 80px; }
-  img.post-img { max-width: 100%; max-height: 300px; margin-top: 10px; }
-  .post { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
-  .post img { max-width: 100%; max-height: 200px; }
+  .post { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+  .post img { max-width: 100%; max-height: 300px; }
   .post-time { font-size: 0.8em; color: #666; }
 </style>
 </head>
 <body>
 
 <h2>Create a Post</h2>
-
 <textarea id="postText" placeholder="Write your post..."></textarea><br />
 <input type="file" id="imageFile" accept="image/*" /><br /><br />
 <button id="submitBtn">Post</button>
@@ -28,7 +24,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -39,86 +34,82 @@
     measurementId: "G-W6VHMP77YR"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Your provided Pinata JWT token (Secret Access Token)
   const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-  // Upload file to Pinata
   async function uploadFileToPinata(file) {
     const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`,
-      },
-      body: formData,
-    });
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${PINATA_JWT}`,
+        },
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error("Pinata upload failed: " + errorText);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Pinata upload error: ${text}`);
+      }
+      const data = await res.json();
+      console.log("Pinata upload success:", data);
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
-
-    const data = await response.json();
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
   }
 
-  // Save post to Firestore
   async function savePost(text, imageUrl = null) {
     try {
-      await addDoc(collection(db, "posts"), {
+      const docRef = await addDoc(collection(db, "posts"), {
         text,
         imageUrl,
         createdAt: serverTimestamp(),
       });
-    } catch (error) {
-      console.error("Error adding document: ", error);
+      console.log("Post saved with ID:", docRef.id);
+    } catch (e) {
+      console.error("Error saving post:", e);
     }
   }
 
-  // Listen for posts realtime
   function listenPosts() {
     const postsContainer = document.getElementById("postsContainer");
-    const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
-    onSnapshot(postsQuery, (snapshot) => {
-      postsContainer.innerHTML = ""; // clear container
-
+    onSnapshot(q, (snapshot) => {
+      postsContainer.innerHTML = "";
       snapshot.forEach((doc) => {
         const post = doc.data();
-
-        let timeText = "";
-        if (post.createdAt && post.createdAt.toDate) {
-          timeText = new Date(post.createdAt.toDate()).toLocaleString();
-        }
+        const dateStr = post.createdAt ? post.createdAt.toDate().toLocaleString() : "Unknown";
 
         const div = document.createElement("div");
-        div.classList.add("post");
+        div.className = "post";
         div.innerHTML = `
-          <p>${post.text ? post.text : ''}</p>
-          ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Post image" class="post-img" />` : ""}
-          <div class="post-time">${timeText}</div>
+          <p>${post.text ? post.text : ""}</p>
+          ${post.imageUrl ? `<img src="${post.imageUrl}" alt="post image" />` : ""}
+          <div class="post-time">${dateStr}</div>
         `;
-
         postsContainer.appendChild(div);
       });
+    }, error => {
+      console.error("Realtime listener error:", error);
     });
   }
 
-  // Handle submit
   document.getElementById("submitBtn").addEventListener("click", async () => {
     const text = document.getElementById("postText").value.trim();
     const fileInput = document.getElementById("imageFile");
     const file = fileInput.files[0];
 
     if (!text && !file) {
-      alert("Write something or upload an image.");
+      alert("Please enter text or upload an image.");
       return;
     }
 
@@ -128,19 +119,18 @@
       try {
         imageUrl = await uploadFileToPinata(file);
       } catch (error) {
-        alert("Image upload failed: " + error.message);
+        alert("Failed to upload image: " + error.message);
         return;
       }
     }
 
     await savePost(text, imageUrl);
 
-    // Clear form
+    // Reset inputs
     document.getElementById("postText").value = "";
     fileInput.value = "";
   });
 
-  // Start listening for posts
   listenPosts();
 </script>
 
