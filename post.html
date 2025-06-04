@@ -3,276 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Social - Profile & Posts</title>
+  <title>DRF Media Timeline</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
-    input, textarea, button { width: 100%; padding: 8px; margin: 8px 0; }
-    label { font-weight: bold; display: block; margin-top: 15px; }
-    img.avatar { max-width: 100px; border-radius: 50%; display: block; margin-bottom: 10px; }
-    .post-preview { margin-top: 10px; }
-    .post-preview video, .post-preview img { max-width: 100%; max-height: 300px; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
+  <h1>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" />
+    DRF Media Timeline
+  </h1>
 
-<h2>DRF Social - Profile Setup & Posting</h2>
-
-<div id="auth-section">
-  <button id="loginBtn">Login with Email</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
-</div>
-
-<div id="profile-section" style="display:none;">
-  <h3>Profile</h3>
-  <img id="avatarPreview" class="avatar" src="" alt="Avatar Preview" />
-  <form id="profileForm">
-    <label for="fullName">Full Name *</label>
-    <input type="text" id="fullName" required />
-
-    <label for="avatarUrl">Avatar Image URL *</label>
-    <input type="url" id="avatarUrl" placeholder="https://example.com/avatar.jpg" required />
-
-    <button type="submit">Save Profile</button>
-  </form>
-</div>
-
-<hr />
-
-<div id="post-section" style="display:none;">
-  <h3>Create a Post</h3>
-  <form id="postForm">
-    <label for="caption">Say something...</label>
-    <textarea id="caption" maxlength="300" placeholder="Write a caption (max 300 chars)"></textarea>
-
-    <label for="mediaFile">Upload Photo/Video</label>
-    <input type="file" id="mediaFile" accept="image/*,video/*" />
-
-    <div class="post-preview" id="mediaPreview"></div>
-
+  <form id="uploadForm">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
   </form>
-</div>
 
-<div id="statusMsg"></div>
+  <div id="postContainer"></div>
 
-<!-- Firebase App (the core Firebase SDK) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
-  import { getDatabase, ref, set, get, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
-  import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.firebasestorage.app",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-    measurementId: "G-TPT7QMWDYE"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-  const storage = getStorage(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  // Elements
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const profileSection = document.getElementById('profile-section');
-  const profileForm = document.getElementById('profileForm');
-  const fullNameInput = document.getElementById('fullName');
-  const avatarUrlInput = document.getElementById('avatarUrl');
-  const avatarPreview = document.getElementById('avatarPreview');
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-  const postSection = document.getElementById('post-section');
-  const postForm = document.getElementById('postForm');
-  const captionInput = document.getElementById('caption');
-  const mediaFileInput = document.getElementById('mediaFile');
-  const mediaPreview = document.getElementById('mediaPreview');
-  const statusMsg = document.getElementById('statusMsg');
+    const postContainer = document.getElementById('postContainer');
+    const uploadForm = document.getElementById('uploadForm');
+    const mediaFileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
 
-  let currentUser = null;
-  let userProfile = null;
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
 
-  // Login with Google (can replace with Email later)
-  loginBtn.onclick = () => {
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch(console.error);
-  };
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData,
+      });
 
-  logoutBtn.onclick = () => {
-    signOut(auth);
-  };
-
-  onAuthStateChanged(auth, async user => {
-    currentUser = user;
-    if (user) {
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      profileSection.style.display = 'block';
-      postSection.style.display = 'block';
-      loadUserProfile();
-    } else {
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      profileSection.style.display = 'none';
-      postSection.style.display = 'none';
-      clearForm();
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
     }
-  });
 
-  function clearForm() {
-    fullNameInput.value = '';
-    avatarUrlInput.value = '';
-    avatarPreview.src = '';
-    captionInput.value = '';
-    mediaFileInput.value = '';
-    mediaPreview.innerHTML = '';
-    statusMsg.textContent = '';
-  }
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
+    }
 
-  async function loadUserProfile() {
-    try {
-      const snapshot = await get(ref(db, 'users/' + currentUser.uid));
-      if (snapshot.exists()) {
-        userProfile = snapshot.val();
-        fullNameInput.value = userProfile.fullName || '';
-        avatarUrlInput.value = userProfile.avatarUrl || '';
-        avatarPreview.src = userProfile.avatarUrl || '';
-      } else {
-        userProfile = null;
-        clearForm();
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) return alert('Please select a file and caption.');
+
+      const button = uploadForm.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Posting...';
+
+      try {
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+
+        const postData = {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: []
+        };
+
+        await push(ref(db, 'posts'), postData);
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Post';
       }
-    } catch (err) {
-      console.error('Error loading profile:', err);
-    }
-  }
+    });
 
-  // Update avatar preview on URL change
-  avatarUrlInput.oninput = () => {
-    const url = avatarUrlInput.value.trim();
-    if (url) avatarPreview.src = url;
-    else avatarPreview.src = '';
-  };
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, (snapshot) => {
+      postContainer.innerHTML = '';
+      const posts = [];
 
-  // Save profile form submit
-  profileForm.onsubmit = async e => {
-    e.preventDefault();
-    if (!currentUser) return alert('Login first');
-    const fullName = fullNameInput.value.trim();
-    const avatarUrl = avatarUrlInput.value.trim();
-
-    if (!fullName || !avatarUrl) return alert('Full name and avatar URL are required.');
-
-    try {
-      await set(ref(db, 'users/' + currentUser.uid), {
-        fullName,
-        avatarUrl
-      });
-      userProfile = { fullName, avatarUrl };
-      alert('Profile saved successfully!');
-    } catch (err) {
-      console.error('Error saving profile:', err);
-      alert('Failed to save profile.');
-    }
-  };
-
-  // Preview media file on selection
-  mediaFileInput.onchange = () => {
-    mediaPreview.innerHTML = '';
-    const file = mediaFileInput.files[0];
-    if (!file) return;
-
-    const maxSizeMB = 100;
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`File size exceeds ${maxSizeMB} MB limit.`);
-      mediaFileInput.value = '';
-      return;
-    }
-
-    if (file.type.startsWith('image/')) {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      mediaPreview.appendChild(img);
-    } else if (file.type.startsWith('video/')) {
-      const video = document.createElement('video');
-      video.controls = true;
-      video.src = URL.createObjectURL(file);
-
-      // Optional: check video duration if you want to limit length client-side
-
-      mediaPreview.appendChild(video);
-    } else {
-      alert('Unsupported file type. Only images and videos allowed.');
-      mediaFileInput.value = '';
-    }
-  };
-
-  // Post form submit
-  postForm.onsubmit = async e => {
-    e.preventDefault();
-    if (!currentUser) return alert('Login first');
-    if (!userProfile) return alert('Complete your profile first.');
-
-    const caption = captionInput.value.trim();
-    const file = mediaFileInput.files[0];
-
-    if (!file) {
-      return alert('Please select a photo or video to upload.');
-    }
-
-    const mediaType = file.type.startsWith('image/') ? 'photo'
-                     : file.type.startsWith('video/') ? 'video'
-                     : null;
-    if (!mediaType) {
-      return alert('Invalid media type.');
-    }
-
-    // For videos: you can optionally check duration here using <video> element if needed
-
-    // Disable form while uploading
-    statusMsg.textContent = 'Uploading media... Please wait.';
-    postForm.querySelector('button').disabled = true;
-
-    try {
-      // Upload file to Storage under posts/uid/timestamp_filename
-      const timestamp = Date.now();
-      const filePath = `posts/${currentUser.uid}/${timestamp}_${file.name}`;
-      const storageRef = sRef(storage, filePath);
-      await uploadBytes(storageRef, file);
-
-      // Get download URL
-      const downloadUrl = await getDownloadURL(storageRef);
-
-      // Save post data to Realtime Database
-      const postsRef = ref(db, 'posts');
-      const newPostRef = push(postsRef);
-      await set(newPostRef, {
-        uid: currentUser.uid,
-        fullName: userProfile.fullName,
-        avatarUrl: userProfile.avatarUrl,
-        mediaUrl: downloadUrl,
-        mediaType,
-        caption,
-        timestamp
+      snapshot.forEach((child) => {
+        const post = child.val();
+        post.id = child.key;
+        posts.push(post);
       });
 
-      statusMsg.textContent = 'Post uploaded successfully!';
-      captionInput.value = '';
-      mediaFileInput.value = '';
-      mediaPreview.innerHTML = '';
-    } catch (err) {
-      console.error('Error uploading post:', err);
-      statusMsg.textContent = 'Error uploading post.';
-    } finally {
-      postForm.querySelector('button').disabled = false;
-    }
-  };
-</script>
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      posts.forEach((post) => {
+        const div = document.createElement('div');
+        div.className = 'post-item';
+        const media = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        div.innerHTML = `
+          ${media}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
+        `;
+        postContainer.appendChild(div);
+      });
+    });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const post = await response.json();
+      const currentLikes = post.likes || 0;
+      update(postRef, { likes: currentLikes + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment saved (feature coming soon)");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
+    };
+  </script>
 </body>
 </html>
