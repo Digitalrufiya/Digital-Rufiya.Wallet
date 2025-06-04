@@ -2,123 +2,324 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Posts Timeline with Reactions & Comments</title>
   <style>
-    body { font-family: sans-serif; background: #f8f9fa; padding: 20px; }
-    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
-    input, textarea, button { width: 100%; margin: 10px 0; padding: 10px; }
-    .post { border-bottom: 1px solid #ccc; padding: 15px 0; }
-    .post img { max-width: 100%; border-radius: 8px; }
-    .caption { margin: 10px 0; font-weight: bold; }
-    .wallet { color: #888; font-size: 0.9em; }
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: auto; padding: 1rem; background: #f4f4f4;}
+    h1 { text-align: center; }
+    form { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+    input, textarea, button { width: 100%; padding: 0.5rem; margin-top: 0.5rem; font-size: 1rem; }
+    #posts { margin-top: 2rem; }
+    .post { background: white; margin-bottom: 1.5rem; border-radius: 8px; padding: 1rem; box-shadow: 0 0 8px #ddd;}
+    .post-header { font-weight: bold; margin-bottom: 0.5rem; }
+    .post-media { max-width: 100%; margin: 0.5rem 0; border-radius: 8px; }
+    .post-text { margin: 0.5rem 0; white-space: pre-wrap; }
+    .actions { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0; }
+    .like-btn { cursor: pointer; color: #555; }
+    .like-btn.liked { color: #e0245e; font-weight: bold; }
+    .comments { margin-top: 1rem; background: #fafafa; padding: 0.5rem; border-radius: 6px; }
+    .comment { border-top: 1px solid #ddd; padding: 0.25rem 0; }
+    .comment:first-child { border-top: none; }
+    .comment-user { font-weight: bold; }
+    .comment-text { margin-left: 0.5rem; }
+    .comment-input { width: 100%; margin-top: 0.5rem; }
+    .share-btn { cursor: pointer; background: #0084ff; border: none; color: white; padding: 0.3rem 0.8rem; border-radius: 5px; }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>Create a New Post</h2>
-  <input type="file" id="postImage" accept="image/*" />
-  <textarea id="caption" placeholder="Write a caption..."></textarea>
-  <input type="text" id="wallet" placeholder="Your Wallet Address (required)" />
-  <button id="submitPost">Post</button>
+  <h1>Posts Timeline</h1>
 
-  <h2>Your Timeline</h2>
-  <div id="timeline"></div>
-</div>
+  <form id="postForm">
+    <label>
+      Your Name (required):
+      <input type="text" id="username" required />
+    </label>
+    <label>
+      Wallet Address (required):
+      <input type="text" id="wallet" required />
+    </label>
+    <label>
+      Post Text:
+      <textarea id="postText" rows="3" placeholder="What's on your mind?"></textarea>
+    </label>
+    <label>
+      Upload Image/Video (optional):
+      <input type="file" id="postMedia" accept="image/*,video/*" />
+    </label>
+    <button type="submit">Post</button>
+  </form>
 
-<!-- Firebase + Post logic -->
+  <div id="posts"></div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, push, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getDatabase, ref, push, onValue, update, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
     databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
     projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
+    storageBucket: "drfsocial-23a06.firebasestorage.app",
     messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  let imageIPFS = "";
+  // Pinata JWT from you
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-  const postImage = document.getElementById("postImage");
-  postImage.addEventListener("change", async () => {
-    const file = postImage.files[0];
+  // Helpers
+  const postForm = document.getElementById("postForm");
+  const postsContainer = document.getElementById("posts");
+
+  async function uploadToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
     const formData = new FormData();
     formData.append("file", file);
 
-    const metadata = JSON.stringify({ name: file.name });
-    formData.append("pinataMetadata", metadata);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
+    });
 
-    const options = JSON.stringify({ cidVersion: 0 });
-    formData.append("pinataOptions", options);
-
-    try {
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      imageIPFS = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-      alert("Image uploaded to IPFS.");
-    } catch (err) {
-      alert("Failed to upload image.");
-      console.error(err);
+    if (!response.ok) {
+      throw new Error("Pinata upload failed");
     }
-  });
+    const data = await response.json();
+    // Pinata returns the IPFS hash in data.IpfsHash
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
 
-  document.getElementById("submitPost").addEventListener("click", async () => {
-    const caption = document.getElementById("caption").value;
-    const wallet = document.getElementById("wallet").value;
-    if (!wallet || !imageIPFS) return alert("Image and wallet are required.");
+  // Create post
+  postForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-    const post = {
-      caption,
-      image: imageIPFS,
+    const username = document.getElementById("username").value.trim();
+    const wallet = document.getElementById("wallet").value.trim();
+    const postText = document.getElementById("postText").value.trim();
+    const postMediaInput = document.getElementById("postMedia");
+    let mediaUrl = "";
+
+    if (!username || !wallet) {
+      alert("Please fill in your name and wallet address.");
+      return;
+    }
+
+    // If media file selected, upload it to Pinata
+    if (postMediaInput.files.length > 0) {
+      try {
+        mediaUrl = await uploadToPinata(postMediaInput.files[0]);
+      } catch (err) {
+        alert("Media upload failed: " + err.message);
+        return;
+      }
+    }
+
+    // Save post to Firebase
+    const newPostRef = push(ref(db, "posts"));
+    await newPostRef.set({
+      username,
       wallet,
-      timestamp: Date.now()
-    };
+      text: postText,
+      mediaUrl,
+      timestamp: Date.now(),
+      likes: {},
+      comments: {}
+    });
 
-    await push(ref(db, "posts"), post);
-    alert("Post uploaded!");
-    document.getElementById("caption").value = "";
-    imageIPFS = "";
-    loadPosts();
+    // Reset form
+    postForm.reset();
   });
 
-  async function loadPosts() {
-    const snapshot = await get(child(ref(db), "posts"));
-    const timeline = document.getElementById("timeline");
-    timeline.innerHTML = "";
+  // Display posts
+  function renderPost(postId, postData) {
+    const postDiv = document.createElement("div");
+    postDiv.classList.add("post");
+    postDiv.id = postId;
 
-    if (snapshot.exists()) {
-      const posts = Object.values(snapshot.val());
-      posts.sort((a, b) => b.timestamp - a.timestamp); // newest first
-      posts.forEach(post => {
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <img src="${post.image}" />
-          <div class="caption">${post.caption}</div>
-          <div class="wallet">By: ${post.wallet}</div>
-        `;
-        timeline.appendChild(div);
-      });
-    } else {
-      timeline.innerHTML = "<p>No posts yet.</p>";
+    // Format date/time
+    const date = new Date(postData.timestamp);
+    const timeString = date.toLocaleString();
+
+    // Check if media is image or video
+    let mediaHTML = "";
+    if (postData.mediaUrl) {
+      if (postData.mediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
+        mediaHTML = `<video class="post-media" controls src="${postData.mediaUrl}"></video>`;
+      } else {
+        mediaHTML = `<img class="post-media" src="${postData.mediaUrl}" alt="Post media" />`;
+      }
+    }
+
+    // Count likes
+    const likesCount = postData.likes ? Object.keys(postData.likes).length : 0;
+
+    postDiv.innerHTML = `
+      <div class="post-header">${postData.username} (${postData.wallet})</div>
+      <div class="post-text">${postData.text || ""}</div>
+      ${mediaHTML}
+      <div class="actions">
+        <span class="like-btn" data-postid="${postId}">&#10084; <span class="likes-count">${likesCount}</span></span>
+        <button class="share-btn" data-postid="${postId}">Share</button>
+      </div>
+      <div class="comments">
+        <div class="comments-list"></div>
+        <input type="text" placeholder="Write a comment..." class="comment-input" data-postid="${postId}" />
+      </div>
+      <div class="post-time" style="font-size:0.8rem;color:#666;margin-top:0.5rem;">${timeString}</div>
+    `;
+
+    // Likes click handler
+    const likeBtn = postDiv.querySelector(".like-btn");
+    likeBtn.addEventListener("click", () => toggleLike(postId, likeBtn));
+
+    // Share button
+    const shareBtn = postDiv.querySelector(".share-btn");
+    shareBtn.addEventListener("click", () => sharePost(postId));
+
+    // Comment input enter handler
+    const commentInput = postDiv.querySelector(".comment-input");
+    commentInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addComment(postId, commentInput.value.trim(), commentInput);
+      }
+    });
+
+    // Render comments
+    renderComments(postId, postData.comments, postDiv.querySelector(".comments-list"));
+
+    return postDiv;
+  }
+
+  // Render comments list
+  function renderComments(postId, commentsObj = {}, commentsListDiv) {
+    commentsListDiv.innerHTML = "";
+    if (!commentsObj) return;
+    const commentsArr = Object.entries(commentsObj).sort((a,b) => a[1].timestamp - b[1].timestamp);
+
+    for (const [commentId, comment] of commentsArr) {
+      const commentDiv = document.createElement("div");
+      commentDiv.classList.add("comment");
+      commentDiv.innerHTML = `<span class="comment-user">${comment.username}</span>: <span class="comment-text">${comment.text}</span>`;
+      commentsListDiv.appendChild(commentDiv);
     }
   }
 
-  window.onload = loadPosts;
+  // Like toggle
+  async function toggleLike(postId, likeBtn) {
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+      alert("Please enter your name to like posts.");
+      return;
+    }
+    const likesRef = ref(db, `posts/${postId}/likes`);
+    const snapshot = await get(likesRef);
+    const likes = snapshot.val() || {};
+
+    if (likes[username]) {
+      // User already liked, remove like
+      delete likes[username];
+    } else {
+      // Add user like
+      likes[username] = true;
+    }
+    await update(likesRef, likes);
+
+    // Update UI
+    likeBtn.classList.toggle("liked", !!likes[username]);
+    likeBtn.querySelector(".likes-count").textContent = Object.keys(likes).length;
+  }
+
+  // Add comment
+  async function addComment(postId, text, inputElement) {
+    if (!text) return;
+    const username = document.getElementById("username").value.trim();
+    if (!username) {
+      alert("Please enter your name to comment.");
+      return;
+    }
+
+    const commentsRef = ref(db, `posts/${postId}/comments`);
+    const newCommentRef = push(commentsRef);
+    await newCommentRef.set({
+      username,
+      text,
+      timestamp: Date.now()
+    });
+    inputElement.value = "";
+  }
+
+  // Share post (copy link)
+  function sharePost(postId) {
+    const shareURL = `${window.location.origin}${window.location.pathname}?post=${postId}`;
+    navigator.clipboard.writeText(shareURL).then(() => {
+      alert("Post link copied to clipboard!");
+    }).catch(() => {
+      alert("Failed to copy post link.");
+    });
+  }
+
+  // Load posts & listen for changes
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, (snapshot) => {
+    postsContainer.innerHTML = "";
+    const posts = snapshot.val();
+    if (!posts) {
+      postsContainer.innerHTML = "<p>No posts yet.</p>";
+      return;
+    }
+    // Sort posts by timestamp desc
+    const sortedPosts = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+    for (const [postId, postData] of sortedPosts) {
+      const postElem = renderPost(postId, postData);
+      postsContainer.appendChild(postElem);
+    }
+  });
+
+  // Optional: Auto-like button state update if username entered and posts loaded
+  postForm.username.addEventListener("input", () => {
+    const username = postForm.username.value.trim();
+    const posts = postsContainer.querySelectorAll(".post");
+    posts.forEach(post => {
+      const postId = post.id;
+      get(ref(db, `posts/${postId}/likes`)).then(snap => {
+        const likes = snap.val() || {};
+        const likeBtn = post.querySelector(".like-btn");
+        if (likes[username]) {
+          likeBtn.classList.add("liked");
+        } else {
+          likeBtn.classList.remove("liked");
+        }
+        likeBtn.querySelector(".likes-count").textContent = Object.keys(likes).length;
+      });
+    });
+  });
+
+  // On load, if ?post=ID in URL, scroll to it
+  window.addEventListener("load", () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const postId = urlParams.get("post");
+    if (postId) {
+      setTimeout(() => {
+        const postElem = document.getElementById(postId);
+        if (postElem) {
+          postElem.scrollIntoView({ behavior: "smooth" });
+          postElem.style.backgroundColor = "#ffffcc";
+          setTimeout(() => postElem.style.backgroundColor = "white", 2000);
+        }
+      }, 500);
+    }
+  });
 </script>
 
 </body>
