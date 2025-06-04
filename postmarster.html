@@ -3,117 +3,120 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Upload to IPFS & Firebase</title>
+  <title>DRF Media Timeline</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f9f9f9;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    input[type="file"] {
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      background: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #ccc;
-    }
-    .status {
-      margin-top: 10px;
-      font-size: 0.9em;
-      color: green;
-    }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+    #profileForm, #postForm { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+    .post-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 10px; }
+    .comments { background: #f9f9f9; padding: 10px; border-radius: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Upload File to IPFS (Pinata) & Save Hash to Firebase</h2>
-    <input type="file" id="fileInput" />
-    <button id="uploadBtn">Upload</button>
-    <div class="status" id="status"></div>
-  </div>
+  <h2>DRF Media Timeline</h2>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-    import { getDatabase, ref, push, set } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+  <form id="profileForm">
+    <h3>Setup Your Profile</h3>
+    <input type="text" id="name" placeholder="Name" required /><br/>
+    <input type="text" id="wallet" placeholder="DRF Wallet Address" required /><br/>
+    <input type="number" id="age" placeholder="Age" required /><br/>
+    <select id="gender" required>
+      <option value="">Select Gender</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select><br/>
+    <input type="file" id="profilePic" accept="image/*" required /><br/>
+    <button type="submit">Save Profile</button>
+  </form>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
+  <form id="postForm">
+    <h3>Create New Post</h3>
+    <textarea id="caption" placeholder="Write a caption..." required></textarea><br/>
+    <input type="file" id="media" accept="image/*,video/*" required /><br/>
+    <button type="submit">Post</button>
+  </form>
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+  <div id="posts"></div>
 
-    const uploadBtn = document.getElementById('uploadBtn');
-    const fileInput = document.getElementById('fileInput');
-    const status = document.getElementById('status');
+ <script type="module">
+  // Firebase SDKs
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Replace this with your full JWT
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.firebasestorage.app",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getDatabase(app);
 
-    uploadBtn.addEventListener('click', async () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("Please select a file.");
-        return;
-      }
+  // 🔐 Pinata API
+  const PINATA_API_KEY = "3d87f9ed904df892654c";
+  const PINATA_API_SECRET = "a279e8854d44af6cb17047da98aa772a19022aaa20949b137f9fb1027c03bf9f";
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-      uploadBtn.disabled = true;
-      status.textContent = "Uploading to IPFS...";
+  // 🖼️ ImgBB API
+  const IMGBB_API_KEY = "02aeb122c5b92d7f3b98d91ad02cdadd"; // replace this with your actual ImgBB API key
 
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
+  // 📤 Upload to Pinata
+  async function uploadToPinata(file) {
+    const formData = new FormData();
+    formData.append("file", file);
 
-        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${PINATA_JWT}`
-          },
-          body: formData
-        });
-
-        const data = await res.json();
-        const ipfsHash = data.IpfsHash;
-        const timestamp = new Date().toISOString();
-
-        const fileRef = push(ref(database, 'uploads'));
-        await set(fileRef, {
-          fileName: file.name,
-          ipfsHash,
-          timestamp
-        });
-
-        status.textContent = `✅ File uploaded successfully! IPFS Hash: ${ipfsHash}`;
-        uploadBtn.disabled = false;
-      } catch (error) {
-        console.error(error);
-        status.textContent = "❌ Upload failed. Check console for details.";
-        uploadBtn.disabled = false;
-      }
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
     });
-  </script>
-</body>
-</html>
+
+    const data = await res.json();
+    return data.IpfsHash ? `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}` : null;
+  }
+
+  // 📤 Upload to ImgBB
+  async function uploadToImgBB(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    return data.data?.url || null;
+  }
+
+  // 📦 Example: Posting to Firebase
+  async function postMedia(caption, file) {
+    const imageUrl = await uploadToImgBB(file); // or use uploadToPinata(file)
+    if (!imageUrl) {
+      alert("Image upload failed");
+      return;
+    }
+
+    const postRef = ref(db, "posts");
+    await push(postRef, {
+      caption,
+      imageUrl,
+      timestamp: Date.now(),
+      wallet: "DRF_WALLET_ADDRESS" // replace with actual user wallet if needed
+    });
+    alert("Post uploaded!");
+  }
+
+  // Example call for posting (you can bind this to a form/button)
+  // postMedia("My first DRF post", yourFileObject);
+
+</script>
