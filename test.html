@@ -35,7 +35,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -51,18 +51,17 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
     const postContainer = document.getElementById('postContainer');
     const uploadForm = document.getElementById('uploadForm');
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
 
-    const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace with real JWT
-
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
 
       const response = await fetch(url, {
         method: 'POST',
@@ -87,57 +86,58 @@
       const caption = captionInput.value.trim();
       if (!file || !caption) return alert('Please select a file and caption.');
 
-      try {
-        uploadForm.querySelector('button').disabled = true;
-        uploadForm.querySelector('button').textContent = 'Posting...';
+      const button = uploadForm.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Posting...';
 
+      try {
         const cid = await uploadToPinata(file);
         const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
         const type = getFileType(file);
 
-        await push(ref(db, 'posts'), {
+        const postData = {
           caption,
           fileUrl,
           type,
           timestamp: Date.now(),
           likes: 0,
           comments: []
-        });
+        };
+
+        await push(ref(db, 'posts'), postData);
 
         mediaFileInput.value = '';
         captionInput.value = '';
       } catch (error) {
         alert('Upload failed: ' + error.message);
       } finally {
-        uploadForm.querySelector('button').disabled = false;
-        uploadForm.querySelector('button').textContent = 'Post';
+        button.disabled = false;
+        button.textContent = 'Post';
       }
     });
 
     const postsRef = ref(db, 'posts/');
     onValue(postsRef, (snapshot) => {
       postContainer.innerHTML = '';
-      const postsArray = [];
+      const posts = [];
 
       snapshot.forEach((child) => {
-        const postId = child.key;
         const post = child.val();
-        post.id = postId;
-        postsArray.push(post);
+        post.id = child.key;
+        posts.push(post);
       });
 
-      postsArray.sort((a, b) => b.timestamp - a.timestamp); // Newest on top
+      posts.sort((a, b) => b.timestamp - a.timestamp);
 
-      postsArray.forEach((post) => {
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
-
-        let mediaHtml = post.type === 'image'
+      posts.forEach((post) => {
+        const div = document.createElement('div');
+        div.className = 'post-item';
+        const media = post.type === 'image'
           ? `<img src="${post.fileUrl}" alt="Post Image" />`
           : `<video controls src="${post.fileUrl}"></video>`;
 
-        postDiv.innerHTML = `
-          ${mediaHtml}
+        div.innerHTML = `
+          ${media}
           <p class="post-caption">${post.caption}</p>
           <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
           <div class="post-actions">
@@ -146,24 +146,25 @@
             <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
           </div>
         `;
-
-        postContainer.appendChild(postDiv);
+        postContainer.appendChild(div);
       });
     });
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
-      update(postRef, { likes: current + 1 });
+      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const post = await response.json();
+      const currentLikes = post.likes || 0;
+      update(postRef, { likes: currentLikes + 1 });
     };
 
     window.commentPost = (postId) => {
       const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment received. Will be added in next version.");
+      if (comment) alert("Comment saved (feature coming soon)");
     };
 
     window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
     };
   </script>
 </body>
