@@ -2,32 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DRFMedia - Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRF Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .profile-pic {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 100%;
+    }
+  </style>
 </head>
-<body>
-  <h2>User Profile</h2>
-  <form id="profileForm">
-    <input type="text" id="name" placeholder="Full Name"><br>
-    <input type="text" id="photoURL" placeholder="Profile Photo URL"><br>
-    <input type="text" id="wallet" placeholder="Wallet Address"><br>
-    <input type="text" id="country" placeholder="Country"><br>
-    <select id="gender">
-      <option value="">Gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    </select><br>
-    <input type="number" id="age" placeholder="Age"><br>
-    <button type="submit">Save Profile</button>
-  </form>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-  <p id="status"></p>
+  <div class="bg-white shadow-lg rounded-xl p-6 max-w-sm w-full text-center">
+    <h2 class="text-xl font-semibold mb-4">Your DRF Profile</h2>
+
+    <img id="profileImage" src="https://via.placeholder.com/120" alt="Profile" class="profile-pic mx-auto mb-4">
+
+    <input type="file" id="uploadInput" accept="image/*" class="mb-4 block mx-auto">
+    <button onclick="uploadProfilePhoto()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      Upload Photo
+    </button>
+
+    <p id="status" class="text-sm mt-4 text-gray-600"></p>
+  </div>
 
   <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -41,65 +49,66 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    const db = getDatabase(app);
 
-    const name = document.getElementById("name");
-    const photoURL = document.getElementById("photoURL");
-    const wallet = document.getElementById("wallet");
-    const country = document.getElementById("country");
-    const gender = document.getElementById("gender");
-    const age = document.getElementById("age");
-    const status = document.getElementById("status");
+    const userId = "user123"; // Replace with wallet/user session ID dynamically
 
-    let currentUser = null;
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          name.value = data.name || "";
-          photoURL.value = data.photoURL || "";
-          wallet.value = data.wallet || "";
-          country.value = data.country || "";
-          gender.value = data.gender || "";
-          age.value = data.age || "";
-          status.textContent = "Profile loaded.";
-        } else {
-          status.textContent = "Profile not found. Please fill it.";
-        }
-      } else {
-        status.textContent = "You are not logged in.";
+    // Fetch existing profile photo
+    get(child(ref(db), `profiles/${userId}`)).then(snapshot => {
+      if (snapshot.exists() && snapshot.val().photoURL) {
+        document.getElementById('profileImage').src = snapshot.val().photoURL;
       }
     });
 
-    document.getElementById("profileForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentUser) {
-        alert("Login first to save your profile.");
-        return;
-      }
+    window.uploadProfilePhoto = async function () {
+      const fileInput = document.getElementById('uploadInput');
+      const status = document.getElementById('status');
+      const file = fileInput.files[0];
 
-      const userData = {
-        name: name.value,
-        photoURL: photoURL.value,
-        wallet: wallet.value,
-        country: country.value,
-        gender: gender.value,
-        age: parseInt(age.value)
-      };
+      if (!file) return alert("Please select a photo.");
+
+      status.textContent = "Uploading to IPFS via Pinata...";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const metadata = JSON.stringify({
+        name: file.name,
+      });
+      formData.append("pinataMetadata", metadata);
 
       try {
-        await setDoc(doc(db, "users", currentUser.uid), userData, { merge: true });
-        status.textContent = "✅ Profile saved to server.";
+        const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb...` // Truncated for brevity
+          },
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data && data.IpfsHash) {
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+          document.getElementById("profileImage").src = ipfsUrl;
+          status.textContent = "Uploaded successfully! Saving...";
+
+          // Save to Firebase DB
+          await set(ref(db, 'profiles/' + userId), {
+            photoURL: ipfsUrl,
+            timestamp: Date.now()
+          });
+
+          status.textContent = "Profile photo updated successfully.";
+        } else {
+          throw new Error("IPFS Upload failed.");
+        }
+
       } catch (err) {
         console.error(err);
-        status.textContent = "❌ Error saving profile.";
+        status.textContent = "Upload failed. Try again.";
       }
-    });
+    };
   </script>
 </body>
 </html>
