@@ -5,47 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Social Timeline</title>
   <style>
-    body { font-family: Arial; padding: 20px; background: #f4f4f4; }
-    .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
-    .profile, .post, .timeline { margin-bottom: 30px; }
-    input, button, textarea { width: 100%; margin-top: 10px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-    .timeline .card { border: 1px solid #ddd; margin-bottom: 15px; padding: 10px; border-radius: 5px; background: #fafafa; }
-    .timeline .card img { max-width: 100%; border-radius: 5px; margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    .profile, .post-form, .timeline { margin-bottom: 30px; }
+    .timeline .post { border-bottom: 1px solid #ccc; padding: 10px 0; }
+    .timeline img { max-width: 100%; border-radius: 8px; }
+    .image-preview { width: 100%; max-height: 300px; object-fit: cover; margin-top: 10px; display: none; }
+    button { background-color: #0088cc; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+    input, textarea { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
-<div class="container">
-  <h2>🚀 DRF Social Timeline</h2>
 
-  <!-- Profile Section -->
+<div class="container">
+  <h2>DRF Social Profile</h2>
   <div class="profile">
-    <h3>Edit Profile</h3>
     <input type="text" id="name" placeholder="Your Name" />
-    <input type="text" id="wallet" placeholder="Your Wallet Address" />
-    <input type="file" id="profilePic" accept="image/*" />
-    <button onclick="updateProfile()">Save Profile</button>
+    <input type="text" id="wallet" placeholder="Wallet Address" />
+    <input type="file" id="profileImage" accept="image/*" />
+    <button onclick="saveProfile()">Save Profile</button>
   </div>
 
-  <!-- Post Section -->
-  <div class="post">
-    <h3>Create New Post</h3>
-    <textarea id="postText" placeholder="Write something..."></textarea>
-    <input type="file" id="postImage" accept="image/*" onchange="previewImage(event)" />
-    <img id="preview" style="max-width: 100%; margin-top: 10px; display: none;" />
+  <h2>Create a Post</h2>
+  <div class="post-form">
+    <textarea id="postText" placeholder="What's on your mind?" rows="4"></textarea>
+    <input type="file" id="postImage" accept="image/*" onchange="previewImage()" />
+    <img id="preview" class="image-preview"/>
     <button onclick="createPost()">Post</button>
   </div>
 
-  <!-- Timeline -->
-  <div class="timeline">
-    <h3>📌 Timeline</h3>
-    <div id="postsContainer"></div>
-  </div>
+  <h2>Timeline</h2>
+  <div class="timeline" id="timeline"></div>
 </div>
 
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -61,97 +61,97 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb..."; // Truncated for security
-
-  const profileRef = ref(db, 'profile');
-  const postsRef = ref(db, 'posts');
-
-  document.addEventListener('DOMContentLoaded', () => {
-    loadProfile();
-    loadPosts();
-  });
-
-  function updateProfile() {
-    const name = document.getElementById('name').value;
-    const wallet = document.getElementById('wallet').value;
-    const file = document.getElementById('profilePic').files[0];
-
-    if (file) {
-      uploadToIPFS(file).then(url => {
-        set(profileRef, { name, wallet, profilePic: url });
-        alert('Profile updated');
-      });
-    } else {
-      set(profileRef, { name, wallet });
-      alert('Profile updated without image');
-    }
-  }
-
-  function loadProfile() {
-    onValue(profileRef, snap => {
-      const data = snap.val();
-      if (data) {
-        document.getElementById('name').value = data.name || '';
-        document.getElementById('wallet').value = data.wallet || '';
-      }
-    });
-  }
-
-  function previewImage(event) {
-    const preview = document.getElementById('preview');
-    preview.src = URL.createObjectURL(event.target.files[0]);
-    preview.style.display = 'block';
-  }
-
-  async function createPost() {
-    const text = document.getElementById('postText').value;
-    const file = document.getElementById('postImage').files[0];
-    const timestamp = Date.now();
-
-    let imageUrl = '';
-    if (file) {
-      imageUrl = await uploadToIPFS(file);
-    }
-
-    push(postsRef, { text, imageUrl, timestamp });
-    alert("Posted!");
-    document.getElementById('postText').value = '';
-    document.getElementById('preview').style.display = 'none';
-  }
-
-  function loadPosts() {
-    onValue(postsRef, snap => {
-      const data = snap.val();
-      const container = document.getElementById('postsContainer');
-      container.innerHTML = '';
-
-      if (data) {
-        const entries = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
-        entries.forEach(post => {
-          const div = document.createElement('div');
-          div.className = 'card';
-          div.innerHTML = `<p>${post.text}</p>` + (post.imageUrl ? `<img src="${post.imageUrl}" />` : '');
-          container.appendChild(div);
-        });
-      }
-    });
-  }
+  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
   async function uploadToIPFS(file) {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append('file', file);
 
     const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${jwt}`
-      },
+      headers: { Authorization: `Bearer ${jwt}` },
       body: formData
     });
 
     const result = await res.json();
     return `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
   }
+
+  async function saveProfile() {
+    const name = document.getElementById("name").value;
+    const wallet = document.getElementById("wallet").value;
+    const image = document.getElementById("profileImage").files[0];
+
+    let imageUrl = "";
+    if (image) imageUrl = await uploadToIPFS(image);
+
+    const profileRef = ref(db, 'profiles/' + wallet);
+    await set(profileRef, { name, wallet, imageUrl });
+    alert("Profile saved successfully!");
+  }
+
+  function previewImage() {
+    const preview = document.getElementById("preview");
+    const file = document.getElementById("postImage").files[0];
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      preview.src = reader.result;
+      preview.style.display = "block";
+    };
+    if (file) reader.readAsDataURL(file);
+  }
+
+  async function createPost() {
+    const text = document.getElementById("postText").value;
+    const wallet = document.getElementById("wallet").value;
+    const image = document.getElementById("postImage").files[0];
+
+    let imageUrl = "";
+    if (image) imageUrl = await uploadToIPFS(image);
+
+    const postRef = push(ref(db, 'posts'));
+    await set(postRef, {
+      text,
+      wallet,
+      imageUrl,
+      timestamp: Date.now()
+    });
+
+    document.getElementById("postText").value = "";
+    document.getElementById("postImage").value = "";
+    document.getElementById("preview").style.display = "none";
+    loadPosts();
+  }
+
+  function loadPosts() {
+    const postRef = ref(db, 'posts');
+    onValue(postRef, async (snapshot) => {
+      const posts = snapshot.val();
+      const timeline = document.getElementById("timeline");
+      timeline.innerHTML = "";
+
+      if (!posts) return;
+
+      const sorted = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+      for (const [_, post] of sorted) {
+        const profileSnap = await fetch(`https://drfsocial-23a06-default-rtdb.firebaseio.com/profiles/${post.wallet}.json`);
+        const profile = await profileSnap.json();
+
+        const postEl = document.createElement("div");
+        postEl.className = "post";
+        postEl.innerHTML = `
+          <strong>${profile?.name || 'Anonymous'}</strong> (${post.wallet})<br/>
+          ${post.text ? `<p>${post.text}</p>` : ""}
+          ${post.imageUrl ? `<img src="${post.imageUrl}" />` : ""}
+        `;
+        timeline.appendChild(postEl);
+      }
+    });
+  }
+
+  loadPosts();
 </script>
+
 </body>
 </html>
