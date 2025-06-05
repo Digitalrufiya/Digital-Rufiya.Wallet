@@ -1,165 +1,128 @@
-<!-- Save this as drf-post.html or similar -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <title>DRFM Post Submission</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    input, textarea, button { display: block; width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; border-radius: 5px; }
-    button { background: #007bff; color: white; border: none; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    #postContainer { max-width: 700px; margin: 20px auto; }
-    .post-item { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
+    textarea, select, input[type=checkbox], button { width: 100%; margin-top: 10px; padding: 10px; }
+    label { font-weight: bold; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-<h1>🕌 DRF Media Timeline</h1>
+<h2>✍️ Submit a New Post</h2>
 
-<button id="loginBtn">Sign in with Google</button>
-<button id="logoutBtn" style="display:none;">Logout</button>
+<label for="postContent">Post Content</label>
+<textarea id="postContent" placeholder="Write something meaningful..." rows="4"></textarea>
 
-<form id="uploadForm" style="display:none;">
-  <input type="file" id="mediaFile" accept="image/*,video/*" required />
-  <textarea id="caption" placeholder="Write your caption..." required></textarea>
-  <button type="submit">Post</button>
-  <button type="button" id="boostBtn" style="background:#28a745;">🚀 Boost</button>
-</form>
+<label for="userType">You are:</label>
+<select id="userType">
+  <option value="believer">Believer (Zakat)</option>
+  <option value="nonbeliever">Non-believer (Jizya)</option>
+</select>
 
-<div id="postContainer"></div>
+<label><input type="checkbox" id="boostPost"> Boost this post for 30 days</label>
+
+<div id="boostDetails" class="hidden">
+  <p><strong>Boost Fee:</strong> <span id="boostAmount">$30</span></p>
+  <p><strong>Will be sent to:</strong> <span id="boostWallet"></span></p>
+</div>
+
+<button onclick="submitPost()">📤 Submit Post</button>
+
+<p id="status"></p>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, push, update, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-};
+  // 🔐 Firebase Config (replace with yours)
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_DOMAIN.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com"
+  };
 
-const PINATA_JWT = "Bearer eyJhbGciOi..."; // Keep your full JWT token
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+  const postContent = document.getElementById("postContent");
+  const userType = document.getElementById("userType");
+  const boostPost = document.getElementById("boostPost");
+  const boostDetails = document.getElementById("boostDetails");
+  const boostAmount = document.getElementById("boostAmount");
+  const boostWallet = document.getElementById("boostWallet");
+  const status = document.getElementById("status");
 
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const uploadForm = document.getElementById("uploadForm");
-const mediaFileInput = document.getElementById("mediaFile");
-const captionInput = document.getElementById("caption");
-const boostBtn = document.getElementById("boostBtn");
-const postContainer = document.getElementById("postContainer");
+  const ZAKAT_ADDRESS = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b";
+  const JIZYA_ADDRESS = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
 
-loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login error: " + e.message));
-logoutBtn.onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, user => {
-  const show = !!user;
-  loginBtn.style.display = show ? "none" : "block";
-  logoutBtn.style.display = show ? "block" : "none";
-  uploadForm.style.display = show ? "block" : "none";
-});
-
-async function uploadToPinata(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
-  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-    method: 'POST',
-    headers: { Authorization: PINATA_JWT },
-    body: formData
+  boostPost.addEventListener("change", () => {
+    boostDetails.classList.toggle("hidden", !boostPost.checked);
+    updateBoostInfo();
   });
-  const data = await res.json();
-  return data.IpfsHash;
-}
 
-function getFileType(file) {
-  if (file.type.startsWith("image/")) return "image";
-  if (file.type.startsWith("video/")) return "video";
-  return "unknown";
-}
+  userType.addEventListener("change", updateBoostInfo);
 
-uploadForm.onsubmit = async (e) => {
-  e.preventDefault();
-  postContent();
-};
-
-async function postContent() {
-  const file = mediaFileInput.files[0];
-  const caption = captionInput.value.trim();
-  if (!file || !caption) return alert("Please select media and write a caption.");
-  boostBtn.disabled = true;
-  const cid = await uploadToPinata(file);
-  await push(ref(db, 'posts'), {
-    caption,
-    fileUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
-    type: getFileType(file),
-    timestamp: Date.now(),
-    likes: 0
-  });
-  uploadForm.reset();
-  boostBtn.disabled = false;
-  alert("✅ Post published successfully.");
-}
-
-boostBtn.onclick = async () => {
-  const believer = confirm("Are you a Muslim?");
-  const amount = believer ? 30 : 60;
-  const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC on BSC
-  const decimals = 18;
-  const user = await window.ethereum.request({ method: 'eth_requestAccounts' });
-  const to = "YOUR_WALLET_ADDRESS"; // Your admin wallet address
-
-  const value = BigInt(amount * (10 ** decimals)).toString(16);
-  try {
-    const tx = await window.ethereum.request({
-      method: 'eth_sendTransaction',
-      params: [{
-        from: user[0],
-        to: usdcAddress,
-        value: "0x0",
-        data: "0xa9059cbb" + to.replace("0x", "").padStart(64, "0") + BigInt(amount * 1e18).toString(16).padStart(64, "0")
-      }]
-    });
-    alert("✅ Payment successful. TX: " + tx);
-    await postContent();
-  } catch (err) {
-    alert("❌ Payment failed: " + err.message);
+  function updateBoostInfo() {
+    const isBeliever = userType.value === "believer";
+    boostAmount.innerText = isBeliever ? "$30" : "$60";
+    boostWallet.innerText = isBeliever ? ZAKAT_ADDRESS : JIZYA_ADDRESS;
   }
-};
 
-onValue(ref(db, 'posts'), (snapshot) => {
-  const posts = [];
-  snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
-  posts.sort((a, b) => b.timestamp - a.timestamp);
-  postContainer.innerHTML = '';
-  posts.forEach(post => {
-    const div = document.createElement("div");
-    div.className = "post-item";
-    const media = post.type === 'image'
-      ? `<img src="${post.fileUrl}" />`
-      : `<video controls src="${post.fileUrl}"></video>`;
-    div.innerHTML = `
-      ${media}
-      <p>${post.caption}</p>
-      <p style="font-size:12px;color:gray;">${new Date(post.timestamp).toLocaleString()}</p>
-    `;
-    postContainer.appendChild(div);
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      status.innerText = "Please login to submit a post.";
+    }
   });
-});
+
+  window.submitPost = async function () {
+    const user = auth.currentUser;
+    if (!user) {
+      status.innerText = "You must be logged in.";
+      return;
+    }
+
+    const content = postContent.value.trim();
+    if (!content) {
+      status.innerText = "Post content is required.";
+      return;
+    }
+
+    const type = userType.value;
+    const boosting = boostPost.checked;
+
+    const postRef = push(ref(db, "posts"));
+    const postId = postRef.key;
+
+    await set(postRef, {
+      postId: postId,
+      content: content,
+      userId: user.uid,
+      userEmail: user.email,
+      userType: type,
+      boost: boosting,
+      boostType: boosting ? (type === "believer" ? "zakat" : "jizya") : null,
+      boostAmount: boosting ? (type === "believer" ? 30 : 60) : 0,
+      boostAddress: boosting ? (type === "believer" ? ZAKAT_ADDRESS : JIZYA_ADDRESS) : null,
+      timestamp: Date.now()
+    });
+
+    status.innerText = "✅ Post submitted successfully!";
+    postContent.value = "";
+    boostPost.checked = false;
+    boostDetails.classList.add("hidden");
+  }
 </script>
 
 </body>
