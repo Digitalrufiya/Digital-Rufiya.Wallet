@@ -37,7 +37,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // ✅ Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -48,11 +47,10 @@
     appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
   };
 
-  // ✅ Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...QyA"; // ✅ Your JWT (already used)
+  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // ← Replace with your full JWT if trimmed
 
   async function uploadToIPFS(file) {
     const formData = new FormData();
@@ -60,22 +58,39 @@
 
     const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
-      headers: { Authorization: `Bearer ${jwt}` },
+      headers: {
+        Authorization: `Bearer ${jwt}`
+      },
       body: formData
     });
 
+    if (!res.ok) {
+      alert("Failed to upload to IPFS.");
+      return "";
+    }
+
     const json = await res.json();
-    return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
+    if (json.IpfsHash) {
+      return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
+    } else {
+      alert("Pinata did not return a valid IPFS hash.");
+      return "";
+    }
   }
 
   async function saveProfile() {
     const name = document.getElementById("name").value;
-    const wallet = document.getElementById("wallet").value;
+    const wallet = document.getElementById("wallet").value.trim();
     const imageFile = document.getElementById("profileImage").files[0];
 
     let imageUrl = "";
     if (imageFile) {
       imageUrl = await uploadToIPFS(imageFile);
+    }
+
+    if (!wallet) {
+      alert("Please enter your wallet address.");
+      return;
     }
 
     await db.ref("profiles/" + wallet).set({
@@ -84,7 +99,7 @@
       imageUrl
     });
 
-    alert("Profile saved!");
+    alert("Profile saved successfully.");
   }
 
   function previewPostImage() {
@@ -100,8 +115,13 @@
 
   async function createPost() {
     const text = document.getElementById("postText").value;
-    const wallet = document.getElementById("wallet").value;
+    const wallet = document.getElementById("wallet").value.trim();
     const imageFile = document.getElementById("postImage").files[0];
+
+    if (!wallet || !text.trim()) {
+      alert("Please enter text and wallet address.");
+      return;
+    }
 
     let imageUrl = "";
     if (imageFile) {
@@ -119,6 +139,7 @@
     document.getElementById("postImage").value = "";
     document.getElementById("preview").style.display = "none";
 
+    alert("Post created!");
     loadPosts();
   }
 
