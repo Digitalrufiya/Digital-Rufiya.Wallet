@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DRFM Post Submission</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
+    textarea, select, input[type=checkbox], button { width: 100%; margin-top: 10px; padding: 10px; }
+    label { font-weight: bold; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<h2>✍️ Submit a New Post</h2>
+
+<label for="postContent">Post Content</label>
+<textarea id="postContent" placeholder="Write something meaningful..." rows="4"></textarea>
+
+<label for="userType">You are:</label>
+<select id="userType">
+  <option value="believer">Believer (Zakat)</option>
+  <option value="nonbeliever">Non-believer (Jizya)</option>
+</select>
+
+<label><input type="checkbox" id="boostPost"> Boost this post for 30 days</label>
+
+<div id="boostDetails" class="hidden">
+  <p><strong>Boost Fee:</strong> <span id="boostAmount">$30</span></p>
+  <p><strong>Will be sent to:</strong> <span id="boostWallet"></span></p>
+</div>
+
+<button onclick="submitPost()">📤 Submit Post</button>
+
+<p id="status"></p>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+  // 🔐 Firebase Config (replace with yours)
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_DOMAIN.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const postContent = document.getElementById("postContent");
+  const userType = document.getElementById("userType");
+  const boostPost = document.getElementById("boostPost");
+  const boostDetails = document.getElementById("boostDetails");
+  const boostAmount = document.getElementById("boostAmount");
+  const boostWallet = document.getElementById("boostWallet");
+  const status = document.getElementById("status");
+
+  const ZAKAT_ADDRESS = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b";
+  const JIZYA_ADDRESS = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
+
+  boostPost.addEventListener("change", () => {
+    boostDetails.classList.toggle("hidden", !boostPost.checked);
+    updateBoostInfo();
+  });
+
+  userType.addEventListener("change", updateBoostInfo);
+
+  function updateBoostInfo() {
+    const isBeliever = userType.value === "believer";
+    boostAmount.innerText = isBeliever ? "$30" : "$60";
+    boostWallet.innerText = isBeliever ? ZAKAT_ADDRESS : JIZYA_ADDRESS;
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      status.innerText = "Please login to submit a post.";
+    }
+  });
+
+  window.submitPost = async function () {
+    const user = auth.currentUser;
+    if (!user) {
+      status.innerText = "You must be logged in.";
+      return;
+    }
+
+    const content = postContent.value.trim();
+    if (!content) {
+      status.innerText = "Post content is required.";
+      return;
+    }
+
+    const type = userType.value;
+    const boosting = boostPost.checked;
+
+    const postRef = push(ref(db, "posts"));
+    const postId = postRef.key;
+
+    await set(postRef, {
+      postId: postId,
+      content: content,
+      userId: user.uid,
+      userEmail: user.email,
+      userType: type,
+      boost: boosting,
+      boostType: boosting ? (type === "believer" ? "zakat" : "jizya") : null,
+      boostAmount: boosting ? (type === "believer" ? 30 : 60) : 0,
+      boostAddress: boosting ? (type === "believer" ? ZAKAT_ADDRESS : JIZYA_ADDRESS) : null,
+      timestamp: Date.now()
+    });
+
+    status.innerText = "✅ Post submitted successfully!";
+    postContent.value = "";
+    boostPost.checked = false;
+    boostDetails.classList.add("hidden");
+  }
+</script>
+
+</body>
+</html>
