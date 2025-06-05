@@ -3,51 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Post Submission & Boost System</title>
+  <title>Post & Boost with IPFS</title>
   <style>
-    body {
-      font-family: Arial;
-      max-width: 500px;
-      margin: 30px auto;
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-    }
-    textarea, select, button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    #boostInfo {
-      background: #f5f5f5;
-      padding: 10px;
-      border: 1px dashed #aaa;
-    }
+    body { font-family: Arial; max-width: 600px; margin: 30px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    textarea, select, button { width: 100%; margin-bottom: 10px; padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    #boostInfo { background: #f5f5f5; padding: 10px; border: 1px dashed #aaa; display: none; }
+    code { background: #eee; padding: 2px 4px; }
   </style>
 </head>
 <body>
-  <h2>📝 Post Submission</h2>
+  <h2>📤 Submit a Post & Boost</h2>
 
   <form id="postForm">
-    <textarea id="postContent" placeholder="Write your post..." required></textarea><br>
+    <textarea id="postContent" placeholder="Write your post here..." required></textarea>
 
     <label>User Type:</label>
     <select id="userType" required>
       <option value="believer">Believer (Zakat)</option>
       <option value="nonbeliever">Nonbeliever (Jizya)</option>
-    </select><br>
+    </select>
 
-    <label>Boost Post?</label>
+    <label>Boost?</label>
     <select id="boostOption" required>
       <option value="false">No</option>
       <option value="true">Yes</option>
-    </select><br>
+    </select>
 
-    <div id="boostInfo" style="display:none;">
+    <div id="boostInfo">
       <p><strong>Send Boost Payment To:</strong></p>
-      <p id="boostTypeInfo"></p>
+      <p id="boostWalletInfo"></p>
     </div>
 
     <button type="submit">Submit Post</button>
@@ -55,9 +39,9 @@
 
   <p id="statusMsg"></p>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK -->
   <script type="module">
-    // ✅ Replace this with your Firebase config
+    // 🔐 Replace this with your Firebase config:
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -77,61 +61,86 @@
     const db = getDatabase(app);
 
     const form = document.getElementById('postForm');
-    const boostOption = document.getElementById('boostOption');
     const boostInfo = document.getElementById('boostInfo');
-    const boostTypeInfo = document.getElementById('boostTypeInfo');
+    const boostWalletInfo = document.getElementById('boostWalletInfo');
     const statusMsg = document.getElementById('statusMsg');
+    const boostOption = document.getElementById('boostOption');
+    const userTypeSelect = document.getElementById('userType');
 
     const ZAKAT_ADDRESS = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b";
     const JIZYA_ADDRESS = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
 
-    boostOption.addEventListener('change', () => {
-      const userType = document.getElementById('userType').value;
-      if (boostOption.value === 'true') {
-        boostInfo.style.display = 'block';
-        boostTypeInfo.innerHTML = userType === 'believer'
-          ? `💸 Pay <strong>$30</strong> in DRFM to <code>${ZAKAT_ADDRESS}</code>`
-          : `💸 Pay <strong>$60</strong> in DRFM to <code>${JIZYA_ADDRESS}</code>`;
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+    function updateBoostInfo() {
+      const userType = userTypeSelect.value;
+      if (boostOption.value === "true") {
+        boostInfo.style.display = "block";
+        boostWalletInfo.innerHTML = userType === "believer"
+          ? `💸 $30 Zakat to: <code>${ZAKAT_ADDRESS}</code>`
+          : `💸 $60 Jizya to: <code>${JIZYA_ADDRESS}</code>`;
       } else {
-        boostInfo.style.display = 'none';
+        boostInfo.style.display = "none";
       }
-    });
+    }
 
-    document.getElementById('userType').addEventListener('change', () => {
-      boostOption.dispatchEvent(new Event('change'));
-    });
+    boostOption.addEventListener('change', updateBoostInfo);
+    userTypeSelect.addEventListener('change', updateBoostInfo);
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      statusMsg.innerText = "⏳ Processing...";
 
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          const postContent = document.getElementById('postContent').value;
-          const userType = document.getElementById('userType').value;
-          const boost = boostOption.value === 'true';
-          const boostAmount = boost ? (userType === 'believer' ? 30 : 60) : 0;
-          const boostType = boost ? (userType === 'believer' ? 'zakat' : 'jizya') : null;
+      const postContent = document.getElementById('postContent').value;
+      const userType = userTypeSelect.value;
+      const boost = boostOption.value === "true";
+      const boostAmount = boost ? (userType === "believer" ? 30 : 60) : 0;
+      const boostType = boost ? (userType === "believer" ? "zakat" : "jizya") : null;
 
-          const newPostRef = push(ref(db, 'posts'));
-          set(newPostRef, {
-            content: postContent,
-            userId: user.uid,
-            userEmail: user.email,
-            userType: userType,
-            boost: boost,
-            boostType: boostType,
-            boostAmount: boostAmount,
-            timestamp: Date.now()
-          }).then(() => {
-            statusMsg.innerText = "✅ Post submitted successfully!";
-            form.reset();
-            boostInfo.style.display = 'none';
-          }).catch((error) => {
-            statusMsg.innerText = "❌ Error: " + error.message;
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) return statusMsg.innerText = "⚠️ You must be logged in.";
+
+        const postData = {
+          content: postContent,
+          userEmail: user.email,
+          userType,
+          boost,
+          boostAmount,
+          boostType,
+          timestamp: Date.now()
+        };
+
+        // ✅ Upload to Pinata
+        try {
+          const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${PINATA_JWT}`
+            },
+            body: JSON.stringify({
+              pinataMetadata: { name: `post_${Date.now()}` },
+              pinataContent: postData
+            })
           });
 
-        } else {
-          statusMsg.innerText = "⚠️ Please log in to submit a post.";
+          const pinataJson = await pinataRes.json();
+
+          if (!pinataJson.IpfsHash) throw new Error("IPFS upload failed");
+
+          // ✅ Save to Firebase backup
+          const newPostRef = push(ref(db, "posts"));
+          await set(newPostRef, {
+            ...postData,
+            ipfsHash: pinataJson.IpfsHash,
+            ipfsUrl: `https://gateway.pinata.cloud/ipfs/${pinataJson.IpfsHash}`
+          });
+
+          statusMsg.innerHTML = `✅ Post submitted! View on IPFS: <a href="https://gateway.pinata.cloud/ipfs/${pinataJson.IpfsHash}" target="_blank">Open</a>`;
+          form.reset();
+          boostInfo.style.display = "none";
+        } catch (err) {
+          statusMsg.innerText = "❌ Error: " + err.message;
         }
       });
     });
