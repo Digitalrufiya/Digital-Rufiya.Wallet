@@ -1,169 +1,173 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-  </style>
-</head>
-<body>
-  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getAuth,
+    signInWithPopup,
+    GoogleAuthProvider,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import {
+    getDatabase, ref, push, update, serverTimestamp, onValue
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-  <form id="uploadForm">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-  </form>
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
 
-  <div id="postContainer"></div>
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  const uploadForm = document.getElementById("uploadForm");
+  const postContainer = document.getElementById("postContainer");
+  const mediaFileInput = document.getElementById("mediaFile");
+  const captionInput = document.getElementById("caption");
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
+  const loginBtn = document.createElement("button");
+  loginBtn.textContent = "Sign in with Google";
+  loginBtn.style.marginBottom = "20px";
+  document.body.insertBefore(loginBtn, uploadForm);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+  const userDisplay = document.createElement("div");
+  userDisplay.style.marginBottom = "10px";
+  document.body.insertBefore(userDisplay, uploadForm);
 
-    const postContainer = document.getElementById('postContainer');
-    const uploadForm = document.getElementById('uploadForm');
-    const mediaFileInput = document.getElementById('mediaFile');
-    const captionInput = document.getElementById('caption');
+  loginBtn.addEventListener("click", async () => {
+    await signInWithPopup(auth, provider);
+  });
 
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-
-    async function uploadToPinata(file) {
-      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append('pinataMetadata', metadata);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${PINATA_JWT}` },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Pinata upload failed');
-      const data = await response.json();
-      return data.IpfsHash;
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      userDisplay.innerHTML = `Logged in as <strong>${user.displayName}</strong> <button id="logout">Logout</button>`;
+      document.getElementById("logout").onclick = () => signOut(auth);
+      uploadForm.style.display = "block";
+    } else {
+      userDisplay.innerHTML = "";
+      uploadForm.style.display = "none";
     }
+  });
 
-    function getFileType(file) {
-      if (file.type.startsWith('image/')) return 'image';
-      if (file.type.startsWith('video/')) return 'video';
-      return 'unknown';
-    }
+  const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace this
 
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const file = mediaFileInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and caption.');
+  async function uploadToPinata(file) {
+    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+    const formData = new FormData();
+    formData.append("file", file);
 
-      try {
-        uploadForm.querySelector('button').disabled = true;
-        uploadForm.querySelector('button').textContent = 'Posting...';
+    const metadata = JSON.stringify({ name: file.name });
+    formData.append("pinataMetadata", metadata);
 
-        const cid = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-        const type = getFileType(file);
-
-        await push(ref(db, 'posts'), {
-          caption,
-          fileUrl,
-          type,
-          timestamp: Date.now(),
-          likes: 0,
-          comments: []
-        });
-
-        mediaFileInput.value = '';
-        captionInput.value = '';
-      } catch (error) {
-        alert('Upload failed: ' + error.message);
-      } finally {
-        uploadForm.querySelector('button').disabled = false;
-        uploadForm.querySelector('button').textContent = 'Post';
-      }
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${PINATA_JWT}` },
+      body: formData,
     });
 
-    const postsRef = ref(db, 'posts/');
-    onValue(postsRef, (snapshot) => {
-      const posts = [];
-      snapshot.forEach((child) => {
-        posts.push({ id: child.key, ...child.val() });
+    if (!response.ok) throw new Error("Pinata upload failed");
+    const data = await response.json();
+    return data.IpfsHash;
+  }
+
+  function getFileType(file) {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type.startsWith("video/")) return "video";
+    return "unknown";
+  }
+
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = mediaFileInput.files[0];
+    const caption = captionInput.value.trim();
+    if (!file || !caption) return alert("Please select a file and caption.");
+    const user = auth.currentUser;
+    if (!user) return alert("Please log in first.");
+
+    try {
+      uploadForm.querySelector("button").disabled = true;
+      uploadForm.querySelector("button").textContent = "Posting...";
+
+      const cid = await uploadToPinata(file);
+      const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+      const type = getFileType(file);
+
+      await push(ref(db, "posts"), {
+        caption,
+        fileUrl,
+        type,
+        timestamp: Date.now(),
+        likes: 0,
+        author: {
+          name: user.displayName,
+          email: user.email,
+          photo: user.photoURL
+        },
+        comments: []
       });
 
-      posts.sort((a, b) => b.timestamp - a.timestamp); // newest first
+      mediaFileInput.value = "";
+      captionInput.value = "";
+    } catch (error) {
+      alert("Upload failed: " + error.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+      uploadForm.querySelector("button").textContent = "Post";
+    }
+  });
 
-      postContainer.innerHTML = '';
-      posts.forEach((post) => {
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
-
-        const mediaHtml = post.type === 'image'
-          ? `<img src="${post.fileUrl}" alt="Post Image" />`
-          : `<video controls src="${post.fileUrl}"></video>`;
-
-        postDiv.innerHTML = `
-          ${mediaHtml}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-          <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${post.id}')">💬 Comment</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-          </div>
-        `;
-
-        postContainer.appendChild(postDiv);
-      });
+  const postsRef = ref(db, "posts/");
+  onValue(postsRef, (snapshot) => {
+    postContainer.innerHTML = "";
+    const posts = [];
+    snapshot.forEach((child) => {
+      posts.push({ id: child.key, ...child.val() });
     });
 
-    window.likePost = async (postId) => {
-      const postRef = ref(db, `posts/${postId}`);
-      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
-      const data = await response.json();
-      const currentLikes = data.likes || 0;
-      update(postRef, { likes: currentLikes + 1 });
-    };
+    posts.sort((a, b) => b.timestamp - a.timestamp);
 
-    window.commentPost = (postId) => {
-      const comment = prompt("Enter your comment:");
-      if (comment) alert("Your comment was noted. Comment system will be upgraded in the next version.");
-    };
+    for (let post of posts) {
+      const postDiv = document.createElement("div");
+      postDiv.classList.add("post-item");
 
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied to clipboard!"));
-    };
-  </script>
-</body>
-</html>
+      let mediaHtml = post.type === "image"
+        ? `<img src="${post.fileUrl}" alt="Post Image" />`
+        : `<video controls src="${post.fileUrl}"></video>`;
+
+      postDiv.innerHTML = `
+        ${mediaHtml}
+        <p class="post-caption">${post.caption}</p>
+        <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+        <p><img src="${post.author?.photo}" height="30" style="border-radius:50%"> ${post.author?.name}</p>
+        <div class="post-actions">
+          <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+          <button onclick="commentPost('${post.id}')">💬 Comment</button>
+          <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+        </div>
+      `;
+
+      postContainer.appendChild(postDiv);
+    }
+  });
+
+  window.likePost = async (postId) => {
+    const postRef = ref(db, `posts/${postId}`);
+    const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
+    update(postRef, { likes: current + 1 });
+  };
+
+  window.commentPost = (postId) => {
+    const comment = prompt("Enter your comment:");
+    if (comment) alert("Comment saved (Real comment system is coming next 🔧)");
+  };
+
+  window.sharePost = (url) => {
+    navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+  };
+</script>
