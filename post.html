@@ -1,176 +1,168 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DRF Social</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Timeline</title>
   <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
-    .input, textarea { width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-    button { padding: 10px 15px; background: #0088cc; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
-    .post { border-bottom: 1px solid #ddd; padding: 15px 0; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
   </style>
 </head>
 <body>
+  <h1><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" /> DRF Media Timeline</h1>
 
-<div class="container">
-  <h2>DRF Profile</h2>
-  <input class="input" type="text" id="name" placeholder="Your Name" />
-  <input class="input" type="text" id="wallet" placeholder="Wallet Address" />
-  <input class="input" type="file" id="profileImage" />
-  <button onclick="saveProfile()">Save Profile</button>
+  <form id="uploadForm">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
 
-  <h2 style="margin-top:40px;">Create Post</h2>
-  <textarea class="input" id="postText" placeholder="What's on your mind?"></textarea>
-  <input class="input" type="file" id="postImage" onchange="previewPostImage()" />
-  <img id="preview" style="display:none" />
-  <button onclick="createPost()">Post</button>
+  <div id="postContainer"></div>
 
-  <h2 style="margin-top:40px;">Timeline</h2>
-  <div id="timeline"></div>
-</div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-<!-- Firebase App (CDN) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // ← Replace with your full JWT if trimmed
-
-  async function uploadToIPFS(file) {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${jwt}`
-      },
-      body: formData
-    });
-
-    if (!res.ok) {
-      alert("Failed to upload to IPFS.");
-      return "";
-    }
-
-    const json = await res.json();
-    if (json.IpfsHash) {
-      return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
-    } else {
-      alert("Pinata did not return a valid IPFS hash.");
-      return "";
-    }
-  }
-
-  async function saveProfile() {
-    const name = document.getElementById("name").value;
-    const wallet = document.getElementById("wallet").value.trim();
-    const imageFile = document.getElementById("profileImage").files[0];
-
-    let imageUrl = "";
-    if (imageFile) {
-      imageUrl = await uploadToIPFS(imageFile);
-    }
-
-    if (!wallet) {
-      alert("Please enter your wallet address.");
-      return;
-    }
-
-    await db.ref("profiles/" + wallet).set({
-      name,
-      wallet,
-      imageUrl
-    });
-
-    alert("Profile saved successfully.");
-  }
-
-  function previewPostImage() {
-    const file = document.getElementById("postImage").files[0];
-    const reader = new FileReader();
-    reader.onloadend = function () {
-      const img = document.getElementById("preview");
-      img.src = reader.result;
-      img.style.display = "block";
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
     };
-    if (file) reader.readAsDataURL(file);
-  }
 
-  async function createPost() {
-    const text = document.getElementById("postText").value;
-    const wallet = document.getElementById("wallet").value.trim();
-    const imageFile = document.getElementById("postImage").files[0];
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    if (!wallet || !text.trim()) {
-      alert("Please enter text and wallet address.");
-      return;
+    const postContainer = document.getElementById('postContainer');
+    const uploadForm = document.getElementById('uploadForm');
+    const mediaFileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
+
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error('Pinata upload failed: ' + err);
+      }
+
+      const data = await response.json();
+      return data.IpfsHash;
     }
 
-    let imageUrl = "";
-    if (imageFile) {
-      imageUrl = await uploadToIPFS(imageFile);
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
     }
 
-    await db.ref("posts").push({
-      wallet,
-      text,
-      imageUrl,
-      timestamp: Date.now()
-    });
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) return alert('Please select a file and caption.');
 
-    document.getElementById("postText").value = "";
-    document.getElementById("postImage").value = "";
-    document.getElementById("preview").style.display = "none";
+      try {
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
 
-    alert("Post created!");
-    loadPosts();
-  }
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
 
-  async function loadPosts() {
-    const timeline = document.getElementById("timeline");
-    timeline.innerHTML = "";
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: []
+        });
 
-    firebase.database().ref("posts").on("value", async function(snapshot) {
-      const posts = snapshot.val();
-      if (!posts) return;
-
-      const postList = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
-
-      for (let [key, post] of postList) {
-        const profileSnap = await firebase.database().ref("profiles/" + post.wallet).once("value");
-        const profile = profileSnap.val();
-
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <strong>${profile?.name || "Unknown"}</strong> (${post.wallet})<br/>
-          <p>${post.text || ""}</p>
-          ${post.imageUrl ? `<img src="${post.imageUrl}" />` : ""}
-        `;
-        timeline.appendChild(div);
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
       }
     });
-  }
 
-  loadPosts();
-</script>
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, (snapshot) => {
+      postContainer.innerHTML = '';
+      snapshot.forEach((child) => {
+        const postId = child.key;
+        const post = child.val();
 
+        const postDiv = document.createElement('div');
+        postDiv.classList.add('post-item');
+
+        let mediaHtml = post.type === 'image'
+          ? `<img src="${post.fileUrl}" alt="Post Image" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        postDiv.innerHTML = `
+          ${mediaHtml}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button onclick="likePost('${postId}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${postId}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
+        `;
+
+        postContainer.appendChild(postDiv);
+      });
+    });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
+      update(postRef, { likes: current + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) alert("Comment received. Will be added in next version.");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
+  </script>
 </body>
 </html>
