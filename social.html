@@ -18,15 +18,18 @@
     .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
     .post-caption { margin: 10px 0; font-size: 16px; }
     .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; color: #0066cc; }
+    .post-actions button:hover { text-decoration: underline; }
     .post-actions span { font-weight: bold; margin-left: 4px; }
-    .comments-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-    .comment-item { font-size: 14px; margin-bottom: 8px; }
-    .comment-time { color: #777; font-size: 12px; margin-left: 5px; }
-    .comment-form { margin-top: 10px; display: flex; gap: 8px; }
-    .comment-input { flex-grow: 1; padding: 6px 8px; border-radius: 4px; border: 1px solid #ccc; }
-    .boost-form { display: inline-block; margin-left: 10px; }
+    .boost-label { margin-right: 8px; font-weight: bold; }
+    .boost-options { margin: 10px 0; }
+    .comments-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; max-height: 200px; overflow-y: auto; }
+    .comment-item { font-size: 14px; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .comment-input { width: 100%; padding: 8px; margin-top: 8px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+    .reactions { display: flex; gap: 6px; margin-left: 6px; }
+    .reaction-btn { font-size: 18px; cursor: pointer; user-select: none; }
+    .reaction-btn:hover { transform: scale(1.2); }
   </style>
 </head>
 <body>
@@ -42,7 +45,6 @@
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
     <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
-    <button type="button" id="boostNewPostBtn" class="boost-form" style="display:none;">Boost New Post</button>
   </form>
 
   <!-- Posts will be rendered here -->
@@ -52,10 +54,9 @@
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    // ─── Firebase Configuration ─────────────────────────────────────────────────────────
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -70,31 +71,25 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // ─── UI Elements ─────────────────────────────────────────────────────────────────────
     const loginBtn       = document.getElementById("loginBtn");
     const logoutBtn      = document.getElementById("logoutBtn");
     const uploadForm     = document.getElementById("uploadForm");
     const mediaFileInput = document.getElementById("mediaFile");
     const captionInput   = document.getElementById("caption");
     const postContainer  = document.getElementById("postContainer");
-    const boostNewPostBtn = document.getElementById("boostNewPostBtn");
 
-    // ─── Pinata JWT & DRFM Token Info ───────────────────────────────────────────────────
-    // NOTE: Replace the placeholder text below with your actual JWT (without "Bearer" prefix).
     const PINATA_JWT     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...DQoXDQyA";
-    const DRFM_TOKEN_ADDR = "0x9CF972437e17927C1114F44D2D38aA77c4845d01"; // DRFM ERC-20
-    const ZAKAT_ADDR      = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b"; // Zakat Fund
-    const JIZYA_ADDR      = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C"; // Jizya Account
+    const DRFM_TOKEN_ADDR = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const ZAKAT_ADDR      = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b";
+    const JIZYA_ADDR      = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
 
     let web3;
-    let drfmContract; // Will hold the ERC20 contract instance
+    let drfmContract;
 
-    // ─── Initialize Web3 & ERC20 Contract ────────────────────────────────────────────────
     async function initWeb3() {
       if (window.ethereum) {
         web3 = new Web3(window.ethereum);
         try {
-          // Request account access if needed
           await window.ethereum.request({ method: 'eth_requestAccounts' });
         } catch (error) {
           console.error("User denied account access");
@@ -102,27 +97,13 @@
       } else {
         alert("Please install MetaMask to use this feature!");
       }
-
-      // ERC-20 ABI (minimal for transfer)
       const erc20Abi = [
-        {
-          "constant": false,
-          "inputs": [
-            { "name": "_to", "type": "address" },
-            { "name": "_value", "type": "uint256" }
-          ],
-          "name": "transfer",
-          "outputs": [ { "name": "", "type": "bool" } ],
-          "type": "function"
-        }
+        { "constant": false, "inputs": [ { "name": "_to", "type": "address" }, { "name": "_value", "type": "uint256" } ], "name": "transfer", "outputs": [ { "name": "", "type": "bool" } ], "type": "function" }
       ];
       drfmContract = new web3.eth.Contract(erc20Abi, DRFM_TOKEN_ADDR);
     }
-
-    // Call this once at start
     initWeb3();
 
-    // ─── Authentication Logic ────────────────────────────────────────────────────────────
     loginBtn.onclick = async () => {
       try {
         await signInWithPopup(auth, provider);
@@ -134,3 +115,275 @@
     logoutBtn.onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+      } else {
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+      }
+    });
+
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    function getFileType(file) {
+      return file.type.startsWith('image/') ? 'image'
+           : file.type.startsWith('video/') ? 'video'
+           : 'unknown';
+    }
+
+    uploadForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!mediaFileInput.files.length) {
+        alert("Please select a media file.");
+        return;
+      }
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!caption) {
+        alert("Caption cannot be empty.");
+        return;
+      }
+
+      try {
+        uploadForm.querySelector('button[type=submit]').disabled = true;
+        const ipfsHash = await uploadToPinata(file);
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not authenticated");
+
+        const newPostRef = push(ref(db, "posts"));
+        const postData = {
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          caption,
+          ipfsHash,
+          mediaType: getFileType(file),
+          timestamp: Date.now(),
+          likes: 0,
+          reactions: {},
+          comments: {}
+        };
+        await update(newPostRef, postData);
+        uploadForm.reset();
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+      } finally {
+        uploadForm.querySelector('button[type=submit]').disabled = false;
+      }
+    });
+
+    // Utility for formatting time elapsed
+    function timeAgo(ts) {
+      const seconds = Math.floor((Date.now() - ts) / 1000);
+      if (seconds < 60) return seconds + " seconds ago";
+      const intervals = [
+        { label: "year", seconds: 31536000 },
+        { label: "month", seconds: 2592000 },
+        { label: "day", seconds: 86400 },
+        { label: "hour", seconds: 3600 },
+        { label: "minute", seconds: 60 }
+      ];
+      for (const interval of intervals) {
+        const count = Math.floor(seconds / interval.seconds);
+        if (count >= 1) return count + " " + interval.label + (count > 1 ? "s" : "") + " ago";
+      }
+      return "Just now";
+    }
+
+    // Render posts
+    function renderPost(postId, postData) {
+      const div = document.createElement('div');
+      div.className = "post-item";
+      div.id = postId;
+
+      // Media HTML
+      let mediaHTML = "";
+      if (postData.mediaType === "image") {
+        mediaHTML = `<img src="https://gateway.pinata.cloud/ipfs/${postData.ipfsHash}" alt="Post media" loading="lazy" />`;
+      } else if (postData.mediaType === "video") {
+        mediaHTML = `<video controls src="https://gateway.pinata.cloud/ipfs/${postData.ipfsHash}"></video>`;
+      }
+
+      // Post HTML
+      div.innerHTML = `
+        <div><strong>${postData.displayName || "Unknown"}</strong></div>
+        <div>${mediaHTML}</div>
+        <div class="post-caption">${postData.caption || ""}</div>
+        <div class="post-time">${timeAgo(postData.timestamp)}</div>
+        <div class="post-actions">
+          <button class="like-btn">👍 Like <span>${postData.likes || 0}</span></button>
+          <div class="reactions" title="React">
+            <span class="reaction-btn" data-reaction="❤️" role="button">❤️</span>
+            <span class="reaction-btn" data-reaction="😂" role="button">😂</span>
+            <span class="reaction-btn" data-reaction="😮" role="button">😮</span>
+            <span class="reaction-btn" data-reaction="😢" role="button">😢</span>
+            <span class="reaction-btn" data-reaction="😡" role="button">😡</span>
+          </div>
+          <button class="boost-btn">🚀 Boost</button>
+          <button class="ask-payment-btn">💰 Ask Payment</button>
+          <button class="share-btn">🔗 Share</button>
+        </div>
+
+        <div class="comments-section">
+          <div class="comments-list"></div>
+          <input type="text" class="comment-input" placeholder="Add a comment..." />
+        </div>
+      `;
+
+      // Like button logic
+      const likeBtn = div.querySelector(".like-btn");
+      likeBtn.onclick = async () => {
+        try {
+          const user = auth.currentUser;
+          if (!user) { alert("Please login to like posts."); return; }
+          // Increment likes atomically (simple approach)
+          const postRef = ref(db, `posts/${postId}/likes`);
+          const snap = await postRef.get();
+          let newLikes = (snap.exists() ? snap.val() : 0) + 1;
+          await update(ref(db, `posts/${postId}`), { likes: newLikes });
+        } catch (err) {
+          alert("Error liking post: " + err.message);
+        }
+      };
+
+      // Reactions logic
+      const reactionEls = div.querySelectorAll(".reaction-btn");
+      reactionEls.forEach(el => {
+        el.onclick = async () => {
+          const reaction = el.dataset.reaction;
+          const user = auth.currentUser;
+          if (!user) { alert("Please login to react."); return; }
+          const reactionPath = `posts/${postId}/reactions/${user.uid}`;
+          await update(ref(db, reactionPath), reaction);
+          alert(`You reacted with ${reaction}`);
+        };
+      });
+
+      // Comments logic
+      const commentsList = div.querySelector(".comments-list");
+      const commentInput = div.querySelector(".comment-input");
+
+      // Load existing comments
+      const commentsRef = ref(db, `posts/${postId}/comments`);
+      onValue(commentsRef, snapshot => {
+        const comments = snapshot.val() || {};
+        commentsList.innerHTML = "";
+        Object.values(comments).forEach(c => {
+          const cdiv = document.createElement('div');
+          cdiv.className = "comment-item";
+          cdiv.textContent = `${c.userName || "Anonymous"}: ${c.text}`;
+          commentsList.appendChild(cdiv);
+        });
+      });
+
+      // Add new comment on Enter
+      commentInput.onkeydown = async (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const text = commentInput.value.trim();
+          if (!text) return;
+          const user = auth.currentUser;
+          if (!user) { alert("Please login to comment."); return; }
+          const newCommentRef = push(ref(db, `posts/${postId}/comments`));
+          await update(newCommentRef, {
+            userId: user.uid,
+            userName: user.displayName || "User",
+            text,
+            timestamp: Date.now()
+          });
+          commentInput.value = "";
+        }
+      };
+
+      // Boost button logic
+      const boostBtn = div.querySelector(".boost-btn");
+      boostBtn.onclick = () => alert("Boost button clicked - implement your boost logic here!");
+
+      // Ask payment logic
+      const askPaymentBtn = div.querySelector(".ask-payment-btn");
+      askPaymentBtn.onclick = async () => {
+        const user = auth.currentUser;
+        if (!user) { alert("Please login to ask payment."); return; }
+        const amountStr = prompt("Enter amount of DRF tokens to request:");
+        if (!amountStr) return;
+        const amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) {
+          alert("Invalid amount.");
+          return;
+        }
+        // Simple demo: send tokens from user to post author
+        // For a real app, you'd implement an escrow or request system
+        try {
+          const accounts = await web3.eth.getAccounts();
+          if (!accounts.length) throw new Error("No accounts found in MetaMask");
+          const from = accounts[0];
+          // Here postData.uid is the post author's user id but we need their wallet address. We'll assume the postData.uid corresponds to wallet address for demo (or ask for wallet mapping in your DB)
+          const to = postData.uid; // <-- Replace with actual wallet address of post owner
+          if (!to || to.length !== 42) {
+            alert("Cannot find valid recipient address.");
+            return;
+          }
+          const amountWei = web3.utils.toWei(amount.toString(), "ether");
+          await drfmContract.methods.transfer(to, amountWei).send({ from });
+          alert(`Sent ${amount} DRF tokens to post author!`);
+        } catch (err) {
+          alert("Payment failed: " + err.message);
+        }
+      };
+
+      // Share button logic
+      const shareBtn = div.querySelector(".share-btn");
+      shareBtn.onclick = () => {
+        if (navigator.share) {
+          navigator.share({
+            title: "Check out this DRF post",
+            text: postData.caption || "",
+            url: window.location.href + "#" + postId
+          }).catch(console.error);
+        } else {
+          // fallback: copy link
+          const shareUrl = window.location.href + "#" + postId;
+          navigator.clipboard.writeText(shareUrl).then(() => alert("Post link copied to clipboard!"));
+        }
+      };
+
+      return div;
+    }
+
+    function loadPosts() {
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, snapshot => {
+        postContainer.innerHTML = "";
+        const posts = snapshot.val();
+        if (!posts) return;
+        // Sort by timestamp desc
+        const sortedPosts = Object.entries(posts).sort((a,b) => b[1].timestamp - a[1].timestamp);
+        for (const [postId, postData] of sortedPosts) {
+          const postEl = renderPost(postId, postData);
+          postContainer.appendChild(postEl);
+        }
+      });
+    }
+    loadPosts();
+
+  </script>
+</body>
+</html>
