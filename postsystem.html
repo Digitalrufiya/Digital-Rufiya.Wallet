@@ -1,145 +1,166 @@
+<!-- Save this as drf-post.html or similar -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline with Boost</title>
+  <title>DRF Media Timeline</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
     h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"], textarea { width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    #boostBtn { background-color: #28a745; margin-left: 10px; }
-    button:disabled { background: #999; cursor: not-allowed; }
+    form { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, textarea, button { display: block; width: 100%; margin-bottom: 10px; padding: 10px; font-size: 16px; border-radius: 5px; }
+    button { background: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    #postContainer { max-width: 700px; margin: 20px auto; }
+    .post-item { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
   </style>
 </head>
 <body>
-  <h1>🕌 DRF Media Timeline</h1>
 
-  <button id="loginBtn">Sign in with Google</button>
-  <button id="logoutBtn" style="display: none;">Logout</button>
+<h1>🕌 DRF Media Timeline</h1>
 
-  <form id="uploadForm" style="display:none;">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-    <button type="button" id="boostBtn">🚀 Boost</button>
-  </form>
+<button id="loginBtn">Sign in with Google</button>
+<button id="logoutBtn" style="display:none;">Logout</button>
 
-  <div id="postContainer"></div>
+<form id="uploadForm" style="display:none;">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <textarea id="caption" placeholder="Write your caption..." required></textarea>
+  <button type="submit">Post</button>
+  <button type="button" id="boostBtn" style="background:#28a745;">🚀 Boost</button>
+</form>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, child, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<div id="postContainer"></div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, update, onValue, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    const PINATA_JWT = "Bearer YOUR_PINATA_JWT"; // Replace with actual
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+const PINATA_JWT = "Bearer eyJhbGciOi..."; // Keep your full JWT token
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const uploadForm = document.getElementById("uploadForm");
-    const mediaFileInput = document.getElementById("mediaFile");
-    const captionInput = document.getElementById("caption");
-    const boostBtn = document.getElementById("boostBtn");
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login error: " + e.message));
-    logoutBtn.onclick = () => signOut(auth);
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const uploadForm = document.getElementById("uploadForm");
+const mediaFileInput = document.getElementById("mediaFile");
+const captionInput = document.getElementById("caption");
+const boostBtn = document.getElementById("boostBtn");
+const postContainer = document.getElementById("postContainer");
 
-    onAuthStateChanged(auth, user => {
-      loginBtn.style.display = user ? "none" : "block";
-      logoutBtn.style.display = user ? "block" : "none";
-      uploadForm.style.display = user ? "block" : "none";
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login error: " + e.message));
+logoutBtn.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  const show = !!user;
+  loginBtn.style.display = show ? "none" : "block";
+  logoutBtn.style.display = show ? "block" : "none";
+  uploadForm.style.display = show ? "block" : "none";
+});
+
+async function uploadToPinata(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
+  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: 'POST',
+    headers: { Authorization: PINATA_JWT },
+    body: formData
+  });
+  const data = await res.json();
+  return data.IpfsHash;
+}
+
+function getFileType(file) {
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  return "unknown";
+}
+
+uploadForm.onsubmit = async (e) => {
+  e.preventDefault();
+  postContent();
+};
+
+async function postContent() {
+  const file = mediaFileInput.files[0];
+  const caption = captionInput.value.trim();
+  if (!file || !caption) return alert("Please select media and write a caption.");
+  boostBtn.disabled = true;
+  const cid = await uploadToPinata(file);
+  await push(ref(db, 'posts'), {
+    caption,
+    fileUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
+    type: getFileType(file),
+    timestamp: Date.now(),
+    likes: 0
+  });
+  uploadForm.reset();
+  boostBtn.disabled = false;
+  alert("✅ Post published successfully.");
+}
+
+boostBtn.onclick = async () => {
+  const believer = confirm("Are you a Muslim?");
+  const amount = believer ? 30 : 60;
+  const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC on BSC
+  const decimals = 18;
+  const user = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  const to = "YOUR_WALLET_ADDRESS"; // Your admin wallet address
+
+  const value = BigInt(amount * (10 ** decimals)).toString(16);
+  try {
+    const tx = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: user[0],
+        to: usdcAddress,
+        value: "0x0",
+        data: "0xa9059cbb" + to.replace("0x", "").padStart(64, "0") + BigInt(amount * 1e18).toString(16).padStart(64, "0")
+      }]
     });
+    alert("✅ Payment successful. TX: " + tx);
+    await postContent();
+  } catch (err) {
+    alert("❌ Payment failed: " + err.message);
+  }
+};
 
-    async function uploadToPinata(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: 'POST',
-        headers: { Authorization: PINATA_JWT },
-        body: formData
-      });
-      const data = await res.json();
-      return data.IpfsHash;
-    }
+onValue(ref(db, 'posts'), (snapshot) => {
+  const posts = [];
+  snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+  posts.sort((a, b) => b.timestamp - a.timestamp);
+  postContainer.innerHTML = '';
+  posts.forEach(post => {
+    const div = document.createElement("div");
+    div.className = "post-item";
+    const media = post.type === 'image'
+      ? `<img src="${post.fileUrl}" />`
+      : `<video controls src="${post.fileUrl}"></video>`;
+    div.innerHTML = `
+      ${media}
+      <p>${post.caption}</p>
+      <p style="font-size:12px;color:gray;">${new Date(post.timestamp).toLocaleString()}</p>
+    `;
+    postContainer.appendChild(div);
+  });
+});
+</script>
 
-    function getFileType(file) {
-      if (file.type.startsWith("image/")) return "image";
-      if (file.type.startsWith("video/")) return "video";
-      return "unknown";
-    }
-
-    async function payAndPostPost(isMuslim) {
-      const file = mediaFileInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file || !caption) return alert("File and caption are required.");
-
-      const amount = isMuslim ? 30 : 60;
-      const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC on BSC
-      const decimals = 18;
-
-      if (typeof window.ethereum === 'undefined') {
-        alert("MetaMask is not installed.");
-        return;
-      }
-
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(usdcAddress, [
-        "function transfer(address to, uint amount) public returns (bool)"
-      ], signer);
-
-      const receiver = "0xYourWalletAddressHere"; // Replace with your receiving wallet
-      const amountWei = ethers.utils.parseUnits(amount.toString(), decimals);
-
-      try {
-        const tx = await contract.transfer(receiver, amountWei);
-        await tx.wait();
-
-        const cid = await uploadToPinata(file);
-        await push(ref(db, 'posts'), {
-          caption,
-          fileUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
-          type: getFileType(file),
-          timestamp: Date.now(),
-          likes: 0,
-          boost: true,
-          boostAmount: amount,
-          userType: isMuslim ? "Muslim" : "Non-Muslim",
-          paid: true
-        });
-
-        alert("Boosted post submitted successfully!");
-        uploadForm.reset();
-      } catch (err) {
-        alert("Payment or upload failed: " + err.message);
-      }
-    }
-
-    boostBtn.onclick = () => {
-      const answer = confirm("Are you a Muslim?");
-      payAndPostPost(answer);
-    };
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 </body>
 </html>
