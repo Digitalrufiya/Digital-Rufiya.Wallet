@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dynamic Firebase + IPFS App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h1>Welcome to the Voice of the Ummah</h1>
+  <button id="googleSignIn">Sign in with Google</button>
+  <p id="userEmail">No user signed in</p>
+
+  <h2>Upload to IPFS</h2>
+  <input type="file" id="fileInput" />
+  <p>IPFS Link: <span id="ipfsLink"></span></p>
+
+  
+<!-- Firebase App (the core Firebase SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+    projectId: "YOUR_FIREBASE_PROJECT_ID",
+    storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+    appId: "YOUR_FIREBASE_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+  
+<script>
+  const provider = new firebase.auth.GoogleAuthProvider();
+  document.getElementById("googleSignIn").addEventListener("click", () => {
+    firebase.auth().signInWithPopup(provider)
+      .then((result) => {
+        const user = result.user;
+        console.log("Signed in as:", user.email);
+        document.getElementById("userEmail").innerText = user.email;
+      })
+      .catch((error) => {
+        console.error("Google sign-in error:", error.message);
+      });
+  });
+</script>
+
+  
+<script>
+  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Insert your JWT token here
+
+  async function uploadToPinata(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: PINATA_JWT
+        },
+        body: formData
+      });
+
+      const result = await res.json();
+      console.log("Pinata upload success:", result);
+      document.getElementById("ipfsLink").innerText = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+    } catch (err) {
+      console.error("Pinata upload failed:", err);
+    }
+  }
+
+  document.getElementById("fileInput").addEventListener("change", (e) => {
+    uploadToPinata(e.target.files[0]);
+  });
+</script>
+
+</body>
+</html>
