@@ -44,8 +44,7 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -56,7 +55,7 @@
     const mediaFileInput = document.getElementById('mediaFile');
     const captionInput = document.getElementById('caption');
 
-    const PINATA_JWT = "<your_pinata_jwt_here>"; // Use securely in production
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -118,15 +117,19 @@
 
     const postsRef = ref(db, 'posts/');
     onValue(postsRef, (snapshot) => {
-      postContainer.innerHTML = '';
+      const posts = [];
       snapshot.forEach((child) => {
-        const postId = child.key;
-        const post = child.val();
+        posts.push({ id: child.key, ...child.val() });
+      });
 
+      posts.sort((a, b) => b.timestamp - a.timestamp); // newest first
+
+      postContainer.innerHTML = '';
+      posts.forEach((post) => {
         const postDiv = document.createElement('div');
         postDiv.classList.add('post-item');
 
-        let mediaHtml = post.type === 'image'
+        const mediaHtml = post.type === 'image'
           ? `<img src="${post.fileUrl}" alt="Post Image" />`
           : `<video controls src="${post.fileUrl}"></video>`;
 
@@ -135,8 +138,8 @@
           <p class="post-caption">${post.caption}</p>
           <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
           <div class="post-actions">
-            <button onclick="likePost('${postId}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${postId}')">💬 Comment</button>
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
             <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
           </div>
         `;
@@ -147,17 +150,19 @@
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
-      update(postRef, { likes: current + 1 });
+      const response = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const data = await response.json();
+      const currentLikes = data.likes || 0;
+      update(postRef, { likes: currentLikes + 1 });
     };
 
     window.commentPost = (postId) => {
       const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment received. Will be added in next version with real database storage.");
+      if (comment) alert("Your comment was noted. Comment system will be upgraded in the next version.");
     };
 
     window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied to clipboard!"));
     };
   </script>
 </body>
