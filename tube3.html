@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DRF Video Upload DApp</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    video { width: 100%; margin-top: 1rem; }
+    input, button { margin: 5px 0; display: block; }
+  </style>
+</head>
+<body>
+
+<h2>DRF Video DApp</h2>
+
+<button id="googleLogin">Login with Google</button>
+<div id="userInfo" style="display:none;"></div>
+
+<input type="file" id="videoInput" accept="video/*" />
+<input type="text" id="title" placeholder="Video title">
+<button id="uploadBtn">Upload Video</button>
+
+<video id="videoPlayer" controls></video>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+    measurementId: "G-TPT7QMWDYE"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById('googleLogin');
+  const userInfo = document.getElementById('userInfo');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const videoInput = document.getElementById('videoInput');
+  const videoPlayer = document.getElementById('videoPlayer');
+
+  loginBtn.onclick = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  };
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      userInfo.style.display = 'block';
+      userInfo.innerHTML = `Logged in as: ${user.email}`;
+      loginBtn.style.display = 'none';
+    }
+  });
+
+  uploadBtn.onclick = async () => {
+    const file = videoInput.files[0];
+    const title = document.getElementById("title").value;
+
+    if (!file || !title) return alert("Please select a video and title");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ...QyA`  // your JWT
+      },
+      body: formData
+    });
+
+    const result = await pinataRes.json();
+    const ipfsHash = result.IpfsHash;
+    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+    // Save video info to Firebase
+    const videoRef = ref(db, "videos/");
+    await push(videoRef, {
+      title,
+      videoUrl: ipfsUrl,
+      uploader: auth.currentUser.email,
+      timestamp: Date.now()
+    });
+
+    alert("Video uploaded!");
+  };
+
+  // Auto load latest video (for demo)
+  const videoRef = ref(db, "videos/");
+  onChildAdded(videoRef, (snapshot) => {
+    const data = snapshot.val();
+    videoPlayer.src = data.videoUrl;
+  });
+</script>
+</body>
+</html>
