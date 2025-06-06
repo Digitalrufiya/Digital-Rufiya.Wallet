@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Timeline</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"], textarea { width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
+    .comment-section { margin-top: 15px; }
+    .comment-item { padding: 5px 10px; background: #f1f1f1; border-radius: 5px; margin-bottom: 5px; font-size: 14px; }
+    .comment-form { display: flex; gap: 10px; margin-top: 10px; }
+    .comment-form input { flex: 1; padding: 6px; border-radius: 5px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+  <h1>🕌 DRF Media Timeline</h1>
+
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
+
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
+
+  <div id="postContainer"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, child, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login error: " + e.message));
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      loginBtn.style.display = user ? "none" : "block";
+      logoutBtn.style.display = user ? "block" : "none";
+      uploadForm.style.display = user ? "block" : "none";
+    });
+
+    async function uploadToPinata(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: 'POST',
+        headers: { Authorization: PINATA_JWT },
+        body: formData
+      });
+      const data = await res.json();
+      return data.IpfsHash;
+    }
+
+    function getFileType(file) {
+      if (file.type.startsWith("image/")) return "image";
+      if (file.type.startsWith("video/")) return "video";
+      return "unknown";
+    }
+
+    uploadForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) return alert("File and caption are required.");
+      uploadForm.querySelector("button").disabled = true;
+      uploadForm.querySelector("button").textContent = "Posting...";
+      try {
+        const cid = await uploadToPinata(file);
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
+          type: getFileType(file),
+          timestamp: Date.now(),
+          likes: 0
+        });
+        uploadForm.reset();
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+      } finally {
+        uploadForm.querySelector("button").disabled = false;
+        uploadForm.querySelector("button").textContent = "Post";
+      }
+    };
+
+    onValue(ref(db, 'posts'), (snapshot) => {
+      const posts = [];
+      snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+      postContainer.innerHTML = '';
+      posts.forEach(renderPost);
+    });
+
+    function renderPost(post) {
+      const postDiv = document.createElement('div');
+      postDiv.className = 'post-item';
+      const media = post.type === 'image'
+        ? `<img src="${post.fileUrl}" />`
+        : `<video controls src="${post.fileUrl}"></video>`;
+
+      postDiv.innerHTML = `
+        ${media}
+        <p class="post-caption">${post.caption}</p>
+        <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+        <div class="post-actions">
+          <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+          <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+        </div>
+        <div class="comment-section" id="comments-${post.id}"><strong>Comments:</strong></div>
+        <div class="comment-form">
+          <input type="text" id="input-${post.id}" placeholder="Write a comment..." />
+          <button onclick="addComment('${post.id}')">💬</button>
+        </div>
+      `;
+      postContainer.appendChild(postDiv);
+      loadComments(post.id);
+    }
+
+    window.likePost = async (postId) => {
+      const snapshot = await get(child(ref(db), `posts/${postId}`));
+      const current = snapshot.val().likes || 0;
+      update(ref(db, `posts/${postId}`), { likes: current + 1 });
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
+
+    window.addComment = async (postId) => {
+      const input = document.getElementById(`input-${postId}`);
+      const text = input.value.trim();
+      const user = auth.currentUser;
+      if (!text || !user) return;
+      await push(ref(db, `comments/${postId}`), {
+        text,
+        user: user.displayName || "Anon",
+        timestamp: Date.now()
+      });
+      input.value = '';
+    };
+
+    function loadComments(postId) {
+      onValue(ref(db, `comments/${postId}`), snapshot => {
+        const container = document.getElementById(`comments-${postId}`);
+        container.innerHTML = "<strong>Comments:</strong>";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const div = document.createElement("div");
+          div.className = "comment-item";
+          div.textContent = `${data.user}: ${data.text}`;
+          container.appendChild(div);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
