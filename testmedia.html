@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Timeline with Boost</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
+    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"], textarea { width: 100%; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+    textarea { resize: none; height: 60px; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
+    .boost-label { margin-right: 8px; font-weight: bold; }
+    .boost-options { margin: 10px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>🕌 DRF Media Timeline (with Boost)</h1>
+
+  <!-- Authentication Buttons -->
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
+
+  <!-- Post Creation Form (visible after login) -->
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
+
+  <!-- Posts will be rendered here -->
+  <div id="postContainer"></div>
+
+  <!-- Firebase & Web3JS -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    // ─── Firebase Configuration ─────────────────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // ─── UI Elements ─────────────────────────────────────────────────────────────────────
+    const loginBtn       = document.getElementById("loginBtn");
+    const logoutBtn      = document.getElementById("logoutBtn");
+    const uploadForm     = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput   = document.getElementById("caption");
+    const postContainer  = document.getElementById("postContainer");
+
+    // ─── Pinata JWT & DRFM Token Info ───────────────────────────────────────────────────
+    // NOTE: Replace the placeholder text below with your actual JWT (without "Bearer" prefix).
+    const PINATA_JWT     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...DQoXDQyA";
+    const DRFM_TOKEN_ADDR = "0x9CF972437e17927C1114F44D2D38aA77c4845d01"; // DRFM ERC-20
+    const ZAKAT_ADDR      = "0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b"; // Zakat Fund
+    const JIZYA_ADDR      = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C"; // Jizya Account
+
+    let web3;
+    let drfmContract; // Will hold the ERC20 contract instance
+
+    // ─── Initialize Web3 & ERC20 Contract ────────────────────────────────────────────────
+    async function initWeb3() {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        try {
+          // Request account access if needed
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+        } catch (error) {
+          console.error("User denied account access");
+        }
+      } else {
+        alert("Please install MetaMask to use this feature!");
+      }
+
+      // ERC-20 ABI (minimal for transfer)
+      const erc20Abi = [
+        {
+          "constant": false,
+          "inputs": [
+            { "name": "_to", "type": "address" },
+            { "name": "_value", "type": "uint256" }
+          ],
+          "name": "transfer",
+          "outputs": [ { "name": "", "type": "bool" } ],
+          "type": "function"
+        }
+      ];
+      drfmContract = new web3.eth.Contract(erc20Abi, DRFM_TOKEN_ADDR);
+    }
+
+    // Call this once at start
+    initWeb3();
+
+    // ─── Authentication Logic ────────────────────────────────────────────────────────────
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login error: " + e.message);
+      }
+    };
+
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+      } else {
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+      }
+    });
+
+    // ─── Upload to Pinata ─────────────────────────────────────────────────────────────────
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${PINATA_JWT}` },
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    function getFileType(file) {
+      return file.type.startsWith('image/') ? 'image'
+           : file.type.startsWith('video/') ? 'video'
+           : 'unknown';
+    }
+
+    // ─── Create New Post ─────────────────────────────────────────────────────────────────
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption) {
+        return alert('Please select a file and caption.');
+      }
+
+      try {
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
+
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+        const timestamp = Date.now();
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp,
+          likes: 0,
+          comments: [],
+          boostExpiry: 0 // no boost initially
+        });
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
+      }
+    });
+
+    // ─── Render Timeline (with Boost Sorting) ────────────────────────────────────────────
+    const postsRef = ref(db, 'posts/');
+    onValue(postsRef, snapshot => {
+      const posts = [];
+      snapshot.forEach(child => {
+        posts.push({ id: child.key, ...child.val() });
+      });
+
+      // Separate boosted posts (not expired) vs regular
+      const now = Date.now();
+      const boosted = posts.filter(p => p.boostExpiry && p.boostExpiry > now);
+      const regular = posts.filter(p => !p.boostExpiry || p.boostExpiry <= now);
+
+      // Sort boosted by boostExpiry descending (most recently boosted first)
+      boosted.sort((a, b) => b.boostExpiry - a.boostExpiry);
+      // Sort regular by timestamp descending
+      regular.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Combine: boosted posts first, then regular
+      const combined = [...boosted, ...regular];
+
+      postContainer.innerHTML = '';
+      combined.forEach(post => {
+        const postDiv = document.createElement('div');
+        postDiv.classList.add('post-item');
+
+        const mediaHtml = post.type === 'image'
+          ? `<img src="${post.fileUrl}" />`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        // Show "Boosted" label if currently boosted
+        const isBoosted = post.boostExpiry && post.boostExpiry > now;
+        const boostedLabel = isBoosted
+          ? `<p style="color: green; font-weight:bold;">🌟 Boosted until ${new Date(post.boostExpiry).toLocaleString()}</p>`
+          : '';
+
+        postDiv.innerHTML = `
+          ${mediaHtml}
+          ${boostedLabel}
+          <p class="post-caption">${post.caption}</p>
+          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+            <button onclick="boostPost('${post.id}')">🚀 Boost</button>
+          </div>
+        `;
+        postContainer.appendChild(postDiv);
+      });
+    });
+
+    // ─── Like, Comment, Share ─────────────────────────────────────────────────────────────
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const current = (await res.json()).likes || 0;
+      update(postRef, { likes: current + 1 });
+    };
+
+    window.commentPost = (postId) => {
+      const comment = prompt("Enter your comment:");
+      if (comment) {
+        const commentRef = ref(db, `posts/${postId}/comments`);
+        push(commentRef, { text: comment, timestamp: Date.now() });
+        alert("Comment added!");
+      }
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    };
+
+    // ─── Boost Post Functionality ─────────────────────────────────────────────────────────
+    async function boostPost(postId) {
+      const user = auth.currentUser;
+      if (!user) {
+        return alert("You must be signed in to boost.");
+      }
+
+      // Ask user type: believer or non-believer
+      const isBeliever = confirm("Are you a believer? (OK = Yes for $30 boost, Cancel = No for $60 boost)");
+      const tokenAmount = isBeliever ? 30 : 60;
+      const recipient = isBeliever ? ZAKAT_ADDR : JIZYA_ADDR;
+
+      // Convert token amount to Wei (assuming DRFM has 18 decimals)
+      const amountWei = web3.utils.toWei(tokenAmount.toString(), 'ether');
+
+      // Confirm transaction
+      const confirmMsg = `You will send ${tokenAmount} DRFM tokens to ${recipient}\nProceed?`;
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        // Get the user's address
+        const accounts = await web3.eth.getAccounts();
+        const from = accounts[0];
+
+        // Call ERC20 transfer
+        await drfmContract.methods.transfer(recipient, amountWei).send({ from });
+
+        // Compute new boost expiry (30 days from now)
+        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+        const newExpiry = Date.now() + thirtyDaysMs;
+
+        // Update the post in Firebase
+        const postRef = ref(db, `posts/${postId}`);
+        await update(postRef, { boostExpiry: newExpiry });
+
+        alert("Boost successful! Your post is boosted for 30 days.");
+      } catch (err) {
+        console.error(err);
+        alert("Boost failed: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
