@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Video Channel</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    video { width: 100%; margin-top: 10px; }
+    .video-controls { margin-top: 10px; display: flex; gap: 10px; }
+    .comment-box { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Upload a Video</h2>
+  <input type="file" accept="video/*" id="videoInput" />
+  <button onclick="uploadVideo()">Upload</button>
+
+  <div id="uploadStatus"></div>
+
+  <hr>
+
+  <h2>Watch Video</h2>
+  <input type="text" id="videoIdInput" placeholder="Enter Video ID" />
+  <button onclick="loadVideo()">Load</button>
+  <video id="videoPlayer" controls></video>
+
+  <div class="video-controls">
+    <button onclick="boostVideo()">Boost</button>
+    <button onclick="likeVideo()">Like</button>
+  </div>
+
+  <div class="comment-box">
+    <input type="text" id="commentInput" placeholder="Add a comment...">
+    <button onclick="addComment()">Comment</button>
+  </div>
+  <div id="comments"></div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js';
+    import { getDatabase, ref, set, get, onValue, push, update, runTransaction } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const JWT = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
+
+    window.uploadVideo = async function () {
+      const file = document.getElementById('videoInput').files[0];
+      if (!file || !file.type.startsWith('video/')) {
+        alert('Please select a video file only.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${JWT}` },
+        body: formData
+      });
+
+      const json = await res.json();
+      const ipfsHash = json.IpfsHash;
+      const id = Date.now().toString();
+
+      await set(ref(db, 'videos/' + id), {
+        hash: ipfsHash,
+        title: file.name,
+        boost: 0,
+        likes: 0,
+        time: new Date().toISOString(),
+      });
+
+      document.getElementById('uploadStatus').innerText = `Uploaded! Video ID: ${id}`;
+    }
+
+    window.loadVideo = async function () {
+      const id = document.getElementById('videoIdInput').value;
+      const snapshot = await get(ref(db, 'videos/' + id));
+      if (!snapshot.exists()) return alert('Video not found');
+
+      const data = snapshot.val();
+      document.getElementById('videoPlayer').src = `https://gateway.pinata.cloud/ipfs/${data.hash}`;
+      loadComments(id);
+      window.currentVideoId = id;
+    }
+
+    window.boostVideo = function () {
+      if (!window.currentVideoId) return;
+      const refPath = ref(db, 'videos/' + window.currentVideoId + '/boost');
+      runTransaction(refPath, val => (val || 0) + 1);
+    }
+
+    window.likeVideo = function () {
+      if (!window.currentVideoId) return;
+      const refPath = ref(db, 'videos/' + window.currentVideoId + '/likes');
+      runTransaction(refPath, val => (val || 0) + 1);
+    }
+
+    window.addComment = function () {
+      if (!window.currentVideoId) return;
+      const comment = document.getElementById('commentInput').value;
+      if (!comment) return;
+
+      const commentRef = push(ref(db, 'videos/' + window.currentVideoId + '/comments'));
+      set(commentRef, { text: comment, time: new Date().toISOString() });
+      document.getElementById('commentInput').value = '';
+    }
+
+    function loadComments(id) {
+      const commentsRef = ref(db, 'videos/' + id + '/comments');
+      onValue(commentsRef, snapshot => {
+        const val = snapshot.val();
+        const box = document.getElementById('comments');
+        box.innerHTML = '<h4>Comments:</h4>';
+        if (val) {
+          Object.values(val).forEach(c => {
+            const div = document.createElement('div');
+            div.innerText = `${c.text} (${new Date(c.time).toLocaleString()})`;
+            box.appendChild(div);
+          });
+        }
+      });
+    }
+  </script>
+</body>
+</html>
