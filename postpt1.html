@@ -59,3 +59,183 @@
   </form>
 
   <div id="postContainer"></div>
+<script type="module">
+  // --- Firebase Config ---
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-YourKeyHere",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdefghijk"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const boostBtn = document.getElementById('boostBtn');
+  const form = document.getElementById('uploadForm');
+  const fileInput = document.getElementById('mediaFile');
+  const captionInput = document.getElementById('caption');
+  const postContainer = document.getElementById('postContainer');
+
+  let currentUser = null;
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      currentUser = user;
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      form.style.display = 'block';
+      boostBtn.style.display = 'inline-block';
+    } else {
+      currentUser = null;
+      loginBtn.style.display = 'inline-block';
+      logoutBtn.style.display = 'none';
+      form.style.display = 'none';
+      boostBtn.style.display = 'none';
+    }
+  });
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider);
+  logoutBtn.onclick = () => signOut(auth);
+
+  const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // 🔒 DO NOT REMOVE
+
+  async function uploadToPinata(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: { Authorization: pinataJWT },
+      body: formData
+    });
+    const data = await res.json();
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = fileInput.files[0];
+    const caption = captionInput.value.trim();
+    if (!file || !caption) return;
+
+    const url = await uploadToPinata(file);
+    const type = file.type.startsWith("image/") ? "image" : "video";
+
+    await addDoc(collection(db, "posts"), {
+      user: currentUser.email,
+      caption,
+      url,
+      type,
+      timestamp: Date.now(),
+      boosted: false
+    });
+
+    fileInput.value = '';
+    captionInput.value = '';
+  });
+
+  function renderPosts(posts) {
+    postContainer.innerHTML = '';
+    posts.forEach(post => {
+      const item = document.createElement('div');
+      item.className = 'post-item';
+      if (post.boosted) item.classList.add('boosted');
+
+      const media = post.type === 'image'
+        ? `<img src="${post.url}" width="100%" style="border-radius:8px;" />`
+        : `<video src="${post.url}" width="100%" controls style="border-radius:8px;"></video>`;
+
+      const date = new Date(post.timestamp).toLocaleString();
+
+      item.innerHTML = `
+        ${media}
+        <div class="post-caption">${post.caption}</div>
+        <div class="post-time">Posted by: ${post.user} • ${date}</div>
+      `;
+      postContainer.appendChild(item);
+    });
+  }
+
+  onSnapshot(query(collection(db, "posts"), orderBy("timestamp", "desc")), (snapshot) => {
+    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderPosts(posts);
+  });
+    const BSC_API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8"; // ✅ Your BscScan API Key
+  const DRF_BOOST_WALLET = "0xYourBoostReceiverWalletHere"; // 🔁 Replace with your actual wallet
+  const BOOST_AMOUNT_MIN = 1; // Minimum DRF for boost eligibility
+
+  async function checkBoostPayment(walletAddress) {
+    const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&sort=desc&apikey=${BSC_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.result || data.result.length === 0) return false;
+
+    const recentDRFTransfers = data.result.filter(tx =>
+      tx.tokenSymbol === "DRF" &&
+      tx.to.toLowerCase() === DRF_BOOST_WALLET.toLowerCase()
+    );
+
+    // Check if there's at least one recent transaction with enough DRF sent to boost wallet
+    for (let tx of recentDRFTransfers) {
+      const amount = Number(tx.value) / 10 ** tx.tokenDecimal;
+      if (amount >= BOOST_AMOUNT_MIN) return true;
+    }
+
+    return false;
+  }
+
+  boostBtn.onclick = async () => {
+    if (!currentUser) return alert("Please login first.");
+    boostBtn.disabled = true;
+    boostBtn.innerText = "Checking Boost...";
+
+    const userAddress = prompt("Enter your wallet address for boost check:");
+    if (!userAddress || !/^0x[a-fA-F0-9]{40}$/.test(userAddress)) {
+      alert("Invalid wallet address.");
+      boostBtn.disabled = false;
+      boostBtn.innerText = "Boost My Post";
+      return;
+    }
+
+    const paid = await checkBoostPayment(userAddress);
+
+    if (!paid) {
+      alert("No valid DRF payment found to the boost wallet.");
+      boostBtn.disabled = false;
+      boostBtn.innerText = "Boost My Post";
+      return;
+    }
+
+    const userPosts = await getDocs(query(collection(db, "posts")));
+    const latestPost = userPosts.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(p => p.user === currentUser.email)
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+    if (!latestPost) {
+      alert("No post found to boost.");
+      boostBtn.disabled = false;
+      boostBtn.innerText = "Boost My Post";
+      return;
+    }
+
+    const postRef = doc(db, "posts", latestPost.id);
+    await updateDoc(postRef, { boosted: true });
+
+    alert("✅ Your post has been boosted!");
+    boostBtn.disabled = false;
+    boostBtn.innerText = "Boost My Post";
+  };
+</script>
