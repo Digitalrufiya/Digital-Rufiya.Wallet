@@ -2,240 +2,228 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🚀 DRF Boost Wall</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    form { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item {
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .post {
       background: white;
       padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
-      border: 3px solid transparent;
+      margin-top: 15px;
+      border-radius: 8px;
+      border-left: 5px solid #2196F3;
     }
-    .post-item.boosted {
-      border-color: gold;
-      position: relative;
+    .boosted {
+      border: 2px solid #f9a825;
+      background: #fff8e1;
+      box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
     }
-    .post-item.boosted::after {
-      content: "🚀 Boosted";
-      position: absolute;
-      top: -12px;
-      right: -10px;
-      background: gold;
-      color: black;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-    }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-    #loginBtn, #logoutBtn, #boostBtn { margin: 10px auto; display: block; }
   </style>
 </head>
 <body>
-  <h1>🕌 DRF Media Timeline</h1>
+  <div class="container">
+    <h2>🚀 DRF Boost Wall</h2>
 
-  <button id="loginBtn">Sign in with Google</button>
-  <button id="logoutBtn" style="display: none;">Logout</button>
-  <button id="boostBtn" style="display: none;">🚀 Boost Latest Post</button>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="loginBtn">Login / Register</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
 
-  <form id="uploadForm" style="display:none;">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-  </form>
+    <textarea id="postContent" placeholder="What's on your mind?" rows="4"></textarea>
+    <input type="file" id="mediaUpload" />
+    <button id="postBtn">Post</button>
+    <button id="boostBtn">Boost My Post</button>
 
-  <div id="postContainer"></div>
-<script type="module">
-  // --- Firebase Config ---
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    <div id="posts"></div>
+  </div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyA-YourKeyHere",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdefghijk"
-  };
+  <!-- ✅ Firebase CDN SDK v11.9.0 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-analytics.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, orderBy, query, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
 
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const boostBtn = document.getElementById('boostBtn');
-  const form = document.getElementById('uploadForm');
-  const fileInput = document.getElementById('mediaFile');
-  const captionInput = document.getElementById('caption');
-  const postContainer = document.getElementById('postContainer');
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  let currentUser = null;
+    let currentUser = null;
 
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      currentUser = user;
-      loginBtn.style.display = 'none';
-      logoutBtn.style.display = 'inline-block';
-      form.style.display = 'block';
-      boostBtn.style.display = 'inline-block';
-    } else {
-      currentUser = null;
-      loginBtn.style.display = 'inline-block';
-      logoutBtn.style.display = 'none';
-      form.style.display = 'none';
-      boostBtn.style.display = 'none';
-    }
-  });
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const postContent = document.getElementById("postContent");
+    const postBtn = document.getElementById("postBtn");
+    const mediaUpload = document.getElementById("mediaUpload");
+    const postsContainer = document.getElementById("posts");
+    const boostBtn = document.getElementById("boostBtn");
 
-  loginBtn.onclick = () => signInWithPopup(auth, provider);
-  logoutBtn.onclick = () => signOut(auth);
-
-  const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // 🔒 DO NOT REMOVE
-
-  async function uploadToPinata(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: { Authorization: pinataJWT },
-      body: formData
-    });
-    const data = await res.json();
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const file = fileInput.files[0];
-    const caption = captionInput.value.trim();
-    if (!file || !caption) return;
-
-    const url = await uploadToPinata(file);
-    const type = file.type.startsWith("image/") ? "image" : "video";
-
-    await addDoc(collection(db, "posts"), {
-      user: currentUser.email,
-      caption,
-      url,
-      type,
-      timestamp: Date.now(),
-      boosted: false
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        loadPosts();
+      } else {
+        currentUser = null;
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+      }
     });
 
-    fileInput.value = '';
-    captionInput.value = '';
-  });
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithEmailAndPassword(auth, email.value, password.value);
+      } catch {
+        await createUserWithEmailAndPassword(auth, email.value, password.value);
+      }
+    };
 
-  function renderPosts(posts) {
-    postContainer.innerHTML = '';
-    posts.forEach(post => {
-      const item = document.createElement('div');
-      item.className = 'post-item';
-      if (post.boosted) item.classList.add('boosted');
+    logoutBtn.onclick = () => signOut(auth);
 
-      const media = post.type === 'image'
-        ? `<img src="${post.url}" width="100%" style="border-radius:8px;" />`
-        : `<video src="${post.url}" width="100%" controls style="border-radius:8px;"></video>`;
+    async function uploadToIPFS(file) {
+      const pinataJwt = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+      const data = new FormData();
+      data.append("file", file);
 
-      const date = new Date(post.timestamp).toLocaleString();
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: pinataJwt },
+        body: data
+      });
 
-      item.innerHTML = `
-        ${media}
-        <div class="post-caption">${post.caption}</div>
-        <div class="post-time">Posted by: ${post.user} • ${date}</div>
-      `;
-      postContainer.appendChild(item);
-    });
-  }
-
-  onSnapshot(query(collection(db, "posts"), orderBy("timestamp", "desc")), (snapshot) => {
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderPosts(posts);
-  });
-    const BSC_API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8"; // ✅ Your BscScan API Key
-  const DRF_BOOST_WALLET = "0xYourBoostReceiverWalletHere"; // 🔁 Replace with your actual wallet
-  const BOOST_AMOUNT_MIN = 1; // Minimum DRF for boost eligibility
-
-  async function checkBoostPayment(walletAddress) {
-    const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&sort=desc&apikey=${BSC_API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data.result || data.result.length === 0) return false;
-
-    const recentDRFTransfers = data.result.filter(tx =>
-      tx.tokenSymbol === "DRF" &&
-      tx.to.toLowerCase() === DRF_BOOST_WALLET.toLowerCase()
-    );
-
-    // Check if there's at least one recent transaction with enough DRF sent to boost wallet
-    for (let tx of recentDRFTransfers) {
-      const amount = Number(tx.value) / 10 ** tx.tokenDecimal;
-      if (amount >= BOOST_AMOUNT_MIN) return true;
+      const json = await res.json();
+      return "https://gateway.pinata.cloud/ipfs/" + json.IpfsHash;
     }
 
-    return false;
-  }
+    postBtn.onclick = async () => {
+      if (!currentUser) return alert("Login first");
 
-  boostBtn.onclick = async () => {
-    if (!currentUser) return alert("Please login first.");
-    boostBtn.disabled = true;
-    boostBtn.innerText = "Checking Boost...";
+      const content = postContent.value.trim();
+      if (!content) return alert("Post cannot be empty");
 
-    const userAddress = prompt("Enter your wallet address for boost check:");
-    if (!userAddress || !/^0x[a-fA-F0-9]{40}$/.test(userAddress)) {
-      alert("Invalid wallet address.");
+      let mediaUrl = null;
+      const file = mediaUpload.files[0];
+      if (file) mediaUrl = await uploadToIPFS(file);
+
+      await addDoc(collection(db, "posts"), {
+        user: currentUser.email,
+        content,
+        mediaUrl,
+        boosted: false,
+        timestamp: Date.now()
+      });
+
+      postContent.value = "";
+      mediaUpload.value = "";
+      loadPosts();
+    };
+
+    async function loadPosts() {
+      const snapshot = await getDocs(query(collection(db, "posts"), orderBy("timestamp", "desc")));
+      postsContainer.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const div = document.createElement("div");
+        div.className = "post" + (data.boosted ? " boosted" : "");
+        div.innerHTML = `
+          <p><strong>${data.user}</strong></p>
+          <p>${data.content}</p>
+          ${data.mediaUrl ? `<img src="${data.mediaUrl}" width="100%" />` : ""}
+          ${data.boosted ? `<p>🚀 Boosted Post</p>` : ""}
+        `;
+        postsContainer.appendChild(div);
+      });
+    }
+
+    const BSC_API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
+    const USDC_RECEIVER = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
+    const MIN_USDC_BOOST = 1;
+
+    async function checkUSDCBoost(walletAddress) {
+      const res = await fetch(`https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&sort=desc&apikey=${BSC_API_KEY}`);
+      const json = await res.json();
+      if (!json.result) return false;
+
+      const usdcTxs = json.result.filter(tx =>
+        tx.tokenSymbol === "USDC" &&
+        tx.to.toLowerCase() === USDC_RECEIVER.toLowerCase()
+      );
+
+      return usdcTxs.some(tx => Number(tx.value) / 10 ** tx.tokenDecimal >= MIN_USDC_BOOST);
+    }
+
+    boostBtn.onclick = async () => {
+      if (!currentUser) return alert("Login first");
+
+      const userWallet = prompt("Enter your BSC wallet address:");
+      if (!/^0x[a-fA-F0-9]{40}$/.test(userWallet)) return alert("Invalid address");
+
+      boostBtn.disabled = true;
+      boostBtn.innerText = "Checking Boost...";
+
+      const paid = await checkUSDCBoost(userWallet);
+      if (!paid) {
+        alert("No valid USDC payment found.");
+        boostBtn.disabled = false;
+        boostBtn.innerText = "Boost My Post";
+        return;
+      }
+
+      const snapshot = await getDocs(query(collection(db, "posts"), orderBy("timestamp", "desc")));
+      const userPost = snapshot.docs.find(doc => doc.data().user === currentUser.email);
+      if (!userPost) {
+        alert("No post to boost.");
+        boostBtn.disabled = false;
+        boostBtn.innerText = "Boost My Post";
+        return;
+      }
+
+      await updateDoc(doc(db, "posts", userPost.id), { boosted: true });
+      alert("✅ Boost successful!");
       boostBtn.disabled = false;
       boostBtn.innerText = "Boost My Post";
-      return;
-    }
-
-    const paid = await checkBoostPayment(userAddress);
-
-    if (!paid) {
-      alert("No valid DRF payment found to the boost wallet.");
-      boostBtn.disabled = false;
-      boostBtn.innerText = "Boost My Post";
-      return;
-    }
-
-    const userPosts = await getDocs(query(collection(db, "posts")));
-    const latestPost = userPosts.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(p => p.user === currentUser.email)
-      .sort((a, b) => b.timestamp - a.timestamp)[0];
-
-    if (!latestPost) {
-      alert("No post found to boost.");
-      boostBtn.disabled = false;
-      boostBtn.innerText = "Boost My Post";
-      return;
-    }
-
-    const postRef = doc(db, "posts", latestPost.id);
-    await updateDoc(postRef, { boosted: true });
-
-    alert("✅ Your post has been boosted!");
-    boostBtn.disabled = false;
-    boostBtn.innerText = "Boost My Post";
-  };
-</script>
+      loadPosts();
+    };
+  </script>
+</body>
+</html>
