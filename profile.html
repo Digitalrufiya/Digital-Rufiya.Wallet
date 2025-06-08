@@ -91,7 +91,7 @@
       getStorage, ref as storageRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
     import {
-      getDatabase, ref as dbRef, get, update
+      getDatabase, ref as dbRef, get, set, update
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
@@ -118,8 +118,10 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        email.textContent = user.email;
+        // Set default values
+        profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         displayName.textContent = user.displayName || 'Anonymous';
+        email.textContent = user.email;
 
         const userRef = dbRef(database, 'users/' + user.uid);
         const snapshot = await get(userRef);
@@ -127,18 +129,8 @@
 
         drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
         country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
-
-        // Load profile photo from storage (if exists), else use Google photo or placeholder
-        const sRef = storageRef(storage, `profilePhotos/${user.uid}`);
-        try {
-          const url = await getDownloadURL(sRef);
-          profilePic.src = url;
-        } catch (err) {
-          profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
-        }
-
       } else {
-        window.location.href = 'index.html'; // Not logged in
+        window.location.href = 'index.html';
       }
     });
 
@@ -180,12 +172,14 @@
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file && auth.currentUser) {
-        const sRef = storageRef(storage, `profilePhotos/${auth.currentUser.uid}`);
+        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
+        const sRef = storageRef(storage, storagePath);
         try {
           await uploadBytes(sRef, file);
           const url = await getDownloadURL(sRef);
           await updateProfile(auth.currentUser, { photoURL: url });
           profilePic.src = url;
+
           alert("Profile photo updated!");
         } catch (err) {
           alert("Upload failed: " + err.message);
