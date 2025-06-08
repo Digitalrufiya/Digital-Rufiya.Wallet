@@ -69,7 +69,7 @@
     <input type="file" id="uploadPic" accept="image/*" />
     <h2 id="displayName">User Name</h2>
     <button onclick="updateName()">Edit Name</button>
-
+    
     <p id="email">email@example.com</p>
 
     <p id="drfmAddress">DRFM Token Address: <small>Not set</small></p>
@@ -88,10 +88,10 @@
       getAuth, signOut, updateProfile, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
     import {
-      getStorage, ref as sRef, uploadBytes, getDownloadURL
+      getStorage, ref as storageRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
     import {
-      getDatabase, ref, set, get, update
+      getDatabase, ref as dbRef, get, update
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
@@ -101,13 +101,13 @@
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com/"
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const storage = getStorage(app);
-    const db = getDatabase(app);
+    const database = getDatabase(app);
 
     const profilePic = document.getElementById('profilePic');
     const displayName = document.getElementById('displayName');
@@ -118,18 +118,18 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        email.textContent = user.email;
         profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         displayName.textContent = user.displayName || 'Anonymous';
+        email.textContent = user.email;
 
-        const snapshot = await get(ref(db, "users/" + user.uid));
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
-          country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
-        }
+        const userRef = dbRef(database, 'users/' + user.uid);
+        const snapshot = await get(userRef);
+        const data = snapshot.exists() ? snapshot.val() : {};
+
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
+        country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
       } else {
-        window.location.href = "index.html";
+        window.location.href = 'index.html';
       }
     });
 
@@ -138,7 +138,6 @@
       if (newName?.trim()) {
         try {
           await updateProfile(auth.currentUser, { displayName: newName.trim() });
-          await update(ref(db, "users/" + auth.currentUser.uid), { name: newName.trim() });
           displayName.textContent = newName.trim();
           alert("Name updated!");
         } catch (e) {
@@ -150,38 +149,34 @@
     window.updateDRFM = async () => {
       const token = prompt("Enter your DRFM token address:");
       if (token?.trim()) {
-        try {
-          await update(ref(db, "users/" + auth.currentUser.uid), { drfm: token.trim() });
-          drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
-          alert("Token address updated!");
-        } catch (e) {
-          alert("Error: " + e.message);
-        }
+        const user = auth.currentUser;
+        const updates = { drfm: token.trim() };
+        await update(dbRef(database, 'users/' + user.uid), updates);
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
+        alert("Token address updated successfully.");
       }
     };
 
     window.updateCountry = async () => {
       const c = prompt("Enter your country:");
       if (c?.trim()) {
-        try {
-          await update(ref(db, "users/" + auth.currentUser.uid), { country: c.trim() });
-          country.innerHTML = `Country: <small>${c.trim()}</small>`;
-          alert("Country updated!");
-        } catch (e) {
-          alert("Error: " + e.message);
-        }
+        const user = auth.currentUser;
+        const updates = { country: c.trim() };
+        await update(dbRef(database, 'users/' + user.uid), updates);
+        country.innerHTML = `Country: <small>${c.trim()}</small>`;
+        alert("Country updated successfully.");
       }
     };
 
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file) {
-        const storageRef = sRef(storage, `profilePhotos/${auth.currentUser.uid}`);
+        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
+        const sRef = storageRef(storage, storagePath);
         try {
-          await uploadBytes(storageRef, file);
-          const url = await getDownloadURL(storageRef);
+          await uploadBytes(sRef, file);
+          const url = await getDownloadURL(sRef);
           await updateProfile(auth.currentUser, { photoURL: url });
-          await update(ref(db, "users/" + auth.currentUser.uid), { photoURL: url });
           profilePic.src = url;
           alert("Profile photo updated!");
         } catch (err) {
