@@ -3,111 +3,195 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Wallet & File Uploader</title>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <title>DRF Social Feed</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-    #walletAddress, #uploadResult, #qrCodeContainer { margin-top: 15px; }
-    .hidden { display: none; }
-    button { padding: 10px 20px; margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      background: #f0f2f5;
+    }
+    #uploadForm, .post-item {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .post-item img, .post-item video {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .post-actions {
+      margin-top: 10px;
+    }
+    .post-actions button {
+      margin-right: 8px;
+      padding: 6px 10px;
+    }
+    #postContainer {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
 
-  <h2>DRF Wallet DApp</h2>
-
-  <div id="walletSection">
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <div id="walletAddress"></div>
-    <div id="qrCodeContainer">
-      <canvas id="qrCode"></canvas>
-    </div>
-  </div>
-
-  <hr>
-
-  <h3>Upload File to IPFS (via Pinata)</h3>
+  <h2>📤 Upload a Post</h2>
   <form id="uploadForm">
-    <input type="file" id="fileInput" required /><br><br>
+    <input type="file" id="fileInput" accept="image/*,video/*" required /><br><br>
+    <textarea id="captionInput" placeholder="Enter caption..." required></textarea><br><br>
     <button type="submit">Upload</button>
   </form>
 
-  <div id="uploadResult" class="hidden">
-    <p><strong>IPFS Hash:</strong> <span id="ipfsHash"></span></p>
-    <p><strong>IPFS Link:</strong> <a id="ipfsLink" href="#" target="_blank"></a></p>
-  </div>
+  <div id="postContainer"></div>
 
-  <script>
-    const PINATA_JWT = 'PASTE_YOUR_PINATA_JWT_HERE'; // <-- replace this with your real JWT from Pinata
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
-    async function connectWallet() {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const wallet = accounts[0];
-          document.getElementById('walletAddress').innerText = 'Connected: ' + wallet;
-          generateQRCode(wallet);
-        } catch (error) {
-          alert('Connection rejected');
-        }
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
       } else {
-        alert('MetaMask not detected');
-      }
-    }
-
-    function generateQRCode(address) {
-      QRCode.toCanvas(document.getElementById("qrCode"), address, function (error) {
-        if (error) console.error(error);
-      });
-    }
-
-    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const file = document.getElementById("fileInput").files[0];
-      if (!file) {
-        alert("Please select a file.");
-        return;
-      }
-      try {
-        const ipfsHash = await uploadToPinata(file);
-        document.getElementById("ipfsHash").innerText = ipfsHash;
-        document.getElementById("ipfsLink").href = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-        document.getElementById("ipfsLink").innerText = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-        document.getElementById("uploadResult").classList.remove("hidden");
-      } catch (err) {
-        alert("Upload failed: " + err.message);
+        signInWithPopup(auth, provider)
+          .then((result) => currentUser = result.user)
+          .catch(console.error);
       }
     });
 
-    async function uploadToPinata(file) {
-      const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const uploadForm = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("fileInput");
+    const captionInput = document.getElementById("captionInput");
+    const postContainer = document.getElementById("postContainer");
+
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption || !currentUser) return;
+
+      const fileType = file.type.startsWith("image") ? "image" : "video";
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
+      formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
-      const response = await fetch(url, {
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`
-        },
+        headers: { Authorization: pinataJWT },
         body: formData
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("Pinata upload failed: " + errorText);
-      }
+      const data = await res.json();
+      const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
 
-      const data = await response.json();
-      return data.IpfsHash;
-    }
+      const postData = {
+        user: currentUser.displayName,
+        fileUrl,
+        caption,
+        timestamp: Date.now(),
+        type: fileType,
+        likes: 0,
+        boostTimestamp: null,
+        comments: []
+      };
 
-    function getFileType(file) {
-      if (!file) return "";
-      if (file.type.startsWith("image/")) return "image";
-      if (file.type.startsWith("video/")) return "video";
-      return "file";
-    }
+      await push(ref(db, "posts"), postData);
+      fileInput.value = "";
+      captionInput.value = "";
+      alert("Post uploaded!");
+    });
+
+    onValue(ref(db, "posts"), (snapshot) => {
+      const posts = [];
+      snapshot.forEach(child => {
+        posts.push({ id: child.key, ...child.val() });
+      });
+
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      postContainer.innerHTML = "";
+      posts.forEach(post => {
+        const isBoosted = post.boostTimestamp && (Date.now() - post.boostTimestamp < 30 * 24 * 60 * 60 * 1000);
+        const media = post.type === "image"
+          ? `<img src="${post.fileUrl}" alt="Post Image">`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        const comments = post.comments?.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join("") || "";
+
+        const postDiv = document.createElement("div");
+        postDiv.classList.add("post-item");
+        postDiv.innerHTML = `
+          ${media}
+          <p>${post.caption}</p>
+          <small>${new Date(post.timestamp).toLocaleString()}</small>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="boostPost('${post.id}')">${isBoosted ? "✅ Boosted" : "🚀 Boost"}</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
+          <div id="comments-${post.id}" style="margin-top: 10px;">${comments}</div>
+        `;
+        postContainer.appendChild(postDiv);
+      });
+    });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const snapshot = await get(postRef);
+      const post = snapshot.val();
+      const newLikes = (post.likes || 0) + 1;
+      await update(postRef, { likes: newLikes });
+    };
+
+    window.commentPost = async (postId) => {
+      if (!currentUser) return alert("Please log in to comment.");
+      const text = prompt("Enter your comment:");
+      if (!text) return;
+
+      const postRef = ref(db, `posts/${postId}`);
+      const snapshot = await get(postRef);
+      const post = snapshot.val();
+      const newComments = post.comments || [];
+      newComments.push({ user: currentUser.displayName || "Anonymous", text });
+
+      await update(postRef, { comments: newComments });
+    };
+
+    window.boostPost = async (postId) => {
+      const confirmBoost = confirm("Do you want to boost this post for 30 days?");
+      if (!confirmBoost) return;
+      await update(ref(db, `posts/${postId}`), { boostTimestamp: Date.now() });
+      alert("✅ Post boosted!");
+    };
+
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
+    };
   </script>
 </body>
 </html>
