@@ -69,7 +69,7 @@
     <input type="file" id="uploadPic" accept="image/*" />
     <h2 id="displayName">User Name</h2>
     <button onclick="updateName()">Edit Name</button>
-    
+
     <p id="email">email@example.com</p>
 
     <p id="drfmAddress">DRFM Token Address: <small>Not set</small></p>
@@ -88,8 +88,11 @@
       getAuth, signOut, updateProfile, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
     import {
-      getStorage, ref, uploadBytes, getDownloadURL
+      getStorage, ref as sRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+    import {
+      getDatabase, ref, set, get, update
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -97,12 +100,14 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com/"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const storage = getStorage(app);
+    const db = getDatabase(app);
 
     const profilePic = document.getElementById('profilePic');
     const displayName = document.getElementById('displayName');
@@ -111,18 +116,20 @@
     const country = document.getElementById('country');
     const uploadInput = document.getElementById('uploadPic');
 
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const meta = user.reloadUserInfo?.customAttributes
-          ? JSON.parse(user.reloadUserInfo.customAttributes)
-          : {};
+        email.textContent = user.email;
         profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         displayName.textContent = user.displayName || 'Anonymous';
-        email.textContent = user.email;
-        drfmAddress.innerHTML = `DRFM Token Address: <small>${meta.drfm || 'Not set'}</small>`;
-        country.innerHTML = `Country: <small>${meta.country || 'Not set'}</small>`;
+
+        const snapshot = await get(ref(db, "users/" + user.uid));
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
+          country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
+        }
       } else {
-        window.location.href = 'index.html';
+        window.location.href = "index.html";
       }
     });
 
@@ -131,6 +138,7 @@
       if (newName?.trim()) {
         try {
           await updateProfile(auth.currentUser, { displayName: newName.trim() });
+          await update(ref(db, "users/" + auth.currentUser.uid), { name: newName.trim() });
           displayName.textContent = newName.trim();
           alert("Name updated!");
         } catch (e) {
@@ -142,36 +150,38 @@
     window.updateDRFM = async () => {
       const token = prompt("Enter your DRFM token address:");
       if (token?.trim()) {
-        await auth.currentUser.reload(); // refresh
-        const meta = { ...JSON.parse(auth.currentUser.reloadUserInfo.customAttributes || "{}") };
-        meta.drfm = token.trim();
-        await updateProfile(auth.currentUser, { photoURL: auth.currentUser.photoURL, displayName: auth.currentUser.displayName });
-        // Firebase does not store custom metadata by default in Auth; you'd need Firestore for full custom fields.
-        alert("Token saved locally. To store it permanently, please use Firestore.");
-        drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
+        try {
+          await update(ref(db, "users/" + auth.currentUser.uid), { drfm: token.trim() });
+          drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
+          alert("Token address updated!");
+        } catch (e) {
+          alert("Error: " + e.message);
+        }
       }
     };
 
     window.updateCountry = async () => {
       const c = prompt("Enter your country:");
       if (c?.trim()) {
-        await auth.currentUser.reload();
-        const meta = { ...JSON.parse(auth.currentUser.reloadUserInfo.customAttributes || "{}") };
-        meta.country = c.trim();
-        await updateProfile(auth.currentUser, { photoURL: auth.currentUser.photoURL, displayName: auth.currentUser.displayName });
-        alert("Country saved locally. To persist, integrate Firestore.");
-        country.innerHTML = `Country: <small>${c.trim()}</small>`;
+        try {
+          await update(ref(db, "users/" + auth.currentUser.uid), { country: c.trim() });
+          country.innerHTML = `Country: <small>${c.trim()}</small>`;
+          alert("Country updated!");
+        } catch (e) {
+          alert("Error: " + e.message);
+        }
       }
     };
 
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file) {
-        const storageRef = ref(storage, `profilePhotos/${auth.currentUser.uid}`);
+        const storageRef = sRef(storage, `profilePhotos/${auth.currentUser.uid}`);
         try {
           await uploadBytes(storageRef, file);
           const url = await getDownloadURL(storageRef);
           await updateProfile(auth.currentUser, { photoURL: url });
+          await update(ref(db, "users/" + auth.currentUser.uid), { photoURL: url });
           profilePic.src = url;
           alert("Profile photo updated!");
         } catch (err) {
