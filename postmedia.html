@@ -2,78 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Social Feed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Timeline</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #f0f2f5;
-    }
-    h2 {
-      margin-top: 30px;
-    }
-    #uploadForm, .post-item, #analytics {
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
       background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-    textarea {
-      width: 100%;
-      min-height: 60px;
-      padding: 10px;
-      resize: vertical;
-    }
-    .post-item img, .post-item video {
-      width: 100%;
-      max-height: 400px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-    .post-actions {
-      margin-top: 10px;
-    }
-    .post-actions button {
-      margin-right: 8px;
-      padding: 6px 12px;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
       cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    #postContainer {
-      margin-top: 20px;
-    }
-    .comment-box {
-      margin-top: 10px;
-      font-size: 14px;
-      background: #f9f9f9;
-      padding: 5px;
-      border-radius: 4px;
-    }
-    .comment-box b {
-      color: #333;
-    }
+    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
+    .comment-section { margin-top: 10px; }
+    .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
+    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
+    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
+    .post-owner { font-size: 13px; color: #888; }
   </style>
 </head>
 <body>
 
-  <h2>📊 Boost Analytics</h2>
-  <div id="analytics">Loading analytics...</div>
+  <h1>🕌 DRF Media Timeline</h1>
+  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
-  <h2>📤 Upload a Post</h2>
-  <form id="uploadForm">
-    <input type="file" id="fileInput" accept="image/*,video/*" required /><br><br>
-    <textarea id="captionInput" placeholder="Enter caption..." required></textarea><br><br>
-    <button type="submit">Upload</button>
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
+
+  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
+
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
   </form>
+
+  <div id="boostSection" style="display:none; text-align:center;">
+    <h3>🚀 Boost Your Post</h3>
+    <button onclick="askBoost()">Boost Now</button>
+  </div>
 
   <div id="postContainer"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, get } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
-    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-messaging.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, remove, child, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -82,159 +77,223 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
-
-    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Your full JWT here
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    const messaging = getMessaging(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+    const filterBtn = document.getElementById("filterMyPosts");
 
     let currentUser = null;
+    let showOnlyMyPosts = false;
 
-    signInWithEmailAndPassword(auth, "digitalrufiya@gmail.com", "Digitalreminder@2025")
-      .then(userCred => {
-        currentUser = userCred.user;
-        requestNotificationPermission();
-      })
-      .catch(err => alert("Login Failed: " + err.message));
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) currentUser = user;
-    });
-
-    async function requestNotificationPermission() {
+    loginBtn.onclick = async () => {
       try {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
-          const token = await getToken(messaging);
-          console.log("FCM Token:", token);
-        }
-      } catch (err) {
-        console.warn("Notification error:", err.message);
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login error: " + e.message);
       }
-    }
+    };
 
-    onMessage(messaging, (payload) => {
-      alert(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
-    });
+    logoutBtn.onclick = () => signOut(auth);
 
-    const uploadForm = document.getElementById("uploadForm");
-    const fileInput = document.getElementById("fileInput");
-    const captionInput = document.getElementById("captionInput");
-    const postContainer = document.getElementById("postContainer");
-    const analytics = document.getElementById("analytics");
-
-    uploadForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const file = fileInput.files[0];
-      const caption = captionInput.value.trim();
-      if (!file || !caption || !currentUser) return alert("Missing file or caption.");
-
-      try {
-        const fileType = file.type.startsWith("image") ? "image" : "video";
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
-        formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
-
-        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: { Authorization: pinataJWT },
-          body: formData
-        });
-
-        const data = await res.json();
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-
-        const postData = {
-          user: currentUser.email,
-          fileUrl,
-          caption,
-          timestamp: Date.now(),
-          type: fileType,
-          likes: 0,
-          boostTimestamp: null,
-          comments: []
-        };
-
-        await push(ref(db, "posts"), postData);
-        fileInput.value = "";
-        captionInput.value = "";
-        alert("✅ Post uploaded!");
-      } catch (err) {
-        alert("❌ Upload failed: " + err.message);
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+        filterBtn.style.display = "block";
+        document.getElementById("boostSection").style.display = "block";
+      } else {
+        currentUser = null;
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+        filterBtn.style.display = "none";
+        document.getElementById("boostSection").style.display = "none";
       }
     });
 
-    onValue(ref(db, "posts"), (snapshot) => {
-      const posts = [];
-      snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
-      posts.sort((a, b) => b.timestamp - a.timestamp);
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
 
-      let boosted = 0;
-      postContainer.innerHTML = "";
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
 
-      posts.forEach(post => {
-        const isBoosted = post.boostTimestamp && (Date.now() - post.boostTimestamp < 30 * 86400000);
-        if (isBoosted) boosted++;
-
-        const media = post.type === "image"
-          ? `<img src="${post.fileUrl}" alt="Image">`
-          : `<video controls src="${post.fileUrl}"></video>`;
-
-        const commentsHTML = post.comments?.map(c => `<div class="comment-box"><b>${c.user}</b>: ${c.text}</div>`).join("") || "";
-
-        const div = document.createElement("div");
-        div.classList.add("post-item");
-        div.innerHTML = `
-          ${media}
-          <p>${post.caption}</p>
-          <small>Posted on: ${new Date(post.timestamp).toLocaleString()}</small>
-          <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like (<span>${post.likes || 0}</span>)</button>
-            <button onclick="commentPost('${post.id}')">💬 Comment</button>
-            <button onclick="boostPost('${post.id}')">${isBoosted ? "✅ Boosted" : "🚀 Boost"}</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-          </div>
-          <div id="comments-${post.id}">${commentsHTML}</div>
-        `;
-        postContainer.appendChild(div);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: PINATA_JWT },
+        body: formData,
       });
 
-      analytics.innerHTML = `Total Posts: <b>${posts.length}</b><br>Boosted in last 30 days: <b>${boosted}</b>`;
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || caption.length < 4) return alert('Please select a file and caption at least 4 characters long.');
+
+      try {
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
+
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: [],
+          uid: currentUser.uid,
+          userName: currentUser.displayName,
+          userPhoto: currentUser.photoURL
+        });
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
+      }
     });
 
+    filterBtn.onclick = () => {
+      showOnlyMyPosts = !showOnlyMyPosts;
+      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+      loadPosts();
+    };
+
+    const postsRef = ref(db, 'posts/');
+    function loadPosts() {
+      onValue(postsRef, (snapshot) => {
+        const posts = [];
+        snapshot.forEach((child) => {
+          posts.push({ id: child.key, ...child.val() });
+        });
+
+        posts.sort((a, b) => b.timestamp - a.timestamp);
+        postContainer.innerHTML = '';
+        posts.forEach(post => {
+          if (showOnlyMyPosts && currentUser && post.uid !== currentUser.uid) return;
+
+          const postDiv = document.createElement('div');
+          postDiv.classList.add('post-item');
+
+          const media = post.type === 'image'
+            ? `<img src="${post.fileUrl}" />`
+            : `<video controls src="${post.fileUrl}"></video>`;
+
+          let commentsHtml = '';
+          if (post.comments) {
+            commentsHtml = Object.values(post.comments).map(c => `<div class="comment-item">${c}</div>`).join('');
+          }
+
+          const isOwner = currentUser && post.uid === currentUser.uid;
+
+          postDiv.innerHTML = `
+            ${media}
+            <p class="post-caption">${post.caption}</p>
+            <p class="post-owner">By ${post.userName || 'Anonymous'}</p>
+            <p class="post-time">${timeAgo(post.timestamp)}</p>
+            <div class="post-actions">
+              <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+              <button onclick="commentPost('${post.id}')">💬 Comment</button>
+              <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+              ${isOwner ? `<button onclick="deletePost('${post.id}')">🗑️ Delete</button>` : ''}
+            </div>
+            <div class="comment-section">${commentsHtml}</div>
+          `;
+          postContainer.appendChild(postDiv);
+        });
+      });
+    }
+
+    function timeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      const intervals = {
+        year: 31536000, month: 2592000, week: 604800,
+        day: 86400, hour: 3600, minute: 60, second: 1
+      };
+      for (let key in intervals) {
+        const val = Math.floor(seconds / intervals[key]);
+        if (val > 0) return `${val} ${key}${val !== 1 ? 's' : ''} ago`;
+      }
+      return "Just now";
+    }
+
     window.likePost = async (postId) => {
-      const refPath = ref(db, `posts/${postId}`);
-      const snap = await get(refPath);
-      const post = snap.val();
-      await update(refPath, { likes: (post.likes || 0) + 1 });
+      const postRef = ref(db, `posts/${postId}`);
+      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const current = (await res.json()).likes || 0;
+      update(postRef, { likes: current + 1 });
     };
 
     window.commentPost = async (postId) => {
-      if (!currentUser) return alert("Please log in.");
-      const comment = prompt("Your comment:");
-      if (!comment) return;
-      const refPath = ref(db, `posts/${postId}`);
-      const snap = await get(refPath);
-      const post = snap.val();
-      const updatedComments = post.comments || [];
-      updatedComments.push({ user: currentUser.email, text: comment });
-      await update(refPath, { comments: updatedComments });
+      const comment = prompt("Enter your comment:");
+      if (comment && comment.trim()) {
+        const commentRef = ref(db, `posts/${postId}/comments`);
+        push(commentRef, comment.trim());
+      }
     };
 
-    window.boostPost = async (postId) => {
-      const ok = confirm("Boost this post for 30 days?");
-      if (ok) await update(ref(db, `posts/${postId}`), { boostTimestamp: Date.now() });
+    window.deletePost = (postId) => {
+      if (confirm("Delete this post?")) {
+        remove(ref(db, `posts/${postId}`));
+      }
     };
 
     window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("🔗 Link copied!"));
+      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
     };
+
+    window.askBoost = () => {
+      const isMuslim = confirm("Are you Muslim?\nClick OK for Yes, Cancel for No.");
+      const price = isMuslim ? 30 : 60;
+      const message = `
+Boost Plan Activated ✅
+Duration: 30 Days
+Price: ${price} USDC (BSC)
+
+📥 Please send exactly ${price} USDC to:
+➡️ 0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C
+
+After sending, please wait for confirmation via support.
+
+Thank you! 🤝
+      `.trim();
+      alert(message);
+    };
+
+    loadPosts();
   </script>
 </body>
 </html>
