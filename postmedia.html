@@ -1,238 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRF Social Feed</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 15px;
-      background: #f4f4f4;
+      padding: 10px;
+      background: #f0f2f5;
     }
-    h1 {
-      text-align: center;
-      color: #333;
+    h2 {
+      margin-top: 30px;
     }
-    form {
-      margin-bottom: 20px;
+    #uploadForm, .post-item, #analytics {
       background: #fff;
       padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    input[type="file"],
-    input[type="text"],
-    button {
-      display: block;
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 16px;
-    }
-    .post-item {
-      background: white;
       margin-bottom: 15px;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px;
+      resize: vertical;
     }
     .post-item img, .post-item video {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .post-actions {
+      margin-top: 10px;
     }
     .post-actions button {
-      margin-right: 10px;
-      margin-top: 8px;
-      padding: 5px 10px;
-      font-size: 14px;
+      margin-right: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
     }
-    input[type="search"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      font-size: 16px;
+    #postContainer {
+      margin-top: 20px;
+    }
+    .comment-box {
+      margin-top: 10px;
+      font-size: 14px;
+      background: #f9f9f9;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    .comment-box b {
+      color: #333;
     }
   </style>
 </head>
 <body>
 
-<h1>📸 DRF Social Feed</h1>
+  <h2>📊 Boost Analytics</h2>
+  <div id="analytics">Loading analytics...</div>
 
-<form id="uploadForm">
-  <input type="file" id="fileInput" accept="image/*,video/*" required />
-  <input type="text" id="captionInput" placeholder="Write a caption..." required />
-  <button type="submit">Post</button>
-</form>
+  <h2>📤 Upload a Post</h2>
+  <form id="uploadForm">
+    <input type="file" id="fileInput" accept="image/*,video/*" required /><br><br>
+    <textarea id="captionInput" placeholder="Enter caption..." required></textarea><br><br>
+    <button type="submit">Upload</button>
+  </form>
 
-<!-- Search Bar -->
-<input type="search" id="searchBar" placeholder="🔍 Search posts by user or caption..." />
+  <div id="postContainer"></div>
 
-<div id="postContainer"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, get } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-messaging.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-  import { getDatabase, ref, push, update, onValue, get } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-    measurementId: "G-W6VHMP77YR"
-  };
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Your full JWT here
 
-  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Truncated for safety
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const messaging = getMessaging(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+    let currentUser = null;
 
-  let currentUser = null;
+    signInWithEmailAndPassword(auth, "digitalrufiya@gmail.com", "Digitalreminder@2025")
+      .then(userCred => {
+        currentUser = userCred.user;
+        requestNotificationPermission();
+      })
+      .catch(err => alert("Login Failed: " + err.message));
 
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      currentUser = user;
-    } else {
-      signInWithPopup(auth, provider).then(result => currentUser = result.user).catch(console.error);
-    }
-  });
-
-  const uploadForm = document.getElementById("uploadForm");
-  const fileInput = document.getElementById("fileInput");
-  const captionInput = document.getElementById("captionInput");
-  const postContainer = document.getElementById("postContainer");
-  const searchBar = document.getElementById("searchBar");
-
-  uploadForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const file = fileInput.files[0];
-    const caption = captionInput.value.trim();
-    if (!file || !caption || !currentUser) return;
-
-    const fileType = file.type.startsWith("image") ? "image" : "video";
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
-    formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: { Authorization: pinataJWT },
-      body: formData
+    onAuthStateChanged(auth, (user) => {
+      if (user) currentUser = user;
     });
 
-    const data = await res.json();
-    const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    async function requestNotificationPermission() {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          const token = await getToken(messaging);
+          console.log("FCM Token:", token);
+        }
+      } catch (err) {
+        console.warn("Notification error:", err.message);
+      }
+    }
 
-    const postData = {
-      user: currentUser.displayName || "Anonymous",
-      email: currentUser.email || "",
-      photo: currentUser.photoURL || "",
-      fileUrl,
-      caption,
-      timestamp: Date.now(),
-      type: fileType,
-      likes: 0,
-      boostTimestamp: null,
-      comments: []
-    };
+    onMessage(messaging, (payload) => {
+      alert(`🔔 ${payload.notification.title}: ${payload.notification.body}`);
+    });
 
-    await push(ref(db, "posts"), postData);
-    fileInput.value = "";
-    captionInput.value = "";
-    alert("✅ Post uploaded!");
-  });
+    const uploadForm = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("fileInput");
+    const captionInput = document.getElementById("captionInput");
+    const postContainer = document.getElementById("postContainer");
+    const analytics = document.getElementById("analytics");
 
-  onValue(ref(db, "posts"), (snapshot) => {
-    const posts = [];
-    snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
-    posts.sort((a, b) => b.timestamp - a.timestamp);
-    renderPosts(posts);
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption || !currentUser) return alert("Missing file or caption.");
 
-    searchBar.oninput = () => {
-      const term = searchBar.value.toLowerCase();
-      const filtered = posts.filter(p =>
-        (p.caption || "").toLowerCase().includes(term) ||
-        (p.user || "").toLowerCase().includes(term) ||
-        (p.email || "").toLowerCase().includes(term)
-      );
-      renderPosts(filtered);
-    };
-  });
+      try {
+        const fileType = file.type.startsWith("image") ? "image" : "video";
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
+        formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
-  function renderPosts(posts) {
-    postContainer.innerHTML = "";
-    posts.forEach(post => {
-      const isBoosted = post.boostTimestamp && (Date.now() - post.boostTimestamp < 30 * 86400000);
-      const media = post.type === "image"
-        ? `<img src="${post.fileUrl}" alt="Post Image">`
-        : `<video controls src="${post.fileUrl}"></video>`;
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: { Authorization: pinataJWT },
+          body: formData
+        });
 
-      const comments = post.comments?.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join("") || "";
+        const data = await res.json();
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
 
-      const div = document.createElement("div");
-      div.className = "post-item";
-      div.innerHTML = `
-        <div style="display: flex; align-items: center; margin-bottom: 10px;">
-          <img src="${post.photo || 'https://via.placeholder.com/40'}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-          <div>
-            <strong>${post.user}</strong><br><small>${post.email}</small>
+        const postData = {
+          user: currentUser.email,
+          fileUrl,
+          caption,
+          timestamp: Date.now(),
+          type: fileType,
+          likes: 0,
+          boostTimestamp: null,
+          comments: []
+        };
+
+        await push(ref(db, "posts"), postData);
+        fileInput.value = "";
+        captionInput.value = "";
+        alert("✅ Post uploaded!");
+      } catch (err) {
+        alert("❌ Upload failed: " + err.message);
+      }
+    });
+
+    onValue(ref(db, "posts"), (snapshot) => {
+      const posts = [];
+      snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      let boosted = 0;
+      postContainer.innerHTML = "";
+
+      posts.forEach(post => {
+        const isBoosted = post.boostTimestamp && (Date.now() - post.boostTimestamp < 30 * 86400000);
+        if (isBoosted) boosted++;
+
+        const media = post.type === "image"
+          ? `<img src="${post.fileUrl}" alt="Image">`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        const commentsHTML = post.comments?.map(c => `<div class="comment-box"><b>${c.user}</b>: ${c.text}</div>`).join("") || "";
+
+        const div = document.createElement("div");
+        div.classList.add("post-item");
+        div.innerHTML = `
+          ${media}
+          <p>${post.caption}</p>
+          <small>Posted on: ${new Date(post.timestamp).toLocaleString()}</small>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like (<span>${post.likes || 0}</span>)</button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="boostPost('${post.id}')">${isBoosted ? "✅ Boosted" : "🚀 Boost"}</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
           </div>
-        </div>
-        ${media}
-        <p>${post.caption}</p>
-        <small>${new Date(post.timestamp).toLocaleString()}</small>
-        <div class="post-actions">
-          <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-          <button onclick="commentPost('${post.id}')">💬 Comment</button>
-          <button onclick="boostPost('${post.id}')">${isBoosted ? "✅ Boosted" : "🚀 Boost"}</button>
-          <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-        </div>
-        <div id="comments-${post.id}" style="margin-top: 10px;">${comments}</div>
-      `;
-      postContainer.appendChild(div);
+          <div id="comments-${post.id}">${commentsHTML}</div>
+        `;
+        postContainer.appendChild(div);
+      });
+
+      analytics.innerHTML = `Total Posts: <b>${posts.length}</b><br>Boosted in last 30 days: <b>${boosted}</b>`;
     });
-  }
 
-  window.likePost = async (postId) => {
-    const postRef = ref(db, `posts/${postId}`);
-    const snapshot = await get(postRef);
-    const post = snapshot.val();
-    await update(postRef, { likes: (post.likes || 0) + 1 });
-  };
+    window.likePost = async (postId) => {
+      const refPath = ref(db, `posts/${postId}`);
+      const snap = await get(refPath);
+      const post = snap.val();
+      await update(refPath, { likes: (post.likes || 0) + 1 });
+    };
 
-  window.commentPost = async (postId) => {
-    if (!currentUser) return alert("Please log in to comment.");
-    const text = prompt("Enter your comment:");
-    if (!text) return;
-    const postRef = ref(db, `posts/${postId}`);
-    const snapshot = await get(postRef);
-    const post = snapshot.val();
-    const comments = post.comments || [];
-    comments.push({ user: currentUser.displayName, text });
-    await update(postRef, { comments });
-  };
+    window.commentPost = async (postId) => {
+      if (!currentUser) return alert("Please log in.");
+      const comment = prompt("Your comment:");
+      if (!comment) return;
+      const refPath = ref(db, `posts/${postId}`);
+      const snap = await get(refPath);
+      const post = snap.val();
+      const updatedComments = post.comments || [];
+      updatedComments.push({ user: currentUser.email, text: comment });
+      await update(refPath, { comments: updatedComments });
+    };
 
-  window.boostPost = async (postId) => {
-    const confirmed = confirm("Boost this post for 30 days?");
-    if (confirmed) {
-      await update(ref(db, `posts/${postId}`), { boostTimestamp: Date.now() });
-      alert("✅ Boosted for 30 days");
-    }
-  };
+    window.boostPost = async (postId) => {
+      const ok = confirm("Boost this post for 30 days?");
+      if (ok) await update(ref(db, `posts/${postId}`), { boostTimestamp: Date.now() });
+    };
 
-  window.sharePost = (url) => {
-    navigator.clipboard.writeText(url).then(() => alert("🔗 Link copied!"));
-  };
-</script>
-
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("🔗 Link copied!"));
+    };
+  </script>
 </body>
 </html>
