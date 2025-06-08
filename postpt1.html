@@ -3,226 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🚀 DRF Boost Wall</title>
+  <title>DRF Social Feed</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f3f3f3;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-    }
-    textarea, input {
-      width: 100%;
       padding: 10px;
-      margin-top: 10px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
+      background: #f0f2f5;
     }
-    button {
-      padding: 10px;
-      margin-top: 10px;
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .post {
-      background: white;
+    #uploadForm, .post-item {
+      background: #fff;
       padding: 15px;
-      margin-top: 15px;
-      border-radius: 8px;
-      border-left: 5px solid #2196F3;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     }
-    .boosted {
-      border: 2px solid #f9a825;
-      background: #fff8e1;
-      box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
+    .post-item img, .post-item video {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .post-actions {
+      margin-top: 10px;
+    }
+    .post-actions button {
+      margin-right: 8px;
+      padding: 6px 10px;
+    }
+    #postContainer {
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🚀 DRF Boost Wall</h2>
 
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginBtn">Login / Register</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
+  <h2>📤 Upload a Post</h2>
+  <form id="uploadForm">
+    <input type="file" id="fileInput" accept="image/*,video/*" required /><br><br>
+    <textarea id="captionInput" placeholder="Enter caption..." required></textarea><br><br>
+    <button type="submit">Upload</button>
+  </form>
 
-    <textarea id="postContent" placeholder="What's on your mind?" rows="4"></textarea>
-    <input type="file" id="mediaUpload" />
-    <button id="postBtn">Post</button>
-    <button id="boostBtn">Boost My Post</button>
+  <div id="postContainer"></div>
 
-    <div id="posts"></div>
-  </div>
-
-  <!-- ✅ Firebase CDN SDK v11.9.0 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-analytics.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, orderBy, query, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
+    import { getDatabase, ref, push, update, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
       databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
       projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
       measurementId: "G-W6VHMP77YR"
     };
 
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
     let currentUser = null;
 
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const postContent = document.getElementById("postContent");
-    const postBtn = document.getElementById("postBtn");
-    const mediaUpload = document.getElementById("mediaUpload");
-    const postsContainer = document.getElementById("posts");
-    const boostBtn = document.getElementById("boostBtn");
-
-    onAuthStateChanged(auth, user => {
+    onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        loadPosts();
       } else {
-        currentUser = null;
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
+        signInWithPopup(auth, provider)
+          .then((result) => currentUser = result.user)
+          .catch(console.error);
       }
     });
 
-    loginBtn.onclick = async () => {
-      try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-      } catch {
-        await createUserWithEmailAndPassword(auth, email.value, password.value);
-      }
-    };
+    const uploadForm = document.getElementById("uploadForm");
+    const fileInput = document.getElementById("fileInput");
+    const captionInput = document.getElementById("captionInput");
+    const postContainer = document.getElementById("postContainer");
 
-    logoutBtn.onclick = () => signOut(auth);
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || !caption || !currentUser) return;
 
-    async function uploadToIPFS(file) {
-      const pinataJwt = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-      const data = new FormData();
-      data.append("file", file);
+      const fileType = file.type.startsWith("image") ? "image" : "video";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("pinataMetadata", JSON.stringify({ name: file.name }));
+      formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
-        headers: { Authorization: pinataJwt },
-        body: data
+        headers: { Authorization: pinataJWT },
+        body: formData
       });
 
-      const json = await res.json();
-      return "https://gateway.pinata.cloud/ipfs/" + json.IpfsHash;
-    }
+      const data = await res.json();
+      const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
 
-    postBtn.onclick = async () => {
-      if (!currentUser) return alert("Login first");
+      const postData = {
+        user: currentUser.displayName,
+        fileUrl,
+        caption,
+        timestamp: Date.now(),
+        type: fileType,
+        likes: 0,
+        boostTimestamp: null,
+        comments: []
+      };
 
-      const content = postContent.value.trim();
-      if (!content) return alert("Post cannot be empty");
+      await push(ref(db, "posts"), postData);
+      fileInput.value = "";
+      captionInput.value = "";
+      alert("Post uploaded!");
+    });
 
-      let mediaUrl = null;
-      const file = mediaUpload.files[0];
-      if (file) mediaUrl = await uploadToIPFS(file);
-
-      await addDoc(collection(db, "posts"), {
-        user: currentUser.email,
-        content,
-        mediaUrl,
-        boosted: false,
-        timestamp: Date.now()
+    onValue(ref(db, "posts"), (snapshot) => {
+      const posts = [];
+      snapshot.forEach(child => {
+        posts.push({ id: child.key, ...child.val() });
       });
 
-      postContent.value = "";
-      mediaUpload.value = "";
-      loadPosts();
+      posts.sort((a, b) => b.timestamp - a.timestamp);
+
+      postContainer.innerHTML = "";
+      posts.forEach(post => {
+        const isBoosted = post.boostTimestamp && (Date.now() - post.boostTimestamp < 30 * 24 * 60 * 60 * 1000);
+        const media = post.type === "image"
+          ? `<img src="${post.fileUrl}" alt="Post Image">`
+          : `<video controls src="${post.fileUrl}"></video>`;
+
+        const comments = post.comments?.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join("") || "";
+
+        const postDiv = document.createElement("div");
+        postDiv.classList.add("post-item");
+        postDiv.innerHTML = `
+          ${media}
+          <p>${post.caption}</p>
+          <small>${new Date(post.timestamp).toLocaleString()}</small>
+          <div class="post-actions">
+            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+            <button onclick="commentPost('${post.id}')">💬 Comment</button>
+            <button onclick="boostPost('${post.id}')">${isBoosted ? "✅ Boosted" : "🚀 Boost"}</button>
+            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+          </div>
+          <div id="comments-${post.id}" style="margin-top: 10px;">${comments}</div>
+        `;
+        postContainer.appendChild(postDiv);
+      });
+    });
+
+    window.likePost = async (postId) => {
+      const postRef = ref(db, `posts/${postId}`);
+      const snapshot = await get(postRef);
+      const post = snapshot.val();
+      const newLikes = (post.likes || 0) + 1;
+      await update(postRef, { likes: newLikes });
     };
 
-    async function loadPosts() {
-      const snapshot = await getDocs(query(collection(db, "posts"), orderBy("timestamp", "desc")));
-      postsContainer.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const div = document.createElement("div");
-        div.className = "post" + (data.boosted ? " boosted" : "");
-        div.innerHTML = `
-          <p><strong>${data.user}</strong></p>
-          <p>${data.content}</p>
-          ${data.mediaUrl ? `<img src="${data.mediaUrl}" width="100%" />` : ""}
-          ${data.boosted ? `<p>🚀 Boosted Post</p>` : ""}
-        `;
-        postsContainer.appendChild(div);
-      });
-    }
+    window.commentPost = async (postId) => {
+      if (!currentUser) return alert("Please log in to comment.");
+      const text = prompt("Enter your comment:");
+      if (!text) return;
 
-    const BSC_API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8";
-    const USDC_RECEIVER = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C";
-    const MIN_USDC_BOOST = 1;
+      const postRef = ref(db, `posts/${postId}`);
+      const snapshot = await get(postRef);
+      const post = snapshot.val();
+      const newComments = post.comments || [];
+      newComments.push({ user: currentUser.displayName || "Anonymous", text });
 
-    async function checkUSDCBoost(walletAddress) {
-      const res = await fetch(`https://api.bscscan.com/api?module=account&action=tokentx&address=${walletAddress}&sort=desc&apikey=${BSC_API_KEY}`);
-      const json = await res.json();
-      if (!json.result) return false;
+      await update(postRef, { comments: newComments });
+    };
 
-      const usdcTxs = json.result.filter(tx =>
-        tx.tokenSymbol === "USDC" &&
-        tx.to.toLowerCase() === USDC_RECEIVER.toLowerCase()
-      );
+    window.boostPost = async (postId) => {
+      const confirmBoost = confirm("Do you want to boost this post for 30 days?");
+      if (!confirmBoost) return;
+      await update(ref(db, `posts/${postId}`), { boostTimestamp: Date.now() });
+      alert("✅ Post boosted!");
+    };
 
-      return usdcTxs.some(tx => Number(tx.value) / 10 ** tx.tokenDecimal >= MIN_USDC_BOOST);
-    }
-
-    boostBtn.onclick = async () => {
-      if (!currentUser) return alert("Login first");
-
-      const userWallet = prompt("Enter your BSC wallet address:");
-      if (!/^0x[a-fA-F0-9]{40}$/.test(userWallet)) return alert("Invalid address");
-
-      boostBtn.disabled = true;
-      boostBtn.innerText = "Checking Boost...";
-
-      const paid = await checkUSDCBoost(userWallet);
-      if (!paid) {
-        alert("No valid USDC payment found.");
-        boostBtn.disabled = false;
-        boostBtn.innerText = "Boost My Post";
-        return;
-      }
-
-      const snapshot = await getDocs(query(collection(db, "posts"), orderBy("timestamp", "desc")));
-      const userPost = snapshot.docs.find(doc => doc.data().user === currentUser.email);
-      if (!userPost) {
-        alert("No post to boost.");
-        boostBtn.disabled = false;
-        boostBtn.innerText = "Boost My Post";
-        return;
-      }
-
-      await updateDoc(doc(db, "posts", userPost.id), { boosted: true });
-      alert("✅ Boost successful!");
-      boostBtn.disabled = false;
-      boostBtn.innerText = "Boost My Post";
-      loadPosts();
+    window.sharePost = (url) => {
+      navigator.clipboard.writeText(url).then(() => alert("Link copied!"));
     };
   </script>
 </body>
