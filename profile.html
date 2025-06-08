@@ -1,173 +1,211 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getAuth,
-    signInWithPopup,
-    GoogleAuthProvider,
-    onAuthStateChanged,
-    signOut
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-  import {
-    getDatabase, ref, push, update, serverTimestamp, onValue
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  const uploadForm = document.getElementById("uploadForm");
-  const postContainer = document.getElementById("postContainer");
-  const mediaFileInput = document.getElementById("mediaFile");
-  const captionInput = document.getElementById("caption");
-
-  const loginBtn = document.createElement("button");
-  loginBtn.textContent = "Sign in with Google";
-  loginBtn.style.marginBottom = "20px";
-  document.body.insertBefore(loginBtn, uploadForm);
-
-  const userDisplay = document.createElement("div");
-  userDisplay.style.marginBottom = "10px";
-  document.body.insertBefore(userDisplay, uploadForm);
-
-  loginBtn.addEventListener("click", async () => {
-    await signInWithPopup(auth, provider);
-  });
-
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      userDisplay.innerHTML = `Logged in as <strong>${user.displayName}</strong> <button id="logout">Logout</button>`;
-      document.getElementById("logout").onclick = () => signOut(auth);
-      uploadForm.style.display = "block";
-    } else {
-      userDisplay.innerHTML = "";
-      uploadForm.style.display = "none";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My DRF Profile</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
     }
-  });
+    .profile-container {
+      max-width: 400px;
+      margin: 60px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .profile-container img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+      margin-bottom: 15px;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .profile-container h2,
+    .profile-container p {
+      margin: 10px 0 5px;
+    }
+    .profile-container small {
+      color: #888;
+    }
+    .profile-container button {
+      padding: 8px 12px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .profile-container button.logout {
+      background: #d33;
+      margin-top: 15px;
+    }
+    .back-link {
+      display: block;
+      margin: 20px auto;
+      text-align: center;
+      color: #0066cc;
+      text-decoration: none;
+    }
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+<body>
 
-  const PINATA_JWT = "<your_pinata_jwt_here>"; // Replace this
+  <div class="profile-container" id="profile">
+    <label for="uploadPic">
+      <img src="" alt="Profile Photo" id="profilePic" title="Click to change photo" />
+    </label>
+    <input type="file" id="uploadPic" accept="image/*" />
+    <h2 id="displayName">User Name</h2>
+    <button onclick="updateName()">Edit Name</button>
+    
+    <p id="email">email@example.com</p>
 
-  async function uploadToPinata(file) {
-    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-    const formData = new FormData();
-    formData.append("file", file);
+    <p id="drfmAddress">DRFM Token Address: <small>Not set</small></p>
+    <button onclick="updateDRFM()">Edit Token Address</button>
 
-    const metadata = JSON.stringify({ name: file.name });
-    formData.append("pinataMetadata", metadata);
+    <p id="country">Country: <small>Not set</small></p>
+    <button onclick="updateCountry()">Edit Country</button>
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${PINATA_JWT}` },
-      body: formData,
+    <button class="logout" onclick="logout()">Logout</button>
+    <a class="back-link" href="index.html">⬅ Back to Timeline</a>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import {
+      getAuth, signOut, updateProfile, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import {
+      getStorage, ref as storageRef, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+    import {
+      getDatabase, ref as dbRef, get, update
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+    const database = getDatabase(app);
+
+    const profilePic = document.getElementById('profilePic');
+    const displayName = document.getElementById('displayName');
+    const email = document.getElementById('email');
+    const drfmAddress = document.getElementById('drfmAddress');
+    const country = document.getElementById('country');
+    const uploadInput = document.getElementById('uploadPic');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
+        displayName.textContent = user.displayName || 'Anonymous';
+        email.textContent = user.email;
+
+        const userRef = dbRef(database, 'users/' + user.uid);
+        const snapshot = await get(userRef);
+        const data = snapshot.exists() ? snapshot.val() : {};
+
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
+        country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
+
+        if (!data.drfm) {
+          alert("⚠️ Please set your DRFM wallet address to receive rewards.");
+        }
+      } else {
+        window.location.href = 'index.html';
+      }
     });
 
-    if (!response.ok) throw new Error("Pinata upload failed");
-    const data = await response.json();
-    return data.IpfsHash;
-  }
+    window.updateName = async () => {
+      const newName = prompt("Enter your new display name:");
+      if (newName?.trim()) {
+        try {
+          await updateProfile(auth.currentUser, { displayName: newName.trim() });
+          displayName.textContent = newName.trim();
+          alert("✅ Name updated!");
+        } catch (e) {
+          alert("❌ Error: " + e.message);
+        }
+      }
+    };
 
-  function getFileType(file) {
-    if (file.type.startsWith("image/")) return "image";
-    if (file.type.startsWith("video/")) return "video";
-    return "unknown";
-  }
+    window.updateDRFM = async () => {
+      const token = prompt("Enter your DRFM token wallet address:");
+      if (!token || !/^0x[a-fA-F0-9]{40}$/.test(token.trim())) {
+        alert("❌ Invalid address! Must start with 0x and be 42 characters.");
+        return;
+      }
 
-  uploadForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const file = mediaFileInput.files[0];
-    const caption = captionInput.value.trim();
-    if (!file || !caption) return alert("Please select a file and caption.");
-    const user = auth.currentUser;
-    if (!user) return alert("Please log in first.");
+      const cleanToken = token.trim();
+      const userRef = dbRef(database, 'users/' + auth.currentUser.uid);
 
-    try {
-      uploadForm.querySelector("button").disabled = true;
-      uploadForm.querySelector("button").textContent = "Posting...";
+      try {
+        await update(userRef, { drfm: cleanToken });
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${cleanToken}</small>`;
+        alert("✅ DRFM wallet address saved successfully!");
+      } catch (err) {
+        alert("❌ Failed to save address: " + err.message);
+      }
+    };
 
-      const cid = await uploadToPinata(file);
-      const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-      const type = getFileType(file);
+    window.updateCountry = async () => {
+      const c = prompt("Enter your country:");
+      if (c?.trim()) {
+        const userRef = dbRef(database, 'users/' + auth.currentUser.uid);
+        try {
+          await update(userRef, { country: c.trim() });
+          country.innerHTML = `Country: <small>${c.trim()}</small>`;
+          alert("✅ Country updated successfully!");
+        } catch (err) {
+          alert("❌ Failed to update country: " + err.message);
+        }
+      }
+    };
 
-      await push(ref(db, "posts"), {
-        caption,
-        fileUrl,
-        type,
-        timestamp: Date.now(),
-        likes: 0,
-        author: {
-          name: user.displayName,
-          email: user.email,
-          photo: user.photoURL
-        },
-        comments: []
+    uploadInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file && auth.currentUser) {
+        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
+        const sRef = storageRef(storage, storagePath);
+        try {
+          await uploadBytes(sRef, file);
+          const url = await getDownloadURL(sRef);
+          await updateProfile(auth.currentUser, { photoURL: url });
+          profilePic.src = url;
+          alert("✅ Profile photo updated!");
+        } catch (err) {
+          alert("❌ Upload failed: " + err.message);
+        }
+      }
+    });
+
+    window.logout = () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
       });
-
-      mediaFileInput.value = "";
-      captionInput.value = "";
-    } catch (error) {
-      alert("Upload failed: " + error.message);
-    } finally {
-      uploadForm.querySelector("button").disabled = false;
-      uploadForm.querySelector("button").textContent = "Post";
-    }
-  });
-
-  const postsRef = ref(db, "posts/");
-  onValue(postsRef, (snapshot) => {
-    postContainer.innerHTML = "";
-    const posts = [];
-    snapshot.forEach((child) => {
-      posts.push({ id: child.key, ...child.val() });
-    });
-
-    posts.sort((a, b) => b.timestamp - a.timestamp);
-
-    for (let post of posts) {
-      const postDiv = document.createElement("div");
-      postDiv.classList.add("post-item");
-
-      let mediaHtml = post.type === "image"
-        ? `<img src="${post.fileUrl}" alt="Post Image" />`
-        : `<video controls src="${post.fileUrl}"></video>`;
-
-      postDiv.innerHTML = `
-        ${mediaHtml}
-        <p class="post-caption">${post.caption}</p>
-        <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-        <p><img src="${post.author?.photo}" height="30" style="border-radius:50%"> ${post.author?.name}</p>
-        <div class="post-actions">
-          <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-          <button onclick="commentPost('${post.id}')">💬 Comment</button>
-          <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-        </div>
-      `;
-
-      postContainer.appendChild(postDiv);
-    }
-  });
-
-  window.likePost = async (postId) => {
-    const postRef = ref(db, `posts/${postId}`);
-    const current = (await (await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`)).json()).likes || 0;
-    update(postRef, { likes: current + 1 });
-  };
-
-  window.commentPost = (postId) => {
-    const comment = prompt("Enter your comment:");
-    if (comment) alert("Comment saved (Real comment system is coming next 🔧)");
-  };
-
-  window.sharePost = (url) => {
-    navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
-  };
-</script>
+    };
+  </script>
+</body>
+</html>
