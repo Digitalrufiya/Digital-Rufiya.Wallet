@@ -5,166 +5,95 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DRFMedia - Profile</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f1f1f1;
-    }
-    header {
-      background: #1d1d1d;
-      color: #fff;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .profile-container {
-      max-width: 600px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 10px;
-    }
-    .profile-header {
-      text-align: center;
-    }
-    .profile-photo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-    .profile-name {
-      font-size: 24px;
-      font-weight: bold;
-    }
-    .wallet-address {
-      font-size: 14px;
-      color: #555;
-      margin-top: 5px;
-      word-break: break-all;
-    }
-    .edit-btn {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 6px 12px;
-      background: #007bff;
-      color: #fff;
-      border-radius: 5px;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    .post {
-      background: #f9f9f9;
-      margin-top: 15px;
-      border-radius: 10px;
-      padding: 10px;
-    }
-    .post img, .post video {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-    .likes-comments {
-      font-size: 13px;
-      color: #555;
-      margin-top: 5px;
-    }
-    .comments-section {
-      margin-top: 10px;
-      padding-left: 10px;
-      border-left: 2px solid #ddd;
-    }
-    .comment {
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
+    body { font-family: Arial; padding: 15px; background: #f8f8f8; }
+    .profile-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 0 5px #ccc; margin-bottom: 20px; }
+    .profile-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; }
+    .post { background: white; margin: 15px 0; padding: 10px; border-radius: 8px; box-shadow: 0 0 4px #ddd; }
+    .post img, .post video { width: 100%; max-height: 300px; margin-top: 10px; border-radius: 8px; }
+    .edit-btn { padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 5px; }
   </style>
 </head>
 <body>
-  <header>
-    <h2>DRFMedia</h2>
-    <button onclick="logout()">Logout</button>
-  </header>
 
-  <div class="profile-container" id="profile">
-    <div class="profile-header">
-      <img src="" class="profile-photo" id="profilePhoto" />
-      <div class="profile-name" id="profileName">Loading...</div>
-      <div class="wallet-address" id="walletAddress"></div>
-      <a id="editBtn" class="edit-btn" href="edit-profile.html" style="display: none;">Edit Profile</a>
-    </div>
+<div id="profile" class="profile-card">
+  <center>
+    <img id="profilePhoto" class="profile-photo" src="" alt="Profile Photo"/>
+    <h2 id="displayName">Loading...</h2>
+    <p><strong>Wallet:</strong> <span id="walletAddress">Loading...</span></p>
+    <div id="editProfileSection"></div>
+  </center>
+</div>
 
-    <div id="userPosts"></div>
-  </div>
+<h3>User Posts</h3>
+<div id="userPosts"></div>
 
-  <script>
-    const token = localStorage.getItem("jwt");
-    const viewingUser = new URLSearchParams(window.location.search).get("user");
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const viewingUser = urlParams.get("user");
+  let currentUserEmail = null;
 
-    if (!token || !viewingUser) {
-      alert("Login required.");
+  if (!viewingUser) {
+    alert("No user selected.");
+    window.location.href = "index.html";
+  }
+
+  firebase.auth().onAuthStateChanged(async (user) => {
+    if (!user) {
+      alert("Login required");
       window.location.href = "index.html";
+      return;
     }
 
-    async function loadProfile() {
-      try {
-        const res = await fetch("https://your-backend.com/api/user-profile?user=" + viewingUser, {
-          headers: { Authorization: "Bearer " + token }
-        });
-        const data = await res.json();
+    currentUserEmail = user.email;
 
-        document.getElementById("profileName").innerText = data.name;
-        document.getElementById("walletAddress").innerText = "DRFM Wallet: " + data.wallet;
-        document.getElementById("profilePhoto").src = data.photo || "default-profile.png";
+    const db = firebase.firestore();
 
-        // If logged in user = profile owner, show edit button
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        if (payload.email === data.email) {
-          document.getElementById("editBtn").style.display = "inline-block";
-        }
-
-        showPosts(data.posts);
-      } catch (e) {
-        console.error(e);
-        alert("Failed to load profile.");
-      }
+    // Fetch user profile
+    const userDoc = await db.collection("users").doc(viewingUser).get();
+    if (!userDoc.exists) {
+      alert("User not found.");
+      return;
     }
 
-    function showPosts(posts) {
-      const container = document.getElementById("userPosts");
-      posts.forEach(post => {
-        const div = document.createElement("div");
-        div.className = "post";
+    const data = userDoc.data();
+    document.getElementById("displayName").innerText = data.name || viewingUser;
+    document.getElementById("profilePhoto").src = data.photo || "default.jpg";
+    document.getElementById("walletAddress").innerText = data.wallet || "Not set";
 
-        let media = "";
-        if (post.type === "image") {
-          media = `<img src="${post.url}" alt="Post Image">`;
-        } else if (post.type === "video") {
-          media = `<video controls src="${post.url}"></video>`;
-        }
-
-        const commentsHtml = post.comments.map(c => `<div class="comment"><strong>${c.user}:</strong> ${c.text}</div>`).join("");
-
-        div.innerHTML = `
-          <p>${post.text}</p>
-          ${media}
-          <div class="likes-comments">❤️ ${post.likes} Likes</div>
-          <div class="comments-section">${commentsHtml}</div>
-        `;
-        container.appendChild(div);
-      });
+    // Show edit button only for own profile
+    if (user.uid === data.uid) {
+      document.getElementById("editProfileSection").innerHTML = `
+        <button class="edit-btn" onclick="editProfile()">Edit Profile</button>
+      `;
     }
 
-    function logout() {
-      localStorage.removeItem("jwt");
-      window.location.href = "index.html";
-    }
+    // Fetch posts by user
+    const postsRef = await db.collection("posts").where("owner", "==", viewingUser).orderBy("timestamp", "desc").get();
 
-    loadProfile();
-  </script>
+    let postsHTML = "";
+    postsRef.forEach((doc) => {
+      const post = doc.data();
+      postsHTML += `
+        <div class="post">
+          <p>${post.text || ""}</p>
+          ${post.image ? `<img src="${post.image}" />` : ""}
+          ${post.video ? `<video controls src="${post.video}"></video>` : ""}
+          <p>👍 ${post.likes || 0} | 💬 ${post.comments?.length || 0}</p>
+        </div>
+      `;
+    });
+
+    document.getElementById("userPosts").innerHTML = postsHTML || "<p>No posts yet.</p>";
+  });
+
+  function editProfile() {
+    window.location.href = "edit-profile.html";
+  }
+</script>
 </body>
 </html>
