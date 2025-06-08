@@ -7,28 +7,68 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     h1 { text-align: center; margin-bottom: 20px; }
-    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    form, #boostSection {
+      max-width: 600px; margin: 0 auto 30px; background: white;
+      padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
     input[type="file"] { display: block; margin-bottom: 15px; }
     textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
     button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
     button:disabled { background: #999; cursor: not-allowed; }
     #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item {
+      background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
     .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
     .post-caption { margin: 10px 0; font-size: 16px; }
     .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
+    .post-actions {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;
+      align-items: center;
+    }
+    .post-actions button {
+      background: none; border: none; cursor: pointer; font-size: 14px;
+    }
+    .comment-section { margin-top: 10px; }
+    .comment-item {
+      font-size: 14px; background: #f1f1f1; padding: 5px 10px;
+      border-radius: 5px; margin-top: 5px;
+    }
+    .post-owner {
+      font-size: 13px; color: #888; display: flex; align-items: center; gap: 8px;
+    }
+    .post-owner img {
+      width: 20px; height: 20px; border-radius: 50%;
+    }
+    #loginBtn, #logoutBtn, #filterMyPosts {
+      margin: 10px auto; display: block; text-align: center;
+    }
   </style>
 </head>
 <body>
 
   <h1>🕌 DRF Media Timeline</h1>
+  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
   <button id="loginBtn">Sign in with Google</button>
-  <button id="logoutBtn" style="display: none;">Logout</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
+  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
 
   <form id="uploadForm" style="display:none;">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -45,7 +85,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -69,62 +109,46 @@
     const mediaFileInput = document.getElementById("mediaFile");
     const captionInput = document.getElementById("caption");
     const postContainer = document.getElementById("postContainer");
+    const filterBtn = document.getElementById("filterMyPosts");
 
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+    let currentUser = null;
+    let showOnlyMyPosts = false;
 
-    loginBtn.onclick = async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (e) {
-        alert("Login error: " + e.message);
-      }
-    };
-
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login error: " + e.message));
     logoutBtn.onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, user => {
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "block";
-        uploadForm.style.display = "block";
-        document.getElementById("boostSection").style.display = "block";
-      } else {
-        loginBtn.style.display = "block";
-        logoutBtn.style.display = "none";
-        uploadForm.style.display = "none";
-        document.getElementById("boostSection").style.display = "none";
-      }
+      currentUser = user;
+      const isLoggedIn = !!user;
+      loginBtn.style.display = isLoggedIn ? "none" : "block";
+      logoutBtn.style.display = isLoggedIn ? "block" : "none";
+      uploadForm.style.display = isLoggedIn ? "block" : "none";
+      filterBtn.style.display = isLoggedIn ? "block" : "none";
+      document.getElementById("boostSection").style.display = isLoggedIn ? "block" : "none";
     });
 
+    const PINATA_JWT = "Bearer YOUR_PINATA_JWT_TOKEN_HERE";
+
     async function uploadToPinata(file) {
-      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
       const formData = new FormData();
       formData.append('file', file);
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append('pinataMetadata', metadata);
+      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
 
-      const response = await fetch(url, {
-        method: 'POST',
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
         headers: { Authorization: PINATA_JWT },
-        body: formData,
+        body: formData
       });
 
-      if (!response.ok) throw new Error('Pinata upload failed');
-      const data = await response.json();
+      const data = await res.json();
       return data.IpfsHash;
-    }
-
-    function getFileType(file) {
-      if (file.type.startsWith('image/')) return 'image';
-      if (file.type.startsWith('video/')) return 'video';
-      return 'unknown';
     }
 
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || !caption) return alert('Please select a file and caption.');
+      if (!file || caption.length < 4) return alert('Please select a file and caption at least 4 characters.');
 
       try {
         uploadForm.querySelector('button').disabled = true;
@@ -132,7 +156,7 @@
 
         const cid = await uploadToPinata(file);
         const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-        const type = getFileType(file);
+        const type = file.type.startsWith('image') ? 'image' : 'video';
 
         await push(ref(db, 'posts'), {
           caption,
@@ -140,7 +164,12 @@
           type,
           timestamp: Date.now(),
           likes: 0,
-          comments: []
+          reactions: {},
+          comments: [],
+          uid: currentUser.uid,
+          userName: currentUser.displayName,
+          userPhoto: currentUser.photoURL,
+          userEmail: currentUser.email
         });
 
         mediaFileInput.value = '';
@@ -153,70 +182,110 @@
       }
     });
 
-    const postsRef = ref(db, 'posts/');
-    onValue(postsRef, (snapshot) => {
-      const posts = [];
-      snapshot.forEach((child) => {
-        posts.push({ id: child.key, ...child.val() });
+    filterBtn.onclick = () => {
+      showOnlyMyPosts = !showOnlyMyPosts;
+      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+      loadPosts();
+    };
+
+    function timeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      const intervals = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60, second: 1 };
+      for (let unit in intervals) {
+        const count = Math.floor(seconds / intervals[unit]);
+        if (count >= 1) return `${count} ${unit}${count > 1 ? 's' : ''} ago`;
+      }
+      return "Just now";
+    }
+
+    function emojiHTML(reactions = {}) {
+      const emojis = ['❤️', '😂', '😢', '🔥'];
+      return emojis.map(emoji => {
+        const count = reactions[emoji] || 0;
+        return `<button onclick="reactPost(this, '${emoji}')">${emoji} <span>${count}</span></button>`;
+      }).join('');
+    }
+
+    function loadPosts() {
+      onValue(ref(db, 'posts/'), snapshot => {
+        const posts = [];
+        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+        posts.sort((a, b) => b.timestamp - a.timestamp);
+        postContainer.innerHTML = '';
+
+        posts.forEach(post => {
+          if (showOnlyMyPosts && currentUser?.uid !== post.uid) return;
+
+          const postDiv = document.createElement('div');
+          postDiv.className = 'post-item';
+
+          const media = post.type === 'image'
+            ? `<img src="${post.fileUrl}" />`
+            : `<video controls src="${post.fileUrl}"></video>`;
+
+          const comments = post.comments
+            ? Object.values(post.comments).map(c => `<div class="comment-item">${c}</div>`).join('')
+            : '';
+
+          postDiv.innerHTML = `
+            ${media}
+            <p class="post-caption">${post.caption}</p>
+            <p class="post-owner"><img src="${post.userPhoto}" /> ${post.userName} (${post.userEmail})</p>
+            <p class="post-time">${timeAgo(post.timestamp)}</p>
+            <div class="post-actions">
+              <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+              <button onclick="commentPost('${post.id}')">💬 Comment</button>
+              ${emojiHTML(post.reactions)}
+              ${currentUser?.uid === post.uid ? `<button onclick="deletePost('${post.id}')">🗑️ Delete</button>` : ''}
+            </div>
+            <div class="comment-section">${comments}</div>
+          `;
+
+          postContainer.appendChild(postDiv);
+        });
       });
-
-      posts.sort((a, b) => b.timestamp - a.timestamp);
-      postContainer.innerHTML = '';
-      posts.forEach(post => {
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
-
-        const media = post.type === 'image'
-          ? `<img src="${post.fileUrl}" />`
-          : `<video controls src="${post.fileUrl}"></video>`;
-
-        postDiv.innerHTML = `
-          ${media}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-time">${new Date(post.timestamp).toLocaleString()}</p>
-          <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
-            <button onclick="commentPost('${post.id}')">💬 Comment</button>
-            <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-          </div>
-        `;
-        postContainer.appendChild(postDiv);
-      });
-    });
+    }
 
     window.likePost = async (postId) => {
       const postRef = ref(db, `posts/${postId}`);
-      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
-      const current = (await res.json()).likes || 0;
-      update(postRef, { likes: current + 1 });
+      const snap = await fetch(`${firebaseConfig.databaseURL}/posts/${postId}.json`);
+      const data = await snap.json();
+      const currentLikes = data.likes || 0;
+      update(postRef, { likes: currentLikes + 1 });
     };
 
-    window.commentPost = (postId) => {
-      const comment = prompt("Enter your comment:");
-      if (comment) alert("Comment saved (simulated). Real comments coming soon Inshaa’Allah.");
+    window.commentPost = async (postId) => {
+      const comment = prompt("Write your comment:");
+      if (comment?.trim()) {
+        push(ref(db, `posts/${postId}/comments`), comment.trim());
+      }
     };
 
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
+    window.reactPost = async (el, emoji) => {
+      const postId = el.closest('.post-item').querySelector('video,img').src.split('/').pop();
+      const postRef = ref(db, `posts`);
+      const allPosts = await fetch(`${firebaseConfig.databaseURL}/posts.json`).then(r => r.json());
+      const postKey = Object.keys(allPosts).find(k => allPosts[k].fileUrl.includes(postId));
+      if (!postKey) return;
+
+      const current = allPosts[postKey].reactions || {};
+      current[emoji] = (current[emoji] || 0) + 1;
+      update(ref(db, `posts/${postKey}`), { reactions: current });
+    };
+
+    window.deletePost = (postId) => {
+      if (confirm("Delete this post?")) {
+        remove(ref(db, `posts/${postId}`));
+      }
     };
 
     window.askBoost = () => {
       const isMuslim = confirm("Are you Muslim?\nClick OK for Yes, Cancel for No.");
       const price = isMuslim ? 30 : 60;
-      const message = `
-Boost Plan Activated ✅
-Duration: 30 Days
-Price: ${price} USDC (BSC)
-
-📥 Please send exactly ${price} USDC to:
-➡️ 0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C
-
-After sending, please wait for confirmation via support.
-
-Thank you! 🤝
-      `.trim();
-      alert(message);
+      alert(`Boost Activated ✅\n\nPrice: ${price} USDC (BSC)\n\nSend to: 0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C\n\nWait for confirmation.`);
     };
+
+    loadPosts();
   </script>
 </body>
 </html>
