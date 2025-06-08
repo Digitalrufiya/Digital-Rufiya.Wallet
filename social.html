@@ -26,25 +26,27 @@
       border-radius: 50%;
       border: 2px solid #ccc;
       margin-bottom: 15px;
+      object-fit: cover;
     }
-    .profile-container h2 {
+    .profile-container h2,
+    .profile-container p {
       margin: 10px 0 5px;
     }
-    .profile-container p {
-      color: #555;
-      margin-bottom: 20px;
+    .profile-container small {
+      color: #888;
     }
     .profile-container button {
-      padding: 10px 15px;
+      padding: 8px 12px;
       background: #0066cc;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      margin: 5px;
     }
     .profile-container button.logout {
       background: #d33;
-      margin-top: 20px;
+      margin-top: 15px;
     }
     .back-link {
       display: block;
@@ -53,22 +55,41 @@
       color: #0066cc;
       text-decoration: none;
     }
+    input[type="file"] {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
   <div class="profile-container" id="profile">
-    <img src="" alt="Profile Photo" id="profilePic" />
+    <label for="uploadPic">
+      <img src="" alt="Profile Photo" id="profilePic" title="Click to change photo" />
+    </label>
+    <input type="file" id="uploadPic" accept="image/*" />
     <h2 id="displayName">User Name</h2>
+    <button onclick="updateName()">Edit Name</button>
+    
     <p id="email">email@example.com</p>
-    <button onclick="updateName()">Update Display Name</button>
+
+    <p id="drfmAddress">DRFM Token Address: <small>Not set</small></p>
+    <button onclick="updateDRFM()">Edit Token Address</button>
+
+    <p id="country">Country: <small>Not set</small></p>
+    <button onclick="updateCountry()">Edit Country</button>
+
     <button class="logout" onclick="logout()">Logout</button>
     <a class="back-link" href="index.html">⬅ Back to Timeline</a>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAuth, signOut, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import {
+      getAuth, signOut, updateProfile, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -81,16 +102,25 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const storage = getStorage(app);
 
     const profilePic = document.getElementById('profilePic');
     const displayName = document.getElementById('displayName');
     const email = document.getElementById('email');
+    const drfmAddress = document.getElementById('drfmAddress');
+    const country = document.getElementById('country');
+    const uploadInput = document.getElementById('uploadPic');
 
     onAuthStateChanged(auth, user => {
       if (user) {
+        const meta = user.reloadUserInfo?.customAttributes
+          ? JSON.parse(user.reloadUserInfo.customAttributes)
+          : {};
         profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         displayName.textContent = user.displayName || 'Anonymous';
         email.textContent = user.email;
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${meta.drfm || 'Not set'}</small>`;
+        country.innerHTML = `Country: <small>${meta.country || 'Not set'}</small>`;
       } else {
         window.location.href = 'index.html';
       }
@@ -102,12 +132,53 @@
         try {
           await updateProfile(auth.currentUser, { displayName: newName.trim() });
           displayName.textContent = newName.trim();
-          alert("Name updated successfully!");
-        } catch (error) {
-          alert("Error: " + error.message);
+          alert("Name updated!");
+        } catch (e) {
+          alert("Error: " + e.message);
         }
       }
     };
+
+    window.updateDRFM = async () => {
+      const token = prompt("Enter your DRFM token address:");
+      if (token?.trim()) {
+        await auth.currentUser.reload(); // refresh
+        const meta = { ...JSON.parse(auth.currentUser.reloadUserInfo.customAttributes || "{}") };
+        meta.drfm = token.trim();
+        await updateProfile(auth.currentUser, { photoURL: auth.currentUser.photoURL, displayName: auth.currentUser.displayName });
+        // Firebase does not store custom metadata by default in Auth; you'd need Firestore for full custom fields.
+        alert("Token saved locally. To store it permanently, please use Firestore.");
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
+      }
+    };
+
+    window.updateCountry = async () => {
+      const c = prompt("Enter your country:");
+      if (c?.trim()) {
+        await auth.currentUser.reload();
+        const meta = { ...JSON.parse(auth.currentUser.reloadUserInfo.customAttributes || "{}") };
+        meta.country = c.trim();
+        await updateProfile(auth.currentUser, { photoURL: auth.currentUser.photoURL, displayName: auth.currentUser.displayName });
+        alert("Country saved locally. To persist, integrate Firestore.");
+        country.innerHTML = `Country: <small>${c.trim()}</small>`;
+      }
+    };
+
+    uploadInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const storageRef = ref(storage, `profilePhotos/${auth.currentUser.uid}`);
+        try {
+          await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(storageRef);
+          await updateProfile(auth.currentUser, { photoURL: url });
+          profilePic.src = url;
+          alert("Profile photo updated!");
+        } catch (err) {
+          alert("Upload failed: " + err.message);
+        }
+      }
+    });
 
     window.logout = () => {
       signOut(auth).then(() => {
