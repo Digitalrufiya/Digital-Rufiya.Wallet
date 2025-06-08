@@ -27,7 +27,6 @@
       border: 2px solid #ccc;
       margin-bottom: 15px;
       object-fit: cover;
-      cursor: pointer;
     }
     .profile-container h2,
     .profile-container p {
@@ -119,9 +118,8 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
-        displayName.textContent = user.displayName || 'Anonymous';
         email.textContent = user.email;
+        displayName.textContent = user.displayName || 'Anonymous';
 
         const userRef = dbRef(database, 'users/' + user.uid);
         const snapshot = await get(userRef);
@@ -130,11 +128,17 @@
         drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
         country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
 
-        if (!data.drfm) {
-          alert("⚠️ Please set your DRFM wallet address to receive rewards.");
+        // Load profile photo from storage (if exists), else use Google photo or placeholder
+        const sRef = storageRef(storage, `profilePhotos/${user.uid}`);
+        try {
+          const url = await getDownloadURL(sRef);
+          profilePic.src = url;
+        } catch (err) {
+          profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         }
+
       } else {
-        window.location.href = 'index.html';
+        window.location.href = 'index.html'; // Not logged in
       }
     });
 
@@ -144,59 +148,47 @@
         try {
           await updateProfile(auth.currentUser, { displayName: newName.trim() });
           displayName.textContent = newName.trim();
-          alert("✅ Name updated!");
+          alert("Name updated!");
         } catch (e) {
-          alert("❌ Error: " + e.message);
+          alert("Error: " + e.message);
         }
       }
     };
 
     window.updateDRFM = async () => {
-      const token = prompt("Enter your DRFM token wallet address:");
-      if (!token || !/^0x[a-fA-F0-9]{40}$/.test(token.trim())) {
-        alert("❌ Invalid address! Must start with 0x and be 42 characters.");
-        return;
-      }
-
-      const cleanToken = token.trim();
-      const userRef = dbRef(database, 'users/' + auth.currentUser.uid);
-
-      try {
-        await update(userRef, { drfm: cleanToken });
-        drfmAddress.innerHTML = `DRFM Token Address: <small>${cleanToken}</small>`;
-        alert("✅ DRFM wallet address saved successfully!");
-      } catch (err) {
-        alert("❌ Failed to save address: " + err.message);
+      const token = prompt("Enter your DRFM token address:");
+      if (token?.trim()) {
+        const user = auth.currentUser;
+        const updates = { drfm: token.trim() };
+        await update(dbRef(database, 'users/' + user.uid), updates);
+        drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
+        alert("Token address updated successfully.");
       }
     };
 
     window.updateCountry = async () => {
       const c = prompt("Enter your country:");
       if (c?.trim()) {
-        const userRef = dbRef(database, 'users/' + auth.currentUser.uid);
-        try {
-          await update(userRef, { country: c.trim() });
-          country.innerHTML = `Country: <small>${c.trim()}</small>`;
-          alert("✅ Country updated successfully!");
-        } catch (err) {
-          alert("❌ Failed to update country: " + err.message);
-        }
+        const user = auth.currentUser;
+        const updates = { country: c.trim() };
+        await update(dbRef(database, 'users/' + user.uid), updates);
+        country.innerHTML = `Country: <small>${c.trim()}</small>`;
+        alert("Country updated successfully.");
       }
     };
 
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file && auth.currentUser) {
-        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
-        const sRef = storageRef(storage, storagePath);
+        const sRef = storageRef(storage, `profilePhotos/${auth.currentUser.uid}`);
         try {
           await uploadBytes(sRef, file);
           const url = await getDownloadURL(sRef);
           await updateProfile(auth.currentUser, { photoURL: url });
           profilePic.src = url;
-          alert("✅ Profile photo updated!");
+          alert("Profile photo updated!");
         } catch (err) {
-          alert("❌ Upload failed: " + err.message);
+          alert("Upload failed: " + err.message);
         }
       }
     });
