@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Timeline Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      background: #007bff;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Post to DRF Timeline</h2>
+    <form id="timelineForm">
+      <label for="username">Your Name or @handle</label>
+      <input type="text" id="username" placeholder="@rufiya" required />
+
+      <label for="message">Your Message</label>
+      <textarea id="message" rows="4" placeholder="What’s happening, DRF fam?" required></textarea>
+
+      <label for="image">Optional Image</label>
+      <input type="file" id="image" accept="image/*" />
+
+      <button type="submit">Upload to DRF Timeline</button>
+      <div id="status"></div>
+    </form>
+  </div>
+
+  <script type="module">
+    import { PINATA_JWT } from './app.js';
+
+    const form = document.getElementById("timelineForm");
+    const statusDiv = document.getElementById("status");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusDiv.innerText = "Uploading...";
+
+      const username = document.getElementById("username").value.trim();
+      const message = document.getElementById("message").value.trim();
+      const imageFile = document.getElementById("image").files[0];
+
+      if (!username || !message) {
+        statusDiv.innerText = "Please fill out all required fields.";
+        return;
+      }
+
+      let imageCID = "";
+
+      if (imageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("file", imageFile);
+
+        const imageMetadata = JSON.stringify({
+          name: "DRF_Timeline_Image",
+        });
+
+        imageFormData.append("pinataMetadata", imageMetadata);
+
+        try {
+          const imgRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+            method: "POST",
+            headers: {
+              Authorization: PINATA_JWT,
+            },
+            body: imageFormData,
+          });
+
+          const imgData = await imgRes.json();
+          imageCID = imgData.IpfsHash;
+        } catch (err) {
+          console.error("Image upload error:", err);
+          statusDiv.innerText = "Image upload failed. Try again.";
+          return;
+        }
+      }
+
+      const post = {
+        username,
+        message,
+        image: imageCID ? `https://gateway.pinata.cloud/ipfs/${imageCID}` : "",
+        timestamp: new Date().toISOString(),
+      };
+
+      const postBlob = new Blob([JSON.stringify(post, null, 2)], {
+        type: "application/json",
+      });
+
+      const postFormData = new FormData();
+      postFormData.append("file", postBlob, "drf_timeline_post.json");
+
+      const postMeta = JSON.stringify({
+        name: `Timeline_Post_${Date.now()}`,
+      });
+
+      postFormData.append("pinataMetadata", postMeta);
+
+      try {
+        const postRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: PINATA_JWT,
+          },
+          body: postFormData,
+        });
+
+        const postData = await postRes.json();
+
+        statusDiv.innerHTML = `
+          ✅ Post uploaded!<br>
+          <a href="https://gateway.pinata.cloud/ipfs/${postData.IpfsHash}" target="_blank">View on IPFS</a>
+        `;
+      } catch (err) {
+        console.error("Post upload error:", err);
+        statusDiv.innerText = "Post upload failed.";
+      }
+    });
+  </script>
+</body>
+</html>
