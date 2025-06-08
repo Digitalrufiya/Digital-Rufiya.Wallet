@@ -91,7 +91,7 @@
       getStorage, ref as storageRef, uploadBytes, getDownloadURL
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
     import {
-      getDatabase, ref as dbRef, get, update
+      getDatabase, ref as dbRef, get, update, set
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
     const firebaseConfig = {
@@ -118,9 +118,9 @@
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
-        displayName.textContent = user.displayName || 'Anonymous';
         email.textContent = user.email;
+        displayName.textContent = user.displayName || "Anonymous";
+        profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
 
         const userRef = dbRef(database, 'users/' + user.uid);
         const snapshot = await get(userRef);
@@ -137,7 +137,9 @@
       const newName = prompt("Enter your new display name:");
       if (newName?.trim()) {
         try {
-          await updateProfile(auth.currentUser, { displayName: newName.trim() });
+          const user = auth.currentUser;
+          await updateProfile(user, { displayName: newName.trim() });
+          await update(dbRef(database, 'users/' + user.uid), { name: newName.trim() });
           displayName.textContent = newName.trim();
           alert("Name updated!");
         } catch (e) {
@@ -150,8 +152,7 @@
       const token = prompt("Enter your DRFM token address:");
       if (token?.trim()) {
         const user = auth.currentUser;
-        const updates = { drfm: token.trim() };
-        await update(dbRef(database, 'users/' + user.uid), updates);
+        await update(dbRef(database, 'users/' + user.uid), { drfm: token.trim() });
         drfmAddress.innerHTML = `DRFM Token Address: <small>${token.trim()}</small>`;
         alert("Token address updated successfully.");
       }
@@ -161,8 +162,7 @@
       const c = prompt("Enter your country:");
       if (c?.trim()) {
         const user = auth.currentUser;
-        const updates = { country: c.trim() };
-        await update(dbRef(database, 'users/' + user.uid), updates);
+        await update(dbRef(database, 'users/' + user.uid), { country: c.trim() });
         country.innerHTML = `Country: <small>${c.trim()}</small>`;
         alert("Country updated successfully.");
       }
@@ -170,13 +170,14 @@
 
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
-      if (file) {
-        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
-        const sRef = storageRef(storage, storagePath);
+      if (file && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const sRef = storageRef(storage, `profilePhotos/${uid}`);
         try {
           await uploadBytes(sRef, file);
           const url = await getDownloadURL(sRef);
           await updateProfile(auth.currentUser, { photoURL: url });
+          await update(dbRef(database, 'users/' + uid), { photoURL: url });
           profilePic.src = url;
           alert("Profile photo updated!");
         } catch (err) {
