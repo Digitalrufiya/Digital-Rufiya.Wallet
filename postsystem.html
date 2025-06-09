@@ -2,110 +2,322 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Decentralized App</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@pinata/sdk@1.1.23/dist/pinata.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 2rem;
-      background: #f9f9f9;
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    #preview {
-      margin-top: 20px;
-    }
-    #preview img,
-    #preview video,
-    #preview audio {
-      max-width: 100%;
-      margin-top: 10px;
-    }
+    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .post-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+    .post-actions span { font-weight: bold; margin-left: 4px; }
+    .comment-section { margin-top: 10px; }
+    .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
+    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
+    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
+    .post-owner { font-size: 13px; color: #888; }
   </style>
 </head>
 <body>
-  <h1>DRF DApp Media Upload</h1>
+  <h1> DRFMedia</h1>
+  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
-  <input type="file" id="fileInput" />
-  <button onclick="uploadToIPFS()">Upload to IPFS</button>
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
 
-  <div id="preview"></div>
+  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
 
-  <script>
-    // Firebase config
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
+
+  <div id="boostSection" style="display:none; text-align:center;">
+    <h3>🚀 Boost Your Post</h3>
+    <button onclick="askBoost()">Boost Now</button>
+  </div>
+
+  <div id="postContainer"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
     const firebaseConfig = {
-      apiKey: "YOUR_FIREBASE_API_KEY",
-      authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-      projectId: "YOUR_FIREBASE_PROJECT_ID",
-      storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_FIREBASE_SENDER_ID",
-      appId: "YOUR_FIREBASE_APP_ID"
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
-    firebase.initializeApp(firebaseConfig);
 
-    // Pinata SDK
-    const pinata = new Pinata('PINATA_API_KEY', 'PINATA_SECRET_KEY');
-    const jwt = 'YOUR_PINATA_JWT';
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
-    async function uploadToIPFS() {
-      const fileInput = document.getElementById("fileInput");
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("Please select a file to upload.");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+    const filterBtn = document.getElementById("filterMyPosts");
+
+    let currentUser = null;
+    let showOnlyMyPosts = false;
+
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login error: " + e.message);
+      }
+    };
+
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+        filterBtn.style.display = "block";
+        document.getElementById("boostSection").style.display = "block";
+        loadPosts();
+      } else {
+        currentUser = null;
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+        filterBtn.style.display = "none";
+        document.getElementById("boostSection").style.display = "none";
+        postContainer.innerHTML = "";
+      }
+    });
+
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiNjdiMjE3MmVhNjY0OTVhNzFjMzM2NWE5NmIwY2UzNjgiLCJpYXQiOjE2OTU0OTY5NjF9.tMgOfZVdz1Cp6eZPeL1_X8zOzDRRTsHvz1fOWxJPwZk";
+
+    uploadForm.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!mediaFileInput.files.length) {
+        alert("Please select a media file.");
         return;
       }
 
-      const formData = new FormData();
-      formData.append("file", file);
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+
+      if (!caption) {
+        alert("Please enter a caption.");
+        return;
+      }
+
+      const fileType = file.type.startsWith("image/") ? "image" : (file.type.startsWith("video/") ? "video" : null);
+      if (!fileType) {
+        alert("Only images and videos are allowed.");
+        return;
+      }
 
       try {
+        // Upload to Pinata
+        const formData = new FormData();
+        formData.append("file", file);
+
         const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${jwt}`
+            Authorization: pinataJWT,
           },
-          body: formData
+          body: formData,
         });
 
-        const data = await res.json();
-        const ipfsHash = data.IpfsHash;
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+        if (!res.ok) throw new Error("Upload failed.");
 
-        previewFile(file.type, fileUrl);
+        const data = await res.json();
+
+        const post = {
+          fileUrl: `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`,
+          type: fileType,
+          caption,
+          createdAt: new Date().toISOString(),
+          ownerId: currentUser.uid,
+          ownerEmail: currentUser.email,
+          boosts: 0,
+          likes: 0,
+          comments: []
+        };
+
+        await push(ref(db, "posts"), post);
+
+        captionInput.value = "";
+        mediaFileInput.value = "";
       } catch (error) {
-        console.error("IPFS upload failed:", error);
-        alert("Upload failed.");
+        alert("Upload error: " + error.message);
       }
+    };
+
+    filterBtn.onclick = () => {
+      showOnlyMyPosts = !showOnlyMyPosts;
+      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+      loadPosts();
+    };
+
+    function askBoost() {
+      const postId = prompt("Enter the Post ID you want to boost:");
+      if (!postId) return alert("Post ID required.");
+
+      const postRef = ref(db, "posts/" + postId);
+      update(postRef, { boosts: (Math.floor(Math.random() * 100) + 1) }); // dummy boost number for demo
+      alert("Boost applied!");
+      loadPosts();
     }
 
-    function previewFile(mimeType, fileUrl) {
-      const previewDiv = document.getElementById("preview");
-      previewDiv.innerHTML = "";
-
-      if (mimeType.startsWith("image/")) {
+    function createMediaElement(post) {
+      if (post.type === "image") {
         const img = document.createElement("img");
-        img.src = fileUrl;
-        previewDiv.appendChild(img);
-      } else if (mimeType.startsWith("video/")) {
+        img.src = post.fileUrl;
+        img.loading = "lazy";
+        img.alt = post.caption || "Image post";
+        img.onerror = () => { img.src = "https://via.placeholder.com/400x300?text=Image+Unavailable"; };
+        return img;
+      } else if (post.type === "video") {
         const video = document.createElement("video");
-        video.src = fileUrl;
         video.controls = true;
-        video.width = 480;
-        previewDiv.appendChild(video);
-      } else if (mimeType.startsWith("audio/")) {
-        const audio = document.createElement("audio");
-        audio.src = fileUrl;
-        audio.controls = true;
-        previewDiv.appendChild(audio);
-      } else {
-        const link = document.createElement("a");
-        link.href = fileUrl;
-        link.textContent = "Download File";
-        link.target = "_blank";
-        previewDiv.appendChild(link);
+        video.preload = "metadata";
+        video.loading = "lazy";
+        video.src = post.fileUrl;
+        video.onerror = () => { video.style.display = "none"; };
+        return video;
       }
+      return null;
+    }
+
+    async function loadPosts() {
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, snapshot => {
+        const posts = [];
+        snapshot.forEach(childSnapshot => {
+          const post = childSnapshot.val();
+          post.id = childSnapshot.key;
+          posts.push(post);
+        });
+
+        // Sort descending by date
+        posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Limit to last 20 posts
+        const limitedPosts = posts.slice(0, 20);
+
+        // Filter by user if needed
+        const displayedPosts = showOnlyMyPosts && currentUser ? limitedPosts.filter(p => p.ownerId === currentUser.uid) : limitedPosts;
+
+        postContainer.innerHTML = "";
+
+        if (!displayedPosts.length) {
+          postContainer.textContent = "No posts available.";
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        displayedPosts.forEach(post => {
+          const postDiv = document.createElement("div");
+          postDiv.className = "post-item";
+
+          const mediaEl = createMediaElement(post);
+          if (mediaEl) postDiv.appendChild(mediaEl);
+
+          const caption = document.createElement("div");
+          caption.className = "post-caption";
+          caption.textContent = post.caption || "";
+          postDiv.appendChild(caption);
+
+          const ownerInfo = document.createElement("div");
+          ownerInfo.className = "post-owner";
+          ownerInfo.textContent = `Posted by: ${post.ownerEmail || "Unknown"}`;
+          postDiv.appendChild(ownerInfo);
+
+          const timeDiv = document.createElement("div");
+          timeDiv.className = "post-time";
+          timeDiv.textContent = new Date(post.createdAt).toLocaleString();
+          postDiv.appendChild(timeDiv);
+
+          // Actions (Boost, Likes)
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "post-actions";
+
+          const boostBtn = document.createElement("button");
+          boostBtn.textContent = "🚀 Boost";
+          boostBtn.onclick = () => {
+            update(ref(db, "posts/" + post.id), { boosts: (post.boosts || 0) + 1 });
+          };
+          actionsDiv.appendChild(boostBtn);
+
+          const boostCount = document.createElement("span");
+          boostCount.textContent = post.boosts || 0;
+          actionsDiv.appendChild(boostCount);
+
+          const likeBtn = document.createElement("button");
+          likeBtn.textContent = "❤️ Like";
+          likeBtn.onclick = () => {
+            update(ref(db, "posts/" + post.id), { likes: (post.likes || 0) + 1 });
+          };
+          actionsDiv.appendChild(likeBtn);
+
+          const likeCount = document.createElement("span");
+          likeCount.textContent = post.likes || 0;
+          actionsDiv.appendChild(likeCount);
+
+          postDiv.appendChild(actionsDiv);
+
+          // Comments section
+          const commentSection = document.createElement("div");
+          commentSection.className = "comment-section";
+
+          (post.comments || []).forEach(c => {
+            const commentItem = document.createElement("div");
+            commentItem.className = "comment-item";
+            commentItem.textContent = `${c.user}: ${c.text}`;
+            commentSection.appendChild(commentItem);
+          });
+
+          postDiv.appendChild(commentSection);
+
+          fragment.appendChild(postDiv);
+        });
+
+        postContainer.appendChild(fragment);
+      }, { onlyOnce: false });
     }
   </script>
 </body>
