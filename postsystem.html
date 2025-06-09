@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pinata Upload and IPFS Viewer</title>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+</head>
+<body>
+  <h1>Upload to IPFS via Pinata</h1>
+  <input type="file" id="fileInput" />
+  <input type="text" id="captionInput" placeholder="Enter a caption" />
+  <button onclick="uploadToIPFS()">Upload</button>
+
+  <h2>Posts</h2>
+  <div id="postsContainer"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyChE3KovKXrXyx43mRV9XeJ1crUswz0Zys",
+      authDomain: "pinnataipfs.firebaseapp.com",
+      projectId: "pinnataipfs",
+      storageBucket: "pinnataipfs.appspot.com",
+      messagingSenderId: "972399515185",
+      appId: "1:972399515185:web:8d980177debae84c3f3b39",
+      measurementId: "G-VLSJ1C96X7",
+      databaseURL: "https://pinnataipfs-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjRmNzRhMzE0ZTAyMjAzZTUxZGNkZDIxIiwiZW1haWwiOiJkaWdpdGFscnVmaXlhQGdtYWlsLmNvbSIsImlwIjoiMTExLjkyLjIzOS4xNjciLCJpYXQiOjE3MTcyNTM1MDZ9.rQoygMRUpCXe9J9DgWB4_BoAzJ-UE6KZCRVkS3bA9kQ";
+
+    const fallbackGateways = [
+      "https://cloudflare-ipfs.com/ipfs/",
+      "https://ipfs.io/ipfs/",
+      "https://gateway.pinata.cloud/ipfs/"
+    ];
+
+    async function uploadToIPFS() {
+      const fileInput = document.getElementById('fileInput');
+      const captionInput = document.getElementById('captionInput');
+      const file = fileInput.files[0];
+      const caption = captionInput.value;
+
+      if (!file) return alert("No file selected.");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append("pinataMetadata", metadata);
+
+      const options = JSON.stringify({ cidVersion: 0 });
+      formData.append("pinataOptions", options);
+
+      try {
+        const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
+          maxBodyLength: Infinity,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: PINATA_JWT
+          }
+        });
+
+        const cid = res.data.IpfsHash;
+        const fileType = file.type.startsWith('image') ? 'image' : 'video';
+        const newPostRef = push(ref(db, 'posts/'));
+
+        await set(newPostRef, {
+          fileUrl: `${cid}`,
+          caption,
+          type: fileType,
+          timestamp: Date.now()
+        });
+
+        alert("Uploaded successfully!");
+        loadPosts(); // reload after upload
+      } catch (error) {
+        console.error("Upload failed", error);
+        alert("Upload failed!");
+      }
+    }
+
+    function renderPost(post) {
+      const postElement = document.createElement("div");
+      const fileUrl = `${fallbackGateways[0]}${post.fileUrl}`;
+
+      const media = post.type === "image"
+        ? `<img src="${fileUrl}" alt="Image" loading="lazy" width="300"/>`
+        : `<video controls preload="none" loading="lazy" width="300">
+             <source src="${fileUrl}" type="video/mp4">
+             Your browser does not support the video tag.
+           </video>`;
+
+      postElement.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          ${media}
+          <p>${post.caption}</p>
+        </div>
+      `;
+      return postElement;
+    }
+
+    function loadPosts() {
+      const postsContainer = document.getElementById('postsContainer');
+      postsContainer.innerHTML = "<p>Loading...</p>";
+
+      const postsRef = query(ref(db, 'posts/'), limitToLast(20)); // Limit to last 20 posts
+
+      onValue(postsRef, (snapshot) => {
+        postsContainer.innerHTML = "";
+        const posts = [];
+
+        snapshot.forEach((child) => {
+          posts.push({ id: child.key, ...child.val() });
+        });
+
+        posts.reverse().forEach((post) => {
+          const postElement = renderPost(post);
+          postsContainer.appendChild(postElement);
+        });
+      });
+    }
+
+    // Load posts when page loads
+    window.onload = loadPosts;
+  </script>
+</body>
+</html>
