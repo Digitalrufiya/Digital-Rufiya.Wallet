@@ -1,136 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Pinata Upload and IPFS Viewer</title>
-  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Decentralized App</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script src="https://unpkg.com/@pinata/sdk@1.1.23/dist/pinata.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f9f9f9;
+    }
+    #preview {
+      margin-top: 20px;
+    }
+    #preview img,
+    #preview video,
+    #preview audio {
+      max-width: 100%;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Upload to IPFS via Pinata</h1>
+  <h1>DRF DApp Media Upload</h1>
+
   <input type="file" id="fileInput" />
-  <input type="text" id="captionInput" placeholder="Enter a caption" />
-  <button onclick="uploadToIPFS()">Upload</button>
+  <button onclick="uploadToIPFS()">Upload to IPFS</button>
 
-  <h2>Posts</h2>
-  <div id="postsContainer"></div>
+  <div id="preview"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
-
+  <script>
+    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyChE3KovKXrXyx43mRV9XeJ1crUswz0Zys",
-      authDomain: "pinnataipfs.firebaseapp.com",
-      projectId: "pinnataipfs",
-      storageBucket: "pinnataipfs.appspot.com",
-      messagingSenderId: "972399515185",
-      appId: "1:972399515185:web:8d980177debae84c3f3b39",
-      measurementId: "G-VLSJ1C96X7",
-      databaseURL: "https://pinnataipfs-default-rtdb.firebaseio.com"
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+      projectId: "YOUR_FIREBASE_PROJECT_ID",
+      storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_FIREBASE_SENDER_ID",
+      appId: "YOUR_FIREBASE_APP_ID"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjRmNzRhMzE0ZTAyMjAzZTUxZGNkZDIxIiwiZW1haWwiOiJkaWdpdGFscnVmaXlhQGdtYWlsLmNvbSIsImlwIjoiMTExLjkyLjIzOS4xNjciLCJpYXQiOjE3MTcyNTM1MDZ9.rQoygMRUpCXe9J9DgWB4_BoAzJ-UE6KZCRVkS3bA9kQ";
-
-    const fallbackGateways = [
-      "https://cloudflare-ipfs.com/ipfs/",
-      "https://ipfs.io/ipfs/",
-      "https://gateway.pinata.cloud/ipfs/"
-    ];
+    // Pinata SDK
+    const pinata = new Pinata('PINATA_API_KEY', 'PINATA_SECRET_KEY');
+    const jwt = 'YOUR_PINATA_JWT';
 
     async function uploadToIPFS() {
-      const fileInput = document.getElementById('fileInput');
-      const captionInput = document.getElementById('captionInput');
+      const fileInput = document.getElementById("fileInput");
       const file = fileInput.files[0];
-      const caption = captionInput.value;
-
-      if (!file) return alert("No file selected.");
+      if (!file) {
+        alert("Please select a file to upload.");
+        return;
+      }
 
       const formData = new FormData();
       formData.append("file", file);
 
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append("pinataMetadata", metadata);
-
-      const options = JSON.stringify({ cidVersion: 0 });
-      formData.append("pinataOptions", options);
-
       try {
-        const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", formData, {
-          maxBodyLength: Infinity,
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
           headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: PINATA_JWT
-          }
+            Authorization: `Bearer ${jwt}`
+          },
+          body: formData
         });
 
-        const cid = res.data.IpfsHash;
-        const fileType = file.type.startsWith('image') ? 'image' : 'video';
-        const newPostRef = push(ref(db, 'posts/'));
+        const data = await res.json();
+        const ipfsHash = data.IpfsHash;
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
 
-        await set(newPostRef, {
-          fileUrl: `${cid}`,
-          caption,
-          type: fileType,
-          timestamp: Date.now()
-        });
-
-        alert("Uploaded successfully!");
-        loadPosts(); // reload after upload
+        previewFile(file, fileUrl);
       } catch (error) {
-        console.error("Upload failed", error);
-        alert("Upload failed!");
+        console.error("IPFS upload failed:", error);
+        alert("Upload failed.");
       }
     }
 
-    function renderPost(post) {
-      const postElement = document.createElement("div");
-      const fileUrl = `${fallbackGateways[0]}${post.fileUrl}`;
+    function previewFile(file, fileUrl) {
+      const previewDiv = document.getElementById("preview");
+      previewDiv.innerHTML = "";
 
-      const media = post.type === "image"
-        ? `<img src="${fileUrl}" alt="Image" loading="lazy" width="300"/>`
-        : `<video controls preload="none" loading="lazy" width="300">
-             <source src="${fileUrl}" type="video/mp4">
-             Your browser does not support the video tag.
-           </video>`;
+      const mimeType = file.type;
 
-      postElement.innerHTML = `
-        <div style="margin-bottom: 20px;">
-          ${media}
-          <p>${post.caption}</p>
-        </div>
-      `;
-      return postElement;
+      if (mimeType.startsWith("image/")) {
+        const img = document.createElement("img");
+        img.src = fileUrl;
+        previewDiv.appendChild(img);
+      } else if (mimeType.startsWith("video/")) {
+        const video = document.createElement("video");
+        video.src = fileUrl;
+        video.controls = true;
+        previewDiv.appendChild(video);
+      } else if (mimeType.startsWith("audio/")) {
+        const audio = document.createElement("audio");
+        audio.src = fileUrl;
+        audio.controls = true;
+        previewDiv.appendChild(audio);
+      } else {
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.textContent = "Download File";
+        link.target = "_blank";
+        previewDiv.appendChild(link);
+      }
     }
-
-    function loadPosts() {
-      const postsContainer = document.getElementById('postsContainer');
-      postsContainer.innerHTML = "<p>Loading...</p>";
-
-      const postsRef = query(ref(db, 'posts/'), limitToLast(20)); // Limit to last 20 posts
-
-      onValue(postsRef, (snapshot) => {
-        postsContainer.innerHTML = "";
-        const posts = [];
-
-        snapshot.forEach((child) => {
-          posts.push({ id: child.key, ...child.val() });
-        });
-
-        posts.reverse().forEach((post) => {
-          const postElement = renderPost(post);
-          postsContainer.appendChild(postElement);
-        });
-      });
-    }
-
-    // Load posts when page loads
-    window.onload = loadPosts;
   </script>
 </body>
 </html>
