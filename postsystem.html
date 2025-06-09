@@ -3,343 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia</title>
+  <title>Pinata JSON Upload</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    #settingsBtn {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: #fff;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      border: 1px solid #ccc;
-      font-size: 18px;
-      text-align: center;
-      line-height: 36px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
-    .post-caption { margin: 10px 0; font-size: 16px; }
-    .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
-    .post-actions span { font-weight: bold; margin-left: 4px; }
-    .comment-section { margin-top: 10px; }
-    .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
-    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
-    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
-    .post-owner { font-size: 13px; color: #888; }
+    body { font-family: Arial, sans-serif; padding: 2rem; max-width: 600px; margin: auto; }
+    textarea { width: 100%; height: 150px; font-family: monospace; }
+    button { padding: 0.5rem 1rem; font-size: 1rem; }
+    pre { background: #f0f0f0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; }
   </style>
 </head>
 <body>
-  <h1>DRFMedia</h1>
-  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
-  <button id="loginBtn">Sign in with Google</button>
-  <button id="logoutBtn" style="display: none;">Logout</button>
+  <h1>Upload JSON to Pinata via Backend Proxy</h1>
 
-  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
+  <textarea id="jsonInput" placeholder='Enter JSON here, e.g. {"name":"test"}'></textarea>
+  <br /><br />
+  <button id="uploadBtn">Upload JSON</button>
 
-  <form id="uploadForm" style="display:none;">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
-    <button type="submit">Post</button>
-  </form>
+  <h2>Response</h2>
+  <pre id="responseOutput">No response yet</pre>
 
-  <div id="boostSection" style="display:none; text-align:center;">
-    <h3>🚀 Boost Your Post</h3>
-    <button onclick="askBoost()">Boost Now</button>
-  </div>
+  <script>
+    const uploadBtn = document.getElementById('uploadBtn');
+    const jsonInput = document.getElementById('jsonInput');
+    const responseOutput = document.getElementById('responseOutput');
 
-  <div id="postContainer"></div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const uploadForm = document.getElementById("uploadForm");
-    const mediaFileInput = document.getElementById("mediaFile");
-    const captionInput = document.getElementById("caption");
-    const postContainer = document.getElementById("postContainer");
-    const filterBtn = document.getElementById("filterMyPosts");
-
-    let currentUser = null;
-    let showOnlyMyPosts = false;
-
-    loginBtn.onclick = async () => {
+    uploadBtn.addEventListener('click', async () => {
+      let jsonData;
       try {
-        await signInWithPopup(auth, provider);
-      } catch (e) {
-        alert("Login error: " + e.message);
+        jsonData = JSON.parse(jsonInput.value);
+      } catch (err) {
+        responseOutput.textContent = 'Invalid JSON: ' + err.message;
+        return;
       }
-    };
 
-    logoutBtn.onclick = () => signOut(auth);
+      responseOutput.textContent = 'Uploading...';
 
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        currentUser = user;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "block";
-        uploadForm.style.display = "block";
-        filterBtn.style.display = "block";
-        document.getElementById("boostSection").style.display = "block";
-        loadPosts();
-      } else {
-        currentUser = null;
-        loginBtn.style.display = "block";
-        logoutBtn.style.display = "none";
-        uploadForm.style.display = "none";
-        filterBtn.style.display = "none";
-        document.getElementById("boostSection").style.display = "none";
-        postContainer.innerHTML = "";
+      try {
+        const res = await fetch('http://localhost:3000/pinata/uploadJson', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(jsonData),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          responseOutput.textContent = 'Upload failed: ' + (errorData.error || res.statusText);
+          return;
+        }
+
+        const data = await res.json();
+        responseOutput.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseOutput.textContent = 'Error: ' + error.message;
       }
     });
-
-    // Basic obfuscation for JWT to avoid plain text exposure
-    function getPinataJWT() {
-      // Base64 encoded JWT string
-      const encodedJWT = "QmVhcmVyIGV5SmhiR2NpT2lKcGJtY2lPaUpoYldVaU9pSktMbVJwYjI0aUxDSnlaV1J2Y21WdVpTSXNJbVY0ZENJNklrRjJNVEl6TlRrek9Ea3pNVFE0TkRVNE5qZzJOemN3TkRNMU56TXpOVEl6TnpFeU9DMTNaV05ySWl3aWRITjBiM0p0Wlc1MElqb2lNQ0lzSW5CaGJtUWlPaUl6ZFdJaUxDSnBZWFFpT2pFMk5EVTBOelkzTlRBNE5UTXNJbjA9";
-      return atob(encodedJWT);
-    }
-
-    async function uploadToPinata(file) {
-      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
-      const formData = new FormData();
-      formData.append('file', file);
-      const metadata = JSON.stringify({ name: file.name });
-      formData.append('pinataMetadata', metadata);
-
-      const pinataJWT = getPinataJWT();
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Authorization: pinataJWT },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Pinata upload failed');
-
-      const data = await response.json();
-      return data.IpfsHash;
-    }
-
-    uploadForm.onsubmit = async e => {
-      e.preventDefault();
-      if (!currentUser) return alert("Please login first!");
-
-      const file = mediaFileInput.files[0];
-      if (!file) return alert("Please select a media file.");
-
-      const caption = captionInput.value.trim();
-      if (!caption) return alert("Please enter a caption.");
-
-      try {
-        // Disable the form while uploading
-        uploadForm.querySelector("button").disabled = true;
-        uploadForm.querySelector("button").textContent = "Posting...";
-
-        const ipfsHash = await uploadToPinata(file);
-        const timestamp = Date.now();
-
-        const postData = {
-          userId: currentUser.uid,
-          userName: currentUser.displayName || "Anonymous",
-          userEmail: currentUser.email || "unknown",
-          mediaHash: ipfsHash,
-          mediaType: file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file",
-          caption,
-          timestamp,
-          likes: {},
-          comments: {}
-        };
-
-        const newPostRef = push(ref(db, 'posts'));
-        await update(newPostRef, postData);
-
-        mediaFileInput.value = "";
-        captionInput.value = "";
-      } catch (err) {
-        alert("Error posting: " + err.message);
-      } finally {
-        uploadForm.querySelector("button").disabled = false;
-        uploadForm.querySelector("button").textContent = "Post";
-      }
-    };
-
-    // Load posts and render
-    function loadPosts() {
-      const postsRef = ref(db, 'posts');
-      onValue(postsRef, snapshot => {
-        const posts = snapshot.val() || {};
-        postContainer.innerHTML = "";
-
-        // Filter posts if needed
-        const filteredPosts = Object.entries(posts).filter(([id, post]) =>
-          !showOnlyMyPosts || (post.userId === (currentUser && currentUser.uid))
-        );
-
-        filteredPosts.sort((a, b) => b[1].timestamp - a[1].timestamp);
-
-        for (const [postId, post] of filteredPosts) {
-          postContainer.appendChild(createPostElement(postId, post));
-        }
-      });
-    }
-
-    filterBtn.onclick = () => {
-      showOnlyMyPosts = !showOnlyMyPosts;
-      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
-      loadPosts();
-    };
-
-    function createPostElement(postId, post) {
-      const div = document.createElement("div");
-      div.className = "post-item";
-
-      // Media display
-      if (post.mediaType === "image") {
-        const img = document.createElement("img");
-        img.src = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
-        div.appendChild(img);
-      } else if (post.mediaType === "video") {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.src = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
-        div.appendChild(video);
-      } else {
-        const link = document.createElement("a");
-        link.href = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
-        link.textContent = "View File";
-        link.target = "_blank";
-        div.appendChild(link);
-      }
-
-      const caption = document.createElement("div");
-      caption.className = "post-caption";
-      caption.textContent = post.caption;
-      div.appendChild(caption);
-
-      const owner = document.createElement("div");
-      owner.className = "post-owner";
-      owner.textContent = `Posted by: ${post.userName || post.userEmail || "Unknown"}`;
-      div.appendChild(owner);
-
-      const timeDiv = document.createElement("div");
-      timeDiv.className = "post-time";
-      timeDiv.textContent = new Date(post.timestamp).toLocaleString();
-      div.appendChild(timeDiv);
-
-      // Actions: Like, Comment, Share
-      const actions = document.createElement("div");
-      actions.className = "post-actions";
-
-      // Like button
-      const likeBtn = document.createElement("button");
-      const likesCount = post.likes ? Object.keys(post.likes).length : 0;
-      likeBtn.innerHTML = `👍 <span>${likesCount}</span>`;
-      likeBtn.onclick = () => toggleLike(postId);
-      if (currentUser && post.likes && post.likes[currentUser.uid]) {
-        likeBtn.style.color = "blue";
-      }
-      actions.appendChild(likeBtn);
-
-      // Comment input and section
-      const commentSection = document.createElement("div");
-      commentSection.className = "comment-section";
-
-      const commentInput = document.createElement("input");
-      commentInput.type = "text";
-      commentInput.placeholder = "Add comment...";
-      commentInput.style.width = "80%";
-      commentSection.appendChild(commentInput);
-
-      const commentBtn = document.createElement("button");
-      commentBtn.textContent = "Comment";
-      commentBtn.onclick = () => addComment(postId, commentInput.value, commentInput);
-      commentSection.appendChild(commentBtn);
-
-      // Show comments
-      if (post.comments) {
-        Object.entries(post.comments).forEach(([cid, comment]) => {
-          const cDiv = document.createElement("div");
-          cDiv.className = "comment-item";
-          cDiv.textContent = `${comment.userName || "Anon"}: ${comment.text}`;
-          commentSection.appendChild(cDiv);
-        });
-      }
-
-      div.appendChild(actions);
-      div.appendChild(commentSection);
-
-      return div;
-    }
-
-    async function toggleLike(postId) {
-      if (!currentUser) return alert("Please login to like posts.");
-
-      const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
-      const snapshot = await new Promise(res => onValue(likeRef, snap => res(snap), { onlyOnce: true }));
-
-      if (snapshot.exists()) {
-        await remove(likeRef);
-      } else {
-        await update(likeRef, true);
-      }
-    }
-
-    async function addComment(postId, text, inputElem) {
-      if (!currentUser) return alert("Please login to comment.");
-      if (!text.trim()) return alert("Comment cannot be empty.");
-
-      const commentData = {
-        userId: currentUser.uid,
-        userName: currentUser.displayName || "Anonymous",
-        text: text.trim(),
-        timestamp: Date.now()
-      };
-
-      const commentsRef = ref(db, `posts/${postId}/comments`);
-      const newCommentRef = push(commentsRef);
-      await update(newCommentRef, commentData);
-
-      inputElem.value = "";
-    }
-
-    // Boost function placeholder
-    function askBoost() {
-      alert("Boost your posts will be available soon!");
-    }
-
   </script>
+
 </body>
 </html>
