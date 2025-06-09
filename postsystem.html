@@ -73,18 +73,16 @@
         const ipfsHash = data.IpfsHash;
         const fileUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
 
-        previewFile(file, fileUrl);
+        previewFile(file.type, fileUrl);
       } catch (error) {
         console.error("IPFS upload failed:", error);
         alert("Upload failed.");
       }
     }
 
-    function previewFile(file, fileUrl) {
+    function previewFile(mimeType, fileUrl) {
       const previewDiv = document.getElementById("preview");
       previewDiv.innerHTML = "";
-
-      const mimeType = file.type;
 
       if (mimeType.startsWith("image/")) {
         const img = document.createElement("img");
@@ -94,6 +92,7 @@
         const video = document.createElement("video");
         video.src = fileUrl;
         video.controls = true;
+        video.width = 480;
         previewDiv.appendChild(video);
       } else if (mimeType.startsWith("audio/")) {
         const audio = document.createElement("audio");
