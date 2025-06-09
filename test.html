@@ -1,0 +1,150 @@
+// Full Updated Code with Login Prompt for Interactions Only
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  updateDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAJcIcyJXyOeUL2HwgoEnCdNJDcCFcAY5o",
+  authDomain: "drf-wallet.firebaseapp.com",
+  projectId: "drf-wallet",
+  storageBucket: "drf-wallet.appspot.com",
+  messagingSenderId: "103501693479",
+  appId: "1:103501693479:web:760feef0c9a76f239014ef",
+  measurementId: "G-LRSY7TZYCY"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const postContent = document.getElementById("postContent");
+const uploadBtn = document.getElementById("uploadBtn");
+const postList = document.getElementById("postList");
+const filterBtn = document.getElementById("filterBtn");
+const allPostsBtn = document.getElementById("allPostsBtn");
+const userEmail = document.getElementById("userEmail");
+const loginReminder = document.getElementById("loginReminder");
+
+let currentUser = null;
+
+loginBtn.addEventListener("click", () => {
+  signInWithPopup(auth, provider).catch((error) => {
+    console.error("Login failed:", error);
+    alert("Login failed. Please try again.");
+  });
+});
+
+logoutBtn.addEventListener("click", () => {
+  signOut(auth);
+});
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if (user) {
+    userEmail.textContent = `Logged in as: ${user.email}`;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    loginReminder.style.display = "none";
+  } else {
+    userEmail.textContent = "";
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    loginReminder.style.display = "block";
+  }
+  loadPosts();
+});
+
+uploadBtn.addEventListener("click", async () => {
+  if (!currentUser) {
+    alert("Please sign in to post.");
+    return;
+  }
+
+  const content = postContent.value.trim();
+  if (content !== "") {
+    const postData = {
+      content,
+      uid: currentUser.uid,
+      boosted: false,
+      timestamp: serverTimestamp()
+    };
+    await addDoc(collection(db, "posts"), postData);
+    postContent.value = "";
+    loadPosts();
+  }
+});
+
+filterBtn.addEventListener("click", () => {
+  if (!currentUser) {
+    alert("Please sign in to filter your posts.");
+    return;
+  }
+  loadPosts(currentUser.uid);
+});
+
+allPostsBtn.addEventListener("click", () => {
+  loadPosts();
+});
+
+async function loadPosts(filterUid = null) {
+  postList.innerHTML = "";
+  let q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+  if (filterUid) {
+    q = query(
+      collection(db, "posts"),
+      where("uid", "==", filterUid),
+      orderBy("timestamp", "desc")
+    );
+  }
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach((docSnap) => {
+    const post = docSnap.data();
+    const li = document.createElement("li");
+    li.textContent = post.content;
+    if (post.boosted) {
+      li.style.fontWeight = "bold";
+    }
+
+    const boostBtn = document.createElement("button");
+    boostBtn.textContent = post.boosted ? "Boosted" : "Boost";
+    boostBtn.disabled = post.boosted;
+    boostBtn.addEventListener("click", async () => {
+      if (!currentUser) {
+        alert("Please sign in to boost posts.");
+        return;
+      }
+      const postRef = doc(db, "posts", docSnap.id);
+      await updateDoc(postRef, { boosted: true });
+      loadPosts(filterUid);
+    });
+    li.appendChild(boostBtn);
+    postList.appendChild(li);
+  });
+}
+
+// Add a friendly login reminder banner
+const banner = document.createElement("div");
+banner.id = "loginReminder";
+banner.style = "text-align:center; padding:10px; background:#eef; color:#333;";
+banner.innerHTML = 'Welcome! <a href="#" onclick="document.getElementById(\'loginBtn\').click()">Sign in</a> to post, comment, or boost.';
+document.body.insertBefore(banner, document.body.firstChild);
