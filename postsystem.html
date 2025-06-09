@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <title>DRFMedia</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     h1 { text-align: center; margin-bottom: 20px; }
@@ -22,14 +22,7 @@
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-    form, #boostSection {
-      max-width: 600px;
-      margin: 0 auto 30px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
+    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     input[type="file"] { display: block; margin-bottom: 15px; }
     textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
     button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
@@ -47,16 +40,15 @@
     #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
     #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
     .post-owner { font-size: 13px; color: #888; }
-    #loadingPosts { text-align: center; color: #999; font-size: 14px; margin: 20px 0; }
   </style>
 </head>
 <body>
-
-  <h1>🕌 DRF Media Timeline</h1>
+  <h1>DRFMedia</h1>
   <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
   <button id="loginBtn">Sign in with Google</button>
   <button id="logoutBtn" style="display: none;">Logout</button>
+
   <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
 
   <form id="uploadForm" style="display:none;">
@@ -70,12 +62,11 @@
     <button onclick="askBoost()">Boost Now</button>
   </div>
 
-  <div id="loadingPosts" style="display: none;">Loading posts...</div>
   <div id="postContainer"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, remove, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -100,7 +91,6 @@
     const captionInput = document.getElementById("caption");
     const postContainer = document.getElementById("postContainer");
     const filterBtn = document.getElementById("filterMyPosts");
-    const loadingPosts = document.getElementById("loadingPosts");
 
     let currentUser = null;
     let showOnlyMyPosts = false;
@@ -135,41 +125,96 @@
       }
     });
 
-    uploadForm.addEventListener('submit', async (e) => {
+    // Basic obfuscation for JWT to avoid plain text exposure
+    function getPinataJWT() {
+      // Base64 encoded JWT string
+      const encodedJWT = "QmVhcmVyIGV5SmhiR2NpT2lKcGJtY2lPaUpoYldVaU9pSktMbVJwYjI0aUxDSnlaV1J2Y21WdVpTSXNJbVY0ZENJNklrRjJNVEl6TlRrek9Ea3pNVFE0TkRVNE5qZzJOemN3TkRNMU56TXpOVEl6TnpFeU9DMTNaV05ySWl3aWRITjBiM0p0Wlc1MElqb2lNQ0lzSW5CaGJtUWlPaUl6ZFdJaUxDSnBZWFFpT2pFMk5EVTBOelkzTlRBNE5UTXNJbjA9";
+      return atob(encodedJWT);
+    }
+
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
+
+      const pinataJWT = getPinataJWT();
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: pinataJWT },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Pinata upload failed');
+
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    uploadForm.onsubmit = async e => {
       e.preventDefault();
+      if (!currentUser) return alert("Please login first!");
+
       const file = mediaFileInput.files[0];
+      if (!file) return alert("Please select a media file.");
+
       const caption = captionInput.value.trim();
-      if (!file || caption.length < 4) return alert('Please select a file and caption at least 4 characters long.');
+      if (!caption) return alert("Please enter a caption.");
 
       try {
-        uploadForm.querySelector('button').disabled = true;
-        uploadForm.querySelector('button').textContent = 'Posting...';
+        // Disable the form while uploading
+        uploadForm.querySelector("button").disabled = true;
+        uploadForm.querySelector("button").textContent = "Posting...";
 
-        const cid = await uploadToPinata(file);
-        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
-        const type = file.type.startsWith('image/') ? 'image' : 'video';
+        const ipfsHash = await uploadToPinata(file);
+        const timestamp = Date.now();
 
-        await push(ref(db, 'posts'), {
+        const postData = {
+          userId: currentUser.uid,
+          userName: currentUser.displayName || "Anonymous",
+          userEmail: currentUser.email || "unknown",
+          mediaHash: ipfsHash,
+          mediaType: file.type.startsWith("image") ? "image" : file.type.startsWith("video") ? "video" : "file",
           caption,
-          fileUrl,
-          type,
-          timestamp: Date.now(),
+          timestamp,
           likes: {},
-          comments: [],
-          uid: currentUser.uid,
-          userName: currentUser.displayName,
-          userPhoto: currentUser.photoURL
-        });
+          comments: {}
+        };
 
-        mediaFileInput.value = '';
-        captionInput.value = '';
-      } catch (error) {
-        alert('Upload failed: ' + error.message);
+        const newPostRef = push(ref(db, 'posts'));
+        await update(newPostRef, postData);
+
+        mediaFileInput.value = "";
+        captionInput.value = "";
+      } catch (err) {
+        alert("Error posting: " + err.message);
       } finally {
-        uploadForm.querySelector('button').disabled = false;
-        uploadForm.querySelector('button').textContent = 'Post';
+        uploadForm.querySelector("button").disabled = false;
+        uploadForm.querySelector("button").textContent = "Post";
       }
-    });
+    };
+
+    // Load posts and render
+    function loadPosts() {
+      const postsRef = ref(db, 'posts');
+      onValue(postsRef, snapshot => {
+        const posts = snapshot.val() || {};
+        postContainer.innerHTML = "";
+
+        // Filter posts if needed
+        const filteredPosts = Object.entries(posts).filter(([id, post]) =>
+          !showOnlyMyPosts || (post.userId === (currentUser && currentUser.uid))
+        );
+
+        filteredPosts.sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+        for (const [postId, post] of filteredPosts) {
+          postContainer.appendChild(createPostElement(postId, post));
+        }
+      });
+    }
 
     filterBtn.onclick = () => {
       showOnlyMyPosts = !showOnlyMyPosts;
@@ -177,113 +222,124 @@
       loadPosts();
     };
 
-    function loadPosts() {
-      loadingPosts.style.display = "block";
-      onValue(ref(db, 'posts/'), snapshot => {
-        loadingPosts.style.display = "none";
-        const posts = [];
-        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
-        posts.sort((a, b) => b.timestamp - a.timestamp);
-        postContainer.innerHTML = '';
-        posts.forEach(post => {
-          if (showOnlyMyPosts && currentUser && post.uid !== currentUser.uid) return;
+    function createPostElement(postId, post) {
+      const div = document.createElement("div");
+      div.className = "post-item";
 
-          const postDiv = document.createElement('div');
-          postDiv.classList.add('post-item');
+      // Media display
+      if (post.mediaType === "image") {
+        const img = document.createElement("img");
+        img.src = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
+        div.appendChild(img);
+      } else if (post.mediaType === "video") {
+        const video = document.createElement("video");
+        video.controls = true;
+        video.src = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
+        div.appendChild(video);
+      } else {
+        const link = document.createElement("a");
+        link.href = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
+        link.textContent = "View File";
+        link.target = "_blank";
+        div.appendChild(link);
+      }
 
-          const media = post.type === 'image'
-            ? `<img src="${post.fileUrl}" />`
-            : `<video controls src="${post.fileUrl}"></video>`;
+      const caption = document.createElement("div");
+      caption.className = "post-caption";
+      caption.textContent = post.caption;
+      div.appendChild(caption);
 
-          let commentsHtml = '';
-          if (post.comments) {
-            commentsHtml = Object.entries(post.comments).map(([k, c]) =>
-              `<div class="comment-item"><b>${c.user}:</b> ${c.text}</div>`).join('');
-          }
+      const owner = document.createElement("div");
+      owner.className = "post-owner";
+      owner.textContent = `Posted by: ${post.userName || post.userEmail || "Unknown"}`;
+      div.appendChild(owner);
 
-          const likedByUser = post.likes && post.likes[currentUser?.uid];
-          const isOwner = currentUser && post.uid === currentUser.uid;
+      const timeDiv = document.createElement("div");
+      timeDiv.className = "post-time";
+      timeDiv.textContent = new Date(post.timestamp).toLocaleString();
+      div.appendChild(timeDiv);
 
-          postDiv.innerHTML = `
-            ${media}
-            <p class="post-caption">${post.caption}</p>
-            <p class="post-owner">By ${post.userName || 'Anonymous'}</p>
-            <p class="post-time">${timeAgo(post.timestamp)}</p>
-            <div class="post-actions">
-              <button onclick="likePost('${post.id}')" ${likedByUser ? "disabled" : ""}>👍 Like <span>${Object.keys(post.likes || {}).length}</span></button>
-              <button onclick="commentPost('${post.id}')">💬 Comment</button>
-              <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-              ${isOwner ? `<button onclick="deletePost('${post.id}')">🗑️ Delete</button>` : ''}
-            </div>
-            <div class="comment-section">${commentsHtml}</div>
-          `;
-          postContainer.appendChild(postDiv);
+      // Actions: Like, Comment, Share
+      const actions = document.createElement("div");
+      actions.className = "post-actions";
+
+      // Like button
+      const likeBtn = document.createElement("button");
+      const likesCount = post.likes ? Object.keys(post.likes).length : 0;
+      likeBtn.innerHTML = `👍 <span>${likesCount}</span>`;
+      likeBtn.onclick = () => toggleLike(postId);
+      if (currentUser && post.likes && post.likes[currentUser.uid]) {
+        likeBtn.style.color = "blue";
+      }
+      actions.appendChild(likeBtn);
+
+      // Comment input and section
+      const commentSection = document.createElement("div");
+      commentSection.className = "comment-section";
+
+      const commentInput = document.createElement("input");
+      commentInput.type = "text";
+      commentInput.placeholder = "Add comment...";
+      commentInput.style.width = "80%";
+      commentSection.appendChild(commentInput);
+
+      const commentBtn = document.createElement("button");
+      commentBtn.textContent = "Comment";
+      commentBtn.onclick = () => addComment(postId, commentInput.value, commentInput);
+      commentSection.appendChild(commentBtn);
+
+      // Show comments
+      if (post.comments) {
+        Object.entries(post.comments).forEach(([cid, comment]) => {
+          const cDiv = document.createElement("div");
+          cDiv.className = "comment-item";
+          cDiv.textContent = `${comment.userName || "Anon"}: ${comment.text}`;
+          commentSection.appendChild(cDiv);
         });
-      });
+      }
+
+      div.appendChild(actions);
+      div.appendChild(commentSection);
+
+      return div;
     }
 
-    window.likePost = async (postId) => {
-      const likePath = `posts/${postId}/likes/${currentUser.uid}`;
-      const refLike = ref(db, likePath);
-      await update(refLike, true);
-    };
+    async function toggleLike(postId) {
+      if (!currentUser) return alert("Please login to like posts.");
 
-    window.commentPost = async (postId) => {
-      const text = prompt("Enter your comment:");
-      if (text && text.trim()) {
-        const commentRef = ref(db, `posts/${postId}/comments`);
-        push(commentRef, {
-          text: text.trim(),
-          user: currentUser.displayName || "Anonymous"
-        });
+      const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
+      const snapshot = await new Promise(res => onValue(likeRef, snap => res(snap), { onlyOnce: true }));
+
+      if (snapshot.exists()) {
+        await remove(likeRef);
+      } else {
+        await update(likeRef, true);
       }
-    };
+    }
 
-    window.deletePost = (postId) => {
-      if (confirm("Delete this post?")) {
-        remove(ref(db, `posts/${postId}`));
-      }
-    };
+    async function addComment(postId, text, inputElem) {
+      if (!currentUser) return alert("Please login to comment.");
+      if (!text.trim()) return alert("Comment cannot be empty.");
 
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
-    };
-
-    function timeAgo(timestamp) {
-      const seconds = Math.floor((Date.now() - timestamp) / 1000);
-      const intervals = {
-        year: 31536000, month: 2592000, week: 604800,
-        day: 86400, hour: 3600, minute: 60, second: 1
+      const commentData = {
+        userId: currentUser.uid,
+        userName: currentUser.displayName || "Anonymous",
+        text: text.trim(),
+        timestamp: Date.now()
       };
-      for (let key in intervals) {
-        const val = Math.floor(seconds / intervals[key]);
-        if (val > 0) return `${val} ${key}${val !== 1 ? 's' : ''} ago`;
-      }
-      return "Just now";
+
+      const commentsRef = ref(db, `posts/${postId}/comments`);
+      const newCommentRef = push(commentsRef);
+      await update(newCommentRef, commentData);
+
+      inputElem.value = "";
     }
 
-    async function uploadToPinata(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
-
-      const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: 'POST',
-        headers: {
-          Authorization: "Bearer eyJhbGciOi..."
-        },
-        body: formData
-      });
-
-      const data = await response.json();
-      return data.IpfsHash;
+    // Boost function placeholder
+    function askBoost() {
+      alert("Boost your posts will be available soon!");
     }
 
-    window.askBoost = () => {
-      const isMuslim = confirm("Are you Muslim?\nClick OK for Yes, Cancel for No.");
-      const price = isMuslim ? 30 : 60;
-      alert(`Boost Activated\n30 Days - ${price} USDC (BSC)`);
-    };
   </script>
 </body>
 </html>
