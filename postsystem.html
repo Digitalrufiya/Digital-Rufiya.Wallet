@@ -3,61 +3,163 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pinata JSON Upload</title>
+  <title>DRFTube</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 2rem; max-width: 600px; margin: auto; }
-    textarea { width: 100%; height: 150px; font-family: monospace; }
-    button { padding: 0.5rem 1rem; font-size: 1rem; }
-    pre { background: #f0f0f0; padding: 1rem; white-space: pre-wrap; word-wrap: break-word; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #d62828; /* YouTube-style red background */
+      color: #fff;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #000;
+    }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    form, #boostSection {
+      max-width: 600px;
+      margin: 0 auto 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      color: #000;
+    }
+    input[type="file"] {
+      display: block;
+      margin-bottom: 15px;
+    }
+    textarea {
+      width: 100%;
+      height: 60px;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      background: #0066cc;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+    #postContainer {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .post-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      color: #000;
+    }
+    .post-item video {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+    .post-caption {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    .post-time {
+      font-size: 12px;
+      color: #555;
+    }
+    .post-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .post-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .post-actions span {
+      font-weight: bold;
+      margin-left: 4px;
+    }
+    .comment-section {
+      margin-top: 10px;
+    }
+    .comment-item {
+      font-size: 14px;
+      background: #f1f1f1;
+      padding: 5px 10px;
+      border-radius: 5px;
+      margin-top: 5px;
+    }
+    #loginBtn, #logoutBtn {
+      margin: 10px auto;
+      display: block;
+    }
+    #filterMyPosts {
+      display: block;
+      margin: 10px auto;
+      text-align: center;
+      background: #ddd;
+      color: #000;
+    }
+    .post-owner {
+      font-size: 13px;
+      color: #888;
+    }
   </style>
 </head>
 <body>
+  <div style="background:white; text-align:center; padding: 20px 0;">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244"
+         alt="DRFTube Logo"
+         style="max-height: 120px; object-fit: contain;" />
+    <h1>DRFTube</h1>
+  </div>
 
-  <h1>Upload JSON to Pinata via Backend Proxy</h1>
+  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
-  <textarea id="jsonInput" placeholder='Enter JSON here, e.g. {"name":"test"}'></textarea>
-  <br /><br />
-  <button id="uploadBtn">Upload JSON</button>
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
+  <button id="filterMyPosts" style="display:none;">Show Only My Videos</button>
 
-  <h2>Response</h2>
-  <pre id="responseOutput">No response yet</pre>
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="video/*" required />
+    <textarea id="caption" placeholder="Write a short description..." required></textarea>
+    <button type="submit">Upload Video</button>
+  </form>
 
-  <script>
-    const uploadBtn = document.getElementById('uploadBtn');
-    const jsonInput = document.getElementById('jsonInput');
-    const responseOutput = document.getElementById('responseOutput');
+  <div id="boostSection" style="display:none; text-align:center;">
+    <h3>🚀 Boost Your Video</h3>
+    <button onclick="askBoost()">Boost Now</button>
+  </div>
 
-    uploadBtn.addEventListener('click', async () => {
-      let jsonData;
-      try {
-        jsonData = JSON.parse(jsonInput.value);
-      } catch (err) {
-        responseOutput.textContent = 'Invalid JSON: ' + err.message;
-        return;
-      }
+  <div id="postContainer"></div>
 
-      responseOutput.textContent = 'Uploading...';
-
-      try {
-        const res = await fetch('http://localhost:3000/pinata/uploadJson', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(jsonData),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          responseOutput.textContent = 'Upload failed: ' + (errorData.error || res.statusText);
-          return;
-        }
-
-        const data = await res.json();
-        responseOutput.textContent = JSON.stringify(data, null, 2);
-      } catch (error) {
-        responseOutput.textContent = 'Error: ' + error.message;
-      }
-    });
-  </script>
+  <!-- The rest of your existing Firebase + Pinata JS remains unchanged -->
 
 </body>
 </html>
