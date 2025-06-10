@@ -35,7 +35,7 @@
     .comment-section { margin-top: 10px; }
     .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
     #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
-    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
+    #filterMyPosts { display: none; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
     .post-owner { font-size: 13px; color: #888; }
   </style>
 </head>
@@ -45,7 +45,7 @@
 
   <button id="loginBtn">Sign in with Google</button>
   <button id="logoutBtn" style="display: none;">Logout</button>
-  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
+  <button id="filterMyPosts">Show Only My Posts</button>
 
   <form id="uploadForm" style="display:none;">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
@@ -87,6 +87,7 @@
     const captionInput = document.getElementById("caption");
     const postContainer = document.getElementById("postContainer");
     const filterBtn = document.getElementById("filterMyPosts");
+    const boostSection = document.getElementById("boostSection");
 
     let currentUser = null;
     let showOnlyMyPosts = false;
@@ -96,18 +97,23 @@
 
     onAuthStateChanged(auth, user => {
       currentUser = user;
+
       loginBtn.style.display = user ? "none" : "block";
       logoutBtn.style.display = user ? "block" : "none";
       uploadForm.style.display = user ? "block" : "none";
       filterBtn.style.display = user ? "block" : "none";
-      document.getElementById("boostSection").style.display = user ? "block" : "none";
-      postContainer.innerHTML = "";
-      
-      loadPosts();  // Always load posts regardless of login state
+      boostSection.style.display = user ? "block" : "none";
+
+      // Reset filter when user logs out
+      if (!user) {
+        showOnlyMyPosts = false;
+        filterBtn.textContent = "Show Only My Posts";
+      }
+
+      loadPosts();
     });
 
-    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-
+       const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
     async function uploadToPinata(file) {
       const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
@@ -183,14 +189,19 @@
 
         postContainer.innerHTML = '';
 
-        if(posts.length === 0){
-          postContainer.innerHTML = '<p style="text-align:center; color:#888;">No posts available.</p>';
+        // Filter posts if needed
+        const filteredPosts = showOnlyMyPosts && currentUser
+          ? posts.filter(post => post.uid === currentUser.uid)
+          : posts;
+
+        if(filteredPosts.length === 0) {
+          postContainer.innerHTML = `<p style="text-align:center; color:#888;">
+            ${showOnlyMyPosts ? 'No posts found for you.' : 'No posts available.'}
+          </p>`;
           return;
         }
 
-        posts.forEach(post => {
-          if (showOnlyMyPosts && (!currentUser || post.uid !== currentUser.uid)) return;
-
+        filteredPosts.forEach(post => {
           const mediaTag = post.type === 'image'
             ? `<img src="${post.fileUrl}" alt="Image"/>`
             : `<video controls src="${post.fileUrl}"></video>`;
@@ -208,11 +219,6 @@
           `;
           postContainer.appendChild(div);
         });
-
-        // If filtered to only my posts but none found, show message
-        if(showOnlyMyPosts && postContainer.children.length === 0) {
-          postContainer.innerHTML = '<p style="text-align:center; color:#888;">No posts found for you.</p>';
-        }
       });
     }
 
