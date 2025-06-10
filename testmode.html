@@ -3,10 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Timeline</title>
+  <title>DRFMedia</title>
+
+  <!-- Basic Styling for layout and components -->
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
     h1 { text-align: center; margin-bottom: 20px; }
+    
+    /* Settings button (top-right gear icon) */
     #settingsBtn {
       position: fixed;
       top: 15px;
@@ -22,6 +26,8 @@
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
+
+    /* Form styling for media upload and post creation */
     form, #boostSection {
       max-width: 600px;
       margin: 0 auto 30px;
@@ -30,54 +36,112 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+
     input[type="file"] { display: block; margin-bottom: 15px; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    textarea {
+      width: 100%; height: 60px; margin-bottom: 15px;
+      padding: 10px; border-radius: 5px; border: 1px solid #ccc;
+      resize: none;
+    }
+
+    button {
+      padding: 10px 20px; border: none;
+      background: #0066cc; color: white;
+      border-radius: 5px; cursor: pointer;
+    }
+
     button:disabled { background: #999; cursor: not-allowed; }
+
+    /* Display container for posts */
     #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+
+    /* Individual post styles */
+    .post-item {
+      background: white; padding: 15px; margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+
+    .post-item img, .post-item video {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
     .post-caption { margin: 10px 0; font-size: 16px; }
     .post-time { font-size: 12px; color: #555; }
-    .post-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-    .post-actions button { background: none; border: none; cursor: pointer; font-size: 14px; }
+
+    /* Post action buttons like like/comment/share */
+    .post-actions {
+      display: flex; gap: 10px; margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .post-actions button {
+      background: none; border: none;
+      cursor: pointer; font-size: 14px;
+    }
+
     .post-actions span { font-weight: bold; margin-left: 4px; }
+
+    /* Comments styling */
     .comment-section { margin-top: 10px; }
-    .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
-    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
-    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
+    .comment-item {
+      font-size: 14px; background: #f1f1f1;
+      padding: 5px 10px; border-radius: 5px;
+      margin-top: 5px;
+    }
+
+    /* Login/logout and filter buttons */
+    #loginBtn, #logoutBtn {
+      margin: 10px auto; display: block;
+    }
+
+    #filterMyPosts {
+      display: block; margin: 10px auto;
+      text-align: center; background: #ddd; color: #000;
+    }
+
     .post-owner { font-size: 13px; color: #888; }
-    #loadingPosts { text-align: center; color: #999; font-size: 14px; margin: 20px 0; }
   </style>
 </head>
 <body>
+  <!-- Page Header -->
+  <h1> DRFMedia</h1>
 
-  <h1>🕌 DRF Media Timeline</h1>
+  <!-- Settings gear button: redirects to user profile page -->
   <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
 
+  <!-- Auth buttons -->
   <button id="loginBtn">Sign in with Google</button>
   <button id="logoutBtn" style="display: none;">Logout</button>
+
+  <!-- Filter button to toggle between all posts and current user's posts -->
   <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
 
+  <!-- Media Upload Form (shown only when user is signed in) -->
   <form id="uploadForm" style="display:none;">
     <input type="file" id="mediaFile" accept="image/*,video/*" required />
     <textarea id="caption" placeholder="Write your caption here..." required></textarea>
     <button type="submit">Post</button>
   </form>
 
+  <!-- Post boost section (shown only when user is signed in) -->
   <div id="boostSection" style="display:none; text-align:center;">
     <h3>🚀 Boost Your Post</h3>
     <button onclick="askBoost()">Boost Now</button>
   </div>
 
-  <div id="loadingPosts" style="display: none;">Loading posts...</div>
+  <!-- Container for dynamically loaded posts -->
   <div id="postContainer"></div>
 
+  <!-- Firebase and App Logic -->
   <script type="module">
+    // Import Firebase SDK modules
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, remove, get, child } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
+    // Firebase app configuration
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -88,11 +152,13 @@
       appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    // Get references to DOM elements
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const uploadForm = document.getElementById("uploadForm");
@@ -100,11 +166,12 @@
     const captionInput = document.getElementById("caption");
     const postContainer = document.getElementById("postContainer");
     const filterBtn = document.getElementById("filterMyPosts");
-    const loadingPosts = document.getElementById("loadingPosts");
 
+    // Track current signed-in user and post filter mode
     let currentUser = null;
     let showOnlyMyPosts = false;
 
+    // Sign in with Google
     loginBtn.onclick = async () => {
       try {
         await signInWithPopup(auth, provider);
@@ -113,8 +180,10 @@
       }
     };
 
+    // Sign out
     logoutBtn.onclick = () => signOut(auth);
 
+    // Monitor auth state and toggle UI accordingly
     onAuthStateChanged(auth, user => {
       if (user) {
         currentUser = user;
@@ -135,27 +204,58 @@
       }
     });
 
+    // Pinata JWT token for uploading media to IPFS
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
+    // Function to upload media file to Pinata (IPFS)
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: pinataJWT },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    // Detect whether file is image or video
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
+    }
+
+    // Handle form submission to upload a post
     uploadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const file = mediaFileInput.files[0];
       const caption = captionInput.value.trim();
-      if (!file || caption.length < 4) return alert('Please select a file and caption at least 4 characters long.');
+      if (!file || caption.length < 4)
+        return alert('Please select a file and caption at least 4 characters long.');
 
       try {
         uploadForm.querySelector('button').disabled = true;
         uploadForm.querySelector('button').textContent = 'Posting...';
 
         const cid = await uploadToPinata(file);
-        const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
 
-        const type = file.type.startsWith('image/') ? 'image' : 'video';
-
+        // Push post data to Firebase Realtime Database
         await push(ref(db, 'posts'), {
           caption,
           fileUrl,
           type,
           timestamp: Date.now(),
-          likes: {},
+          likes: 0,
           comments: [],
           uid: currentUser.uid,
           userName: currentUser.displayName,
@@ -172,21 +272,27 @@
       }
     });
 
+    // Toggle between showing all posts or only current user's posts
     filterBtn.onclick = () => {
       showOnlyMyPosts = !showOnlyMyPosts;
       filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
       loadPosts();
     };
 
+    // Load posts from Firebase and render them
+    const postsRef = ref(db, 'posts/');
     function loadPosts() {
-      loadingPosts.style.display = "block";
-      onValue(ref(db, 'posts/'), snapshot => {
-        loadingPosts.style.display = "none";
+      onValue(postsRef, (snapshot) => {
         const posts = [];
-        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+        snapshot.forEach((child) => {
+          posts.push({ id: child.key, ...child.val() });
+        });
+
         posts.sort((a, b) => b.timestamp - a.timestamp);
         postContainer.innerHTML = '';
+
         posts.forEach(post => {
+          // Skip post if filtering and it doesn't belong to current user
           if (showOnlyMyPosts && currentUser && post.uid !== currentUser.uid) return;
 
           const postDiv = document.createElement('div');
@@ -198,93 +304,5 @@
 
           let commentsHtml = '';
           if (post.comments) {
-            commentsHtml = Object.entries(post.comments).map(([k, c]) =>
-              `<div class="comment-item"><b>${c.user}:</b> ${c.text}</div>`).join('');
+            commentsHtml = Object.values(post.comments).map(c => `<div class="comment-item">${c}</div>`).join('');
           }
-
-          const likedByUser = post.likes && post.likes[currentUser?.uid];
-          const isOwner = currentUser && post.uid === currentUser.uid;
-
-          postDiv.innerHTML = `
-            ${media}
-            <p class="post-caption">${post.caption}</p>
-            <p class="post-owner">By ${post.userName || 'Anonymous'}</p>
-            <p class="post-time">${timeAgo(post.timestamp)}</p>
-            <div class="post-actions">
-              <button onclick="likePost('${post.id}')" ${likedByUser ? "disabled" : ""}>👍 Like <span>${Object.keys(post.likes || {}).length}</span></button>
-              <button onclick="commentPost('${post.id}')">💬 Comment</button>
-              <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
-              ${isOwner ? `<button onclick="deletePost('${post.id}')">🗑️ Delete</button>` : ''}
-            </div>
-            <div class="comment-section">${commentsHtml}</div>
-          `;
-          postContainer.appendChild(postDiv);
-        });
-      });
-    }
-
-    window.likePost = async (postId) => {
-      const likePath = `posts/${postId}/likes/${currentUser.uid}`;
-      const refLike = ref(db, likePath);
-      await update(refLike, true);
-    };
-
-    window.commentPost = async (postId) => {
-      const text = prompt("Enter your comment:");
-      if (text && text.trim()) {
-        const commentRef = ref(db, `posts/${postId}/comments`);
-        push(commentRef, {
-          text: text.trim(),
-          user: currentUser.displayName || "Anonymous"
-        });
-      }
-    };
-
-    window.deletePost = (postId) => {
-      if (confirm("Delete this post?")) {
-        remove(ref(db, `posts/${postId}`));
-      }
-    };
-
-    window.sharePost = (url) => {
-      navigator.clipboard.writeText(url).then(() => alert("Post link copied!"));
-    };
-
-    function timeAgo(timestamp) {
-      const seconds = Math.floor((Date.now() - timestamp) / 1000);
-      const intervals = {
-        year: 31536000, month: 2592000, week: 604800,
-        day: 86400, hour: 3600, minute: 60, second: 1
-      };
-      for (let key in intervals) {
-        const val = Math.floor(seconds / intervals[key]);
-        if (val > 0) return `${val} ${key}${val !== 1 ? 's' : ''} ago`;
-      }
-      return "Just now";
-    }
-
-    async function uploadToPinata(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({ name: file.name }));
-
-      const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: 'POST',
-        headers: {
-          Authorization: "Bearer eyJhbGciOi..."
-        },
-        body: formData
-      });
-
-      const data = await response.json();
-      return data.IpfsHash;
-    }
-
-    window.askBoost = () => {
-      const isMuslim = confirm("Are you Muslim?\nClick OK for Yes, Cancel for No.");
-      const price = isMuslim ? 30 : 60;
-      alert(`Boost Activated\n30 Days - ${price} USDC (BSC)`);
-    };
-  </script>
-</body>
-</html>
