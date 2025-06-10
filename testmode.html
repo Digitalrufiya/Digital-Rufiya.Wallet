@@ -2,77 +2,223 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Shorts Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #ccc; }
-    h2 { text-align: center; margin-bottom: 20px; }
-    input, textarea, button { width: 100%; padding: 10px; margin-top: 10px; }
-    video { width: 100%; margin-top: 10px; border-radius: 10px; }
-    #status { margin-top: 10px; font-weight: bold; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    input[type="file"] { display: block; margin-bottom: 15px; }
+    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; }
+    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .post-time { font-size: 12px; color: #555; }
+    .comment-section { margin-top: 10px; }
+    .comment-item { font-size: 14px; background: #f1f1f1; padding: 5px 10px; border-radius: 5px; margin-top: 5px; }
+    #loginBtn, #logoutBtn { margin: 10px auto; display: block; }
+    #filterMyPosts { display: block; margin: 10px auto; text-align: center; background: #ddd; color: #000; }
+    .post-owner { font-size: 13px; color: #888; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Upload DRF Short</h2>
-    <input type="file" id="videoFile" accept="video/mp4,video/webm" />
-    <textarea id="caption" placeholder="Enter caption..."></textarea>
-    <button onclick="uploadToPinata()">Upload to IPFS</button>
-    <div id="status"></div>
-    <video id="preview" controls hidden></video>
+  <h1>DRFMedia</h1>
+  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
+
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display: none;">Logout</button>
+  <button id="filterMyPosts" style="display:none;">Show Only My Posts</button>
+
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
+
+  <div id="boostSection" style="display:none; text-align:center;">
+    <h3>🚀 Boost Your Post</h3>
+    <button onclick="askBoost()">Boost Now</button>
   </div>
 
-  <script>
-       const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-    const uploadToPinata = async () => {
-      const fileInput = document.getElementById("videoFile");
-      const caption = document.getElementById("caption").value;
-      const status = document.getElementById("status");
-      const preview = document.getElementById("preview");
+  <div id="postContainer"></div>
 
-      if (!fileInput.files.length) {
-        status.textContent = "Please select a video file.";
-        return;
-      }
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-      const videoFile = fileInput.files[0];
-      preview.src = URL.createObjectURL(videoFile);
-      preview.hidden = false;
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
 
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+    const filterBtn = document.getElementById("filterMyPosts");
+
+    let currentUser = null;
+    let showOnlyMyPosts = false;
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      loginBtn.style.display = user ? "none" : "block";
+      logoutBtn.style.display = user ? "block" : "none";
+      uploadForm.style.display = user ? "block" : "none";
+      filterBtn.style.display = user ? "block" : "none";
+      document.getElementById("boostSection").style.display = user ? "block" : "none";
+      postContainer.innerHTML = "";
+      
+      loadPosts();  // Always load posts regardless of login state
+    });
+
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
       const formData = new FormData();
-      formData.append("file", videoFile);
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
 
-      const metadata = JSON.stringify({
-        name: "drf_short",
-        keyvalues: { caption: caption || "No caption" }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: pinataJWT },
+        body: formData,
       });
-      formData.append("pinataMetadata", metadata);
 
-      const options = JSON.stringify({ cidVersion: 1 });
-      formData.append("pinataOptions", options);
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
 
-      status.textContent = "Uploading...";
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || caption.length < 4) return alert('Select a file and enter caption (min 4 chars).');
 
       try {
-        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: { Authorization: pinataJWT },
-          body: formData,
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
+
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = getFileType(file);
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: [],
+          uid: currentUser.uid,
+          userName: currentUser.displayName,
+          userPhoto: currentUser.photoURL
         });
 
-        const result = await res.json();
-        if (result.IpfsHash) {
-          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
-          status.innerHTML = `✅ Upload successful! <br><a href="${ipfsUrl}" target="_blank">${ipfsUrl}</a>`;
-        } else {
-          throw new Error("No IPFS hash returned.");
-        }
-      } catch (err) {
-        console.error(err);
-        status.textContent = "❌ Upload failed: " + err.message;
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
       }
+    });
+
+    filterBtn.onclick = () => {
+      showOnlyMyPosts = !showOnlyMyPosts;
+      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+      loadPosts();
     };
+
+    function loadPosts() {
+      onValue(ref(db, 'posts/'), snapshot => {
+        const posts = [];
+        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+        posts.sort((a, b) => b.timestamp - a.timestamp);
+
+        postContainer.innerHTML = '';
+
+        if(posts.length === 0){
+          postContainer.innerHTML = '<p style="text-align:center; color:#888;">No posts available.</p>';
+          return;
+        }
+
+        posts.forEach(post => {
+          if (showOnlyMyPosts && (!currentUser || post.uid !== currentUser.uid)) return;
+
+          const mediaTag = post.type === 'image'
+            ? `<img src="${post.fileUrl}" alt="Image"/>`
+            : `<video controls src="${post.fileUrl}"></video>`;
+
+          const comments = (post.comments || []).map(c => `<div class="comment-item">${c}</div>`).join('');
+
+          const div = document.createElement('div');
+          div.className = 'post-item';
+          div.innerHTML = `
+            ${mediaTag}
+            <div class="post-caption">${post.caption}</div>
+            <div class="post-owner">Posted by ${post.userName || 'Anonymous'}</div>
+            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+            <div class="comment-section">${comments}</div>
+          `;
+          postContainer.appendChild(div);
+        });
+
+        // If filtered to only my posts but none found, show message
+        if(showOnlyMyPosts && postContainer.children.length === 0) {
+          postContainer.innerHTML = '<p style="text-align:center; color:#888;">No posts found for you.</p>';
+        }
+      });
+    }
+
+    function askBoost() {
+      alert('Boost your post feature is coming soon!');
+    }
   </script>
 </body>
 </html>
