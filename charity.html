@@ -1,0 +1,44 @@
+<!-- charity.html -->
+<form id="charityForm">
+  <h2>🤲 DRFM Charity Request</h2>
+  <input type="text" name="name" placeholder="Full Name" required />
+  <input type="text" name="wallet_address" placeholder="DRFM Wallet Address" required />
+  <input type="text" name="country" placeholder="Country" required />
+  <input type="number" name="age" placeholder="Age" required />
+  <button type="submit">Send Charity Request</button>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  // Replace with your actual EmailJS values
+  const SERVICE_ID = "your_service_id";
+  const TEMPLATE_ID = "your_template_id";
+  const USER_ID = "your_public_key"; // EmailJS public key
+
+  emailjs.init(USER_ID);
+
+  document.getElementById("charityForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const now = new Date().toLocaleString();
+    const form = e.target;
+
+    const formData = {
+      name: form.name.value,
+      wallet_address: form.wallet_address.value,
+      country: form.country.value,
+      age: form.age.value,
+      request_time: now,
+    };
+
+    emailjs.send(SERVICE_ID, TEMPLATE_ID, formData)
+      .then(() => {
+        alert("✅ Charity request sent successfully!");
+        form.reset();
+      })
+      .catch((error) => {
+        console.error("Email send error:", error);
+        alert("❌ Failed to send request. Try again.");
+      });
+  });
+</script>
