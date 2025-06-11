@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFM Charity Admin</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
@@ -31,90 +31,126 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2 class="text-center text-primary mb-4">🤲 DRFM Charity Admin Panel</h2>
 
-    <div id="walletWarning" class="wallet-warning mb-3 d-none">
-      ⛔ Please connect using the authorized admin wallet address to access requests.
-    </div>
-
-    <div id="requestsContainer" class="row gy-4"></div>
+  <!-- Login Form -->
+  <div id="loginDiv" style="max-width:400px; margin: 80px auto;">
+    <h3 class="text-center mb-4">Admin Login</h3>
+    <input type="email" id="adminEmail" placeholder="Email" class="form-control mb-2" autocomplete="username" />
+    <input type="password" id="adminPass" placeholder="Password" class="form-control mb-3" autocomplete="current-password" />
+    <button id="loginBtn" class="btn btn-primary w-100">Login</button>
+    <div id="loginError" class="text-danger mt-2 text-center" style="display:none;">Invalid credentials</div>
   </div>
 
-  <script>
-    const ADMIN_WALLET = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C".toLowerCase();
-    const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-    const DRFM_ABI = [{
-      "constant": false,
-      "inputs": [
-        { "name": "_to", "type": "address" },
-        { "name": "_value", "type": "uint256" }
-      ],
-      "name": "transfer",
-      "outputs": [{ "name": "", "type": "bool" }],
-      "type": "function"
-    }];
+  <!-- Admin Panel -->
+  <div id="adminPanel" style="display:none;">
+    <div class="container">
+      <h2 class="text-center text-primary mb-4">🤲 DRFM Charity Admin Panel</h2>
 
-    const EMAILJS_SERVICE = "service_gxe6qdm";
-    const EMAILJS_TEMPLATE = "template_genho05"; // Incoming request
-    const EMAILJS_CONFIRM_TEMPLATE = "template_nnm02vn"; // Confirmation reply
-    const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
+      <div id="walletWarning" class="wallet-warning mb-3 d-none">
+        ⛔ Please connect using the authorized admin wallet address to access requests.
+      </div>
 
-    emailjs.init(EMAILJS_USER);
+      <div id="requestsContainer" class="row gy-4"></div>
+    </div>
+  </div>
 
-    async function connectWallet() {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-          const currentAccount = accounts[0].toLowerCase();
+<script>
+  // Admin credentials - DO NOT share these publicly!
+  const ADMIN_EMAIL = "digitalrufiyacoin@gmail.com";
+  const ADMIN_PASS = "Zivian@2020";
 
-          if (currentAccount !== ADMIN_WALLET) {
-            document.getElementById("walletWarning").classList.remove("d-none");
-            return;
-          }
+  // EmailJS and blockchain constants
+  const ADMIN_WALLET = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C".toLowerCase();
+  const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+  const DRFM_ABI = [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
 
-          document.getElementById("walletWarning").classList.add("d-none");
-          loadRequests();
-        } catch (err) {
-          alert("MetaMask connection denied.");
-        }
-      } else {
-        alert("Please install MetaMask.");
-      }
+  const EMAILJS_SERVICE = "service_gxe6qdm";
+  const EMAILJS_TEMPLATE = "template_genho05";
+  const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
+
+  emailjs.init(EMAILJS_USER);
+
+  // Login logic
+  document.getElementById("loginBtn").onclick = () => {
+    const email = document.getElementById("adminEmail").value.trim();
+    const pass = document.getElementById("adminPass").value;
+
+    if(email === ADMIN_EMAIL && pass === ADMIN_PASS){
+      sessionStorage.setItem("adminLoggedIn", "true");
+      showAdminPanel();
+    } else {
+      document.getElementById("loginError").style.display = "block";
     }
+  };
 
-    async function loadRequests() {
-      // TEMPORARY: Replace this with your manual list if EmailJS API fetch fails
-      const requests = [
+  function showAdminPanel(){
+    document.getElementById("loginDiv").style.display = "none";
+    document.getElementById("adminPanel").style.display = "block";
+    connectWallet();
+  }
+
+  window.onload = () => {
+    if(sessionStorage.getItem("adminLoggedIn") === "true"){
+      showAdminPanel();
+    }
+  };
+
+  // Wallet connect & validation
+  async function connectWallet() {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        const currentAccount = accounts[0].toLowerCase();
+
+        if (currentAccount !== ADMIN_WALLET) {
+          document.getElementById("walletWarning").classList.remove("d-none");
+          return;
+        }
+
+        document.getElementById("walletWarning").classList.add("d-none");
+        loadRequests();
+      } catch (err) {
+        alert("MetaMask connection denied.");
+      }
+    } else {
+      alert("Please install MetaMask.");
+    }
+  }
+
+  // Load charity requests (using EmailJS API)
+  async function loadRequests() {
+    try {
+      // Fetch EmailJS history via public API - NOTE: EmailJS official API may not support this directly
+      // So here we simulate loading requests from a static JSON or you handle manually.
+      // Replace below code with your actual method to fetch requests if you have a backend.
+      
+      // For demo, just show static sample requests - replace this with your real data fetching
+      const sampleRequests = [
         {
-          name: "Ali Muhammad",
-          email: "ali@example.com",
+          name: "Ali Mohamed",
           wallet_address: "0x1234567890abcdef1234567890abcdef12345678",
-          country: "Pakistan",
-          age: "32",
-          request_time: "2025-06-11 18:10"
+          country: "Egypt",
+          age: "30",
+          request_time: "2025-06-11 12:34:56"
         },
         {
-          name: "Fatima Noor",
-          email: "fatima@example.com",
+          name: "Fatima Noora",
           wallet_address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-          country: "Kenya",
-          age: "29",
-          request_time: "2025-06-11 15:40"
+          country: "UAE",
+          age: "28",
+          request_time: "2025-06-11 13:00:00"
         }
       ];
 
       const container = document.getElementById("requestsContainer");
       container.innerHTML = "";
 
-      requests.forEach((fields, idx) => {
+      sampleRequests.forEach(fields => {
         const card = document.createElement("div");
         card.className = "col-md-6";
-        card.setAttribute("data-email", fields.email);
         card.innerHTML = `
           <div class="card p-3">
             <h5>👤 ${fields.name}</h5>
-            <p><strong>Email:</strong> ${fields.email}</p>
             <p><strong>Wallet:</strong> ${fields.wallet_address}</p>
             <p><strong>Country:</strong> ${fields.country}</p>
             <p><strong>Age:</strong> ${fields.age}</p>
@@ -124,51 +160,46 @@
         `;
         container.appendChild(card);
       });
+
+    } catch (error) {
+      alert("Failed to load requests. Please check your EmailJS setup.");
+      console.error(error);
     }
+  }
 
-    async function sendDRFM(toAddress, buttonEl) {
-      if (!window.ethereum) return alert("MetaMask not found");
+  // Send DRFM tokens via contract
+  async function sendDRFM(toAddress, buttonEl) {
+    if (!window.ethereum) return alert("MetaMask not found");
 
-      const web3 = new Web3(window.ethereum);
-      const contract = new web3.eth.Contract(DRFM_ABI, DRFM_CONTRACT);
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-      const from = accounts[0];
-      const amount = web3.utils.toWei("10", "ether");
+    const web3 = new Web3(window.ethereum);
+    const contract = new web3.eth.Contract(DRFM_ABI, DRFM_CONTRACT);
+    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const amount = web3.utils.toWei("10", "ether");
 
-      const card = buttonEl.closest('.card');
-      const name = card.querySelector('h5').textContent.replace('👤 ', '');
-      const email = card.querySelector('p strong + text')?.textContent || card.getAttribute('data-email') || '';
-      const wallet = toAddress;
+    try {
+      buttonEl.disabled = true;
+      buttonEl.textContent = "Sending...";
 
-      try {
-        buttonEl.disabled = true;
-        buttonEl.textContent = "Sending...";
+      await contract.methods.transfer(toAddress, amount).send({ from });
+      buttonEl.textContent = "✅ Sent!";
 
-        // Send DRFM
-        await contract.methods.transfer(toAddress, amount).send({ from });
-        buttonEl.textContent = "✅ Sent!";
+      // Send confirmation email to user
+      await emailjs.send(EMAILJS_SERVICE, "template_nnm02vn", {
+        to_email: from,
+        to_name: "Charity User",
+        wallet_address: toAddress,
+        amount: "10 DRFM",
+        admin_email: ADMIN_EMAIL
+      });
 
-        // Send confirmation email
-        try {
-          await emailjs.send(EMAILJS_SERVICE, EMAILJS_CONFIRM_TEMPLATE, {
-            to_name: name,
-            to_email: email,
-            wallet_address: wallet,
-            charity_amount: "10 DRFM"
-          });
-          buttonEl.textContent += " ✅ Email Sent";
-        } catch (emailErr) {
-          console.error("Email failed:", emailErr);
-          buttonEl.textContent += " ❌ Email Failed";
-        }
-
-      } catch (err) {
-        console.error("DRFM send failed:", err);
-        buttonEl.textContent = "❌ Send Failed";
-      }
+    } catch (err) {
+      console.error(err);
+      buttonEl.textContent = "Failed";
+      alert("Failed to send tokens. See console for details.");
     }
+  }
+</script>
 
-    window.addEventListener("load", connectWallet);
-  </script>
 </body>
 </html>
