@@ -29,6 +29,68 @@
       border-left: 5px solid #ffc107;
     }
   </style>
+
+  <!-- Firebase SDK modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Expose loadRequests to global scope so main script can call it
+    window.loadRequests = function() {
+      const container = document.getElementById("requestsContainer");
+      container.innerHTML = ""; // Clear container
+
+      const requestsRef = ref(db, 'charityRequests');
+
+      onValue(requestsRef, (snapshot) => {
+        container.innerHTML = ""; // Clear to reload fresh
+
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>No charity requests found.</p>";
+          return;
+        }
+
+        snapshot.forEach((childSnapshot) => {
+          const request = childSnapshot.val();
+
+          const card = document.createElement("div");
+          card.className = "col-md-6";
+          card.innerHTML = `
+            <div class="card p-3">
+              <h5>👤 ${request.name || "N/A"}</h5>
+              <p><strong>Wallet:</strong> ${request.wallet_address || "N/A"}</p>
+              <p><strong>Country:</strong> ${request.country || "N/A"}</p>
+              <p><strong>Age:</strong> ${request.age || "N/A"}</p>
+              <p><strong>Requested:</strong> ${request.request_time || "N/A"}</p>
+              <button class="btn btn-send" onclick="sendDRFM('${request.wallet_address}', this)">Send 10 DRFM</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }, {
+        onlyOnce: true
+      });
+    };
+  </script>
+
 </head>
 <body>
 
@@ -108,62 +170,12 @@
         }
 
         document.getElementById("walletWarning").classList.add("d-none");
-        loadRequests();
+        loadRequests();  // Load requests from Firebase here
       } catch (err) {
         alert("MetaMask connection denied.");
       }
     } else {
       alert("Please install MetaMask.");
-    }
-  }
-
-  // Load charity requests (using EmailJS API)
-  async function loadRequests() {
-    try {
-      // Fetch EmailJS history via public API - NOTE: EmailJS official API may not support this directly
-      // So here we simulate loading requests from a static JSON or you handle manually.
-      // Replace below code with your actual method to fetch requests if you have a backend.
-      
-      // For demo, just show static sample requests - replace this with your real data fetching
-      const sampleRequests = [
-        {
-          name: "Ali Mohamed",
-          wallet_address: "0x1234567890abcdef1234567890abcdef12345678",
-          country: "Egypt",
-          age: "30",
-          request_time: "2025-06-11 12:34:56"
-        },
-        {
-          name: "Fatima Noora",
-          wallet_address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-          country: "UAE",
-          age: "28",
-          request_time: "2025-06-11 13:00:00"
-        }
-      ];
-
-      const container = document.getElementById("requestsContainer");
-      container.innerHTML = "";
-
-      sampleRequests.forEach(fields => {
-        const card = document.createElement("div");
-        card.className = "col-md-6";
-        card.innerHTML = `
-          <div class="card p-3">
-            <h5>👤 ${fields.name}</h5>
-            <p><strong>Wallet:</strong> ${fields.wallet_address}</p>
-            <p><strong>Country:</strong> ${fields.country}</p>
-            <p><strong>Age:</strong> ${fields.age}</p>
-            <p><strong>Requested:</strong> ${fields.request_time}</p>
-            <button class="btn btn-send" onclick="sendDRFM('${fields.wallet_address}', this)">Send 10 DRFM</button>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-    } catch (error) {
-      alert("Failed to load requests. Please check your EmailJS setup.");
-      console.error(error);
     }
   }
 
