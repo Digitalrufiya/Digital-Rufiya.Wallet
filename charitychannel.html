@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🤲 DRFM Charity Request</title>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    window.sendCharityRequest = async function(data) {
+      // Push request to charityRequests node
+      const charityRequestsRef = ref(database, 'charityRequests');
+      return push(charityRequestsRef, {
+        name: data.name,
+        wallet_address: data.wallet_address,
+        country: data.country,
+        age: data.age,
+        request_time: new Date().toLocaleString()
+      });
+    };
+  </script>
+
+  <script>
+    (function() {
+      emailjs.init("iUGLTBCPJukDPr_nZ"); // Your EmailJS Public Key
+    })();
+  </script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .charity-card {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .charity-card h2 {
+      color: #0a7cff;
+      margin-bottom: 10px;
+    }
+
+    .charity-card p {
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    .charity-card img {
+      width: 70px;
+      margin-bottom: 15px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #0a7cff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #056bd6;
+    }
+
+    #responseMessage {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      margin-top: 25px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+<div class="charity-card">
+  <img src="https://cdn-icons-png.flaticon.com/512/1047/1047243.png" alt="Charity Icon" />
+  <h2>🤲 Request 10 DRFM Tokens</h2>
+  <p>For believers in need — 1 request per day allowed.</p>
+
+  <form id="charityForm">
+    <input type="text" name="name" placeholder="Your Full Name" required />
+    <input type="text" name="wallet_address" placeholder="DRFM Wallet Address" required />
+    <input type="text" name="country" placeholder="Your Country" required />
+    <input type="number" name="age" placeholder="Your Age" required min="1" max="120" />
+    <button type="submit">Send Charity Request</button>
+  </form>
+
+  <p id="responseMessage"></p>
+
+  <div class="footer-note">
+    May Allah ﷻ bless you with barakah and Jannah 🤍
+  </div>
+</div>
+
+<script>
+  document.getElementById("charityForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const form = this;
+    const name = form.name.value.trim();
+    const wallet_address = form.wallet_address.value.trim();
+    const country = form.country.value.trim();
+    const age = parseInt(form.age.value.trim());
+
+    // Basic wallet address validation (Ethereum-style)
+    const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+    if (!walletRegex.test(wallet_address)) {
+      showMessage("❌ Invalid wallet address format. It should start with 0x followed by 40 hex characters.", "red");
+      return;
+    }
+
+    try {
+      // Send EmailJS email notification
+      await emailjs.sendForm("service_gxe6qdm", "template_genho05", form);
+
+      // Send data to Firebase Realtime Database
+      await window.sendCharityRequest({ name, wallet_address, country, age });
+
+      showMessage("✅ Request sent successfully. JazakAllah Khair!", "green");
+      form.reset();
+    } catch (error) {
+      console.error("Error sending charity request:", error);
+      showMessage("❌ Failed to send request. Try again later.", "red");
+    }
+  });
+
+  function showMessage(msg, color) {
+    const responseEl = document.getElementById("responseMessage");
+    responseEl.innerText = msg;
+    responseEl.style.color = color;
+  }
+</script>
+
+</body>
+</html>
