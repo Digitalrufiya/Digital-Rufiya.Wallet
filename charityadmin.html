@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFM Charity Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="max-w-4xl mx-auto py-8">
+    <h1 class="text-3xl font-bold mb-4 text-center text-blue-700">🤲 DRFM Charity Admin Panel</h1>
+
+    <div class="mb-4 text-center">
+      <button id="connectBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Connect Wallet</button>
+      <p id="walletAddress" class="mt-2 text-sm text-gray-600"></p>
+    </div>
+
+    <div id="requestContainer" class="space-y-4"></div>
+  </div>
+
+  <script>
+    const adminWallet = "YOUR_ADMIN_WALLET_ADDRESS_HERE";
+    const serviceID = "service_gxe6qdm";
+    const templateID = "template_genho05";
+    const publicKey = "iUGLTBCPJukDPr_nZ";
+    const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const DRFM_ABI = [
+      "function transfer(address to, uint256 amount) public returns (bool)",
+    ];
+
+    let provider, signer;
+
+    document.getElementById("connectBtn").onclick = async () => {
+      if (typeof window.ethereum !== "undefined") {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = await provider.getSigner();
+        const address = await signer.getAddress();
+        document.getElementById("walletAddress").textContent = `Connected: ${address}`;
+
+        if (address.toLowerCase() !== adminWallet.toLowerCase()) {
+          alert("Unauthorized wallet! Only admin can access this panel.");
+          return;
+        }
+
+        loadRequests();
+      } else {
+        alert("MetaMask not detected");
+      }
+    };
+
+    async function loadRequests() {
+      const url = `https://api.emailjs.com/api/v1.0/email/history?user_id=${publicKey}`;
+      try {
+        const res = await axios.get(url);
+        const requests = res.data.filter(r => r.template_id === templateID);
+        const container = document.getElementById("requestContainer");
+
+        requests.forEach((req, idx) => {
+          const name = req.template_params.name;
+          const wallet = req.template_params.wallet_address;
+          const country = req.template_params.country;
+          const age = req.template_params.age;
+          const time = req.template_params.request_time;
+
+          const div = document.createElement("div");
+          div.className = "bg-white shadow-md rounded p-4";
+          div.innerHTML = `
+            <h2 class="text-lg font-semibold">#${idx + 1} - ${name}</h2>
+            <p><strong>Wallet:</strong> ${wallet}</p>
+            <p><strong>Country:</strong> ${country}</p>
+            <p><strong>Age:</strong> ${age}</p>
+            <p><strong>Time:</strong> ${time}</p>
+            <button class="sendBtn mt-3 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded" data-wallet="${wallet}">Send 10 DRFM</button>
+          `;
+          container.appendChild(div);
+        });
+
+        document.querySelectorAll(".sendBtn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const recipient = btn.getAttribute("data-wallet");
+            await sendDRFM(recipient);
+            btn.textContent = "Sent ✅";
+            btn.disabled = true;
+          });
+        });
+      } catch (err) {
+        console.error("Error loading requests:", err);
+      }
+    }
+
+    async function sendDRFM(to) {
+      const token = new ethers.Contract(DRFM_CONTRACT, DRFM_ABI, signer);
+      const amount = ethers.parseUnits("10", 18);
+      try {
+        const tx = await token.transfer(to, amount);
+        await tx.wait();
+        alert(`10 DRFM sent to ${to}`);
+      } catch (err) {
+        alert("Transaction failed");
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
