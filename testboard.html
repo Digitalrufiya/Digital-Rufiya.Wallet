@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Wallet Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; }
+    h1 { font-size: 24px; margin-bottom: 10px; }
+    .card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    select, input { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; width: 100%; }
+    #walletAddress { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>DRF Wallet Dashboard</h1>
+
+  <div class="card">
+    <p>Wallet Address: <span id="walletAddress">Not Connected</span></p>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <button onclick="addTokensToMetaMask()">Add DRF & DRFM to MetaMask</button>
+  </div>
+
+  <div class="card">
+    <h3>Balances</h3>
+    <p>BNB: <span id="bnbBalance">0</span></p>
+    <p>DRF: <span id="drfBalance">0</span></p>
+    <p>DRFM: <span id="drfmBalance">0</span></p>
+    <p>USDT: <span id="usdtBalance">0</span></p>
+    <p>USDC: <span id="usdcBalance">0</span></p>
+  </div>
+
+  <div class="card">
+    <h3>Token Transaction History</h3>
+    <ul>
+      <li><a href="https://bscscan.com/token/0x6ca1e3d17d9e5bd8a79b293851f5ff64a91c40a5" target="_blank">DRF Token Transactions</a></li>
+      <li><a href="https://bscscan.com/token/0x9CF972437e17927C1114F44D2D38aA77c4845d01" target="_blank">DRFM Token Transactions</a></li>
+    </ul>
+  </div>
+
+  <script>
+    const DRF_ADDRESS = "0x6ca1e3d17d9e5bd8a79b293851f5ff64a91c40a5";
+    const DRFM_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    let provider, signer, userWallet;
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userWallet = {
+          address: await signer.getAddress()
+        };
+        document.getElementById("walletAddress").textContent = userWallet.address;
+        fetchBalances();
+      } else {
+        alert("MetaMask is not installed!");
+      }
+    }
+
+    async function fetchBalances() {
+      const [bnb, drf, drfm, usdt, usdc] = await Promise.all([
+        provider.getBalance(userWallet.address),
+        new ethers.Contract(DRF_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
+        new ethers.Contract(DRFM_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
+        new ethers.Contract(USDT_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address),
+        new ethers.Contract(USDC_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider).balanceOf(userWallet.address)
+      ]);
+
+      document.getElementById("bnbBalance").textContent = ethers.utils.formatEther(bnb);
+      document.getElementById("drfBalance").textContent = ethers.utils.formatUnits(drf, 18);
+      document.getElementById("drfmBalance").textContent = ethers.utils.formatUnits(drfm, 18);
+      document.getElementById("usdtBalance").textContent = ethers.utils.formatUnits(usdt, 18);
+      document.getElementById("usdcBalance").textContent = ethers.utils.formatUnits(usdc, 18);
+    }
+
+    async function addTokensToMetaMask() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: DRF_ADDRESS,
+              symbol: 'DRF',
+              decimals: 18,
+              image: 'https://yourdomain.com/images/drf.png'
+            }
+          }
+        });
+
+        await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: DRFM_ADDRESS,
+              symbol: 'DRFM',
+              decimals: 18,
+              image: 'https://yourdomain.com/images/drfm.png'
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Failed to add token to MetaMask:', err);
+      }
+    }
+  </script>
+</body>
+</html>
