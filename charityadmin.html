@@ -46,8 +46,10 @@
     const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
     const DRFM_ABI = [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
 
+    // EmailJS config
     const EMAILJS_SERVICE = "service_gxe6qdm";
-    const EMAILJS_TEMPLATE = "template_genho05";
+    const EMAILJS_TEMPLATE_ADMIN = "template_genho05";  // admin notification template
+    const EMAILJS_TEMPLATE_CONFIRM = "template_nnm02vn"; // user confirmation template
     const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
 
     emailjs.init(EMAILJS_USER);
@@ -75,21 +77,25 @@
 
     async function loadRequests() {
       try {
-        const result = await emailjs.get("https://api.emailjs.com/api/v1.0/history", {
+        // Fetch email history - this API call is a placeholder, update with your own EmailJS REST API logic as needed
+        const response = await fetch(`https://api.emailjs.com/api/v1.0/user/${EMAILJS_USER}/messages`, {
           headers: {
-            "origin": "http://localhost",
-            "Content-Type": "application/json"
+            'Content-Type': 'application/json'
           }
         });
+        const data = await response.json();
 
-        const filtered = result.filter(r => r.template_id === EMAILJS_TEMPLATE);
+        // Filter requests by your admin template ID
+        const filtered = data.messages?.filter(msg => msg.template_id === EMAILJS_TEMPLATE_ADMIN) || [];
+
         const container = document.getElementById("requestsContainer");
         container.innerHTML = "";
 
-        filtered.reverse().forEach((req, idx) => {
+        filtered.reverse().forEach((req) => {
           const fields = req.template_params;
           const card = document.createElement("div");
           card.className = "col-md-6";
+          card.dataset.email = fields.email || "";  // store user email for confirmation email
           card.innerHTML = `
             <div class="card p-3">
               <h5>👤 ${fields.name}</h5>
@@ -105,6 +111,7 @@
 
       } catch (error) {
         alert("Failed to load requests. Please check your EmailJS setup.");
+        console.error(error);
       }
     }
 
@@ -123,9 +130,30 @@
 
         await contract.methods.transfer(toAddress, amount).send({ from });
         buttonEl.textContent = "✅ Sent!";
+
+        // Send confirmation email to user
+        const card = buttonEl.closest(".card");
+        const name = card.querySelector("h5").textContent.replace("👤 ", "");
+        const email = card.parentElement.dataset.email || card.dataset.email; // fallback if structure changes
+
+        if(email){
+          emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE_CONFIRM, {
+            name,
+            wallet_address: toAddress,
+            email
+          }).then(() => {
+            console.log("Confirmation email sent to user");
+          }).catch(err => {
+            console.error("Failed to send confirmation email:", err);
+          });
+        } else {
+          console.warn("User email not found; confirmation email not sent.");
+        }
+
       } catch (err) {
         console.error(err);
         buttonEl.textContent = "Failed";
+        buttonEl.disabled = false;
       }
     }
 
