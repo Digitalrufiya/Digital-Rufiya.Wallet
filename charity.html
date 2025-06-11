@@ -1,44 +1,121 @@
-<!-- charity.html -->
-<form id="charityForm">
-  <h2>🤲 DRFM Charity Request</h2>
-  <input type="text" name="name" placeholder="Full Name" required />
-  <input type="text" name="wallet_address" placeholder="DRFM Wallet Address" required />
-  <input type="text" name="country" placeholder="Country" required />
-  <input type="number" name="age" placeholder="Age" required />
-  <button type="submit">Send Charity Request</button>
-</form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🤲 DRFM Charity Request</title>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+  <script>
+    (function() {
+      emailjs.init("iUGLTBCPJukDPr_nZ"); // Your Public Key
+    })();
+  </script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+      margin: 0;
+      padding: 40px 20px;
+    }
 
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    .charity-card {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .charity-card h2 {
+      color: #0a7cff;
+      margin-bottom: 10px;
+    }
+
+    .charity-card p {
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    .charity-card img {
+      width: 70px;
+      margin-bottom: 15px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #0a7cff;
+      color: white;
+      font-weight: bold;
+      border: none;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #056bd6;
+    }
+
+    #responseMessage {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    .footer-note {
+      font-size: 12px;
+      margin-top: 25px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+<div class="charity-card">
+  <img src="https://cdn-icons-png.flaticon.com/512/1047/1047243.png" alt="Charity Icon" />
+  <h2>🤲 Request 10 DRFM Tokens</h2>
+  <p>For believers in need — 1 request per day allowed.</p>
+
+  <form id="charityForm">
+    <input type="text" name="name" placeholder="Your Full Name" required />
+    <input type="text" name="wallet_address" placeholder="DRFM Wallet Address" required />
+    <input type="text" name="country" placeholder="Your Country" required />
+    <input type="number" name="age" placeholder="Your Age" required />
+    <input type="hidden" name="request_time" id="request_time" />
+    <button type="submit">Send Charity Request</button>
+  </form>
+
+  <p id="responseMessage"></p>
+
+  <div class="footer-note">
+    May Allah ﷻ bless you with barakah and Jannah 🤍
+  </div>
+</div>
+
 <script>
-  // Replace with your actual EmailJS values
-  const SERVICE_ID = "your_service_id";
-  const TEMPLATE_ID = "your_template_id";
-  const USER_ID = "your_public_key"; // EmailJS public key
-
-  emailjs.init(USER_ID);
-
-  document.getElementById("charityForm").addEventListener("submit", function (e) {
+  document.getElementById("charityForm").addEventListener("submit", function(e) {
     e.preventDefault();
+    document.getElementById("request_time").value = new Date().toLocaleString();
 
-    const now = new Date().toLocaleString();
-    const form = e.target;
-
-    const formData = {
-      name: form.name.value,
-      wallet_address: form.wallet_address.value,
-      country: form.country.value,
-      age: form.age.value,
-      request_time: now,
-    };
-
-    emailjs.send(SERVICE_ID, TEMPLATE_ID, formData)
+    emailjs.sendForm("service_gxe6qdm", "template_genho05", this)
       .then(() => {
-        alert("✅ Charity request sent successfully!");
-        form.reset();
-      })
-      .catch((error) => {
-        console.error("Email send error:", error);
-        alert("❌ Failed to send request. Try again.");
+        document.getElementById("responseMessage").innerText = "✅ Request sent successfully. JazakAllah Khair!";
+        document.getElementById("responseMessage").style.color = "green";
+        this.reset();
+      }, (error) => {
+        document.getElementById("responseMessage").innerText = "❌ Failed to send request. Try again.";
+        document.getElementById("responseMessage").style.color = "red";
+        console.error("EmailJS Error:", error);
       });
   });
 </script>
+
+</body>
+</html>
