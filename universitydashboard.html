@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF University - Student Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+    button { margin: 5px 0; padding: 8px 12px; }
+    #walletAddress { font-weight: bold; }
+    .course { background: white; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .enrolled { color: green; font-weight: bold; }
+    #uploadSection, #certificateSection { margin-top: 20px; background: white; padding: 15px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>DRF University - Student Dashboard</h1>
+
+  <button id="connectWalletBtn">Connect Wallet</button>
+  <div>Your Wallet: <span id="walletAddress">Not connected</span></div>
+
+  <h2>Available Courses</h2>
+  <div id="coursesList"></div>
+
+  <h2>Upload Your Project (for Certificate Application)</h2>
+  <div id="uploadSection" style="display:none;">
+    <input type="file" id="projectFile" />
+    <button id="uploadProjectBtn">Upload Project & Pay 120 USDC</button>
+    <div id="uploadStatus"></div>
+  </div>
+
+  <h2>Generate Certificate Hash</h2>
+  <div id="certificateSection" style="display:none;">
+    <textarea id="certificateData" rows="4" cols="50" placeholder="Paste your certificate JSON here..."></textarea><br />
+    <button id="generateHashBtn">Generate SHA-256 Hash</button>
+    <div id="hashOutput"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<script>
+  // Mock course data (replace with blockchain calls)
+  const courses = [
+    { id: 101, title: "AI Intelligence Mastery", description: "Master AI skills with live projects." },
+    { id: 102, title: "Software Makers Online", description: "Build software with AI assistance." },
+    { id: 103, title: "Online Store Builders", description: "Create your own store online easily." },
+    { id: 104, title: "Islamic Guidance & Knowledge", description: "Learn Islamic principles at mastery level." },
+    { id: 105, title: "DRF Backend with AI Help", description: "Build backend systems using AI." },
+  ];
+
+  let userAddress = null;
+  let enrolledCourses = [];
+
+  const walletSpan = document.getElementById('walletAddress');
+  const coursesList = document.getElementById('coursesList');
+  const uploadSection = document.getElementById('uploadSection');
+  const projectFileInput = document.getElementById('projectFile');
+  const uploadProjectBtn = document.getElementById('uploadProjectBtn');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const certificateSection = document.getElementById('certificateSection');
+  const certificateData = document.getElementById('certificateData');
+  const generateHashBtn = document.getElementById('generateHashBtn');
+  const hashOutput = document.getElementById('hashOutput');
+
+  // Connect wallet
+  document.getElementById('connectWalletBtn').onclick = async () => {
+    if(window.ethereum) {
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        walletSpan.textContent = userAddress;
+        loadCourses();
+        uploadSection.style.display = 'block';
+        certificateSection.style.display = 'block';
+      } catch(e) {
+        alert("Wallet connection failed: " + e.message);
+      }
+    } else {
+      alert("Please install MetaMask or compatible wallet.");
+    }
+  };
+
+  // Load courses and show enroll button or enrolled label
+  function loadCourses() {
+    coursesList.innerHTML = '';
+    courses.forEach(course => {
+      const div = document.createElement('div');
+      div.className = 'course';
+      div.innerHTML = `<h3>${course.title}</h3><p>${course.description}</p>`;
+      if(enrolledCourses.includes(course.id)) {
+        div.innerHTML += `<p class="enrolled">Enrolled</p>`;
+      } else {
+        const enrollBtn = document.createElement('button');
+        enrollBtn.textContent = 'Enroll';
+        enrollBtn.onclick = () => enrollCourse(course.id);
+        div.appendChild(enrollBtn);
+      }
+      coursesList.appendChild(div);
+    });
+  }
+
+  // Mock enroll function - here you should add blockchain tx to enroll
+  function enrollCourse(courseId) {
+    enrolledCourses.push(courseId);
+    alert("Enrolled in course ID: " + courseId);
+    loadCourses();
+  }
+
+  // Upload project & mock USDC payment
+  uploadProjectBtn.onclick = () => {
+    if(!projectFileInput.files.length) {
+      alert("Please select a project file.");
+      return;
+    }
+    const file = projectFileInput.files[0];
+    uploadStatus.textContent = `Uploading "${file.name}" and processing payment... (mock)`;
+    setTimeout(() => {
+      uploadStatus.textContent = "Upload and payment completed! You can now apply for certificate.";
+    }, 3000);
+  };
+
+  // SHA-256 hash function
+  async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  generateHashBtn.onclick = async () => {
+    const text = certificateData.value.trim();
+    if(!text) {
+      alert("Please paste certificate JSON data.");
+      return;
+    }
+    const hash = await sha256(text);
+    hashOutput.textContent = "SHA-256 Hash: " + hash;
+    alert("Certificate hash generated. You can send this hash on-chain via admin approval.");
+  };
+</script>
+
+</body>
+</html>
