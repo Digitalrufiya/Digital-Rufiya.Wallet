@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF University - AI Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #3b82f6;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    #chatContainer {
+      flex-grow: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background: white;
+      border: 1px solid #ddd;
+      margin: 15px;
+      border-radius: 8px;
+    }
+    #userInput {
+      width: calc(100% - 110px);
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+    }
+    #sendBtn {
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #completeBtn {
+      margin: 15px auto;
+      padding: 12px 25px;
+      background: #9333ea;
+      color: white;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: block;
+      max-width: 300px;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+    .user {
+      background: #3b82f6;
+      color: white;
+      align-self: flex-end;
+    }
+    .bot {
+      background: #e0e0e0;
+      color: #333;
+      align-self: flex-start;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Chat - <span id="courseName">Loading...</span></h1>
+  </header>
+
+  <div id="chatContainer"></div>
+
+  <div style="display:flex; padding: 15px; background: #fff;">
+    <input type="text" id="userInput" placeholder="Type your message here..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <button id="completeBtn">I have completed my project</button>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseName = urlParams.get('course') || 'Unknown Course';
+    document.getElementById('courseName').textContent = courseName;
+
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const completeBtn = document.getElementById('completeBtn');
+
+    // Simple mock bot replies
+    function botReply(message) {
+      const reply = document.createElement('div');
+      reply.className = 'message bot';
+      reply.textContent = "AI Bot: " + message;
+      chatContainer.appendChild(reply);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Add message to chat window
+    function addUserMessage(text) {
+      const msg = document.createElement('div');
+      msg.className = 'message user';
+      msg.textContent = text;
+      chatContainer.appendChild(msg);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    sendBtn.onclick = () => {
+      const text = userInput.value.trim();
+      if(!text) return;
+      addUserMessage(text);
+      userInput.value = '';
+
+      // Simple bot response logic (mock)
+      setTimeout(() => {
+        if(text.toLowerCase().includes('hello')) {
+          botReply("Hello! How can I assist you with " + courseName + "?");
+        } else if(text.toLowerCase().includes('help')) {
+          botReply("Feel free to ask any questions about the course.");
+        } else {
+          botReply("Thanks for your message. Keep going!");
+        }
+      }, 1000);
+    };
+
+    userInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter') sendBtn.click();
+    });
+
+    completeBtn.onclick = () => {
+      alert(`Congrats! You have marked the project for "${courseName}" as completed.`);
+      // TODO: Here you can redirect to the next step, e.g., project upload or certificate request
+      // For example:
+      // window.location.href = 'projectupload.html?course=' + encodeURIComponent(courseName);
+    };
+
+  </script>
+</body>
+</html>
