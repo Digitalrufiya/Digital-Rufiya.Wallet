@@ -1,3 +1,4 @@
+<!-- [Full working final version below] -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,68 +30,6 @@
       border-left: 5px solid #ffc107;
     }
   </style>
-
-  <!-- Firebase SDK modules -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getDatabase(app);
-
-    // Expose loadRequests to global scope so main script can call it
-    window.loadRequests = function() {
-      const container = document.getElementById("requestsContainer");
-      container.innerHTML = ""; // Clear container
-
-      const requestsRef = ref(db, 'charityRequests');
-
-      onValue(requestsRef, (snapshot) => {
-        container.innerHTML = ""; // Clear to reload fresh
-
-        if (!snapshot.exists()) {
-          container.innerHTML = "<p>No charity requests found.</p>";
-          return;
-        }
-
-        snapshot.forEach((childSnapshot) => {
-          const request = childSnapshot.val();
-
-          const card = document.createElement("div");
-          card.className = "col-md-6";
-          card.innerHTML = `
-            <div class="card p-3">
-              <h5>👤 ${request.name || "N/A"}</h5>
-              <p><strong>Wallet:</strong> ${request.wallet_address || "N/A"}</p>
-              <p><strong>Country:</strong> ${request.country || "N/A"}</p>
-              <p><strong>Age:</strong> ${request.age || "N/A"}</p>
-              <p><strong>Requested:</strong> ${request.request_time || "N/A"}</p>
-              <button class="btn btn-send" onclick="sendDRFM('${request.wallet_address}', this)">Send 10 DRFM</button>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      }, {
-        onlyOnce: true
-      });
-    };
-  </script>
-
 </head>
 <body>
 
@@ -106,7 +45,10 @@
   <!-- Admin Panel -->
   <div id="adminPanel" style="display:none;">
     <div class="container">
-      <h2 class="text-center text-primary mb-4">🤲 DRFM Charity Admin Panel</h2>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary">🤲 DRFM Charity Admin Panel</h2>
+        <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+      </div>
 
       <div id="walletWarning" class="wallet-warning mb-3 d-none">
         ⛔ Please connect using the authorized admin wallet address to access requests.
@@ -116,28 +58,77 @@
     </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.loadRequests = function () {
+      const container = document.getElementById("requestsContainer");
+      container.innerHTML = "<p class='text-center'>⏳ Loading requests...</p>";
+
+      const requestsRef = ref(db, "charityRequests");
+
+      onValue(requestsRef, (snapshot) => {
+        container.innerHTML = "";
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>No charity requests found.</p>";
+          return;
+        }
+
+        snapshot.forEach((childSnapshot) => {
+          const request = childSnapshot.val();
+          const card = document.createElement("div");
+          card.className = "col-md-6";
+          card.innerHTML = `
+            <div class="card p-3">
+              <h5>👤 ${request.name || "N/A"}</h5>
+              <p><strong>Wallet:</strong> ${request.wallet_address || "N/A"}</p>
+              <p><strong>Country:</strong> ${request.country || "N/A"}</p>
+              <p><strong>Age:</strong> ${request.age || "N/A"}</p>
+              <p><strong>Requested:</strong> ${request.request_time || "N/A"}</p>
+              <button class="btn btn-send" onclick="sendDRFM('${request.wallet_address}', this)">Send 10 DRFM</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      });
+    };
+  </script>
+
 <script>
-  // Admin credentials - DO NOT share these publicly!
   const ADMIN_EMAIL = "digitalrufiyacoin@gmail.com";
   const ADMIN_PASS = "Zivian@2020";
 
-  // EmailJS and blockchain constants
   const ADMIN_WALLET = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C".toLowerCase();
   const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
   const DRFM_ABI = [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
 
   const EMAILJS_SERVICE = "service_gxe6qdm";
-  const EMAILJS_TEMPLATE = "template_genho05";
+  const EMAILJS_TEMPLATE = "template_nnm02vn";
   const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
 
   emailjs.init(EMAILJS_USER);
 
-  // Login logic
   document.getElementById("loginBtn").onclick = () => {
     const email = document.getElementById("adminEmail").value.trim();
     const pass = document.getElementById("adminPass").value;
 
-    if(email === ADMIN_EMAIL && pass === ADMIN_PASS){
+    if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
       sessionStorage.setItem("adminLoggedIn", "true");
       showAdminPanel();
     } else {
@@ -145,19 +136,23 @@
     }
   };
 
-  function showAdminPanel(){
+  function showAdminPanel() {
     document.getElementById("loginDiv").style.display = "none";
     document.getElementById("adminPanel").style.display = "block";
     connectWallet();
   }
 
+  function logout() {
+    sessionStorage.removeItem("adminLoggedIn");
+    location.reload();
+  }
+
   window.onload = () => {
-    if(sessionStorage.getItem("adminLoggedIn") === "true"){
+    if (sessionStorage.getItem("adminLoggedIn") === "true") {
       showAdminPanel();
     }
   };
 
-  // Wallet connect & validation
   async function connectWallet() {
     if (typeof window.ethereum !== 'undefined') {
       try {
@@ -170,7 +165,7 @@
         }
 
         document.getElementById("walletWarning").classList.add("d-none");
-        loadRequests();  // Load requests from Firebase here
+        loadRequests();
       } catch (err) {
         alert("MetaMask connection denied.");
       }
@@ -179,7 +174,6 @@
     }
   }
 
-  // Send DRFM tokens via contract
   async function sendDRFM(toAddress, buttonEl) {
     if (!window.ethereum) return alert("MetaMask not found");
 
@@ -196,8 +190,7 @@
       await contract.methods.transfer(toAddress, amount).send({ from });
       buttonEl.textContent = "✅ Sent!";
 
-      // Send confirmation email to user
-      await emailjs.send(EMAILJS_SERVICE, "template_nnm02vn", {
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
         to_email: from,
         to_name: "Charity User",
         wallet_address: toAddress,
@@ -208,7 +201,7 @@
     } catch (err) {
       console.error(err);
       buttonEl.textContent = "Failed";
-      alert("Failed to send tokens. See console for details.");
+      alert("Failed to send tokens.");
     }
   }
 </script>
