@@ -68,7 +68,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+    import { getDatabase, ref, onValue, get, child, set } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -127,20 +127,34 @@
     const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
     emailjs.init(EMAILJS_USER);
 
-    // Login button
     document.getElementById("loginBtn").onclick = () => {
       const email = document.getElementById("adminEmail").value.trim();
       const pass = document.getElementById("adminPass").value.trim();
 
       if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
         sessionStorage.setItem("adminLoggedIn", "true");
+        autoRegisterAdmin();
         showAdminPanel();
       } else {
         document.getElementById("loginError").style.display = "block";
       }
     };
 
-    // Show admin panel if logged in
+    function autoRegisterAdmin() {
+      const dbUrl = "https://drfsocial-23a06-default-rtdb.firebaseio.com/admins.json";
+      fetch(dbUrl)
+        .then(res => res.json())
+        .then(data => {
+          if (!data || !Object.values(data).includes(true)) {
+            fetch("https://drfsocial-23a06-default-rtdb.firebaseio.com/admins.json", {
+              method: "POST",
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(true)
+            });
+          }
+        });
+    }
+
     function showAdminPanel() {
       document.getElementById("loginDiv").style.display = "none";
       document.getElementById("adminPanel").style.display = "block";
@@ -148,20 +162,17 @@
       connectWallet();
     }
 
-    // On page load
     window.onload = () => {
       if (sessionStorage.getItem("adminLoggedIn") === "true") {
         showAdminPanel();
       }
     };
 
-    // Logout
     function logout() {
       sessionStorage.removeItem("adminLoggedIn");
       window.location.reload();
     }
 
-    // Connect Wallet
     async function connectWallet() {
       if (window.ethereum) {
         try {
@@ -183,7 +194,6 @@
       }
     }
 
-    // Send DRFM
     async function sendDRFM(toAddress, buttonEl) {
       if (!window.ethereum) return alert("MetaMask not found");
       const web3 = new Web3(window.ethereum);
