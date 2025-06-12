@@ -1,32 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Charity Request</title>
+  <title>Charity Requests - Admin</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 500px; margin: auto; }
-    input, button { display: block; width: 100%; padding: 10px; margin-bottom: 10px; }
-    .status { margin-top: 10px; color: green; }
-    .error { color: red; }
+    body { font-family: Arial; padding: 20px; }
+    .request { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    .wallet { font-weight: bold; }
   </style>
 </head>
 <body>
-  <h2>Charity Request Form</h2>
-
-  <input type="text" id="name" placeholder="Your Name" required />
-  <input type="text" id="wallet" placeholder="BSC Wallet Address (0x...)" required />
-  <input type="text" id="country" placeholder="Country" required />
-  <input type="number" id="amount" placeholder="Requested Amount" required />
-  <button onclick="submitRequest()">Send Request</button>
-
-  <div id="loginStatus"></div>
-  <div class="status" id="statusMessage"></div>
+  <h2>Charity Requests (Admin View)</h2>
+  <div id="requests"></div>
 
   <script>
-    // ✅ Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_AUTH_DOMAIN",
@@ -38,67 +27,30 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+    firebase.auth().signInAnonymously();
 
-    // 👤 Anonymous auth
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(user => {
       if (user) {
-        document.getElementById("loginStatus").innerText = "✅ Logged in as: " + user.uid;
-      } else {
-        firebase.auth().signInAnonymously()
-          .catch(error => {
-            document.getElementById("statusMessage").innerText = "❌ Auth error: " + error.message;
-          });
+        firebase.database().ref("charityRequests").once("value", snapshot => {
+          const data = snapshot.val();
+          const container = document.getElementById("requests");
+          container.innerHTML = "";
+
+          for (let key in data) {
+            const req = data[key];
+            container.innerHTML += `
+              <div class="request">
+                <p><strong>Name:</strong> ${req.name}</p>
+                <p><strong>Wallet:</strong> <span class="wallet">${req.wallet_address}</span></p>
+                <p><strong>Country:</strong> ${req.country}</p>
+                <p><strong>Amount:</strong> ${req.amount}</p>
+                <p><strong>Time:</strong> ${req.request_time}</p>
+              </div>
+            `;
+          }
+        });
       }
     });
-
-    function isValidWallet(addr) {
-      return /^0x[a-fA-F0-9]{40}$/.test(addr);
-    }
-
-    function submitRequest() {
-      const name = document.getElementById("name").value.trim();
-      const wallet = document.getElementById("wallet").value.trim();
-      const country = document.getElementById("country").value.trim();
-      const amount = parseFloat(document.getElementById("amount").value.trim());
-      const statusMsg = document.getElementById("statusMessage");
-
-      if (!name || !wallet || !country || isNaN(amount)) {
-        statusMsg.innerText = "❌ Please fill all fields correctly.";
-        statusMsg.className = "error";
-        return;
-      }
-
-      if (!isValidWallet(wallet)) {
-        statusMsg.innerText = "❌ Invalid BSC Wallet Address.";
-        statusMsg.className = "error";
-        return;
-      }
-
-      const user = firebase.auth().currentUser;
-      if (!user) {
-        statusMsg.innerText = "❌ Not authenticated. Try again.";
-        statusMsg.className = "error";
-        return;
-      }
-
-      const request = {
-        name: name,
-        wallet_address: wallet,
-        country: country,
-        amount: amount,
-        request_time: new Date().toISOString()
-      };
-
-      firebase.database().ref("charityRequests").push(request)
-        .then(() => {
-          statusMsg.innerText = "✅ Request sent successfully!";
-          statusMsg.className = "status";
-        })
-        .catch((error) => {
-          statusMsg.innerText = "❌ Firebase error: " + error.message;
-          statusMsg.className = "error";
-        });
-    }
   </script>
 </body>
 </html>
