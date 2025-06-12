@@ -8,26 +8,45 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getDatabase, ref, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+    import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
       databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
       projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
       measurementId: "G-W6VHMP77YR"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
+    // Auto sign-in with Google
+    onAuthStateChanged(auth, user => {
+      const userInfo = document.getElementById("userInfo");
+      if (user) {
+        userInfo.textContent = `🔐 Signed in as: ${user.email}`;
+      } else {
+        userInfo.textContent = "";
+        signInWithPopup(auth, provider)
+          .then(result => {
+            userInfo.textContent = `🔐 Signed in as: ${result.user.email}`;
+          })
+          .catch(error => {
+            console.error("Auth error:", error);
+            alert("Login failed. Please refresh and try again.");
+          });
+      }
+    });
+
+    // Send request to Firebase
     window.sendCharityRequest = async function(data) {
-      // Push request to charityRequests node
       const charityRequestsRef = ref(database, 'charityRequests');
       return push(charityRequestsRef, {
         name: data.name,
@@ -41,7 +60,7 @@
 
   <script>
     (function() {
-      emailjs.init("iUGLTBCPJukDPr_nZ"); // Your EmailJS Public Key
+      emailjs.init("iUGLTBCPJukDPr_nZ"); // Your EmailJS public key
     })();
   </script>
 
@@ -105,6 +124,12 @@
       font-weight: bold;
     }
 
+    #userInfo {
+      font-size: 14px;
+      margin-top: 10px;
+      color: #444;
+    }
+
     .footer-note {
       font-size: 12px;
       margin-top: 25px;
@@ -128,6 +153,7 @@
   </form>
 
   <p id="responseMessage"></p>
+  <p id="userInfo"></p>
 
   <div class="footer-note">
     May Allah ﷻ bless you with barakah and Jannah 🤍
@@ -144,7 +170,6 @@
     const country = form.country.value.trim();
     const age = parseInt(form.age.value.trim());
 
-    // Basic wallet address validation (Ethereum-style)
     const walletRegex = /^0x[a-fA-F0-9]{40}$/;
     if (!walletRegex.test(wallet_address)) {
       showMessage("❌ Invalid wallet address format. It should start with 0x followed by 40 hex characters.", "red");
@@ -152,10 +177,7 @@
     }
 
     try {
-      // Send EmailJS email notification
       await emailjs.sendForm("service_gxe6qdm", "template_genho05", form);
-
-      // Send data to Firebase Realtime Database
       await window.sendCharityRequest({ name, wallet_address, country, age });
 
       showMessage("✅ Request sent successfully. JazakAllah Khair!", "green");
