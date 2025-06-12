@@ -5,38 +5,106 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AI University - Student Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #ffffff;
+      color: #000000;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark-mode {
+      background-color: #1a1a1a;
+      color: #f0f0f0;
+    }
     #walletAddress { font-weight: bold; }
-    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    #chat {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
     #inputArea { margin-top: 10px; }
     #inputArea input { width: 80%; padding: 8px; }
     #inputArea button { padding: 8px; }
     #projectUpload { margin-top: 20px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+
+    .section {
+      margin-top: 30px;
+    }
+
+    #themeSwitcher {
+      float: right;
+      margin-top: -50px;
+    }
   </style>
 </head>
 <body>
 
   <h1>Welcome to AI University</h1>
-
-  <button id="connectWalletBtn">Connect Wallet</button>  
+  <button id="connectWalletBtn">Connect Wallet</button>
   <div>Your Wallet: <span id="walletAddress">Not connected</span></div>
+  <button id="themeSwitcher">Switch Theme</button>
 
-  <h2>AI Chat Assistant</h2>
-  <div id="chat"></div>
-  <div id="inputArea">
-    <input type="text" id="userInput" placeholder="Ask me anything..." />
-    <button id="sendBtn">Send</button>
+  <div class="section">
+    <h2>Student Profile</h2>
+    <div><b>Name:</b> Jane Doe</div>
+    <div><b>Student ID:</b> AIU2025-001</div>
+    <div><b>Program:</b> BSc Artificial Intelligence</div>
+    <div><b>Enrollment Year:</b> 2022</div>
   </div>
 
-  <h2>Upload Your Project</h2>
-  <input type="file" id="projectFile" />
-  <button id="uploadBtn">Upload to IPFS/Filecoin</button>
-  <div id="uploadStatus"></div>
+  <div class="section">
+    <h2>Course List & Grades</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Course Code</th>
+          <th>Course Title</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>AI101</td><td>Intro to AI</td><td>A</td></tr>
+        <tr><td>ML201</td><td>Machine Learning</td><td>A-</td></tr>
+        <tr><td>DL301</td><td>Deep Learning</td><td>B+</td></tr>
+        <tr><td>DS401</td><td>Data Science</td><td>A</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h2>Certificate Hash & On-Chain Proof</h2>
-  <textarea id="certificateData" rows="4" cols="50" placeholder="Paste your certificate JSON here..."></textarea><br />
-  <button id="hashCertBtn">Generate SHA-256 Hash & Send On-Chain</button>
-  <div id="hashOutput"></div>
+  <div class="section">
+    <h2>AI Chat Assistant</h2>
+    <div id="chat"></div>
+    <div id="inputArea">
+      <input type="text" id="userInput" placeholder="Ask me anything..." />
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Upload Your Project</h2>
+    <input type="file" id="projectFile" />
+    <button id="uploadBtn">Upload to IPFS/Filecoin</button>
+    <div id="uploadStatus"></div>
+  </div>
+
+  <div class="section">
+    <h2>Certificate Hash & On-Chain Proof</h2>
+    <textarea id="certificateData" rows="4" cols="50" placeholder="Paste your certificate JSON here..."></textarea><br />
+    <button id="hashCertBtn">Generate SHA-256 Hash & Send On-Chain</button>
+    <div id="hashOutput"></div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script>
@@ -44,9 +112,7 @@
     const connectWalletBtn = document.getElementById('connectWalletBtn');
     const walletAddressSpan = document.getElementById('walletAddress');
 
-    let provider;
-    let signer;
-    let userAddress;
+    let provider, signer, userAddress;
 
     connectWalletBtn.onclick = async () => {
       if(window.ethereum){
@@ -65,7 +131,7 @@
       }
     };
 
-    // Simple chat UI (mock AI response)
+    // Simple chat UI
     const chatDiv = document.getElementById('chat');
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
@@ -82,14 +148,12 @@
       if(!question) return;
       addChatMessage('You', question);
       userInput.value = '';
-
-      // MOCK AI response - replace with real API call
       setTimeout(() => {
         addChatMessage('AI', 'This is a mock response to: "' + question + '".');
       }, 1000);
     };
 
-    // Upload project placeholder (no real IPFS upload here yet)
+    // Project upload placeholder
     const uploadBtn = document.getElementById('uploadBtn');
     const projectFileInput = document.getElementById('projectFile');
     const uploadStatus = document.getElementById('uploadStatus');
@@ -100,11 +164,10 @@
         return;
       }
       const file = projectFileInput.files[0];
-      // TODO: Integrate IPFS/Filecoin upload here
       uploadStatus.textContent = `Uploading "${file.name}" ... (functionality coming soon)`;
     };
 
-    // Certificate hashing and mock on-chain send
+    // Certificate hash logic
     const hashCertBtn = document.getElementById('hashCertBtn');
     const certificateData = document.getElementById('certificateData');
     const hashOutput = document.getElementById('hashOutput');
@@ -124,14 +187,15 @@
       }
       const hash = await sha256(certText);
       hashOutput.textContent = 'SHA-256 Hash: ' + hash;
-
       addChatMessage('System', `Certificate hash generated: ${hash}`);
-      
-      // TODO: Add blockchain transaction sending code here
-      // Example: call a smart contract method with this hash from connected wallet
+      // TODO: Send to smart contract
     };
 
+    // Theme switcher
+    const themeSwitcher = document.getElementById('themeSwitcher');
+    themeSwitcher.onclick = () => {
+      document.body.classList.toggle('dark-mode');
+    };
   </script>
-
 </body>
 </html>
