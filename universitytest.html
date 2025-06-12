@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Apply for Certificate - DRF University</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -42,10 +42,13 @@
       cursor: pointer;
       font-size: 16px;
     }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-
 <header>
   <h2>🎓 DRF University</h2>
   <div class="toggle-theme" onclick="toggleTheme()">🌓 Theme</div>
@@ -55,73 +58,116 @@
   <h3>Apply for Blockchain Certificate</h3>
 
   <p><b>Wallet Address:</b> <span id="walletAddress">Not connected</span></p>
-  <button onclick="connectWallet()">Connect Wallet</button>
+  <button id="connectWalletBtn">Connect Wallet</button>
 
   <label>📁 Upload Final Project:</label>
-  <input type="file" id="projectFile">
+  <input type="file" id="projectFile" />
 
   <label>✍️ Consent:</label>
-  <input type="checkbox" id="consentCheck"> I allow DRF University to review and reuse my project.
+  <input type="checkbox" id="consentCheck" /> I allow DRF University to review and reuse my project.
 
-  <button onclick="payUSDC()">Pay $120 USDC for Certificate</button>
-
-  <button onclick="submitApplication()">Submit Application</button>
+  <button id="payBtn" disabled>Pay $120 USDC for Certificate</button>
+  <button id="submitBtn" disabled>Submit Application</button>
 
   <p id="status"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/web3.storage/dist/bundle.min.js"></script>
 <script>
-  let provider, signer, userAddress;
+  // === CONFIG: CHANGE THESE ===
+  const USDC_CONTRACT_ADDRESS = "0xYourUSDCContract"; // replace with real USDC address on your chain
+  const RECIPIENT_ADDRESS = "0xYourRecipientWallet";  // replace with your wallet address to receive payment
+  const WEB3_STORAGE_TOKEN = "YOUR_WEB3_STORAGE_API_TOKEN"; // get from https://web3.storage
 
-  async function connectWallet() {
-    if (window.ethereum) {
+  let provider, signer, userAddress;
+  let projectCID = null;
+  let paymentDone = false;
+
+  const walletSpan = document.getElementById('walletAddress');
+  const connectWalletBtn = document.getElementById('connectWalletBtn');
+  const payBtn = document.getElementById('payBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusP = document.getElementById('status');
+
+  // Connect wallet
+  connectWalletBtn.onclick = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask or compatible wallet.");
+      return;
+    }
+    try {
       provider = new ethers.providers.Web3Provider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
       signer = provider.getSigner();
       userAddress = await signer.getAddress();
-      document.getElementById('walletAddress').textContent = userAddress;
-    } else {
-      alert("Install MetaMask or compatible wallet.");
+      walletSpan.textContent = userAddress;
+      payBtn.disabled = false;
+      statusP.textContent = "Wallet connected. Now upload your project and pay the fee.";
+    } catch (e) {
+      alert("Wallet connection failed: " + e.message);
     }
-  }
+  };
 
-  async function payUSDC() {
-    // TODO: Replace with actual USDC contract address + recipient
-    const usdcAddress = "0xYourUSDCContract"; // Replace
-    const recipient = "0xYourWalletOrContract"; // Replace
-
-    const usdcABI = [
-      "function transfer(address to, uint amount) public returns (bool)"
-    ];
-    const usdcContract = new ethers.Contract(usdcAddress, usdcABI, signer);
-
-    const amount = ethers.utils.parseUnits("120", 6); // USDC has 6 decimals
+  // Upload file to IPFS
+  async function uploadProjectToIPFS(file) {
+    statusP.textContent = "Uploading project to IPFS...";
+    const client = new Web3Storage.Web3Storage({ token: WEB3_STORAGE_TOKEN });
     try {
-      const tx = await usdcContract.transfer(recipient, amount);
-      await tx.wait();
-      alert("Payment successful!");
-    } catch (err) {
-      alert("Payment failed: " + err.message);
+      const cid = await client.put([file], { wrapWithDirectory: false });
+      statusP.textContent = "Upload successful. IPFS CID: " + cid;
+      return cid;
+    } catch (e) {
+      statusP.textContent = "IPFS upload failed: " + e.message;
+      throw e;
     }
   }
 
-  async function submitApplication() {
+  // Pay USDC
+  payBtn.onclick = async () => {
+    if (!signer) return alert("Connect your wallet first.");
     const file = document.getElementById('projectFile').files[0];
     const consent = document.getElementById('consentCheck').checked;
+    if (!file) return alert("Please upload your project file first.");
+    if (!consent) return alert("You must give consent to proceed.");
 
-    if (!userAddress) return alert("Connect your wallet.");
-    if (!file) return alert("Upload your project.");
-    if (!consent) return alert("You must give permission to proceed.");
+    try {
+      projectCID = await uploadProjectToIPFS(file);
 
-    // TODO: Upload project to IPFS
-    document.getElementById('status').textContent = "✅ Application submitted. Await admin approval.";
-  }
+      const usdcABI = ["function transfer(address to, uint amount) public returns (bool)"];
+      const usdcContract = new ethers.Contract(USDC_CONTRACT_ADDRESS, usdcABI, signer);
+      const amount = ethers.utils.parseUnits("120", 6); // USDC 6 decimals
 
+      statusP.textContent = "Sending USDC payment...";
+      const tx = await usdcContract.transfer(RECIPIENT_ADDRESS, amount);
+      await tx.wait();
+
+      statusP.textContent = "Payment successful! You can now submit your application.";
+      paymentDone = true;
+      submitBtn.disabled = false;
+      payBtn.disabled = true;
+    } catch (e) {
+      statusP.textContent = "Payment or upload failed: " + e.message;
+    }
+  };
+
+  // Submit application
+  submitBtn.onclick = () => {
+    if (!paymentDone) return alert("Please complete the payment first.");
+    const consent = document.getElementById('consentCheck').checked;
+    if (!consent) return alert("Consent is required.");
+
+    // Here you can add logic to send projectCID + userAddress + consent info to backend or smart contract
+
+    statusP.textContent = "✅ Application submitted. Await admin approval.";
+    submitBtn.disabled = true;
+  };
+
+  // Toggle theme
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
   }
+  window.toggleTheme = toggleTheme;
 </script>
-
 </body>
 </html>
