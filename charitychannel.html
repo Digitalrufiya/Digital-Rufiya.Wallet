@@ -5,7 +5,7 @@
   <title>🤲 DRFM Charity Request</title>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDK & Init -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
@@ -27,23 +27,20 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
+    window.firebaseTools = { auth, provider, signInWithPopup, onAuthStateChanged, signOut };
     window.sendCharityRequest = async function(data) {
-      const charityRequestsRef = ref(database, 'charityRequests');
-      return push(charityRequestsRef, {
-        name: data.name,
-        wallet_address: data.wallet_address,
-        country: data.country,
-        age: data.age,
+      const refPath = ref(database, 'charityRequests');
+      return push(refPath, {
+        ...data,
         request_time: new Date().toLocaleString()
       });
     };
-
-    window.firebaseAuth = { auth, provider, signInWithPopup, onAuthStateChanged, signOut };
   </script>
 
+  <!-- EmailJS Init -->
   <script>
-    (function() {
-      emailjs.init("iUGLTBCPJukDPr_nZ"); // Replace with your EmailJS public key
+    (function () {
+      emailjs.init("iUGLTBCPJukDPr_nZ"); // replace with your key
     })();
   </script>
 
@@ -163,82 +160,85 @@
   </div>
 </div>
 
-<script type="module">
-  import { auth, provider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+<!-- App Logic -->
+<script>
+  window.addEventListener("load", function () {
+    const { auth, provider, signInWithPopup, onAuthStateChanged, signOut } = window.firebaseTools;
 
-  const signInBtn = document.getElementById("signInBtn");
-  const signOutBtn = document.getElementById("signOutBtn");
-  const userInfo = document.getElementById("userInfo");
-  const form = document.getElementById("charityForm");
+    const signInBtn = document.getElementById("signInBtn");
+    const signOutBtn = document.getElementById("signOutBtn");
+    const userInfo = document.getElementById("userInfo");
+    const form = document.getElementById("charityForm");
 
-  signInBtn.addEventListener("click", () => {
-    signInWithPopup(auth, provider)
-      .then(result => {
-        userInfo.textContent = `🔐 Signed in as: ${result.user.email}`;
-        toggleAuthButtons(true);
-      })
-      .catch(error => {
-        alert("Sign-in failed: " + error.message);
-      });
-  });
+    function toggleAuthButtons(isSignedIn) {
+      signInBtn.style.display = isSignedIn ? "none" : "block";
+      signOutBtn.style.display = isSignedIn ? "block" : "none";
+    }
 
-  signOutBtn.addEventListener("click", () => {
-    signOut(auth).then(() => {
-      userInfo.textContent = "";
-      toggleAuthButtons(false);
+    signInBtn.addEventListener("click", () => {
+      signInWithPopup(auth, provider)
+        .then(result => {
+          userInfo.textContent = `🔐 Signed in as: ${result.user.email}`;
+          toggleAuthButtons(true);
+        })
+        .catch(error => {
+          alert("Sign-in failed: " + error.message);
+        });
     });
-  });
 
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      userInfo.textContent = `🔐 Signed in as: ${user.email}`;
-      toggleAuthButtons(true);
-    } else {
-      userInfo.textContent = "";
-      toggleAuthButtons(false);
+    signOutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        userInfo.textContent = "";
+        toggleAuthButtons(false);
+      });
+    });
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        userInfo.textContent = `🔐 Signed in as: ${user.email}`;
+        toggleAuthButtons(true);
+      } else {
+        userInfo.textContent = "";
+        toggleAuthButtons(false);
+      }
+    });
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      if (!auth.currentUser) {
+        alert("⚠️ Please sign in with Google before submitting a request.");
+        return;
+      }
+
+      const name = form.name.value.trim();
+      const wallet_address = form.wallet_address.value.trim();
+      const country = form.country.value.trim();
+      const age = parseInt(form.age.value.trim());
+
+      const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!walletRegex.test(wallet_address)) {
+        showMessage("❌ Invalid wallet address format.", "red");
+        return;
+      }
+
+      try {
+        await emailjs.sendForm("service_gxe6qdm", "template_genho05", form);
+        await window.sendCharityRequest({ name, wallet_address, country, age });
+        showMessage("✅ Request sent successfully. JazakAllah Khair!", "green");
+        form.reset();
+      } catch (error) {
+        console.error(error);
+        showMessage("❌ Failed to send request. Try again later.", "red");
+      }
+    });
+
+    function showMessage(msg, color) {
+      const msgEl = document.getElementById("responseMessage");
+      msgEl.textContent = msg;
+      msgEl.style.color = color;
     }
   });
-
-  function toggleAuthButtons(isSignedIn) {
-    signInBtn.style.display = isSignedIn ? "none" : "block";
-    signOutBtn.style.display = isSignedIn ? "block" : "none";
-  }
-
-  form.addEventListener("submit", async function(e) {
-    e.preventDefault();
-
-    if (!auth.currentUser) {
-      alert("⚠️ Please sign in with Google before submitting a request.");
-      return;
-    }
-
-    const name = form.name.value.trim();
-    const wallet_address = form.wallet_address.value.trim();
-    const country = form.country.value.trim();
-    const age = parseInt(form.age.value.trim());
-
-    const walletRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!walletRegex.test(wallet_address)) {
-      showMessage("❌ Invalid wallet address format. It should start with 0x followed by 40 hex characters.", "red");
-      return;
-    }
-
-    try {
-      await emailjs.sendForm("service_gxe6qdm", "template_genho05", form);
-      await window.sendCharityRequest({ name, wallet_address, country, age });
-      showMessage("✅ Request sent successfully. JazakAllah Khair!", "green");
-      form.reset();
-    } catch (error) {
-      console.error("Error:", error);
-      showMessage("❌ Failed to send request. Try again later.", "red");
-    }
-  });
-
-  function showMessage(msg, color) {
-    const responseEl = document.getElementById("responseMessage");
-    responseEl.innerText = msg;
-    responseEl.style.color = color;
-  }
 </script>
 
 </body>
