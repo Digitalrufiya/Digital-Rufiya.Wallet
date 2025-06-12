@@ -1,109 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>DRF Boosting Page</title>
-  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boost DApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
   <style>
     body {
-      background: #0f172a;
-      color: #fff;
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 400px;
+      margin: auto;
       text-align: center;
-      padding: 40px;
     }
-
-    h1 {
-      color: #38bdf8;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 18px;
-      margin-bottom: 30px;
-    }
-
     button {
-      background: #22c55e;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      margin: 15px;
-      border-radius: 12px;
+      font-size: 1.2rem;
+      padding: 0.8rem 1.5rem;
+      margin: 1rem 0;
       cursor: pointer;
-      transition: 0.3s;
+      border-radius: 6px;
+      border: none;
+      background-color: #3b82f6;
+      color: white;
+      transition: background-color 0.3s ease;
     }
-
-    button:hover {
-      background: #16a34a;
-    }
-
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-      color: #facc15;
+    button:disabled {
+      background-color: #a5b4fc;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
-  <h1>🚀 DRF Social Boost</h1>
-  <p>Promote your content and support the ecosystem. Choose your plan:</p>
-
-  <button onclick="boost('believer')">✨ Boost as Believer ($30 for 30 days)</button>
-  <button onclick="boost('disbeliever')">💼 Boost as Business/Disbeliever ($60 for 30 days)</button>
-
-  <p id="status"></p>
+  <h1>Boost Your DRF</h1>
+  <button id="connectBtn">Connect Wallet</button>
+  <br />
+  <button id="boostBtn" disabled>Boost</button>
 
   <script>
-    const USDC_TOKEN_ADDRESS = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'; // USDC BSC
-    const RECEIVER_ADDRESS = '0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b'; // Your receiving wallet
-    const USDC_DECIMALS = 18;
+    const connectBtn = document.getElementById('connectBtn');
+    const boostBtn = document.getElementById('boostBtn');
 
-    const PRICES = {
-      believer: 30,
-      disbeliever: 60
-    };
+    let provider;
+    let signer;
 
-    const tokenABI = [
-      {
-        "constant": false,
-        "inputs": [
-          { "name": "_to", "type": "address" },
-          { "name": "_value", "type": "uint256" }
-        ],
-        "name": "transfer",
-        "outputs": [{ "name": "", "type": "bool" }],
-        "type": "function"
+    // WalletConnect provider instance
+    let wcProvider;
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        // MetaMask available
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          connectBtn.textContent = 'Wallet Connected (MetaMask)';
+          boostBtn.disabled = false;
+
+          // Optional: Listen for account/network changes
+          window.ethereum.on('accountsChanged', () => location.reload());
+          window.ethereum.on('chainChanged', () => location.reload());
+
+        } catch (err) {
+          alert('MetaMask connection rejected.');
+        }
+      } else {
+        // MetaMask NOT available, try WalletConnect
+        try {
+          wcProvider = new WalletConnectProvider.default({
+            rpc: {
+              56: 'https://bsc-dataseed.binance.org/',
+            },
+            chainId: 56,
+          });
+          await wcProvider.enable();
+          provider = new ethers.providers.Web3Provider(wcProvider);
+          signer = provider.getSigner();
+          connectBtn.textContent = 'Wallet Connected (WalletConnect)';
+          boostBtn.disabled = false;
+
+          // Optional: Listen for disconnect
+          wcProvider.on("disconnect", () => {
+            alert('WalletConnect disconnected.');
+            location.reload();
+          });
+
+        } catch (err) {
+          alert('Please install MetaMask or connect with WalletConnect-compatible wallet.');
+          console.error(err);
+        }
       }
-    ];
+    }
 
-    async function boost(type) {
-      if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask to continue.');
+    async function boostAction() {
+      if (!signer) {
+        alert('Please connect your wallet first.');
         return;
       }
 
-      const amount = PRICES[type];
-      const web3 = new Web3(window.ethereum);
-      await ethereum.request({ method: 'eth_requestAccounts' });
-
-      const accounts = await web3.eth.getAccounts();
-      const sender = accounts[0];
-
-      const contract = new web3.eth.Contract(tokenABI, USDC_TOKEN_ADDRESS);
-      const value = web3.utils.toBN(amount * 10 ** USDC_DECIMALS);
-
-      document.getElementById('status').innerText = `⏳ Sending $${amount} USDC boost payment...`;
-
       try {
-        const tx = await contract.methods.transfer(RECEIVER_ADDRESS, value).send({ from: sender });
-        document.getElementById('status').innerText = `✅ Boost successful! TX Hash: ${tx.transactionHash}`;
-      } catch (error) {
-        console.error(error);
-        document.getElementById('status').innerText = '❌ Boost failed or cancelled.';
+        const address = await signer.getAddress();
+        alert(`Boost action triggered for wallet:\n${address}\n\nReplace this with your actual boost logic.`);
+        // Here, add your boost logic (e.g., send transaction)
+      } catch (err) {
+        alert('Error getting signer address.');
+        console.error(err);
       }
     }
+
+    connectBtn.onclick = connectWallet;
+    boostBtn.onclick = boostAction;
   </script>
 </body>
 </html>
