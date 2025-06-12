@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI University - Student Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <div class="max-w-5xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-bold text-indigo-700">🎓 AI University</h1>
+      <button id="connectWalletBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+        Connect Wallet
+      </button>
+    </header>
+
+    <div class="mb-4 text-gray-700 text-sm">
+      Your Wallet: <span id="walletAddress" class="font-semibold">Not connected</span>
+    </div>
+
+    <!-- Chat Assistant -->
+    <section class="bg-white shadow-md rounded-lg p-5 mb-6">
+      <h2 class="text-xl font-semibold mb-3 text-indigo-600">🤖 AI Chat Assistant</h2>
+      <div id="chat" class="border rounded-md p-3 h-64 overflow-y-auto bg-gray-50 mb-3"></div>
+      <div class="flex gap-2">
+        <input type="text" id="userInput" placeholder="Ask me anything..." class="flex-grow p-2 border rounded" />
+        <button id="sendBtn" class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600">Send</button>
+      </div>
+    </section>
+
+    <!-- Project Upload -->
+    <section class="bg-white shadow-md rounded-lg p-5 mb-6">
+      <h2 class="text-xl font-semibold mb-3 text-indigo-600">📁 Upload Your Project</h2>
+      <input type="file" id="projectFile" class="mb-3" />
+      <button id="uploadBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Upload to IPFS/Filecoin
+      </button>
+      <div id="uploadStatus" class="mt-2 text-sm text-gray-700"></div>
+    </section>
+
+    <!-- Certificate Verification -->
+    <section class="bg-white shadow-md rounded-lg p-5">
+      <h2 class="text-xl font-semibold mb-3 text-indigo-600">📜 Certificate Verification</h2>
+      <textarea id="certificateData" rows="4" class="w-full p-2 border rounded mb-3" placeholder="Paste your certificate JSON here..."></textarea>
+      <button id="hashCertBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        Generate SHA-256 Hash & Send On-Chain
+      </button>
+      <div id="hashOutput" class="mt-2 text-sm text-gray-800"></div>
+    </section>
+  </div>
+
+  <script>
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+
+    let provider, signer, userAddress;
+
+    connectWalletBtn.onclick = async () => {
+      if (window.ethereum) {
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+          walletAddressSpan.textContent = userAddress;
+          addChatMessage('System', 'Wallet connected: ' + userAddress);
+        } catch {
+          alert('Wallet connection failed');
+        }
+      } else {
+        alert('Please install MetaMask or compatible wallet.');
+      }
+    };
+
+    const chatDiv = document.getElementById('chat');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function addChatMessage(sender, message) {
+      const msg = document.createElement('div');
+      msg.innerHTML = `<b>${sender}:</b> ${message}`;
+      chatDiv.appendChild(msg);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    sendBtn.onclick = () => {
+      const question = userInput.value.trim();
+      if (!question) return;
+      addChatMessage('You', question);
+      userInput.value = '';
+      setTimeout(() => {
+        addChatMessage('AI', 'This is a mock response to: "' + question + '".');
+      }, 800);
+    };
+
+    const uploadBtn = document.getElementById('uploadBtn');
+    const projectFileInput = document.getElementById('projectFile');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    uploadBtn.onclick = () => {
+      if (!projectFileInput.files.length) {
+        alert('Please select a project file first.');
+        return;
+      }
+      const file = projectFileInput.files[0];
+      uploadStatus.textContent = `Uploading "${file.name}"... (IPFS integration coming soon)`;
+    };
+
+    const hashCertBtn = document.getElementById('hashCertBtn');
+    const certificateData = document.getElementById('certificateData');
+    const hashOutput = document.getElementById('hashOutput');
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    hashCertBtn.onclick = async () => {
+      const certText = certificateData.value.trim();
+      if (!certText) {
+        alert('Please paste your certificate JSON.');
+        return;
+      }
+      const hash = await sha256(certText);
+      hashOutput.textContent = 'SHA-256 Hash: ' + hash;
+      addChatMessage('System', `Certificate hash generated: ${hash}`);
+      // Add smart contract interaction here later
+    };
+  </script>
+
+</body>
+</html>
