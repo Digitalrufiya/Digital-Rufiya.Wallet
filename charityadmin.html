@@ -1,4 +1,3 @@
-<!-- [Full working final version below] -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,15 +28,25 @@
       padding: 10px;
       border-left: 5px solid #ffc107;
     }
+    .top-right {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+    }
   </style>
 </head>
 <body>
 
+  <!-- Logout Button -->
+  <div class="top-right d-none" id="logoutBox">
+    <button onclick="logout()" class="btn btn-sm btn-danger">Logout</button>
+  </div>
+
   <!-- Login Form -->
   <div id="loginDiv" style="max-width:400px; margin: 80px auto;">
     <h3 class="text-center mb-4">Admin Login</h3>
-    <input type="email" id="adminEmail" placeholder="Email" class="form-control mb-2" autocomplete="username" />
-    <input type="password" id="adminPass" placeholder="Password" class="form-control mb-3" autocomplete="current-password" />
+    <input type="email" id="adminEmail" placeholder="Email" class="form-control mb-2" />
+    <input type="password" id="adminPass" placeholder="Password" class="form-control mb-3" />
     <button id="loginBtn" class="btn btn-primary w-100">Login</button>
     <div id="loginError" class="text-danger mt-2 text-center" style="display:none;">Invalid credentials</div>
   </div>
@@ -45,13 +54,11 @@
   <!-- Admin Panel -->
   <div id="adminPanel" style="display:none;">
     <div class="container">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary">🤲 DRFM Charity Admin Panel</h2>
-        <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
-      </div>
+      <h2 class="text-center text-primary mb-4">🤲 DRFM Charity Admin Panel</h2>
 
       <div id="walletWarning" class="wallet-warning mb-3 d-none">
-        ⛔ Please connect using the authorized admin wallet address to access requests.
+        ⛔ You are not connected with the authorized admin wallet.
+        <br> Please connect to <code>0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C</code>
       </div>
 
       <div id="requestsContainer" class="row gy-4"></div>
@@ -70,8 +77,7 @@
       projectId: "drfsocial-23a06",
       storageBucket: "drfsocial-23a06.appspot.com",
       messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-      measurementId: "G-W6VHMP77YR"
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -79,12 +85,12 @@
 
     window.loadRequests = function () {
       const container = document.getElementById("requestsContainer");
-      container.innerHTML = "<p class='text-center'>⏳ Loading requests...</p>";
-
-      const requestsRef = ref(db, "charityRequests");
+      container.innerHTML = "Loading requests...";
+      const requestsRef = ref(db, 'charityRequests');
 
       onValue(requestsRef, (snapshot) => {
         container.innerHTML = "";
+
         if (!snapshot.exists()) {
           container.innerHTML = "<p>No charity requests found.</p>";
           return;
@@ -110,101 +116,93 @@
     };
   </script>
 
-<script>
-  const ADMIN_EMAIL = "digitalrufiyacoin@gmail.com";
-  const ADMIN_PASS = "Zivian@2020";
+  <script>
+    const ADMIN_EMAIL = "digitalrufiyacoin@gmail.com";
+    const ADMIN_PASS = "Zivian@2020";
+    const ADMIN_WALLET = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C".toLowerCase();
 
-  const ADMIN_WALLET = "0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C".toLowerCase();
-  const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-  const DRFM_ABI = [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
+    const DRFM_CONTRACT = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const DRFM_ABI = [{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}];
 
-  const EMAILJS_SERVICE = "service_gxe6qdm";
-  const EMAILJS_TEMPLATE = "template_nnm02vn";
-  const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
+    const EMAILJS_USER = "iUGLTBCPJukDPr_nZ";
+    emailjs.init(EMAILJS_USER);
 
-  emailjs.init(EMAILJS_USER);
+    // Login button
+    document.getElementById("loginBtn").onclick = () => {
+      const email = document.getElementById("adminEmail").value.trim();
+      const pass = document.getElementById("adminPass").value.trim();
 
-  document.getElementById("loginBtn").onclick = () => {
-    const email = document.getElementById("adminEmail").value.trim();
-    const pass = document.getElementById("adminPass").value;
-
-    if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
-      sessionStorage.setItem("adminLoggedIn", "true");
-      showAdminPanel();
-    } else {
-      document.getElementById("loginError").style.display = "block";
-    }
-  };
-
-  function showAdminPanel() {
-    document.getElementById("loginDiv").style.display = "none";
-    document.getElementById("adminPanel").style.display = "block";
-    connectWallet();
-  }
-
-  function logout() {
-    sessionStorage.removeItem("adminLoggedIn");
-    location.reload();
-  }
-
-  window.onload = () => {
-    if (sessionStorage.getItem("adminLoggedIn") === "true") {
-      showAdminPanel();
-    }
-  };
-
-  async function connectWallet() {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-        const currentAccount = accounts[0].toLowerCase();
-
-        if (currentAccount !== ADMIN_WALLET) {
-          document.getElementById("walletWarning").classList.remove("d-none");
-          return;
-        }
-
-        document.getElementById("walletWarning").classList.add("d-none");
-        loadRequests();
-      } catch (err) {
-        alert("MetaMask connection denied.");
+      if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+        sessionStorage.setItem("adminLoggedIn", "true");
+        showAdminPanel();
+      } else {
+        document.getElementById("loginError").style.display = "block";
       }
-    } else {
-      alert("Please install MetaMask.");
+    };
+
+    // Show admin panel if logged in
+    function showAdminPanel() {
+      document.getElementById("loginDiv").style.display = "none";
+      document.getElementById("adminPanel").style.display = "block";
+      document.getElementById("logoutBox").classList.remove("d-none");
+      connectWallet();
     }
-  }
 
-  async function sendDRFM(toAddress, buttonEl) {
-    if (!window.ethereum) return alert("MetaMask not found");
+    // On page load
+    window.onload = () => {
+      if (sessionStorage.getItem("adminLoggedIn") === "true") {
+        showAdminPanel();
+      }
+    };
 
-    const web3 = new Web3(window.ethereum);
-    const contract = new web3.eth.Contract(DRFM_ABI, DRFM_CONTRACT);
-    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-    const from = accounts[0];
-    const amount = web3.utils.toWei("10", "ether");
-
-    try {
-      buttonEl.disabled = true;
-      buttonEl.textContent = "Sending...";
-
-      await contract.methods.transfer(toAddress, amount).send({ from });
-      buttonEl.textContent = "✅ Sent!";
-
-      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        to_email: from,
-        to_name: "Charity User",
-        wallet_address: toAddress,
-        amount: "10 DRFM",
-        admin_email: ADMIN_EMAIL
-      });
-
-    } catch (err) {
-      console.error(err);
-      buttonEl.textContent = "Failed";
-      alert("Failed to send tokens.");
+    // Logout
+    function logout() {
+      sessionStorage.removeItem("adminLoggedIn");
+      window.location.reload();
     }
-  }
-</script>
 
+    // Connect Wallet
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+          const currentAccount = accounts[0].toLowerCase();
+
+          if (currentAccount !== ADMIN_WALLET) {
+            document.getElementById("walletWarning").classList.remove("d-none");
+            return;
+          }
+
+          document.getElementById("walletWarning").classList.add("d-none");
+          loadRequests();
+        } catch (e) {
+          alert("Wallet connection rejected.");
+        }
+      } else {
+        alert("MetaMask not installed.");
+      }
+    }
+
+    // Send DRFM
+    async function sendDRFM(toAddress, buttonEl) {
+      if (!window.ethereum) return alert("MetaMask not found");
+      const web3 = new Web3(window.ethereum);
+      const contract = new web3.eth.Contract(DRFM_ABI, DRFM_CONTRACT);
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      const from = accounts[0];
+      const amount = web3.utils.toWei("10", "ether");
+
+      try {
+        buttonEl.disabled = true;
+        buttonEl.textContent = "Sending...";
+        await contract.methods.transfer(toAddress, amount).send({ from });
+        buttonEl.textContent = "✅ Sent!";
+      } catch (err) {
+        console.error(err);
+        buttonEl.textContent = "❌ Failed";
+        alert("Failed to send tokens. Check the console.");
+      }
+    }
+  </script>
 </body>
 </html>
