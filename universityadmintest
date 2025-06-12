@@ -1,0 +1,65 @@
+<!-- === File: admin.html === -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF University Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-white">
+  <div class="container py-5">
+    <h2>🎓 Admin Panel - Approve Certificates</h2>
+    <button class="btn btn-dark" id="connectBtn">🔐 Connect Admin Wallet</button>
+    <p class="mt-2">Wallet: <span id="walletAddress">Not connected</span></p>
+
+    <form id="approveForm" class="mt-4">
+      <div class="mb-3">
+        <label class="form-label">Course ID</label>
+        <input type="number" id="courseId" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Student Address</label>
+        <input type="text" id="studentAddress" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-success">✅ Approve Certificate</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+    const connectBtn = document.getElementById('connectBtn');
+    const walletAddressSpan = document.getElementById('walletAddress');
+    const approveForm = document.getElementById('approveForm');
+    let provider, signer, contract;
+
+    const CONTRACT_ADDRESS = "<YOUR_DEPLOYED_CONTRACT_ADDRESS>";
+    const ABI = ["function approveCertificate(uint courseId, address student)"];
+
+    connectBtn.onclick = async () => {
+      if (window.ethereum) {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        const address = await signer.getAddress();
+        walletAddressSpan.textContent = address;
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+      }
+    };
+
+    approveForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const courseId = document.getElementById('courseId').value;
+      const studentAddress = document.getElementById('studentAddress').value;
+
+      try {
+        const tx = await contract.approveCertificate(courseId, studentAddress);
+        await tx.wait();
+        alert("Certificate approved successfully!");
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
