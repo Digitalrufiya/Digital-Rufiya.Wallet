@@ -4,8 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Boost DApp</title>
+
+  <!-- Ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/@web3modal/ethers5@2.6.4/dist/index.umd.js"></script>
+
+  <!-- Web3Modal v2 -->
+  <script src="https://unpkg.com/@walletconnect/web3modal@2.9.2/dist/umd/index.js"></script>
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -38,40 +43,60 @@
   <button id="boostBtn" disabled>Boost</button>
 
   <script>
+    const { Web3Modal, EthereumClient, walletConnectProvider, EIP6963Connector } = window.WalletConnectModal;
+
     const connectBtn = document.getElementById('connectBtn');
     const boostBtn = document.getElementById('boostBtn');
 
-    let provider;
-    let signer;
+    let provider, signer;
 
-    // Setup Web3Modal
-    const { EthereumProvider, Web3Modal } = window.Web3ModalEthers5;
-    const web3Modal = new Web3Modal({
-      projectId: "5e08959dd19a679754f2bf07c5eeed80",
-      themeMode: "light",
-      walletConnectVersion: 2,
-      defaultChainId: 56, // BSC
-      standaloneChains: ["bsc:56"]
+    const projectId = "5e08959dd19a679754f2bf07c5eeed80"; // Your WalletConnect Project ID
+    const chains = [
+      {
+        id: 56,
+        name: 'Binance Smart Chain',
+        rpcUrl: 'https://bsc-dataseed.binance.org/',
+      }
+    ];
+
+    const metadata = {
+      name: "DRF Boost DApp",
+      description: "Boost your DRF tokens",
+      url: "https://drf-dapp.example.com", // Use your actual domain
+      icons: ["https://yourdomain.com/logo.png"]
+    };
+
+    const ethereumClient = new EthereumClient({
+      chains,
+      provider: walletConnectProvider({ projectId }),
     });
+
+    const web3Modal = new Web3Modal({
+      projectId,
+      walletConnectVersion: 2,
+      metadata,
+    }, ethereumClient);
 
     async function connectWallet() {
       try {
-        const instance = await web3Modal.connect();
-        provider = new ethers.providers.Web3Provider(instance);
+        const instance = await web3Modal.openModal();
+        const ethProvider = await ethereumClient.getProvider();
+        provider = new ethers.providers.Web3Provider(ethProvider);
         signer = provider.getSigner();
 
         const address = await signer.getAddress();
         connectBtn.textContent = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
         boostBtn.disabled = false;
 
-        // Reload on changes
-        instance.on("accountsChanged", () => location.reload());
-        instance.on("chainChanged", () => location.reload());
-        instance.on("disconnect", () => location.reload());
+        // Refresh on disconnect
+        ethProvider.on("disconnect", () => {
+          alert("Disconnected");
+          location.reload();
+        });
 
       } catch (err) {
-        alert('Wallet connection failed.');
-        console.error(err);
+        console.error("Connection Error:", err);
+        alert("Wallet connection failed.");
       }
     }
 
@@ -81,14 +106,8 @@
         return;
       }
 
-      try {
-        const address = await signer.getAddress();
-        alert(`Boost action triggered for wallet:\n${address}\n\nReplace this with your actual boost logic.`);
-        // TODO: Add your smart contract logic here
-      } catch (err) {
-        alert('Error getting wallet address.');
-        console.error(err);
-      }
+      const address = await signer.getAddress();
+      alert(`Boosting wallet: ${address}\n\nImplement your boost logic here.`);
     }
 
     connectBtn.onclick = connectWallet;
