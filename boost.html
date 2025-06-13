@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Boost DApp</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/@web3modal/standalone@2.6.4/dist/standalone.umd.js"></script>
+  <script src="https://unpkg.com/@web3modal/ethers5@2.6.4/dist/index.umd.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -44,23 +44,27 @@
     let provider;
     let signer;
 
-    const modal = window.Web3Modal.default({
+    // Setup Web3Modal
+    const { EthereumProvider, Web3Modal } = window.Web3ModalEthers5;
+    const web3Modal = new Web3Modal({
       projectId: "5e08959dd19a679754f2bf07c5eeed80",
-      standaloneChains: ["bsc:56"],
+      themeMode: "light",
       walletConnectVersion: 2,
-      themeMode: "light"
+      defaultChainId: 56, // BSC
+      standaloneChains: ["bsc:56"]
     });
 
     async function connectWallet() {
       try {
-        const instance = await modal.connect();
+        const instance = await web3Modal.connect();
         provider = new ethers.providers.Web3Provider(instance);
         signer = provider.getSigner();
+
         const address = await signer.getAddress();
         connectBtn.textContent = `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`;
         boostBtn.disabled = false;
 
-        // Reload on account or network change
+        // Reload on changes
         instance.on("accountsChanged", () => location.reload());
         instance.on("chainChanged", () => location.reload());
         instance.on("disconnect", () => location.reload());
@@ -80,7 +84,7 @@
       try {
         const address = await signer.getAddress();
         alert(`Boost action triggered for wallet:\n${address}\n\nReplace this with your actual boost logic.`);
-        // ✅ Add your real smart contract interaction here if needed
+        // TODO: Add your smart contract logic here
       } catch (err) {
         alert('Error getting wallet address.');
         console.error(err);
