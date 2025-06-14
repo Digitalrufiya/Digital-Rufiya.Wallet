@@ -1,106 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFTube Upload Video</title>
-  <style>
-    body {
-      background: #111;
-      color: #eee;
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 20px #0af;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 5px;
-      border: none;
-      font-size: 1rem;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 20px;
-      padding: 12px 20px;
-      background: #0af;
-      border: none;
-      color: #111;
-      font-weight: bold;
-      font-size: 1.1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-    button:hover {
-      background: #08c;
-      color: #fff;
-    }
-    .status {
-      margin-top: 15px;
-      font-size: 0.9rem;
-      min-height: 40px;
-      white-space: pre-line;
-    }
-    #uploadedVideoContainer {
-      margin-top: 30px;
-      background: #222;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 15px #08c;
-    }
-    #uploadedVideoContainer h3 {
-      margin-top: 0;
-    }
-    #uploadedVideoContainer video {
-      width: 100%;
-      border-radius: 6px;
-      background: #000;
-    }
-    #uploadedVideoContainer a {
-      color: #0af;
-      word-break: break-all;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFTube - Upload Videos</title>
+<style>
+  body {
+    background: #121212;
+    color: #eee;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 650px;
+    margin: 40px auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 18px #0a84ff88;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #0a84ff;
+  }
+  label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+  }
+  input[type="text"],
+  textarea,
+  input[type="file"] {
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+    background: #222;
+    color: #eee;
+    box-sizing: border-box;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  button {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: #0a84ff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background: #0066ff;
+  }
+  #status {
+    margin-top: 15px;
+    min-height: 44px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0aff6b;
+    white-space: pre-line;
+  }
+  #uploadedVideoPreview {
+    margin-top: 25px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 15px #0a84ff88;
+  }
+  #uploadedVideoPreview video {
+    width: 100%;
+    border-radius: 10px;
+    background: #000;
+  }
+  #videoList {
+    margin-top: 35px;
+  }
+  .videoItem {
+    margin-bottom: 30px;
+    padding: 15px;
+    background: #222;
+    border-radius: 10px;
+    box-shadow: 0 0 8px #0a84ff88;
+  }
+  .videoItem h3 {
+    margin: 0 0 8px 0;
+    color: #0affff;
+  }
+  .videoItem p {
+    margin: 4px 0;
+  }
+  .videoItem video {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 8px;
+  }
+  a.ipfsLink {
+    color: #0affff;
+    text-decoration: none;
+    word-break: break-word;
+  }
+</style>
 </head>
 <body>
 
-  <h1>Upload Video with Metadata</h1>
+<h1>DRFTube Video Upload</h1>
 
-  <form id="uploadForm">
-    <label for="title">Video Title</label>
-    <input type="text" id="title" required placeholder="Enter video title" />
+<form id="uploadForm" autocomplete="off">
+  <label for="title">Video Title <sup>*</sup></label>
+  <input id="title" type="text" required placeholder="Enter video title" />
 
-    <label for="description">Description</label>
-    <textarea id="description" rows="4" placeholder="Enter video description"></textarea>
+  <label for="description">Description</label>
+  <textarea id="description" placeholder="Enter video description (optional)"></textarea>
 
-    <label for="category">Category</label>
-    <input type="text" id="category" placeholder="E.g. Reminder, Quran, Hadith" />
+  <label for="category">Category</label>
+  <input id="category" type="text" placeholder="E.g., Reminder, Quran, Hadith" />
 
-    <label for="file">Select Video File</label>
-    <input type="file" id="file" accept="video/*" required />
+  <label for="file">Select Video File <sup>*</sup></label>
+  <input id="file" type="file" accept="video/*" required />
 
-    <button type="submit">Upload and Save</button>
-  </form>
+  <button type="submit">Upload Video</button>
+</form>
 
-  <div class="status" id="status"></div>
-  <div id="uploadedVideoContainer"></div>
-  <h2>Uploaded Videos</h2>
-  <div id="videoList"></div>
+<div id="status"></div>
+<div id="uploadedVideoPreview"></div>
+
+<h2>Uploaded Videos</h2>
+<div id="videoList">Loading videos...</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    orderBy,
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
     authDomain: "drftube-634c6.firebaseapp.com",
@@ -108,113 +151,165 @@
     storageBucket: "drftube-634c6.appspot.com",
     messagingSenderId: "819828633864",
     appId: "1:819828633864:web:513002b461259b000cbcbd",
-    measurementId: "G-ZPTJE4DMNN"
+    measurementId: "G-ZPTJE4DMNN",
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // Your Pinata JWT token (keep it safe, DO NOT SHARE)
   const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
-  const form = document.getElementById('uploadForm');
-  const status = document.getElementById('status');
-  const uploadedVideoContainer = document.getElementById('uploadedVideoContainer');
-  const videoListDiv = document.getElementById('videoList');
+  const form = document.getElementById("uploadForm");
+  const statusEl = document.getElementById("status");
+  const uploadedVideoPreview = document.getElementById("uploadedVideoPreview");
+  const videoList = document.getElementById("videoList");
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    status.textContent = "";
-    uploadedVideoContainer.innerHTML = "";
+  // Show status messages in green or red
+  function showStatus(message, isError = false) {
+    statusEl.textContent = message;
+    statusEl.style.color = isError ? "#ff4c4c" : "#0aff6b";
+  }
 
-    const title = document.getElementById('title').value.trim();
-    const description = document.getElementById('description').value.trim();
-    const category = document.getElementById('category').value.trim();
-    const file = document.getElementById('file').files[0];
-
-    if (!file) {
-      status.textContent = "Please select a video file!";
-      return;
-    }
-
-    status.textContent = "Uploading to IPFS via Pinata...";
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('pinataMetadata', JSON.stringify({
+  // Upload to Pinata IPFS
+  async function uploadToPinata(file, title, description, category) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append(
+      "pinataMetadata",
+      JSON.stringify({
         name: title || file.name,
         keyvalues: {
           description: description || "No description",
-          category: category || "Uncategorized"
-        }
-      }));
-
-      const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${PINATA_JWT}`
+          category: category || "Uncategorized",
         },
-        body: formData
-      });
+      })
+    );
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Pinata Upload Failed: ${errText}`);
-      }
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+      body: formData,
+    });
 
-      const data = await response.json();
-      const ipfsHash = data.IpfsHash;
-
-      await addDoc(collection(db, "videos"), {
-        title, description, category, ipfsHash,
-        uploadedAt: new Date().toISOString()
-      });
-
-      status.textContent = "✅ Uploaded successfully!";
-      form.reset();
-
-      const videoUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
-      uploadedVideoContainer.innerHTML = `
-        <h3>Preview:</h3>
-        <video controls>
-          <source src="${videoUrl}" type="${file.type}">
-          Your browser does not support video.
-        </video>
-      `;
-
-      loadVideos();
-    } catch (err) {
-      console.error(err);
-      status.textContent = "❌ Upload failed: " + err.message;
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Pinata upload failed: ${err}`);
     }
-  });
+    const data = await res.json();
+    return data.IpfsHash;
+  }
 
+  // Add metadata to Firestore
+  async function saveMetadataToFirestore(title, description, category, ipfsHash) {
+    const docRef = await addDoc(collection(db, "videos"), {
+      title,
+      description,
+      category,
+      ipfsHash,
+      uploadedAt: new Date().toISOString(),
+    });
+    return docRef.id;
+  }
+
+  // Load videos list from Firestore and display
   async function loadVideos() {
-    videoListDiv.innerHTML = "Loading videos...";
+    videoList.textContent = "Loading videos...";
     try {
       const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
-      const snap = await getDocs(q);
-      if (snap.empty) return videoListDiv.innerHTML = "No videos uploaded yet.";
-      videoListDiv.innerHTML = "";
-      snap.forEach(doc => {
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        videoList.textContent = "No videos uploaded yet.";
+        return;
+      }
+
+      videoList.innerHTML = "";
+
+      snapshot.forEach((doc) => {
         const v = doc.data();
         const videoUrl = `https://ipfs.io/ipfs/${v.ipfsHash}`;
         const div = document.createElement("div");
+        div.className = "videoItem";
         div.innerHTML = `
-          <h3>${v.title}</h3>
-          <p><em>${v.category}</em></p>
-          <p>${v.description}</p>
-          <video controls style="width: 100%">
-            <source src="${videoUrl}" type="video/mp4">
-          </video><br/><br/>
+          <h3>${escapeHtml(v.title)}</h3>
+          <p><strong>Category:</strong> ${escapeHtml(v.category || "N/A")}</p>
+          <p>${escapeHtml(v.description || "")}</p>
+          <video controls preload="metadata">
+            <source src="${videoUrl}" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <p><a href="${videoUrl}" target="_blank" rel="noopener" class="ipfsLink">View on IPFS Gateway</a></p>
         `;
-        videoListDiv.appendChild(div);
+        videoList.appendChild(div);
       });
-    } catch (err) {
-      videoListDiv.innerHTML = `Error loading: ${err.message}`;
+    } catch (error) {
+      videoList.textContent = "Failed to load videos: " + error.message;
     }
   }
 
+  // Simple HTML escape to prevent injection
+  function escapeHtml(text) {
+    if (!text) return "";
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Form submit handler
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    showStatus("");
+    uploadedVideoPreview.innerHTML = "";
+
+    const title = form.title.value.trim();
+    const description = form.description.value.trim();
+    const category = form.category.value.trim();
+    const file = form.file.files[0];
+
+    if (!file) {
+      showStatus("Please select a video file.", true);
+      return;
+    }
+    if (!title) {
+      showStatus("Title is required.", true);
+      return;
+    }
+
+    try {
+      showStatus("Uploading video to IPFS...");
+      const ipfsHash = await uploadToPinata(file, title, description, category);
+
+      showStatus("Saving metadata to Firestore...");
+      await saveMetadataToFirestore(title, description, category, ipfsHash);
+
+      showStatus("✅ Upload complete!");
+
+      form.reset();
+
+      // Show preview of uploaded video
+      uploadedVideoPreview.innerHTML = `
+        <h3>Uploaded Video Preview</h3>
+        <video controls preload="metadata">
+          <source src="https://ipfs.io/ipfs/${ipfsHash}" type="${file.type}">
+          Your browser does not support the video tag.
+        </video>
+        <p><a href="https://ipfs.io/ipfs/${ipfsHash}" target="_blank" rel="noopener" class="ipfsLink">Open in IPFS Gateway</a></p>
+      `;
+
+      loadVideos();
+    } catch (error) {
+      showStatus("❌ Upload failed: " + error.message, true);
+      console.error(error);
+    }
+  });
+
+  // Initial load of videos on page load
   loadVideos();
 </script>
 
