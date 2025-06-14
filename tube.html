@@ -72,6 +72,11 @@
     overflow: hidden;
     box-shadow: 0 0 15px #0a84ff88;
   }
+  #uploadedVideoPreview video {
+    width: 100%;
+    border-radius: 10px;
+    background: #000;
+  }
   #videoList {
     margin-top: 35px;
   }
@@ -93,11 +98,6 @@
     width: 100%;
     margin-top: 12px;
     border-radius: 8px;
-  }
-  a.ipfsLink {
-    color: #0affff;
-    text-decoration: none;
-    word-break: break-word;
   }
 </style>
 </head>
@@ -236,7 +236,6 @@
             <source src="${videoUrl}" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          <p><a href="${videoUrl}" target="_blank" rel="noopener" class="ipfsLink">View on IPFS Gateway</a></p>
         `;
         videoList.appendChild(div);
       });
@@ -287,8 +286,15 @@
 
       form.reset();
 
-      // Removed preview display:
-      uploadedVideoPreview.innerHTML = "";
+      // Show preview of uploaded video
+      uploadedVideoPreview.innerHTML = `
+        <h3>Uploaded Video Preview</h3>
+        <video controls preload="metadata">
+          <source src="https://ipfs.io/ipfs/${ipfsHash}" type="${file.type}">
+          Your browser does not support the video tag.
+        </video>
+        <p><a href="https://ipfs.io/ipfs/${ipfsHash}" target="_blank" rel="noopener" class="ipfsLink">Open in IPFS Gateway</a></p>
+      `;
 
       loadVideos();
     } catch (error) {
