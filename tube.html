@@ -48,7 +48,8 @@
     .status {
       margin-top: 15px;
       font-size: 0.9rem;
-      min-height: 24px;
+      min-height: 40px;
+      white-space: pre-line;
     }
   </style>
 </head>
@@ -69,26 +70,27 @@
     <label for="file">Select Video File</label>
     <input type="file" id="file" accept="video/*" required />
 
-    <button type="submit">Upload to IPFS & Save</button>
+    <button type="submit">Upload and Save</button>
   </form>
 
   <div class="status" id="status"></div>
 
 <script>
-  // Replace with your Pinata JWT token (keep secret in production!)
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW..."; // shortened for security
+  // Put your full Pinata JWT here, **do not expose it publicly in production**
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW..."; // replace with your real token
 
   const form = document.getElementById('uploadForm');
   const status = document.getElementById('status');
 
-  // Simulated video list storage (replace with your backend or cloud storage)
+  // Load saved videos from localStorage or start empty array
   let videoList = JSON.parse(localStorage.getItem('videoList') || '[]');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    status.textContent = "";
 
-    if (!PINATA_JWT) {
-      status.textContent = "Error: Pinata JWT not set!";
+    if (!PINATA_JWT || PINATA_JWT.length < 10) {
+      status.textContent = "Error: Pinata JWT not set or invalid!";
       return;
     }
 
@@ -103,19 +105,18 @@
       return;
     }
 
-    status.textContent = "Uploading video to IPFS... Please wait.";
+    status.textContent = "Uploading video to IPFS via Pinata... Please wait.";
 
     try {
-      // Upload file to Pinata via API
       const formData = new FormData();
       formData.append('file', file);
 
-      // Add metadata to Pinata upload (optional)
+      // Optional metadata for Pinata pin
       const metadata = {
-        name: title,
+        name: title || file.name,
         keyvalues: {
-          description: description,
-          category: category
+          description: description || "No description",
+          category: category || "Uncategorized"
         }
       };
       formData.append('pinataMetadata', JSON.stringify(metadata));
@@ -129,15 +130,17 @@
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        // Get response text for debugging
+        const text = await response.text();
+        throw new Error(`Upload failed: ${response.status} ${response.statusText}\n${text}`);
       }
 
       const data = await response.json();
 
       const ipfsHash = data.IpfsHash;
-      status.textContent = `Uploaded! IPFS Hash: ${ipfsHash}`;
+      status.textContent = `✅ Uploaded! IPFS Hash:\n${ipfsHash}`;
 
-      // Save video metadata + IPFS hash in localStorage (simulate DB)
+      // Save metadata locally (simulate DB)
       const newVideo = {
         title,
         description,
@@ -151,11 +154,11 @@
 
       status.textContent += "\nMetadata saved locally.";
 
-      // Reset form
       form.reset();
 
     } catch (err) {
-      status.textContent = "Error: " + err.message;
+      status.textContent = "❌ Error: " + err.message;
+      console.error(err);
     }
   });
 </script>
