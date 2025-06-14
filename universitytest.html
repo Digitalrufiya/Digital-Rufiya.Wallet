@@ -26,7 +26,7 @@
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
     label { display: block; margin-top: 20px; }
-    input[type="file"], textarea {
+    input, textarea {
       width: 100%; padding: 10px; margin-top: 8px;
     }
     button {
@@ -57,117 +57,83 @@
 <div class="container">
   <h3>Apply for Blockchain Certificate</h3>
 
-  <p><b>Wallet Address:</b> <span id="walletAddress">Not connected</span></p>
-  <button id="connectWalletBtn">Connect Wallet</button>
+  <form id="certificateForm">
+    <label>👤 Full Name:</label>
+    <input type="text" id="fullName" required />
 
-  <label>📁 Upload Final Project:</label>
-  <input type="file" id="projectFile" />
+    <label>🏷️ DRF Wallet Address:</label>
+    <input type="text" id="wallet" required />
 
-  <label>✍️ Consent:</label>
-  <input type="checkbox" id="consentCheck" /> I allow DRF University to review and reuse my project.
+    <label>📛 Project Name:</label>
+    <input type="text" id="projectName" required />
 
-  <button id="payBtn" disabled>Pay $120 USDC for Certificate</button>
-  <button id="submitBtn" disabled>Submit Application</button>
+    <label>📁 Upload Project File:</label>
+    <input type="file" id="projectFile" required />
 
+    <label>🔗 GitHub / Hosting Link:</label>
+    <input type="url" id="githubLink" required />
+
+    <label>📂 Google Drive Link:</label>
+    <input type="url" id="driveLink" required />
+
+    <label>📧 Your Email:</label>
+    <input type="email" id="userEmail" required />
+
+    <label>✍️ Consent:</label>
+    <input type="checkbox" id="consentCheck" required /> I allow DRF University to review and reuse my project.
+
+    <button type="submit">Submit Application</button>
+  </form>
   <p id="status"></p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/web3.storage/dist/bundle.min.js"></script>
 <script>
-  // === CONFIG: CHANGE THESE ===
-  const USDC_CONTRACT_ADDRESS = "0xYourUSDCContract"; // replace with real USDC address on your chain
-  const RECIPIENT_ADDRESS = "0xYourRecipientWallet";  // replace with your wallet address to receive payment
-  const WEB3_STORAGE_TOKEN = "YOUR_WEB3_STORAGE_API_TOKEN"; // get from https://web3.storage
-
-  let provider, signer, userAddress;
-  let projectCID = null;
-  let paymentDone = false;
-
-  const walletSpan = document.getElementById('walletAddress');
-  const connectWalletBtn = document.getElementById('connectWalletBtn');
-  const payBtn = document.getElementById('payBtn');
-  const submitBtn = document.getElementById('submitBtn');
-  const statusP = document.getElementById('status');
-
-  // Connect wallet
-  connectWalletBtn.onclick = async () => {
-    if (!window.ethereum) {
-      alert("Please install MetaMask or compatible wallet.");
-      return;
-    }
-    try {
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-      walletSpan.textContent = userAddress;
-      payBtn.disabled = false;
-      statusP.textContent = "Wallet connected. Now upload your project and pay the fee.";
-    } catch (e) {
-      alert("Wallet connection failed: " + e.message);
-    }
-  };
-
-  // Upload file to IPFS
-  async function uploadProjectToIPFS(file) {
-    statusP.textContent = "Uploading project to IPFS...";
-    const client = new Web3Storage.Web3Storage({ token: WEB3_STORAGE_TOKEN });
-    try {
-      const cid = await client.put([file], { wrapWithDirectory: false });
-      statusP.textContent = "Upload successful. IPFS CID: " + cid;
-      return cid;
-    } catch (e) {
-      statusP.textContent = "IPFS upload failed: " + e.message;
-      throw e;
-    }
-  }
-
-  // Pay USDC
-  payBtn.onclick = async () => {
-    if (!signer) return alert("Connect your wallet first.");
-    const file = document.getElementById('projectFile').files[0];
-    const consent = document.getElementById('consentCheck').checked;
-    if (!file) return alert("Please upload your project file first.");
-    if (!consent) return alert("You must give consent to proceed.");
-
-    try {
-      projectCID = await uploadProjectToIPFS(file);
-
-      const usdcABI = ["function transfer(address to, uint amount) public returns (bool)"];
-      const usdcContract = new ethers.Contract(USDC_CONTRACT_ADDRESS, usdcABI, signer);
-      const amount = ethers.utils.parseUnits("120", 6); // USDC 6 decimals
-
-      statusP.textContent = "Sending USDC payment...";
-      const tx = await usdcContract.transfer(RECIPIENT_ADDRESS, amount);
-      await tx.wait();
-
-      statusP.textContent = "Payment successful! You can now submit your application.";
-      paymentDone = true;
-      submitBtn.disabled = false;
-      payBtn.disabled = true;
-    } catch (e) {
-      statusP.textContent = "Payment or upload failed: " + e.message;
-    }
-  };
-
-  // Submit application
-  submitBtn.onclick = () => {
-    if (!paymentDone) return alert("Please complete the payment first.");
-    const consent = document.getElementById('consentCheck').checked;
-    if (!consent) return alert("Consent is required.");
-
-    // Here you can add logic to send projectCID + userAddress + consent info to backend or smart contract
-
-    statusP.textContent = "✅ Application submitted. Await admin approval.";
-    submitBtn.disabled = true;
-  };
-
-  // Toggle theme
   function toggleTheme() {
     document.body.classList.toggle('dark-mode');
   }
-  window.toggleTheme = toggleTheme;
+
+  // === EMAIL JS Integration ===
+  // Visit https://www.emailjs.com/ to get your service ID, template ID and public key
+
+  document.getElementById('certificateForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const fullName = document.getElementById('fullName').value;
+    const wallet = document.getElementById('wallet').value;
+    const projectName = document.getElementById('projectName').value;
+    const githubLink = document.getElementById('githubLink').value;
+    const driveLink = document.getElementById('driveLink').value;
+    const userEmail = document.getElementById('userEmail').value;
+    const consent = document.getElementById('consentCheck').checked;
+    const projectFile = document.getElementById('projectFile').files[0];
+
+    if (!consent) {
+      alert("You must give consent to continue.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("fullName", fullName);
+    formData.append("wallet", wallet);
+    formData.append("projectName", projectName);
+    formData.append("githubLink", githubLink);
+    formData.append("driveLink", driveLink);
+    formData.append("userEmail", userEmail);
+    formData.append("projectFile", projectFile);
+
+    // Send email using EmailJS
+    emailjs.sendForm('your_service_id', 'your_template_id', '#certificateForm', 'your_public_key')
+      .then(function(response) {
+        document.getElementById('status').textContent = "✅ Application submitted. We'll review and contact you soon.";
+      }, function(error) {
+        document.getElementById('status').textContent = "❌ Submission failed: " + error.text;
+      });
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+  emailjs.init("your_public_key"); // Replace with your EmailJS public key
 </script>
 </body>
 </html>
