@@ -52,21 +52,23 @@
       white-space: pre-line;
     }
     #uploadedVideoContainer {
-      background-color: #b22222; /* Firebrick red */
+      margin-top: 30px;
+      background: #222;
       padding: 15px;
-      margin-top: 20px;
       border-radius: 8px;
+      box-shadow: 0 0 15px #08c;
     }
     #uploadedVideoContainer h3 {
       margin-top: 0;
-      margin-bottom: 10px;
-      color: #fff;
     }
     #uploadedVideoContainer video {
-      max-width: 100%;
+      width: 100%;
       border-radius: 6px;
-      display: block;
-      margin: 0 auto;
+      background: #000;
+    }
+    #uploadedVideoContainer a {
+      color: #0af;
+      word-break: break-all;
     }
   </style>
 </head>
@@ -91,19 +93,38 @@
   </form>
 
   <div class="status" id="status"></div>
+
   <div id="uploadedVideoContainer"></div>
 
-<script>
-  // Put your full Pinata JWT here, **do not expose it publicly in production**
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4
-"; // replace with your real token
+  <h2>Uploaded Videos</h2>
+  <div id="videoList"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  // Your Firebase config (from your snippet)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+    authDomain: "drftube-634c6.firebaseapp.com",
+    projectId: "drftube-634c6",
+    storageBucket: "drftube-634c6.appspot.com",
+    messagingSenderId: "819828633864",
+    appId: "1:819828633864:web:513002b461259b000cbcbd",
+    measurementId: "G-ZPTJE4DMNN"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Pinata JWT (do NOT expose this publicly in production)
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
   const form = document.getElementById('uploadForm');
   const status = document.getElementById('status');
   const uploadedVideoContainer = document.getElementById('uploadedVideoContainer');
-
-  // Load saved videos from localStorage or start empty array
-  let videoList = JSON.parse(localStorage.getItem('videoList') || '[]');
+  const videoListDiv = document.getElementById('videoList');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -132,7 +153,7 @@
       const formData = new FormData();
       formData.append('file', file);
 
-      // Optional metadata for Pinata pin
+      // Metadata for Pinata pin
       const metadata = {
         name: title || file.name,
         keyvalues: {
@@ -151,7 +172,6 @@
       });
 
       if (!response.ok) {
-        // Get response text for debugging
         const text = await response.text();
         throw new Error(`Upload failed: ${response.status} ${response.statusText}\n${text}`);
       }
@@ -160,25 +180,19 @@
 
       const ipfsHash = data.IpfsHash;
 
-      // Save metadata locally (simulate DB)
-      const newVideo = {
+      // Save metadata to Firestore
+      const docRef = await addDoc(collection(db, "videos"), {
         title,
         description,
         category,
         ipfsHash,
         uploadedAt: new Date().toISOString()
-      };
+      });
 
-      videoList.push(newVideo);
-      localStorage.setItem('videoList', JSON.stringify(videoList));
-
-      // Show success message briefly
       status.textContent = "✅ Upload successful! 🎉";
-      setTimeout(() => { status.textContent = ""; }, 3000);
-
       form.reset();
 
-      // Show uploaded video preview with red background container
+      // Show uploaded video preview (hide IPFS link? Here I show preview but no link)
       const videoUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
       uploadedVideoContainer.innerHTML = `
         <h3>Uploaded Video Preview:</h3>
@@ -188,11 +202,59 @@
         </video>
       `;
 
+      // Refresh list after upload
+      loadVideos();
+
     } catch (err) {
       status.textContent = "❌ Error: " + err.message;
       console.error(err);
     }
   });
+
+  // Function to load videos from Firestore and show them
+  async function loadVideos() {
+    videoListDiv.innerHTML = "<p>Loading videos...</p>";
+
+    try {
+      const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        videoListDiv.innerHTML = "<p>No videos uploaded yet.</p>";
+        return;
+      }
+
+      videoListDiv.innerHTML = "";
+      querySnapshot.forEach(doc => {
+        const video = doc.data();
+
+        // Build your video player, but no IPFS link shown openly
+        const videoUrl = `https://ipfs.io/ipfs/${video.ipfsHash}`;
+
+        // You can hide or mask the IPFS URL — here I do NOT display it as text
+        const videoElem = document.createElement("div");
+        videoElem.style.marginBottom = "30px";
+        videoElem.innerHTML = `
+          <h3>${video.title || "Untitled"}</h3>
+          <p><em>${video.category || "Uncategorized"}</em></p>
+          <p>${video.description || ""}</p>
+          <video controls style="width: 100%; border-radius: 6px; background: #000;">
+            <source src="${videoUrl}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        `;
+        videoListDiv.appendChild(videoElem);
+      });
+
+    } catch (err) {
+      videoListDiv.innerHTML = `<p>Error loading videos: ${err.message}</p>`;
+      console.error(err);
+    }
+  }
+
+  // Load videos on page load
+  loadVideos();
+
 </script>
 
 </body>
