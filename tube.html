@@ -3,44 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFTube - Video Channel</title>
+  <title>DRFTube - Upload Videos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: system-ui, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px; }
-    h1 { text-align: center; color: #2c3e50; }
-    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; }
-    input[type="file"], input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-    button { padding: 10px 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button:hover { background-color: #2980b9; }
-    .video-list { margin-top: 30px; }
-    video { width: 100%; margin-bottom: 20px; border-radius: 10px; }
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #0d0d0d;
+      color: white;
+    }
+    header {
+      background: #b30000;
+      padding: 15px 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      background: #1a1a1a;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+    }
+    input[type="file"], textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 5px;
+    }
+    textarea {
+      resize: vertical;
+    }
+    button {
+      background: #cc0000;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #e60000;
+    }
+    .video-card {
+      margin-top: 30px;
+      background: #262626;
+      padding: 15px;
+      border-radius: 10px;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body>
-  <h1>DRFTube - Upload Video</h1>
+  <header>DRFTube - Video Channel</header>
   <div class="container">
-    <div class="form-group">
-      <label for="desc">Description</label>
-      <textarea id="desc" rows="3"></textarea>
-    </div>
-    <div class="form-group">
-      <label for="video">Video File</label>
-      <input type="file" id="video" accept="video/*" />
-    </div>
-    <button onclick="uploadVideo()">Upload</button>
-    <div id="msg"></div>
-  </div>
-  <div class="container video-list">
-    <h2>Videos</h2>
+    <input type="file" id="videoFile" accept="video/*">
+    <textarea id="videoText" rows="4" placeholder="Enter description..."></textarea>
+    <button onclick="uploadVideo()">Upload Video</button>
+
     <div id="videos"></div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
@@ -54,9 +88,8 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
     const auth = getAuth();
-    const db = getDatabase();
-    const storage = getStorage();
     const provider = new GoogleAuthProvider();
 
     let currentUser = null;
@@ -64,50 +97,64 @@
     onAuthStateChanged(auth, user => {
       if (user) {
         currentUser = user;
-        document.getElementById("msg").innerText = `Logged in as ${user.displayName}`;
+        loadVideos();
       } else {
-        signInWithPopup(auth, provider).catch(console.error);
+        signInWithPopup(auth, provider);
       }
     });
 
-    async function uploadVideo() {
-      const file = document.getElementById("video").files[0];
-      const desc = document.getElementById("desc").value;
-      if (!file || !desc || !currentUser) return alert("All fields are required & must be logged in.");
+    function uploadVideo() {
+      const file = document.getElementById("videoFile").files[0];
+      const desc = document.getElementById("videoText").value;
+      if (!file || !desc) return alert("Provide both video and description");
 
-      const videoRef = sRef(storage, `videos/${Date.now()}_${file.name}`);
-      await uploadBytes(videoRef, file);
-      const url = await getDownloadURL(videoRef);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
-      push(ref(db, 'videos'), {
-        url,
-        desc,
-        user: currentUser.displayName,
-        uid: currentUser.uid,
-        time: new Date().toISOString()
+      fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: "BearereyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"
+        },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        const url = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+        push(ref(db, "videos"), {
+          uid: currentUser.uid,
+          user: currentUser.displayName,
+          text: desc,
+          url: url,
+          time: Date.now()
+        });
+        alert("Uploaded to IPFS and saved!");
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Upload failed");
       });
-
-      document.getElementById("msg").innerText = "Video uploaded!";
-      document.getElementById("video").value = "";
-      document.getElementById("desc").value = "";
     }
 
-    const videosRef = ref(db, 'videos');
-    onValue(videosRef, snapshot => {
-      const videosDiv = document.getElementById("videos");
-      videosDiv.innerHTML = "";
-      const data = snapshot.val();
-      if (data) {
-        Object.values(data).reverse().forEach(item => {
-          const vid = document.createElement("div");
-          vid.innerHTML = `
-            <video controls src="${item.url}"></video>
-            <p><strong>${item.user}</strong>: ${item.desc}</p>
+    function loadVideos() {
+      const container = document.getElementById("videos");
+      onValue(ref(db, "videos"), snapshot => {
+        container.innerHTML = "";
+        const data = snapshot.val();
+        for (const key in data) {
+          const vid = data[key];
+          const card = document.createElement("div");
+          card.className = "video-card";
+          card.innerHTML = `
+            <p><strong>${vid.user}</strong></p>
+            <video controls src="${vid.url}"></video>
+            <p>${vid.text}</p>
           `;
-          videosDiv.appendChild(vid);
-        });
-      }
-    });
+          container.appendChild(card);
+        }
+      });
+    }
   </script>
 </body>
 </html>
