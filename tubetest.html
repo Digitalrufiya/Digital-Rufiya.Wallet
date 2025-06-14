@@ -67,6 +67,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .message {
+      text-align: center;
+      color: #777;
+      font-style: italic;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -75,14 +81,14 @@
   <input type="search" id="searchBox" placeholder="Search videos by title or description..." />
 
   <div class="videos-container" id="videosContainer">
-    <p style="text-align:center; color:#777;">Loading videos...</p>
+    <p class="message">Loading videos...</p>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    // Your Firebase config
+    // Replace with your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
       authDomain: "drftube-634c6.firebaseapp.com",
@@ -93,15 +99,16 @@
       measurementId: "G-ZPTJE4DMNN",
     };
 
+    // Initialize Firebase & Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const container = document.getElementById('videosContainer');
     const searchBox = document.getElementById('searchBox');
 
-    let videos = []; // store videos from Firestore
+    let videos = [];
 
-    // Escape HTML to prevent XSS
+    // HTML escape function to prevent XSS attacks
     function escapeHtml(text) {
       if (!text) return "";
       return text
@@ -116,11 +123,13 @@
       const card = document.createElement('div');
       card.className = 'video-card';
 
-      // Thumbnail fallback: if no thumbnail, show IPFS video hash as direct thumbnail link (you may replace with placeholder)
-      const thumbnailUrl = video.thumbnail || `https://ipfs.io/ipfs/${video.ipfsHash}`;
+      // Use thumbnail URL if available, else show placeholder image
+      const thumbnailUrl = video.thumbnail 
+        ? video.thumbnail 
+        : "https://via.placeholder.com/320x180?text=No+Thumbnail";
 
       card.innerHTML = `
-        <img class="thumbnail" src="${thumbnailUrl}" alt="Thumbnail for ${escapeHtml(video.title)}" />
+        <img class="thumbnail" src="${thumbnailUrl}" alt="Thumbnail for ${escapeHtml(video.title)}" loading="lazy" />
         <div class="video-info">
           <h3 class="video-title">${escapeHtml(video.title)}</h3>
           <p class="video-desc">${escapeHtml(video.description)}</p>
@@ -128,6 +137,11 @@
       `;
 
       card.addEventListener('click', () => {
+        if (!video.ipfsHash) {
+          alert('Video IPFS hash missing!');
+          return;
+        }
+        // Redirect to watch.html with safe encoded IPFS hash param
         window.location.href = `watch.html?hash=${encodeURIComponent(video.ipfsHash)}`;
       });
 
@@ -136,12 +150,12 @@
 
     function renderVideos(filter = '') {
       container.innerHTML = '';
-      const filtered = videos.filter(v =>
-        v.title.toLowerCase().includes(filter) ||
+      const filtered = videos.filter(v => 
+        v.title.toLowerCase().includes(filter) || 
         (v.description && v.description.toLowerCase().includes(filter))
       );
       if (filtered.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:#777;">No videos found.</p>`;
+        container.innerHTML = `<p class="message">No videos found.</p>`;
         return;
       }
       filtered.forEach(video => {
@@ -150,35 +164,42 @@
     }
 
     async function loadVideosFromFirestore() {
-      container.innerHTML = '<p style="text-align:center; color:#777;">Loading videos...</p>';
+      container.innerHTML = '<p class="message">Loading videos...</p>';
       try {
         const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-          container.innerHTML = `<p style="text-align:center; color:#777;">No videos uploaded yet.</p>`;
+          container.innerHTML = `<p class="message">No videos uploaded yet.</p>`;
           return;
         }
 
         videos = [];
         snapshot.forEach(doc => {
-          // Ensure doc.data() has the fields you expect: title, description, ipfsHash, thumbnail (optional)
-          videos.push(doc.data());
+          // Add id if needed: doc.id
+          const data = doc.data();
+
+          // Validate required fields:
+          if (data.title && data.ipfsHash) {
+            videos.push(data);
+          } else {
+            console.warn(`Skipping video doc with missing title or ipfsHash:`, doc.id);
+          }
         });
 
         renderVideos();
       } catch (error) {
-        container.innerHTML = `<p style="text-align:center; color:#ff4c4c;">Failed to load videos: ${escapeHtml(error.message)}</p>`;
-        console.error(error);
+        container.innerHTML = `<p style="color:#ff4c4c; text-align:center;">Failed to load videos: ${escapeHtml(error.message)}</p>`;
+        console.error('Error loading videos:', error);
       }
     }
 
     searchBox.addEventListener('input', () => {
-      const query = searchBox.value.trim().toLowerCase();
-      renderVideos(query);
+      const queryText = searchBox.value.trim().toLowerCase();
+      renderVideos(queryText);
     });
 
-    // Load videos on page load
+    // Run on page load
     loadVideosFromFirestore();
   </script>
 
