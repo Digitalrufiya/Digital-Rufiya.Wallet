@@ -51,6 +51,25 @@
       min-height: 40px;
       white-space: pre-line;
     }
+    #uploadedVideoContainer {
+      margin-top: 30px;
+      background: #222;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px #08c;
+    }
+    #uploadedVideoContainer h3 {
+      margin-top: 0;
+    }
+    #uploadedVideoContainer video {
+      width: 100%;
+      border-radius: 6px;
+      background: #000;
+    }
+    #uploadedVideoContainer a {
+      color: #0af;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -75,19 +94,23 @@
 
   <div class="status" id="status"></div>
 
+  <div id="uploadedVideoContainer"></div>
+
 <script>
-  // Your full Pinata JWT token here — keep secret in production!
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
+  // Put your full Pinata JWT here, **do not expose it publicly in production**
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"; 
 
   const form = document.getElementById('uploadForm');
   const status = document.getElementById('status');
+  const uploadedVideoContainer = document.getElementById('uploadedVideoContainer');
 
-  // Load saved videos from localStorage or start empty
+  // Load saved videos from localStorage or start empty array
   let videoList = JSON.parse(localStorage.getItem('videoList') || '[]');
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     status.textContent = "";
+    uploadedVideoContainer.innerHTML = ""; // clear previous preview
 
     if (!PINATA_JWT || PINATA_JWT.length < 10) {
       status.textContent = "Error: Pinata JWT not set or invalid!";
@@ -111,6 +134,7 @@
       const formData = new FormData();
       formData.append('file', file);
 
+      // Optional metadata for Pinata pin
       const metadata = {
         name: title || file.name,
         keyvalues: {
@@ -129,6 +153,7 @@
       });
 
       if (!response.ok) {
+        // Get response text for debugging
         const text = await response.text();
         throw new Error(`Upload failed: ${response.status} ${response.statusText}\n${text}`);
       }
@@ -136,8 +161,8 @@
       const data = await response.json();
 
       const ipfsHash = data.IpfsHash;
-      status.textContent = `✅ Uploaded! IPFS Hash:\n${ipfsHash}`;
 
+      // Save metadata locally (simulate DB)
       const newVideo = {
         title,
         description,
@@ -149,9 +174,21 @@
       videoList.push(newVideo);
       localStorage.setItem('videoList', JSON.stringify(videoList));
 
-      status.textContent += "\nMetadata saved locally.";
+      status.textContent = "✅ Upload successful! 🎉";
+      setTimeout(() => { status.textContent = ""; }, 3000);
 
       form.reset();
+
+      // Show uploaded video preview
+      const videoUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
+      uploadedVideoContainer.innerHTML = `
+        <h3>Uploaded Video Preview:</h3>
+        <video controls>
+          <source src="${videoUrl}" type="${file.type}">
+          Your browser does not support the video tag.
+        </video>
+        <p>IPFS URL: <a href="${videoUrl}" target="_blank" rel="noopener noreferrer">${videoUrl}</a></p>
+      `;
 
     } catch (err) {
       status.textContent = "❌ Error: " + err.message;
