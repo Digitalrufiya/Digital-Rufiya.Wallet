@@ -1,55 +1,137 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>DRFTube – Upload & Watch</title>
+  <meta charset="UTF-8" />
+  <title>DRFTube – Watch Videos</title>
   <style>
-    body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 40px; }
-    input[type="file"] { margin: 20px auto; display: block; }
-    video { width: 90%; max-width: 720px; margin-top: 20px; border-radius: 10px; }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #0a84ff;
+    }
+    .video-item {
+      background: #222;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 30px;
+      box-shadow: 0 0 10px #0a84ff88;
+    }
+    .video-item h3 {
+      margin: 0 0 10px 0;
+      color: #0affff;
+    }
+    .video-item p {
+      margin: 0 0 12px 0;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    video {
+      width: 100%;
+      max-height: 360px;
+      border-radius: 10px;
+      background: #000;
+    }
+    #loading {
+      text-align: center;
+      margin: 40px 0;
+      font-size: 1.2rem;
+      color: #0aff6b;
+    }
   </style>
 </head>
 <body>
 
-  <h2>📤 Upload Your Video to DRFTube</h2>
-  <input type="file" id="fileInput" accept="video/*" />
-  <video id="videoPlayer" controls autoplay></video>
+  <h1>🎬 DRFTube — Watch Videos</h1>
 
-  <script>
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
+  <div id="loading">Loading videos...</div>
+  <div id="videosContainer"></div>
 
-    const fileInput = document.getElementById('fileInput');
-    const videoPlayer = document.getElementById('videoPlayer');
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files[0];
-      if (!file) return;
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.appspot.com",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd",
+      measurementId: "G-ZPTJE4DMNN"
+    };
 
-      const formData = new FormData();
-      formData.append('file', file);
+    // Initialize Firebase & Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
+    const videosContainer = document.getElementById('videosContainer');
+    const loading = document.getElementById('loading');
+
+    // Simple escape for text
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    async function loadVideos() {
       try {
-        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${PINATA_JWT}`
-          },
-          body: formData
-        });
+        const videosRef = collection(db, "videos");
+        const q = query(videosRef, orderBy("uploadedAt", "desc"));
+        const snapshot = await getDocs(q);
 
-        const data = await res.json();
+        loading.style.display = "none";
 
-        if (data.IpfsHash) {
-          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-          videoPlayer.src = ipfsUrl;
-        } else {
-          console.error("Upload failed:", data);
+        if (snapshot.empty) {
+          videosContainer.innerHTML = "<p>No videos uploaded yet.</p>";
+          return;
         }
 
-      } catch (err) {
-        console.error("Upload error:", err.message);
+        snapshot.forEach(doc => {
+          const video = doc.data();
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${video.ipfsHash}`;
+
+          const videoDiv = document.createElement("div");
+          videoDiv.className = "video-item";
+
+          videoDiv.innerHTML = `
+            <h3>${escapeHtml(video.title)}</h3>
+            <p>${escapeHtml(video.description || '')}</p>
+            <video controls preload="metadata">
+              <source src="${ipfsUrl}" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          `;
+
+          videosContainer.appendChild(videoDiv);
+        });
+
+      } catch (error) {
+        loading.textContent = "Failed to load videos: " + error.message;
       }
-    });
+    }
+
+    // Load videos on page load
+    loadVideos();
+
   </script>
 
 </body>
