@@ -2,84 +2,82 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>DRFTube – Watch Videos</title>
+  <title>🚀 Boost Your Video – DRFTube</title>
   <style>
     body {
       background: #111;
       color: #fff;
       font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
+      padding: 30px;
+      max-width: 600px;
+      margin: auto;
     }
-    h1 {
+    h2 {
       text-align: center;
-      color: #0a84ff;
-    }
-    .video-item {
-      background: #222;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 30px;
-      box-shadow: 0 0 10px #0a84ff88;
-      position: relative;
-    }
-    .video-item h3 {
-      margin: 0 0 10px 0;
       color: #0affff;
     }
-    .video-item p {
-      margin: 0 0 12px 0;
-      font-size: 0.9rem;
+    label {
+      display: block;
+      margin-top: 15px;
       color: #ccc;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+    }
+    button {
+      background-color: #0a84ff;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #0077e6;
+    }
+    .preview {
+      margin-top: 20px;
     }
     video {
       width: 100%;
-      max-height: 360px;
       border-radius: 10px;
       background: #000;
-    }
-    .boost-btn {
       margin-top: 10px;
-      background-color: #cc0000;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-      font-size: 1rem;
-    }
-    .boost-btn:hover {
-      background-color: #a30000;
-    }
-    #loading {
-      text-align: center;
-      margin: 40px 0;
-      font-size: 1.2rem;
-      color: #0aff6b;
     }
   </style>
 </head>
 <body>
 
-  <h1>🎬 DRFTube — Watch Videos</h1>
+  <h2>🚀 Boost Your Video</h2>
 
-  <div id="loading">Loading videos...</div>
-  <div id="videosContainer"></div>
+  <div class="preview" id="videoPreview"></div>
 
+  <form id="boostForm">
+    <label>Video Title</label>
+    <input type="text" id="videoTitle" name="title" readonly />
+
+    <label>Video Link (Paste IPFS link or confirm)</label>
+    <input type="url" id="videoLink" name="link" required />
+
+    <label>Boost Reason (optional)</label>
+    <textarea name="reason" placeholder="Why are you boosting this video? (optional)"></textarea>
+
+    <button type="submit">Submit Boost Request</button>
+  </form>
+
+  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import {
       getFirestore,
       collection,
-      getDocs,
-      query,
-      orderBy
+      addDoc,
+      serverTimestamp
     } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
       authDomain: "drftube-634c6.firebaseapp.com",
@@ -90,74 +88,47 @@
       measurementId: "G-ZPTJE4DMNN"
     };
 
-    // Initialize Firebase & Firestore
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const videosContainer = document.getElementById('videosContainer');
-    const loading = document.getElementById('loading');
+    const params = new URLSearchParams(window.location.search);
+    const title = decodeURIComponent(params.get("title") || "");
+    const link = decodeURIComponent(params.get("link") || "");
 
-    // Simple escape for text
-    function escapeHtml(text) {
-      if (!text) return "";
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    document.getElementById("videoTitle").value = title;
+    document.getElementById("videoLink").value = link;
+
+    const videoPreview = document.getElementById("videoPreview");
+    if (link) {
+      videoPreview.innerHTML = `
+        <label>Video Preview:</label>
+        <video controls preload="metadata">
+          <source src="${link}" type="video/mp4" />
+        </video>
+      `;
     }
 
-    async function loadVideos() {
+    document.getElementById("boostForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const boostTitle = document.getElementById("videoTitle").value;
+      const boostLink = document.getElementById("videoLink").value;
+      const reason = this.reason.value;
+
       try {
-        const videosRef = collection(db, "videos");
-        const q = query(videosRef, orderBy("uploadedAt", "desc"));
-        const snapshot = await getDocs(q);
-
-        loading.style.display = "none";
-
-        if (snapshot.empty) {
-          videosContainer.innerHTML = "<p>No videos uploaded yet.</p>";
-          return;
-        }
-
-        snapshot.forEach(doc => {
-          const video = doc.data();
-          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${video.ipfsHash}`;
-
-          const videoDiv = document.createElement("div");
-          videoDiv.className = "video-item";
-
-          videoDiv.innerHTML = `
-            <h3>${escapeHtml(video.title)}</h3>
-            <p>${escapeHtml(video.description || '')}</p>
-            <video controls preload="metadata">
-              <source src="${ipfsUrl}" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-            <button class="boost-btn">Boost</button>
-          `;
-
-          // Add click event to Boost button to redirect to tubeboost.html
-          const boostBtn = videoDiv.querySelector('.boost-btn');
-          boostBtn.addEventListener('click', () => {
-            // Optionally you can pass some video identifier in the query params if needed
-            // e.g. tubeboost.html?videoId=xyz
-            window.location.href = 'tubeboost.html';
-          });
-
-          videosContainer.appendChild(videoDiv);
+        await addDoc(collection(db, "boostRequests"), {
+          title: boostTitle,
+          link: boostLink,
+          reason: reason,
+          requestedAt: serverTimestamp()
         });
 
+        alert("✅ Boost request submitted successfully!");
+        this.reset();
       } catch (error) {
-        loading.textContent = "Failed to load videos: " + error.message;
+        alert("❌ Failed to submit request: " + error.message);
       }
-    }
-
-    // Load videos on page load
-    loadVideos();
-
+    });
   </script>
-
 </body>
 </html>
