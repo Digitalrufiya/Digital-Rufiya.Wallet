@@ -1,140 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Video Channel</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFTube - Videos</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    video { width: 100%; margin-top: 10px; }
-    .video-controls { margin-top: 10px; display: flex; gap: 10px; }
-    .comment-box { margin-top: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0; padding: 20px;
+      min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #0af;
+    }
+    #searchBox {
+      display: block;
+      margin: 0 auto 20px;
+      padding: 10px;
+      width: 90%;
+      max-width: 500px;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+    }
+    .videos-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .video-card {
+      background: #222;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 10px #0af;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .video-card:hover {
+      transform: scale(1.03);
+    }
+    .thumbnail {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #444;
+    }
+    .video-info {
+      padding: 10px;
+    }
+    .video-title {
+      font-size: 1.1rem;
+      margin: 0 0 8px 0;
+      color: #0af;
+    }
+    .video-desc {
+      font-size: 0.9rem;
+      color: #bbb;
+      height: 45px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   </style>
 </head>
 <body>
-  <h2>Upload a Video</h2>
-  <input type="file" accept="video/*" id="videoInput" />
-  <button onclick="uploadVideo()">Upload</button>
 
-  <div id="uploadStatus"></div>
+  <h1>DRFTube - Videos for the Believers</h1>
+  <input type="search" id="searchBox" placeholder="Search videos by title or description..." />
 
-  <hr>
-
-  <h2>Watch Video</h2>
-  <input type="text" id="videoIdInput" placeholder="Enter Video ID" />
-  <button onclick="loadVideo()">Load</button>
-  <video id="videoPlayer" controls></video>
-
-  <div class="video-controls">
-    <button onclick="boostVideo()">Boost</button>
-    <button onclick="likeVideo()">Like</button>
+  <div class="videos-container" id="videosContainer">
+    <!-- Video cards will be injected here -->
   </div>
 
-  <div class="comment-box">
-    <input type="text" id="commentInput" placeholder="Add a comment...">
-    <button onclick="addComment()">Comment</button>
-  </div>
-  <div id="comments"></div>
-
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-app.js';
-    import { getDatabase, ref, set, get, onValue, push, update, runTransaction } from 'https://www.gstatic.com/firebasejs/11.9.0/firebase-database.js';
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    const JWT = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
-
-    window.uploadVideo = async function () {
-      const file = document.getElementById('videoInput').files[0];
-      if (!file || !file.type.startsWith('video/')) {
-        alert('Please select a video file only.');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${JWT}` },
-        body: formData
-      });
-
-      const json = await res.json();
-      const ipfsHash = json.IpfsHash;
-      const id = Date.now().toString();
-
-      await set(ref(db, 'videos/' + id), {
-        hash: ipfsHash,
-        title: file.name,
-        boost: 0,
-        likes: 0,
-        time: new Date().toISOString(),
-      });
-
-      document.getElementById('uploadStatus').innerText = `Uploaded! Video ID: ${id}`;
+<script>
+  // Sample videos list — in production, fetch this from backend or JSON file
+  const videos = [
+    {
+      title: "The Path to Allah",
+      description: "A reminder for every believer to stay on the straight path.",
+      ipfsHash: "QmXyzExampleHash1",
+      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail1" // replace with actual thumbnail IPFS
+    },
+    {
+      title: "Power of Dua",
+      description: "Understanding the impact of dua in our daily life.",
+      ipfsHash: "QmXyzExampleHash2",
+      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail2"
+    },
+    {
+      title: "Signs of The Last Hour",
+      description: "Exploring the major and minor signs before Qiyamah.",
+      ipfsHash: "QmXyzExampleHash3",
+      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail3"
     }
+    // Add more videos here
+  ];
 
-    window.loadVideo = async function () {
-      const id = document.getElementById('videoIdInput').value;
-      const snapshot = await get(ref(db, 'videos/' + id));
-      if (!snapshot.exists()) return alert('Video not found');
+  const container = document.getElementById('videosContainer');
+  const searchBox = document.getElementById('searchBox');
 
-      const data = snapshot.val();
-      document.getElementById('videoPlayer').src = `https://gateway.pinata.cloud/ipfs/${data.hash}`;
-      loadComments(id);
-      window.currentVideoId = id;
+  function createVideoCard(video) {
+    const card = document.createElement('div');
+    card.className = 'video-card';
+
+    card.innerHTML = `
+      <img class="thumbnail" src="${video.thumbnail}" alt="Thumbnail for ${video.title}" />
+      <div class="video-info">
+        <h3 class="video-title">${video.title}</h3>
+        <p class="video-desc">${video.description}</p>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      window.location.href = `watch.html?hash=${video.ipfsHash}`;
+    });
+
+    return card;
+  }
+
+  function renderVideos(filter = '') {
+    container.innerHTML = '';
+    const filtered = videos.filter(v => 
+      v.title.toLowerCase().includes(filter) || 
+      v.description.toLowerCase().includes(filter)
+    );
+    if (filtered.length === 0) {
+      container.innerHTML = `<p style="text-align:center; color:#777;">No videos found.</p>`;
+      return;
     }
+    filtered.forEach(video => {
+      container.appendChild(createVideoCard(video));
+    });
+  }
 
-    window.boostVideo = function () {
-      if (!window.currentVideoId) return;
-      const refPath = ref(db, 'videos/' + window.currentVideoId + '/boost');
-      runTransaction(refPath, val => (val || 0) + 1);
-    }
+  searchBox.addEventListener('input', () => {
+    const query = searchBox.value.trim().toLowerCase();
+    renderVideos(query);
+  });
 
-    window.likeVideo = function () {
-      if (!window.currentVideoId) return;
-      const refPath = ref(db, 'videos/' + window.currentVideoId + '/likes');
-      runTransaction(refPath, val => (val || 0) + 1);
-    }
+  // Initial render
+  renderVideos();
+</script>
 
-    window.addComment = function () {
-      if (!window.currentVideoId) return;
-      const comment = document.getElementById('commentInput').value;
-      if (!comment) return;
-
-      const commentRef = push(ref(db, 'videos/' + window.currentVideoId + '/comments'));
-      set(commentRef, { text: comment, time: new Date().toISOString() });
-      document.getElementById('commentInput').value = '';
-    }
-
-    function loadComments(id) {
-      const commentsRef = ref(db, 'videos/' + id + '/comments');
-      onValue(commentsRef, snapshot => {
-        const val = snapshot.val();
-        const box = document.getElementById('comments');
-        box.innerHTML = '<h4>Comments:</h4>';
-        if (val) {
-          Object.values(val).forEach(c => {
-            const div = document.createElement('div');
-            div.innerText = `${c.text} (${new Date(c.time).toLocaleString()})`;
-            box.appendChild(div);
-          });
-        }
-      });
-    }
-  </script>
 </body>
 </html>
