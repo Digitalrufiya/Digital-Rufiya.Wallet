@@ -75,78 +75,112 @@
   <input type="search" id="searchBox" placeholder="Search videos by title or description..." />
 
   <div class="videos-container" id="videosContainer">
-    <!-- Video cards will be injected here -->
+    <p style="text-align:center; color:#777;">Loading videos...</p>
   </div>
 
-<script>
-  // Sample videos list — in production, fetch this from backend or JSON file
-  const videos = [
-    {
-      title: "The Path to Allah",
-      description: "A reminder for every believer to stay on the straight path.",
-      ipfsHash: "QmXyzExampleHash1",
-      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail1" // replace with actual thumbnail IPFS
-    },
-    {
-      title: "Power of Dua",
-      description: "Understanding the impact of dua in our daily life.",
-      ipfsHash: "QmXyzExampleHash2",
-      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail2"
-    },
-    {
-      title: "Signs of The Last Hour",
-      description: "Exploring the major and minor signs before Qiyamah.",
-      ipfsHash: "QmXyzExampleHash3",
-      thumbnail: "https://ipfs.io/ipfs/QmXyzExampleThumbnail3"
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    // Your Firebase config (replace with your actual config if different)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.appspot.com",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd",
+      measurementId: "G-ZPTJE4DMNN",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const container = document.getElementById('videosContainer');
+    const searchBox = document.getElementById('searchBox');
+
+    let videos = []; // will hold all videos fetched from Firestore
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
-    // Add more videos here
-  ];
 
-  const container = document.getElementById('videosContainer');
-  const searchBox = document.getElementById('searchBox');
+    function createVideoCard(video) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
 
-  function createVideoCard(video) {
-    const card = document.createElement('div');
-    card.className = 'video-card';
+      // For thumbnail, if you do NOT store a thumbnail, fallback to a placeholder image
+      // or generate one from IPFS video (not trivial). So here I just use a placeholder.
+      const thumbnailUrl = video.thumbnail || `https://ipfs.io/ipfs/${video.ipfsHash}`;
 
-    card.innerHTML = `
-      <img class="thumbnail" src="${video.thumbnail}" alt="Thumbnail for ${video.title}" />
-      <div class="video-info">
-        <h3 class="video-title">${video.title}</h3>
-        <p class="video-desc">${video.description}</p>
-      </div>
-    `;
+      card.innerHTML = `
+        <img class="thumbnail" src="${thumbnailUrl}" alt="Thumbnail for ${escapeHtml(video.title)}" />
+        <div class="video-info">
+          <h3 class="video-title">${escapeHtml(video.title)}</h3>
+          <p class="video-desc">${escapeHtml(video.description)}</p>
+        </div>
+      `;
 
-    card.addEventListener('click', () => {
-      window.location.href = `watch.html?hash=${video.ipfsHash}`;
+      card.addEventListener('click', () => {
+        window.location.href = `watch.html?hash=${video.ipfsHash}`;
+      });
+
+      return card;
+    }
+
+    function renderVideos(filter = '') {
+      container.innerHTML = '';
+      const filtered = videos.filter(v => 
+        v.title.toLowerCase().includes(filter) || 
+        (v.description && v.description.toLowerCase().includes(filter))
+      );
+      if (filtered.length === 0) {
+        container.innerHTML = `<p style="text-align:center; color:#777;">No videos found.</p>`;
+        return;
+      }
+      filtered.forEach(video => {
+        container.appendChild(createVideoCard(video));
+      });
+    }
+
+    async function loadVideosFromFirestore() {
+      container.innerHTML = '<p style="text-align:center; color:#777;">Loading videos...</p>';
+      try {
+        const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          container.innerHTML = `<p style="text-align:center; color:#777;">No videos uploaded yet.</p>`;
+          return;
+        }
+
+        videos = [];
+        snapshot.forEach(doc => {
+          videos.push(doc.data());
+        });
+
+        renderVideos();
+      } catch (error) {
+        container.innerHTML = `<p style="text-align:center; color:#ff4c4c;">Failed to load videos: ${error.message}</p>`;
+        console.error(error);
+      }
+    }
+
+    searchBox.addEventListener('input', () => {
+      const query = searchBox.value.trim().toLowerCase();
+      renderVideos(query);
     });
 
-    return card;
-  }
-
-  function renderVideos(filter = '') {
-    container.innerHTML = '';
-    const filtered = videos.filter(v => 
-      v.title.toLowerCase().includes(filter) || 
-      v.description.toLowerCase().includes(filter)
-    );
-    if (filtered.length === 0) {
-      container.innerHTML = `<p style="text-align:center; color:#777;">No videos found.</p>`;
-      return;
-    }
-    filtered.forEach(video => {
-      container.appendChild(createVideoCard(video));
-    });
-  }
-
-  searchBox.addEventListener('input', () => {
-    const query = searchBox.value.trim().toLowerCase();
-    renderVideos(query);
-  });
-
-  // Initial render
-  renderVideos();
-</script>
+    // Load videos on page load
+    loadVideosFromFirestore();
+  </script>
 
 </body>
 </html>
