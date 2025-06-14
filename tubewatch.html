@@ -7,30 +7,23 @@
     body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 40px; }
     input[type="file"] { margin: 20px auto; display: block; }
     video { width: 90%; max-width: 720px; margin-top: 20px; border-radius: 10px; }
-    .status { margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <h2>📤 Upload & 🎬 Watch on DRFTube</h2>
+  <h2>📤 Upload Your Video to DRFTube</h2>
   <input type="file" id="fileInput" accept="video/*" />
-  <p class="status" id="statusText">Select a video to upload</p>
   <video id="videoPlayer" controls autoplay></video>
-  <p id="ipfsLink"></p>
 
   <script>
     const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
     const fileInput = document.getElementById('fileInput');
     const videoPlayer = document.getElementById('videoPlayer');
-    const statusText = document.getElementById('statusText');
-    const ipfsLink = document.getElementById('ipfsLink');
 
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files[0];
       if (!file) return;
-
-      statusText.textContent = 'Uploading to IPFS via Pinata...';
 
       const formData = new FormData();
       formData.append('file', file);
@@ -49,16 +42,12 @@
         if (data.IpfsHash) {
           const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
           videoPlayer.src = ipfsUrl;
-          statusText.textContent = "✅ Uploaded & Playing from IPFS!";
-          ipfsLink.innerHTML = `📡 <a href="${ipfsUrl}" target="_blank">${ipfsUrl}</a>`;
         } else {
-          statusText.textContent = "❌ Upload failed.";
-          console.error(data);
+          console.error("Upload failed:", data);
         }
 
       } catch (err) {
-        console.error(err);
-        statusText.textContent = "❌ Error uploading: " + err.message;
+        console.error("Upload error:", err.message);
       }
     });
   </script>
