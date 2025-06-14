@@ -82,7 +82,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-    // Your Firebase config (replace with your actual config if different)
+    // Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
       authDomain: "drftube-634c6.firebaseapp.com",
@@ -99,7 +99,7 @@
     const container = document.getElementById('videosContainer');
     const searchBox = document.getElementById('searchBox');
 
-    let videos = []; // will hold all videos fetched from Firestore
+    let videos = []; // store videos from Firestore
 
     // Escape HTML to prevent XSS
     function escapeHtml(text) {
@@ -116,8 +116,7 @@
       const card = document.createElement('div');
       card.className = 'video-card';
 
-      // For thumbnail, if you do NOT store a thumbnail, fallback to a placeholder image
-      // or generate one from IPFS video (not trivial). So here I just use a placeholder.
+      // Thumbnail fallback: if no thumbnail, show IPFS video hash as direct thumbnail link (you may replace with placeholder)
       const thumbnailUrl = video.thumbnail || `https://ipfs.io/ipfs/${video.ipfsHash}`;
 
       card.innerHTML = `
@@ -129,7 +128,7 @@
       `;
 
       card.addEventListener('click', () => {
-        window.location.href = `watch.html?hash=${video.ipfsHash}`;
+        window.location.href = `watch.html?hash=${encodeURIComponent(video.ipfsHash)}`;
       });
 
       return card;
@@ -137,8 +136,8 @@
 
     function renderVideos(filter = '') {
       container.innerHTML = '';
-      const filtered = videos.filter(v => 
-        v.title.toLowerCase().includes(filter) || 
+      const filtered = videos.filter(v =>
+        v.title.toLowerCase().includes(filter) ||
         (v.description && v.description.toLowerCase().includes(filter))
       );
       if (filtered.length === 0) {
@@ -163,12 +162,13 @@
 
         videos = [];
         snapshot.forEach(doc => {
+          // Ensure doc.data() has the fields you expect: title, description, ipfsHash, thumbnail (optional)
           videos.push(doc.data());
         });
 
         renderVideos();
       } catch (error) {
-        container.innerHTML = `<p style="text-align:center; color:#ff4c4c;">Failed to load videos: ${error.message}</p>`;
+        container.innerHTML = `<p style="text-align:center; color:#ff4c4c;">Failed to load videos: ${escapeHtml(error.message)}</p>`;
         console.error(error);
       }
     }
