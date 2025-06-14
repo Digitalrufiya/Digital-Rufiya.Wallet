@@ -1,37 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Watch | DRFTube</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>DRFTube – Upload & Watch</title>
   <style>
-    body { font-family: sans-serif; background: #121212; color: white; padding: 20px; text-align: center; }
-    video { width: 100%; max-width: 800px; margin: 20px auto; display: block; border-radius: 8px; }
-    .info { max-width: 800px; margin: auto; text-align: left; }
-    a { color: #0ff; word-break: break-all; }
+    body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 40px; }
+    input[type="file"] { margin: 20px auto; display: block; }
+    video { width: 90%; max-width: 720px; margin-top: 20px; border-radius: 10px; }
+    .status { margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <h2>📺 Watch on DRFTube</h2>
-  <div class="info">
-    <p><strong>IPFS Video:</strong></p>
-    <a id="videoLink" target="_blank"></a>
-  </div>
+  <h2>📤 Upload & 🎬 Watch on DRFTube</h2>
+  <input type="file" id="fileInput" accept="video/*" />
+  <p class="status" id="statusText">Select a video to upload</p>
   <video id="videoPlayer" controls autoplay></video>
+  <p id="ipfsLink"></p>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const hash = params.get('hash');
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
-    if (!hash) {
-      document.body.innerHTML = "<h3>❌ No video hash provided in URL.</h3><p>Use format: <code>watch.html?hash=yourIpfsHash</code></p>";
-    } else {
-      const url = `https://gateway.pinata.cloud/ipfs/${hash}`;
-      document.getElementById("videoPlayer").src = url;
-      document.getElementById("videoLink").href = url;
-      document.getElementById("videoLink").textContent = url;
-    }
+    const fileInput = document.getElementById('fileInput');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const statusText = document.getElementById('statusText');
+    const ipfsLink = document.getElementById('ipfsLink');
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      statusText.textContent = 'Uploading to IPFS via Pinata...';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${PINATA_JWT}`
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.IpfsHash) {
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+          videoPlayer.src = ipfsUrl;
+          statusText.textContent = "✅ Uploaded & Playing from IPFS!";
+          ipfsLink.innerHTML = `📡 <a href="${ipfsUrl}" target="_blank">${ipfsUrl}</a>`;
+        } else {
+          statusText.textContent = "❌ Upload failed.";
+          console.error(data);
+        }
+
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "❌ Error uploading: " + err.message;
+      }
+    });
   </script>
 
 </body>
