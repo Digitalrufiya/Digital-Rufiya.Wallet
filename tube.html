@@ -1,160 +1,541 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFTube - Upload Videos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: #0d0d0d;
-      color: white;
-    }
-    header {
-      background: #b30000;
-      padding: 15px 20px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      color: #fff;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-    .container {
-      max-width: 700px;
-      margin: 30px auto;
-      background: #1a1a1a;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
-    }
-    input[type="file"], textarea, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 15px;
-      border: none;
-      border-radius: 5px;
-    }
-    textarea {
-      resize: vertical;
-    }
-    button {
-      background: #cc0000;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #e60000;
-    }
-    .video-card {
-      margin-top: 30px;
-      background: #262626;
-      padding: 15px;
-      border-radius: 10px;
-    }
-    video {
-      width: 100%;
-      border-radius: 10px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFTube - Islam’s Video Channel</title>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+  import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+    authDomain: "drftube-634c6.firebaseapp.com",
+    projectId: "drftube-634c6",
+    storageBucket: "drftube-634c6.appspot.com",
+    messagingSenderId: "819828633864",
+    appId: "1:819828633864:web:513002b461259b000cbcbd",
+    measurementId: "G-ZPTJE4DMNN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+  const storage = getStorage(app);
+
+  window.app = {
+    auth,
+    db,
+    storage,
+    provider: new GoogleAuthProvider(),
+  };
+</script>
+
+<style>
+  /* Reset & base */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #eee;
+  }
+  a {
+    color: #ff0000;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* Top Nav */
+  header {
+    position: sticky;
+    top: 0; left: 0; right: 0;
+    background: #1e1e1e;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.5);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .logo img {
+    height: 36px;
+    margin-right: 12px;
+  }
+  .logo span {
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 1.2px;
+    color: #ff0000;
+    user-select: none;
+  }
+  .search-bar {
+    flex-grow: 1;
+    max-width: 600px;
+    margin: 0 24px;
+  }
+  .search-bar input[type="search"] {
+    width: 100%;
+    padding: 8px 14px;
+    font-size: 16px;
+    border-radius: 2px;
+    border: none;
+  }
+  .search-bar button {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 32px;
+    width: 64px;
+    border: none;
+    background: #ff0000;
+    color: white;
+    cursor: pointer;
+    font-weight: 700;
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Auth buttons */
+  .auth-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .auth-section button {
+    background: #ff0000;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .auth-section button:hover {
+    background: #cc0000;
+  }
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .user-info img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+
+  /* Main */
+  main {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+
+  /* Upload Section */
+  #upload-section {
+    background: #1e1e1e;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 32px;
+  }
+  #upload-section h2 {
+    margin: 0 0 12px 0;
+    color: #ff0000;
+  }
+  #upload-section input[type="file"] {
+    color: #eee;
+    margin-bottom: 12px;
+  }
+  #upload-section textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    resize: vertical;
+    border-radius: 4px;
+    border: none;
+    background: #121212;
+    color: #eee;
+    font-size: 14px;
+  }
+  #upload-section button {
+    margin-top: 12px;
+    background: #ff0000;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 700;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  #upload-section button:hover {
+    background: #cc0000;
+  }
+  #upload-status {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #ccc;
+  }
+
+  /* Videos Grid */
+  #videos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+    gap: 20px;
+  }
+  .video-card {
+    background: #1e1e1e;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .video-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.6);
+  }
+  .thumbnail {
+    width: 100%;
+    height: 160px;
+    background: #000;
+    object-fit: cover;
+  }
+  .video-info {
+    padding: 12px 12px 16px 12px;
+  }
+  .video-title {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+  .video-uploader {
+    font-size: 14px;
+    color: #bbb;
+  }
+  .video-time {
+    font-size: 12px;
+    color: #777;
+  }
+
+  /* Modal */
+  #video-modal {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  #video-modal.active {
+    display: flex;
+  }
+  #video-modal video {
+    max-width: 90vw;
+    max-height: 80vh;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #ff0000aa;
+  }
+  #modal-close {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    font-size: 28px;
+    color: #ff0000;
+    cursor: pointer;
+    font-weight: 900;
+    user-select: none;
+  }
+</style>
 </head>
 <body>
-  <header>DRFTube - Video Channel</header>
-  <div class="container">
-    <input type="file" id="videoFile" accept="video/*">
-    <textarea id="videoText" rows="4" placeholder="Enter description..."></textarea>
-    <button onclick="uploadVideo()">Upload Video</button>
 
-    <div id="videos"></div>
+<header>
+  <div class="logo" onclick="window.location.reload()">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" alt="DRFTube Logo" />
+    <span>DRFTube</span>
   </div>
+  <div class="search-bar" style="position: relative;">
+    <input type="search" id="search-input" placeholder="Search videos..." />
+    <button id="search-btn">Search</button>
+  </div>
+  <div class="auth-section" id="auth-section">
+    <button id="login-btn">Sign in with Google</button>
+  </div>
+</header>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+<main>
+  <section id="upload-section" style="display:none;">
+    <h2>Upload Your Video</h2>
+    <input type="file" id="video-file" accept="video/*" />
+    <textarea id="video-description" placeholder="Add video description..."></textarea>
+    <button id="upload-btn">Upload Video</button>
+    <div id="upload-status"></div>
+  </section>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
-      authDomain: "drftube-634c6.firebaseapp.com",
-      projectId: "drftube-634c6",
-      storageBucket: "drftube-634c6.appspot.com",
-      messagingSenderId: "819828633864",
-      appId: "1:819828633864:web:513002b461259b000cbcbd",
-      measurementId: "G-ZPTJE4DMNN",
-      databaseURL: "https://drftube-634c6-default-rtdb.firebaseio.com"
-    };
+  <section id="videos-grid"></section>
+</main>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
+<div id="video-modal">
+  <div id="modal-close">&times;</div>
+  <video controls id="modal-video" src=""></video>
+</div>
 
-    let currentUser = null;
+<script type="module">
+  const { auth, provider, db, storage } = window.app;
 
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        currentUser = user;
-        loadVideos();
-      } else {
-        signInWithPopup(auth, provider);
-      }
-    });
+  // Elements
+  const authSection = document.getElementById('auth-section');
+  const loginBtn = document.getElementById('login-btn');
+  const uploadSection = document.getElementById('upload-section');
+  const videoFileInput = document.getElementById('video-file');
+  const videoDescInput = document.getElementById('video-description');
+  const uploadBtn = document.getElementById('upload-btn');
+  const uploadStatus = document.getElementById('upload-status');
+  const videosGrid = document.getElementById('videos-grid');
+  const searchInput = document.getElementById('search-input');
+  const searchBtn = document.getElementById('search-btn');
+  const videoModal = document.getElementById('video-modal');
+  const modalVideo = document.getElementById('modal-video');
+  const modalClose = document.getElementById('modal-close');
 
-    function uploadVideo() {
-      const file = document.getElementById("videoFile").files[0];
-      const desc = document.getElementById("videoText").value;
-      if (!file || !desc) return alert("Provide both video and description");
+  let currentUser = null;
+  let videosData = [];
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
-
-      fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: {
-          Authorization: "BearereyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"
-        },
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        const url = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-        push(ref(db, "videos"), {
-          uid: currentUser.uid,
-          user: currentUser.displayName,
-          text: desc,
-          url: url,
-          time: Date.now()
-        });
-        alert("Uploaded to IPFS and saved!");
-      })
-      .catch(err => {
-        console.error(err);
-        alert("Upload failed");
-      });
+  // Login
+  loginBtn.addEventListener('click', async () => {
+    try {
+      const result = await auth.signInWithPopup(provider);
+      currentUser = result.user;
+      updateUIForUser();
+      loadVideos();
+    } catch (err) {
+      alert('Login failed: ' + err.message);
     }
+  });
 
-    function loadVideos() {
-      const container = document.getElementById("videos");
-      onValue(ref(db, "videos"), snapshot => {
-        container.innerHTML = "";
-        const data = snapshot.val();
-        for (const key in data) {
-          const vid = data[key];
-          const card = document.createElement("div");
-          card.className = "video-card";
-          card.innerHTML = `
-            <p><strong>${vid.user}</strong></p>
-            <video controls src="${vid.url}"></video>
-            <p>${vid.text}</p>
-          `;
-          container.appendChild(card);
+  // Auth state observer
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      updateUIForUser();
+      loadVideos();
+    } else {
+      currentUser = null;
+      updateUIForUser();
+      videosGrid.innerHTML = '';
+    }
+  });
+
+  function updateUIForUser() {
+    if (currentUser) {
+      authSection.innerHTML = `
+        <div class="user-info">
+          <img src="${currentUser.photoURL}" alt="User" />
+          <span>${currentUser.displayName}</span>
+        </div>
+        <button id="logout-btn">Logout</button>
+      `;
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        signOut(auth);
+      });
+      uploadSection.style.display = 'block';
+    } else {
+      authSection.innerHTML = `<button id="login-btn">Sign in with Google</button>`;
+      document.getElementById('login-btn').addEventListener('click', async () => {
+        try {
+          const result = await auth.signInWithPopup(provider);
+          currentUser = result.user;
+          updateUIForUser();
+          loadVideos();
+        } catch (err) {
+          alert('Login failed: ' + err.message);
         }
       });
+      uploadSection.style.display = 'none';
     }
-  </script>
+  }
+
+  // Upload video
+  uploadBtn.addEventListener('click', () => {
+    const file = videoFileInput.files[0];
+    const desc = videoDescInput.value.trim();
+
+    if (!file) {
+      alert('Please select a video file.');
+      return;
+    }
+    if (!desc) {
+      alert('Please enter a description.');
+      return;
+    }
+
+    const metadata = {
+      contentType: file.type,
+    };
+
+    const storageReference = storageRef(storage, `videos/${currentUser.uid}/${Date.now()}_${file.name}`);
+
+    const uploadTask = uploadBytesResumable(storageReference, file, metadata);
+
+    uploadStatus.textContent = 'Uploading... 0%';
+
+    uploadTask.on('state_changed', 
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        uploadStatus.textContent = `Uploading... ${progress.toFixed(0)}%`;
+      }, 
+      (error) => {
+        uploadStatus.textContent = 'Upload failed: ' + error.message;
+      }, 
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+        // Save to realtime db
+        const videosRef = ref(db, 'videos');
+        const newVideoRef = push(videosRef);
+        await newVideoRef.set({
+          uid: currentUser.uid,
+          uploaderName: currentUser.displayName,
+          uploaderPhoto: currentUser.photoURL,
+          videoURL: downloadURL,
+          description: desc,
+          timestamp: Date.now()
+        });
+
+        uploadStatus.textContent = 'Upload successful!';
+        videoFileInput.value = '';
+        videoDescInput.value = '';
+      }
+    );
+  });
+
+  // Load videos from realtime database
+  function loadVideos(searchTerm = '') {
+    const videosRef = ref(db, 'videos');
+    onValue(videosRef, (snapshot) => {
+      videosGrid.innerHTML = '';
+      videosData = [];
+      snapshot.forEach((child) => {
+        const video = child.val();
+        video.id = child.key;
+        if (searchTerm && !video.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return; // Skip non-matching
+        }
+        videosData.push(video);
+      });
+      if (videosData.length === 0) {
+        videosGrid.innerHTML = '<p style="color:#aaa;">No videos found.</p>';
+        return;
+      }
+      videosData.sort((a,b) => b.timestamp - a.timestamp); // newest first
+      videosData.forEach(renderVideoCard);
+    });
+  }
+
+  // Render each video card
+  function renderVideoCard(video) {
+    // Create thumbnail element with video preview (poster)
+    // Firebase Storage does not generate thumbnails automatically,
+    // so we use a placeholder thumbnail (black box) or could extend with more logic.
+
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.tabIndex = 0;
+    card.setAttribute('aria-label', `Play video: ${video.description}`);
+
+    // Video element for thumbnail preview
+    const videoEl = document.createElement('video');
+    videoEl.className = 'thumbnail';
+    videoEl.src = video.videoURL;
+    videoEl.muted = true;
+    videoEl.preload = 'metadata';
+    videoEl.playsInline = true;
+    videoEl.style.objectFit = 'cover';
+    videoEl.onmouseover = () => videoEl.play();
+    videoEl.onmouseout = () => videoEl.pause();
+
+    card.appendChild(videoEl);
+
+    const info = document.createElement('div');
+    info.className = 'video-info';
+
+    const title = document.createElement('div');
+    title.className = 'video-title';
+    title.textContent = video.description;
+
+    const uploader = document.createElement('div');
+    uploader.className = 'video-uploader';
+    uploader.textContent = `By: ${video.uploaderName}`;
+
+    const time = document.createElement('div');
+    time.className = 'video-time';
+    time.textContent = timeAgo(new Date(video.timestamp));
+
+    info.appendChild(title);
+    info.appendChild(uploader);
+    info.appendChild(time);
+    card.appendChild(info);
+
+    card.onclick = () => openModal(video.videoURL);
+
+    videosGrid.appendChild(card);
+  }
+
+  // Simple time ago
+  function timeAgo(date) {
+    const seconds = Math.floor((Date.now() - date) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds/60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds/3600)}h ago`;
+    return `${Math.floor(seconds/86400)}d ago`;
+  }
+
+  // Modal video player
+  function openModal(url) {
+    modalVideo.src = url;
+    videoModal.classList.add('active');
+  }
+  modalClose.onclick = () => {
+    modalVideo.pause();
+    modalVideo.src = '';
+    videoModal.classList.remove('active');
+  };
+  videoModal.onclick = (e) => {
+    if (e.target === videoModal) {
+      modalVideo.pause();
+      modalVideo.src = '';
+      videoModal.classList.remove('active');
+    }
+  };
+
+  // Search
+  searchBtn.onclick = () => {
+    const term = searchInput.value.trim();
+    loadVideos(term);
+  };
+
+  // Initial UI setup
+  updateUIForUser();
+
+  // Automatically load videos if user already logged in
+  onAuthStateChanged(auth, (user) => {
+    if (user) loadVideos();
+  });
+</script>
+
 </body>
 </html>
