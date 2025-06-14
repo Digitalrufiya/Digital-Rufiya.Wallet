@@ -6,14 +6,14 @@
   <title>DRFTube Upload Video</title>
   <style>
     body {
-      background: #330000;
+      background: #111;
       color: #eee;
       font-family: Arial, sans-serif;
       max-width: 600px;
       margin: 40px auto;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 20px #b22222;
+      box-shadow: 0 0 20px #0af;
     }
     label {
       display: block;
@@ -28,44 +28,35 @@
       border: none;
       font-size: 1rem;
       box-sizing: border-box;
-      background: #440000;
-      color: #eee;
-    }
-    input[type="text"]::placeholder,
-    textarea::placeholder {
-      color: #bbb;
     }
     button {
       margin-top: 20px;
       padding: 12px 20px;
-      background: #b22222;
+      background: #0af;
       border: none;
-      color: #fff;
+      color: #111;
       font-weight: bold;
       font-size: 1.1rem;
       border-radius: 6px;
       cursor: pointer;
       transition: background 0.3s ease;
-      box-shadow: 0 0 8px #b22222;
     }
     button:hover {
-      background: #8b0000;
+      background: #08c;
       color: #fff;
-      box-shadow: 0 0 15px #8b0000;
     }
     .status {
       margin-top: 15px;
       font-size: 0.9rem;
       min-height: 40px;
       white-space: pre-line;
-      color: #ffdddd;
     }
     #uploadedVideoContainer {
       margin-top: 30px;
-      background: #440000;
+      background: #222;
       padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 0 15px #8b0000;
+      box-shadow: 0 0 15px #08c;
     }
     #uploadedVideoContainer h3 {
       margin-top: 0;
@@ -76,27 +67,8 @@
       background: #000;
     }
     #uploadedVideoContainer a {
-      color: #b22222;
+      color: #0af;
       word-break: break-all;
-    }
-    #videoList > div {
-      background: #440000;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      box-shadow: 0 0 12px #b22222;
-    }
-    #videoList h3 {
-      margin: 0 0 6px 0;
-      color: #ff4444;
-    }
-    #videoList p em {
-      color: #ff9999;
-    }
-    #videoList video {
-      width: 100%;
-      border-radius: 6px;
-      background: #000;
     }
   </style>
 </head>
@@ -121,9 +93,7 @@
   </form>
 
   <div class="status" id="status"></div>
-
   <div id="uploadedVideoContainer"></div>
-
   <h2>Uploaded Videos</h2>
   <div id="videoList"></div>
 
@@ -131,7 +101,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
   import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-  // Your Firebase config (from your snippet)
   const firebaseConfig = {
     apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
     authDomain: "drftube-634c6.firebaseapp.com",
@@ -142,11 +111,9 @@
     measurementId: "G-ZPTJE4DMNN"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // Pinata JWT (do NOT expose this publicly in production)
   const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
   const form = document.getElementById('uploadForm');
@@ -159,37 +126,28 @@
     status.textContent = "";
     uploadedVideoContainer.innerHTML = "";
 
-    if (!PINATA_JWT || PINATA_JWT.length < 10) {
-      status.textContent = "Error: Pinata JWT not set or invalid!";
-      return;
-    }
-
     const title = document.getElementById('title').value.trim();
     const description = document.getElementById('description').value.trim();
     const category = document.getElementById('category').value.trim();
-    const fileInput = document.getElementById('file');
-    const file = fileInput.files[0];
+    const file = document.getElementById('file').files[0];
 
     if (!file) {
       status.textContent = "Please select a video file!";
       return;
     }
 
-    status.textContent = "Please wait, uploading...";
+    status.textContent = "Uploading to IPFS via Pinata...";
 
     try {
       const formData = new FormData();
       formData.append('file', file);
-
-      // Metadata for Pinata pin
-      const metadata = {
+      formData.append('pinataMetadata', JSON.stringify({
         name: title || file.name,
         keyvalues: {
           description: description || "No description",
           category: category || "Uncategorized"
         }
-      };
-      formData.append('pinataMetadata', JSON.stringify(metadata));
+      }));
 
       const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
@@ -200,89 +158,64 @@
       });
 
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}\n${text}`);
+        const errText = await response.text();
+        throw new Error(`Pinata Upload Failed: ${errText}`);
       }
 
       const data = await response.json();
-
       const ipfsHash = data.IpfsHash;
 
-      // Save metadata to Firestore
-      const docRef = await addDoc(collection(db, "videos"), {
-        title,
-        description,
-        category,
-        ipfsHash,
+      await addDoc(collection(db, "videos"), {
+        title, description, category, ipfsHash,
         uploadedAt: new Date().toISOString()
       });
 
-      status.textContent = "✅ Upload successful! 🎉";
+      status.textContent = "✅ Uploaded successfully!";
       form.reset();
 
-      // Show uploaded video preview (hide IPFS link? Here I show preview but no link)
       const videoUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
       uploadedVideoContainer.innerHTML = `
-        <h3>Uploaded Video Preview:</h3>
+        <h3>Preview:</h3>
         <video controls>
           <source src="${videoUrl}" type="${file.type}">
-          Your browser does not support the video tag.
+          Your browser does not support video.
         </video>
       `;
 
-      // Refresh list after upload
       loadVideos();
-
     } catch (err) {
-      status.textContent = "❌ Error: " + err.message;
       console.error(err);
+      status.textContent = "❌ Upload failed: " + err.message;
     }
   });
 
-  // Function to load videos from Firestore and show them
   async function loadVideos() {
-    videoListDiv.innerHTML = "<p>Loading videos...</p>";
-
+    videoListDiv.innerHTML = "Loading videos...";
     try {
       const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        videoListDiv.innerHTML = "<p>No videos uploaded yet.</p>";
-        return;
-      }
-
+      const snap = await getDocs(q);
+      if (snap.empty) return videoListDiv.innerHTML = "No videos uploaded yet.";
       videoListDiv.innerHTML = "";
-      querySnapshot.forEach(doc => {
-        const video = doc.data();
-
-        // Build your video player, but no IPFS link shown openly
-        const videoUrl = `https://ipfs.io/ipfs/${video.ipfsHash}`;
-
-        // You can hide or mask the IPFS URL — here I do NOT display it as text
-        const videoElem = document.createElement("div");
-        videoElem.style.marginBottom = "30px";
-        videoElem.innerHTML = `
-          <h3>${video.title || "Untitled"}</h3>
-          <p><em>${video.category || "Uncategorized"}</em></p>
-          <p>${video.description || ""}</p>
-          <video controls style="width: 100%; border-radius: 6px; background: #000;">
+      snap.forEach(doc => {
+        const v = doc.data();
+        const videoUrl = `https://ipfs.io/ipfs/${v.ipfsHash}`;
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <h3>${v.title}</h3>
+          <p><em>${v.category}</em></p>
+          <p>${v.description}</p>
+          <video controls style="width: 100%">
             <source src="${videoUrl}" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
+          </video><br/><br/>
         `;
-        videoListDiv.appendChild(videoElem);
+        videoListDiv.appendChild(div);
       });
-
     } catch (err) {
-      videoListDiv.innerHTML = `<p>Error loading videos: ${err.message}</p>`;
-      console.error(err);
+      videoListDiv.innerHTML = `Error loading: ${err.message}`;
     }
   }
 
-  // Load videos on page load
   loadVideos();
-
 </script>
 
 </body>
