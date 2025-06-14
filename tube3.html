@@ -6,145 +6,46 @@
   <title>DRFTube – Watch Videos</title>
   <style>
     body {
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0 15px;
+      background: #111; color: #fff; font-family: Arial, sans-serif;
+      margin: 0; padding: 0 15px;
     }
     .menu-bar {
-      background: #000;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-      border-bottom: 2px solid #0a84ff;
-      position: sticky;
-      top: 0;
-      z-index: 999;
+      background: #000; display: flex; justify-content: space-between;
+      align-items: center; padding: 10px 20px; border-bottom: 2px solid #0a84ff;
+      position: sticky; top: 0; z-index: 999;
     }
-    .menu-title {
-      font-size: 1.3rem;
-      font-weight: bold;
-      color: #0a84ff;
-    }
-    .menu-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
+    .menu-title { font-size: 1.3rem; font-weight: bold; color: #0a84ff; }
+    .menu-links { display: flex; gap: 12px; align-items: center; }
     .menu-links a, .menu-links button {
-      color: #fff;
-      background: #0a84ff;
-      padding: 8px 14px;
-      border-radius: 5px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background 0.3s ease;
-      font-size: 0.95rem;
-      border: none;
-      cursor: pointer;
+      color: #fff; background: #0a84ff; padding: 8px 14px;
+      border-radius: 5px; text-decoration: none;
+      font-weight: bold; font-size: 0.95rem;
+      border: none; cursor: pointer;
     }
-    .menu-links a:hover, .menu-links button:hover {
-      background: #0674d4;
-    }
-    #user-info {
-      margin-left: 10px;
-      font-size: 0.9rem;
-      color: #0affff;
-    }
-    h1 {
-      text-align: center;
-      color: #0a84ff;
-      margin: 30px 0 10px;
-    }
+    .menu-links a:hover, .menu-links button:hover { background: #0674d4; }
+    #user-info { margin-left: 10px; font-size: 0.9rem; color: #0affff; }
+    h1 { text-align: center; color: #0a84ff; margin: 30px 0 10px; }
     .video-item {
-      background: #222;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 20px auto;
-      box-shadow: 0 0 10px #0a84ff88;
-      max-width: 800px;
+      background: #222; border-radius: 10px; padding: 15px;
+      margin: 20px auto; box-shadow: 0 0 10px #0a84ff88; max-width: 800px;
     }
-    .video-item h3 {
-      margin: 0 0 10px 0;
-      color: #0affff;
-    }
-    .video-item p {
-      margin: 0 0 12px 0;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    video {
-      width: 100%;
-      max-height: 360px;
-      border-radius: 10px;
-      background: #000;
-    }
-    #loading {
-      text-align: center;
-      margin: 40px 0;
-      font-size: 1.2rem;
-      color: #0aff6b;
-    }
-    .like-btn, .comment-boost {
-      background: #0aff6b;
-      color: #000;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.3s;
-    }
-    .like-btn:hover, .comment-boost:hover {
-      background: #09cc58;
-    }
-    #sortDropdown {
-      background: #0a84ff;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 5px;
-      border: none;
-      font-size: 0.95rem;
-      margin: 10px auto;
-      display: block;
-    }
-    .comment-section {
-      margin-top: 15px;
+    video { width: 100%; max-height: 360px; border-radius: 10px; background: #000; }
+    .actions, .comments-section { margin-top: 10px; }
+    .like-btn, .comment-btn, .sort-select {
+      background: #0aff6b; color: #000; padding: 6px 12px;
+      border: none; border-radius: 6px; cursor: pointer;
+      font-weight: bold; margin-right: 8px;
     }
     .comment-box {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 10px;
+      width: 100%; padding: 10px; border-radius: 5px; border: none;
+      margin-top: 10px; font-size: 1rem;
     }
-    .comment-box textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
-      font-size: 0.9rem;
-    }
-    .comment-box button {
-      align-self: flex-end;
-      background: #0a84ff;
-      color: white;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .comment-list {
-      margin-top: 10px;
-      font-size: 0.85rem;
-      color: #ddd;
-    }
+    .comment-list { margin-top: 10px; }
     .comment-item {
-      margin-bottom: 5px;
+      background: #333; padding: 10px; border-radius: 5px;
+      margin-bottom: 5px; font-size: 0.9rem;
     }
+    select.sort-select { background: #0aff6b; margin: 10px auto; display: block; }
   </style>
 </head>
 <body>
@@ -153,67 +54,153 @@
     <div class="menu-links">
       <a href="index.html">🏠 Home</a>
       <a href="watch.html">📺 Watch</a>
-      <a href="#" id="uploadLink">⬆️ Upload</a>
+      <a href="tubeupload.html">⬆️ Upload</a>
       <button id="loginBtn">Login</button>
       <button id="logoutBtn" style="display:none;">Logout</button>
       <span id="user-info"></span>
     </div>
   </div>
+
   <h1>Watch Videos</h1>
-  <select id="sortDropdown">
-    <option value="newest">Newest</option>
-    <option value="mostLiked">Most Liked</option>
+  <select id="sortSelect" class="sort-select">
+    <option value="newest">Sort by Newest</option>
+    <option value="mostLiked">Sort by Most Liked</option>
   </select>
-  <div id="loading">Loading videos...</div>
   <div id="videosContainer"></div>
-  <div id="loginModal">
-    <!-- Modal Content Here -->
-  </div>
+
   <script type="module">
-    // Firebase Initialization and Auth here...
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment,
+      addDoc, getDoc, setDoc
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-    // Add Firestore read/write for comments
-    import { collection, addDoc, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.appspot.com",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd"
+    };
 
-    async function postComment(videoId, commentText, userEmail) {
-      if (!commentText.trim()) return;
-      await addDoc(collection(db, "videos", videoId, "comments"), {
-        text: commentText,
-        author: userEmail,
-        createdAt: new Date()
-      });
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("user-info");
+    const videosContainer = document.getElementById("videosContainer");
+    const sortSelect = document.getElementById("sortSelect");
+
+    let currentUser = null;
+
+    loginBtn.onclick = async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login failed: " + e.message);
+      }
+    };
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        userInfo.textContent = user.email;
+      } else {
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        userInfo.textContent = "";
+      }
+      loadVideos();
+    });
+
+    sortSelect.onchange = loadVideos;
+
+    async function loadVideos() {
+      videosContainer.innerHTML = "Loading...";
+      let q = collection(db, "videos");
+      const sortValue = sortSelect.value;
+      q = sortValue === "mostLiked"
+        ? query(q, orderBy("likes", "desc"))
+        : query(q, orderBy("uploadedAt", "desc"));
+      const snap = await getDocs(q);
+      videosContainer.innerHTML = "";
+
+      for (const docSnap of snap.docs) {
+        const video = docSnap.data();
+        const id = docSnap.id;
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${video.ipfsHash}`;
+        const div = document.createElement("div");
+        div.className = "video-item";
+        div.innerHTML = `
+          <h3>${video.title}</h3>
+          <video controls src="${ipfsUrl}"></video>
+          <div class="actions">
+            <button class="like-btn" data-id="${id}">👍 Like (<span>${video.likes || 0}</span>)</button>
+          </div>
+          <div class="comments-section">
+            ${currentUser ? `
+              <textarea class="comment-box" id="comment-${id}" placeholder="Write a comment..."></textarea>
+              <button class="comment-btn" data-id="${id}">Post Comment</button>
+            ` : '<p><i>Login to post comments</i></p>'}
+            <div class="comment-list" id="comments-${id}">Loading comments...</div>
+          </div>
+        `;
+        videosContainer.appendChild(div);
+        loadComments(id);
+      }
     }
 
-    function renderComments(videoId, container) {
+    async function loadComments(videoId) {
       const commentsRef = collection(db, "videos", videoId, "comments");
-      onSnapshot(commentsRef, snapshot => {
-        container.innerHTML = "";
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          const div = document.createElement("div");
-          div.className = "comment-item";
-          div.innerText = `${data.author}: ${data.text}`;
-          container.appendChild(div);
-        });
+      const q = query(commentsRef, orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const container = document.getElementById("comments-" + videoId);
+      container.innerHTML = "";
+      snap.forEach(doc => {
+        const c = doc.data();
+        const item = document.createElement("div");
+        item.className = "comment-item";
+        item.innerHTML = `<strong>${c.author}</strong>: ${c.text}`;
+        container.appendChild(item);
       });
     }
 
-    // In your loadVideos loop after each videoDiv...
-    // const commentSection = document.createElement('div');
-    // commentSection.className = 'comment-section';
-    // commentSection.innerHTML = `
-    //   <div class="comment-box">
-    //     <textarea placeholder="Write a comment..."></textarea>
-    //     <button>Post</button>
-    //   </div>
-    //   <div class="comment-list"></div>
-    // `;
-    // videoDiv.appendChild(commentSection);
-    // const textarea = commentSection.querySelector('textarea');
-    // const postBtn = commentSection.querySelector('button');
-    // const commentList = commentSection.querySelector('.comment-list');
-    // renderComments(videoId, commentList);
-    // postBtn.onclick = () => postComment(videoId, textarea.value, auth.currentUser?.email || 'Anonymous');
+    videosContainer.addEventListener("click", async (e) => {
+      const likeBtn = e.target.closest(".like-btn");
+      const commentBtn = e.target.closest(".comment-btn");
+
+      if (likeBtn) {
+        const id = likeBtn.dataset.id;
+        const ref = doc(db, "videos", id);
+        await updateDoc(ref, { likes: increment(1) });
+        loadVideos();
+      }
+
+      if (commentBtn && currentUser) {
+        const id = commentBtn.dataset.id;
+        const textBox = document.getElementById("comment-" + id);
+        const text = textBox.value.trim();
+        if (!text) return;
+        const commentsRef = collection(db, "videos", id, "comments");
+        await addDoc(commentsRef, {
+          text,
+          author: currentUser.email,
+          createdAt: new Date()
+        });
+        textBox.value = "";
+        loadComments(id);
+      }
+    });
   </script>
 </body>
 </html>
