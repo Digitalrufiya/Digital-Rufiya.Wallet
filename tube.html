@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFTube – Watch Videos</title>
+  <link rel="manifest" href="manifest.json">
   <style>
     body {
       background: #111;
@@ -12,167 +13,31 @@
       margin: 0;
       padding: 0 15px;
     }
-    .menu-bar {
-      background: #000;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 20px;
-      border-bottom: 2px solid #0a84ff;
-      position: sticky;
-      top: 0;
-      z-index: 999;
-    }
-    .menu-title {
-      font-size: 1.3rem;
-      font-weight: bold;
-      color: #0a84ff;
-    }
-    .menu-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
-    .menu-links a, .menu-links button {
-      color: #fff;
-      background: #0a84ff;
-      padding: 8px 14px;
-      border-radius: 5px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background 0.3s ease;
-      font-size: 0.95rem;
-      border: none;
-      cursor: pointer;
-    }
-    .menu-links a:hover, .menu-links button:hover {
-      background: #0674d4;
-    }
-    #user-info {
-      margin-left: 10px;
-      font-size: 0.9rem;
-      color: #0affff;
-    }
-    h1 {
-      text-align: center;
-      color: #0a84ff;
-      margin: 30px 0 10px;
-    }
-    .video-item {
-      background: #222;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 20px auto;
-      box-shadow: 0 0 10px #0a84ff88;
-      max-width: 800px;
-    }
-    .video-item h3 {
-      margin: 0 0 10px 0;
-      color: #0affff;
-    }
-    .video-item p {
-      margin: 0 0 12px 0;
-      font-size: 0.9rem;
-      color: #ccc;
-    }
-    video {
-      width: 100%;
-      max-height: 360px;
-      border-radius: 10px;
-      background: #000;
-    }
-    #loading {
-      text-align: center;
-      margin: 40px 0;
-      font-size: 1.2rem;
-      color: #0aff6b;
-    }
-    .video-actions {
-      margin-top: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .video-actions button {
-      background: #0a84ff;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 5px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.3s ease;
-    }
-    .video-actions button:hover {
-      background: #0674d4;
-    }
-    #loginModal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    #loginModal.active {
-      display: flex;
-    }
-    #loginModalContent {
-      background: #222;
-      padding: 20px 30px;
-      border-radius: 10px;
-      width: 300px;
-      text-align: center;
-      color: white;
-    }
-    #loginModalContent input {
-      width: 90%;
-      padding: 8px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: none;
-      font-size: 1rem;
-    }
-    #loginModalContent button {
-      margin: 10px 0;
-      width: 95%;
-      padding: 10px;
-      background: #0a84ff;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      color: white;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    #loginModalContent button:hover {
-      background: #0674d4;
-    }
-    #loginModalContent .close-btn {
-      background: #444;
-      margin-top: 15px;
-    }
+    .menu-bar { background: #000; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 2px solid #0a84ff; position: sticky; top: 0; z-index: 999; }
+    .menu-title { font-size: 1.3rem; font-weight: bold; color: #0a84ff; }
+    .menu-links { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .menu-links a, .menu-links button { color: #fff; background: #0a84ff; padding: 8px 14px; border-radius: 5px; text-decoration: none; font-weight: bold; transition: background 0.3s ease; font-size: 0.95rem; border: none; cursor: pointer; }
+    .menu-links a:hover, .menu-links button:hover { background: #0674d4; }
+    #user-info { margin-left: 10px; font-size: 0.9rem; color: #0affff; }
+    h1 { text-align: center; color: #0a84ff; margin: 30px 0 10px; }
+    .video-item { background: #222; border-radius: 10px; padding: 15px; margin: 20px auto; box-shadow: 0 0 10px #0a84ff88; max-width: 800px; }
+    .video-item h3 { margin: 0 0 10px 0; color: #0affff; }
+    .video-item p { margin: 0 0 12px 0; font-size: 0.9rem; color: #ccc; }
+    video { width: 100%; max-height: 360px; border-radius: 10px; background: #000; }
+    .video-actions { display: flex; gap: 10px; margin-top: 10px; }
+    .video-actions button { background: #0a84ff; border: none; padding: 6px 12px; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; }
+    #loading { text-align: center; margin: 40px 0; font-size: 1.2rem; color: #0aff6b; }
+    #loginModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); justify-content: center; align-items: center; }
+    #loginModal.active { display: flex; }
+    #loginModalContent { background: #222; padding: 20px 30px; border-radius: 10px; width: 300px; text-align: center; color: white; }
+    #loginModalContent input { width: 90%; padding: 8px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; }
+    #loginModalContent button { margin: 10px 0; width: 95%; padding: 10px; background: #0a84ff; border: none; border-radius: 5px; font-weight: bold; color: white; cursor: pointer; font-size: 1rem; }
+    #loginModalContent button:hover { background: #0674d4; }
+    #loginModalContent .close-btn { background: #444; margin-top: 15px; }
     @media (max-width: 600px) {
-      .menu-links {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        margin-top: 10px;
-      }
-      .menu-links a, .menu-links button {
-        width: 100%;
-        text-align: center;
-      }
-      .menu-title {
-        width: 100%;
-        text-align: center;
-        margin-bottom: 8px;
-      }
+      .menu-links { flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 10px; }
+      .menu-links a, .menu-links button { width: 100%; text-align: center; }
+      .menu-title { width: 100%; text-align: center; margin-bottom: 8px; }
     }
   </style>
 </head>
@@ -188,12 +53,10 @@
       <span id="user-info"></span>
     </div>
   </div>
-
   <h1>Watch Videos</h1>
   <div id="loading">Loading videos...</div>
   <div id="videosContainer"></div>
 
-  <!-- Login Modal -->
   <div id="loginModal">
     <div id="loginModalContent">
       <h3>Login to DRFTube</h3>
@@ -207,6 +70,6 @@
     </div>
   </div>
 
-  <script type="module" src="watch-enhanced.js"></script>
+  <script type="module" src="watch-script.js"></script>
 </body>
 </html>
