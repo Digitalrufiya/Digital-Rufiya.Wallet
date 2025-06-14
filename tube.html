@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFTube - Video Channel</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background-color: #f5f7fa; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #2c3e50; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; }
+    input[type="file"], input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+    button { padding: 10px 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background-color: #2980b9; }
+    .video-list { margin-top: 30px; }
+    video { width: 100%; margin-bottom: 20px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <h1>DRFTube - Upload Video</h1>
+  <div class="container">
+    <div class="form-group">
+      <label for="desc">Description</label>
+      <textarea id="desc" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="video">Video File</label>
+      <input type="file" id="video" accept="video/*" />
+    </div>
+    <button onclick="uploadVideo()">Upload</button>
+    <div id="msg"></div>
+  </div>
+  <div class="container video-list">
+    <h2>Videos</h2>
+    <div id="videos"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.appspot.com",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd",
+      measurementId: "G-ZPTJE4DMNN",
+      databaseURL: "https://drftube-634c6-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase();
+    const storage = getStorage();
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        document.getElementById("msg").innerText = `Logged in as ${user.displayName}`;
+      } else {
+        signInWithPopup(auth, provider).catch(console.error);
+      }
+    });
+
+    async function uploadVideo() {
+      const file = document.getElementById("video").files[0];
+      const desc = document.getElementById("desc").value;
+      if (!file || !desc || !currentUser) return alert("All fields are required & must be logged in.");
+
+      const videoRef = sRef(storage, `videos/${Date.now()}_${file.name}`);
+      await uploadBytes(videoRef, file);
+      const url = await getDownloadURL(videoRef);
+
+      push(ref(db, 'videos'), {
+        url,
+        desc,
+        user: currentUser.displayName,
+        uid: currentUser.uid,
+        time: new Date().toISOString()
+      });
+
+      document.getElementById("msg").innerText = "Video uploaded!";
+      document.getElementById("video").value = "";
+      document.getElementById("desc").value = "";
+    }
+
+    const videosRef = ref(db, 'videos');
+    onValue(videosRef, snapshot => {
+      const videosDiv = document.getElementById("videos");
+      videosDiv.innerHTML = "";
+      const data = snapshot.val();
+      if (data) {
+        Object.values(data).reverse().forEach(item => {
+          const vid = document.createElement("div");
+          vid.innerHTML = `
+            <video controls src="${item.url}"></video>
+            <p><strong>${item.user}</strong>: ${item.desc}</p>
+          `;
+          videosDiv.appendChild(vid);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
