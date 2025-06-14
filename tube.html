@@ -1,82 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Upload | DRFTube</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: Arial; background: #f3f3f3; padding: 20px; }
-    .upload-box { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: auto; box-shadow: 0 0 10px #ccc; }
-    input, button { width: 100%; padding: 10px; margin: 10px 0; }
-    video { width: 100%; margin-top: 10px; }
-    .url-box { background: #eaeaea; padding: 10px; border-radius: 4px; word-break: break-all; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Upload to DRFTube</title>
 </head>
 <body>
-
-<div class="upload-box">
-  <h2>📤 Upload to DRFTube</h2>
-  <input type="file" id="fileInput" accept="video/*" />
-  <button onclick="uploadToIPFS()">Upload Video</button>
+  <h2>Upload Video to IPFS via Pinata</h2>
+  <input type="file" id="fileInput" accept="video/*"><br><br>
+  <button onclick="uploadToIPFS()">Upload</button>
   <div id="status"></div>
-  <div id="preview"></div>
-</div>
+  <script>
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+    async function uploadToIPFS() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
+      if (!fileInput.files.length) {
+        status.innerText = '❌ Please select a file first.';
+        return;
+      }
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
-    authDomain: "drftube-634c6.firebaseapp.com",
-    projectId: "drftube-634c6",
-    storageBucket: "drftube-634c6.firebasestorage.app",
-    messagingSenderId: "819828633864",
-    appId: "1:819828633864:web:513002b461259b000cbcbd",
-    measurementId: "G-ZPTJE4DMNN"
-  };
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
+      status.innerText = "Uploading to Pinata...";
 
-<script>
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // TRUNCATED in UI; use full in deployment
+      try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${PINATA_JWT}`
+          },
+          body: formData
+        });
 
-  async function uploadToIPFS() {
-    const fileInput = document.getElementById("fileInput");
-    const status = document.getElementById("status");
-    const preview = document.getElementById("preview");
-    if (!fileInput.files.length) {
-      status.textContent = "Please choose a video file.";
-      return;
+        const result = await res.json();
+        console.log("Upload response:", result);
+
+        if (result.IpfsHash) {
+          const url = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+          status.innerHTML = `✅ Uploaded: <a href="${url}" target="_blank">${url}</a>`;
+        } else {
+          status.innerText = "❌ Upload failed: " + JSON.stringify(result);
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        status.innerText = "❌ Error uploading to IPFS: " + err.message;
+      }
     }
-
-    const file = fileInput.files[0];
-    status.innerHTML = "Uploading to IPFS...";
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`
-      },
-      body: formData
-    });
-
-    const result = await res.json();
-    if (result.IpfsHash) {
-      const url = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
-      status.innerHTML = `<b>✅ Uploaded!</b> <br><div class="url-box">${url}</div>`;
-      preview.innerHTML = `<video controls src="${url}"></video>`;
-    } else {
-      status.innerHTML = "❌ Upload failed. Please try again.";
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
