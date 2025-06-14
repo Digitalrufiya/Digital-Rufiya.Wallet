@@ -1,205 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFTube</title>
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png" />
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #121212;
-      color: white;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background-color: #ff0000;
-      padding: 10px 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    }
-    header img {
-      height: 40px;
-    }
-    header button {
-      background-color: white;
-      color: #ff0000;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .container {
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-    .upload-form {
-      background: #1f1f1f;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-    }
-    .upload-form input, .upload-form textarea {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      background: #333;
-      border: none;
-      color: white;
-      border-radius: 4px;
-    }
-    .upload-form button {
-      background: #ff0000;
-      color: white;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .video-list video {
-      width: 100%;
-      max-height: 400px;
-      border-radius: 8px;
-      margin-bottom: 8px;
-    }
-    .video-card {
-      background: #1a1a1a;
-      margin-bottom: 30px;
-      padding: 15px;
-      border-radius: 8px;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>DRFTube Upload Test</title>
 </head>
 <body>
-  <header>
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png" alt="DRFTube Logo" />
-    <div>
-      <span id="userDisplayName"></span>
-      <button id="loginBtn">Login</button>
-      <button id="logoutBtn" style="display:none">Logout</button>
-    </div>
-  </header>
+  <h1>Upload to IPFS (Pinata)</h1>
+  <input type="file" id="videoFile" accept="video/*"><br><br>
+  <input type="text" id="title" placeholder="Title"><br><br>
+  <textarea id="description" placeholder="Description"></textarea><br><br>
+  <button onclick="uploadVideo()">Upload Video</button>
 
-  <div class="container">
-    <div class="upload-form" id="uploadSection" style="display:none">
-      <h2>Upload Video</h2>
-      <input type="text" id="title" placeholder="Video Title" required />
-      <textarea id="description" placeholder="Description" rows="3"></textarea>
-      <input type="file" id="videoFile" accept="video/*" />
-      <button onclick="uploadVideo()">Upload</button>
-    </div>
-
-    <div class="video-list" id="videoList">
-      <h2>All Videos</h2>
-    </div>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
-      authDomain: "drftube-634c6.firebaseapp.com",
-      projectId: "drftube-634c6",
-      storageBucket: "drftube-634c6.appspot.com",
-      messagingSenderId: "819828633864",
-      appId: "1:819828633864:web:513002b461259b000cbcbd",
-      measurementId: "G-ZPTJE4DMNN",
-      databaseURL: "https://drftube-634c6-default-rtdb.firebaseio.com/"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    const db = getDatabase();
-
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const uploadSection = document.getElementById("uploadSection");
-    const userDisplayName = document.getElementById("userDisplayName");
-
-    loginBtn.onclick = () => signInWithPopup(auth, provider);
-    logoutBtn.onclick = () => signOut(auth);
-
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        userDisplayName.innerText = user.displayName;
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline";
-        uploadSection.style.display = "block";
-      } else {
-        userDisplayName.innerText = "";
-        loginBtn.style.display = "inline";
-        logoutBtn.style.display = "none";
-        uploadSection.style.display = "none";
-      }
-    });
-
+  <script>
     async function uploadVideo() {
-      const title = document.getElementById("title").value.trim();
-      const description = document.getElementById("description").value.trim();
       const file = document.getElementById("videoFile").files[0];
-      if (!title || !file) return alert("Please enter title and select video file");
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
 
-      alert("Uploading to IPFS via Pinata...");
+      if (!file || !title) {
+        alert("Please select a file and enter title");
+        return;
+      }
 
       const formData = new FormData();
       formData.append("file", file);
 
-      let ipfsURL = '';
       try {
         const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
           headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4`
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"
           },
           body: formData
         });
 
-        if (!res.ok) throw new Error("Pinata upload failed");
-        const data = await res.json();
-        ipfsURL = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-      } catch (e) {
-        console.error(e);
-        return alert("IPFS upload failed. Please check your JWT or internet.");
+        if (!res.ok) throw new Error("Upload failed");
+
+        const result = await res.json();
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+
+        alert("Video uploaded!\n\nIPFS URL:\n" + ipfsUrl);
+        console.log("IPFS URL:", ipfsUrl);
+      } catch (err) {
+        console.error(err);
+        alert("Error uploading to IPFS.");
       }
-
-      const videoData = {
-        title,
-        description,
-        url: ipfsURL,
-        uid: auth.currentUser.uid,
-        user: auth.currentUser.displayName,
-        created: Date.now()
-      };
-
-      await push(ref(db, 'videos'), videoData);
-      alert("Video uploaded successfully!");
     }
-
-    onValue(ref(db, 'videos'), snapshot => {
-      const list = document.getElementById("videoList");
-      list.innerHTML = '<h2>All Videos</h2>';
-      snapshot.forEach(child => {
-        const v = child.val();
-        const card = document.createElement("div");
-        card.className = "video-card";
-        card.innerHTML = `
-          <video controls src="${v.url}"></video>
-          <h3>${v.title}</h3>
-          <p>${v.description}</p>
-          <small>By ${v.user} on ${new Date(v.created).toLocaleString()}</small>
-        `;
-        list.prepend(card);
-      });
-    });
   </script>
 </body>
 </html>
