@@ -83,100 +83,137 @@
       border-radius: 10px;
       background: #000;
     }
-    .comment-box, .comments-list {
-      margin-top: 10px;
-    }
-    .comment-box textarea {
-      width: 100%;
-      padding: 8px;
-      border-radius: 5px;
-      border: none;
-      font-size: 0.9rem;
-      resize: vertical;
-    }
-    .comment-box button {
-      margin-top: 5px;
-      padding: 6px 12px;
-      background: #0a84ff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .comment {
-      background: #333;
-      padding: 8px;
-      border-radius: 6px;
-      margin-top: 5px;
-    }
-    .comment-header {
-      font-weight: bold;
-      color: #0affff;
-    }
-    .comment-actions {
-      font-size: 0.85rem;
-      margin-top: 4px;
-    }
-    .comment-actions button {
-      background: none;
-      color: #0a84ff;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-    }
-    .sort-comments {
-      margin-top: 10px;
-      font-size: 0.9rem;
-    }
-    .sort-comments select {
-      background: #111;
-      color: #fff;
-      border: 1px solid #0a84ff;
-      padding: 4px 6px;
-      border-radius: 4px;
-    }
     #loading {
       text-align: center;
       margin: 40px 0;
       font-size: 1.2rem;
       color: #0aff6b;
     }
+    .like-btn, .comment-boost {
+      background: #0aff6b;
+      color: #000;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    .like-btn:hover, .comment-boost:hover {
+      background: #09cc58;
+    }
+    #sortDropdown {
+      background: #0a84ff;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      font-size: 0.95rem;
+      margin: 10px auto;
+      display: block;
+    }
+    .comment-section {
+      margin-top: 15px;
+    }
+    .comment-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .comment-box textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.9rem;
+    }
+    .comment-box button {
+      align-self: flex-end;
+      background: #0a84ff;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .comment-list {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #ddd;
+    }
+    .comment-item {
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
-
-<div class="menu-bar">
-  <div class="menu-title">🎬 DRFTube</div>
-  <div class="menu-links">
-    <a href="index.html">🏠 Home</a>
-    <a href="watch.html">📺 Watch</a>
-    <a href="#" id="uploadLink">⬆️ Upload</a>
-    <button id="loginBtn">Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-    <span id="user-info"></span>
+  <div class="menu-bar">
+    <div class="menu-title">🎬 DRFTube</div>
+    <div class="menu-links">
+      <a href="index.html">🏠 Home</a>
+      <a href="watch.html">📺 Watch</a>
+      <a href="#" id="uploadLink">⬆️ Upload</a>
+      <button id="loginBtn">Login</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+      <span id="user-info"></span>
+    </div>
   </div>
-</div>
-
-<h1>Watch Videos</h1>
-<div id="loading">Loading videos...</div>
-<div id="videosContainer"></div>
-
-<!-- Login Modal -->
-<div id="loginModal">
-  <div id="loginModalContent">
-    <h3>Login to DRFTube</h3>
-    <button id="googleSignInBtn">Sign in with Google</button>
-    <hr style="margin:15px 0; border-color:#444;">
-    <input type="email" id="emailInput" placeholder="Email" />
-    <input type="password" id="passwordInput" placeholder="Password" />
-    <button id="emailSignInBtn">Sign in with Email</button>
-    <button id="closeModalBtn" class="close-btn">Cancel</button>
-    <p id="loginError" style="color:#ff6666;"></p>
+  <h1>Watch Videos</h1>
+  <select id="sortDropdown">
+    <option value="newest">Newest</option>
+    <option value="mostLiked">Most Liked</option>
+  </select>
+  <div id="loading">Loading videos...</div>
+  <div id="videosContainer"></div>
+  <div id="loginModal">
+    <!-- Modal Content Here -->
   </div>
-</div>
+  <script type="module">
+    // Firebase Initialization and Auth here...
 
-<!-- Firebase Comment System will be added in next update phase -->
-<script src="comment-system.js"></script>
+    // Add Firestore read/write for comments
+    import { collection, addDoc, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+    async function postComment(videoId, commentText, userEmail) {
+      if (!commentText.trim()) return;
+      await addDoc(collection(db, "videos", videoId, "comments"), {
+        text: commentText,
+        author: userEmail,
+        createdAt: new Date()
+      });
+    }
+
+    function renderComments(videoId, container) {
+      const commentsRef = collection(db, "videos", videoId, "comments");
+      onSnapshot(commentsRef, snapshot => {
+        container.innerHTML = "";
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.className = "comment-item";
+          div.innerText = `${data.author}: ${data.text}`;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    // In your loadVideos loop after each videoDiv...
+    // const commentSection = document.createElement('div');
+    // commentSection.className = 'comment-section';
+    // commentSection.innerHTML = `
+    //   <div class="comment-box">
+    //     <textarea placeholder="Write a comment..."></textarea>
+    //     <button>Post</button>
+    //   </div>
+    //   <div class="comment-list"></div>
+    // `;
+    // videoDiv.appendChild(commentSection);
+    // const textarea = commentSection.querySelector('textarea');
+    // const postBtn = commentSection.querySelector('button');
+    // const commentList = commentSection.querySelector('.comment-list');
+    // renderComments(videoId, commentList);
+    // postBtn.onclick = () => postComment(videoId, textarea.value, auth.currentUser?.email || 'Anonymous');
+  </script>
 </body>
 </html>
