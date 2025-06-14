@@ -1,48 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Watch Video – DRFTube</title>
+  <meta charset="UTF-8" />
+  <title>Watch on DRFTube</title>
   <style>
     body {
       background: #111;
-      color: #eee;
-      font-family: sans-serif;
+      color: #fff;
+      font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 800px;
-      margin: auto;
-    }
-    h2 {
-      color: #0af;
-      margin-bottom: 10px;
-    }
-    p.description {
-      color: #ccc;
-      margin-bottom: 20px;
-      font-size: 1rem;
+      text-align: center;
     }
     video {
-      width: 100%;
-      max-width: 100%;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      width: 90%;
+      max-width: 720px;
+      border-radius: 12px;
+      margin-top: 20px;
     }
-    a {
+    .title {
+      font-size: 1.5rem;
       color: #0af;
-      text-decoration: none;
+      margin-top: 20px;
+    }
+    .description {
+      font-size: 1rem;
+      color: #ccc;
+      margin-top: 10px;
+    }
+    .back-link {
+      color: #0af;
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
 
-  <h2 id="videoTitle">Loading title...</h2>
-  <video id="videoPlayer" controls autoplay playsinline></video>
-  <p class="description" id="videoDescription">Loading description...</p>
-  <p><a href="videos.html">← Back to Videos</a></p>
+  <div id="content"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
@@ -56,37 +55,51 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const content = document.getElementById('content');
 
     const urlParams = new URLSearchParams(window.location.search);
     const hash = urlParams.get('hash');
 
-    const videoPlayer = document.getElementById('videoPlayer');
-    const titleEl = document.getElementById('videoTitle');
-    const descEl = document.getElementById('videoDescription');
-
     if (!hash) {
-      titleEl.textContent = "❌ No video hash provided in the URL.";
-      videoPlayer.style.display = "none";
-      descEl.style.display = "none";
+      content.innerHTML = `
+        <h2>❌ No video hash provided in the URL.</h2>
+        <a href="videos.html" class="back-link">← Back to Videos</a>
+      `;
     } else {
-      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
-      videoPlayer.src = ipfsUrl;
+      loadVideo(hash);
+    }
+
+    async function loadVideo(hash) {
+      content.innerHTML = `<p>Loading video...</p>`;
 
       try {
-        const q = query(collection(db, "videos"), where("ipfsHash", "==", hash));
-        const snapshot = await getDocs(q);
+        const snapshot = await getDocs(collection(db, "videos"));
+        let found = null;
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.ipfsHash === hash) {
+            found = data;
+          }
+        });
 
-        if (snapshot.empty) {
-          titleEl.textContent = "Video not found.";
-          descEl.textContent = "";
-        } else {
-          const videoData = snapshot.docs[0].data();
-          titleEl.textContent = videoData.title || "Untitled Video";
-          descEl.textContent = videoData.description || "";
+        if (!found) {
+          content.innerHTML = `<h2>❌ Video not found in database.</h2><a href="videos.html" class="back-link">← Back to Videos</a>`;
+          return;
         }
+
+        const title = found.title || "Untitled Video";
+        const description = found.description || "";
+
+        const videoURL = `https://gateway.pinata.cloud/ipfs/${hash}`;
+
+        content.innerHTML = `
+          <h2 class="title">${title}</h2>
+          <video src="${videoURL}" controls autoplay></video>
+          <p class="description">${description}</p>
+          <a href="videos.html" class="back-link">← Back to Videos</a>
+        `;
       } catch (err) {
-        titleEl.textContent = "⚠️ Error loading video info.";
-        descEl.textContent = err.message;
+        content.innerHTML = `<h2>⚠️ Failed to load video: ${err.message}</h2>`;
       }
     }
   </script>
