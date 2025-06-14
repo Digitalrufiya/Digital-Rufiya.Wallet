@@ -4,136 +4,125 @@
   <meta charset="UTF-8" />
   <title>Apply for Certificate - DRF University</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      margin: 0; padding: 0;
       background: #f4f4f4;
-      color: #222;
-      transition: all 0.3s;
+      margin: 0;
+      padding: 0;
     }
-    .dark-mode { background: #111; color: #eee; }
     header {
-      padding: 20px; background: #003366; color: white;
-      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px;
+      background: #003366;
+      color: white;
+      text-align: center;
     }
     .container {
-      padding: 30px;
-      max-width: 600px;
-      margin: auto;
       background: white;
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 30px;
       border-radius: 10px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
-    label { display: block; margin-top: 20px; }
-    input, textarea {
-      width: 100%; padding: 10px; margin-top: 8px;
+    h3 {
+      text-align: center;
+      color: #003366;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 15px;
     }
     button {
-      padding: 12px 20px;
       margin-top: 20px;
+      padding: 12px;
+      width: 100%;
       background: #0055ff;
       color: white;
+      font-size: 16px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
     }
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 16px;
-    }
-    #status {
-      margin-top: 20px;
+    #emailStatus {
+      margin-top: 15px;
+      text-align: center;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
+
 <header>
-  <h2>🎓 DRF University</h2>
-  <div class="toggle-theme" onclick="toggleTheme()">🌓 Theme</div>
+  <h2>🎓 DRF University Certificate Submission</h2>
 </header>
 
 <div class="container">
-  <h3>Apply for Blockchain Certificate</h3>
+  <h3>Submit Your Final Project</h3>
 
   <form id="certificateForm">
     <label>👤 Full Name:</label>
-    <input type="text" id="fullName" required />
+    <input type="text" name="name" required />
 
-    <label>🏷️ DRF Wallet Address:</label>
-    <input type="text" id="wallet" required />
+    <label>📧 Email Address:</label>
+    <input type="email" name="email" required />
 
-    <label>📛 Project Name:</label>
-    <input type="text" id="projectName" required />
+    <label>💼 Project Name:</label>
+    <input type="text" name="project" required />
 
-    <label>📁 Upload Project File:</label>
-    <input type="file" id="projectFile" required />
+    <label>💳 DRF Wallet Address:</label>
+    <input type="text" name="wallet" required />
 
-    <label>🔗 GitHub / Hosting Link:</label>
-    <input type="url" id="githubLink" required />
+    <label>🌐 GitHub / Hosted Link:</label>
+    <input type="url" name="github" required />
 
-    <label>📂 Google Drive Link:</label>
-    <input type="url" id="driveLink" required />
+    <label>📂 Google Drive Folder Link (with files):</label>
+    <input type="url" name="drive" required />
 
-    <label>📧 Your Email:</label>
-    <input type="email" id="userEmail" required />
+    <label>✅ Reuse Consent:</label>
+    <select name="consent" required>
+      <option value="Yes">Yes, I allow DRF University to reuse my project</option>
+      <option value="No">No</option>
+    </select>
 
-    <label>✍️ Consent:</label>
-    <input type="checkbox" id="consentCheck" required /> I allow DRF University to review and reuse my project.
+    <input type="hidden" name="time" id="submissionTime" />
 
-    <button type="submit">Submit Application</button>
+    <button type="submit">📨 Submit Application</button>
+    <p id="emailStatus"></p>
   </form>
-  <p id="status"></p>
 </div>
 
 <script>
-  function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-  }
+  // Initialize EmailJS with public key
+  emailjs.init("d4t7R4qB82w1utVe1");
 
-  // === EMAIL JS Integration ===
-  // Visit https://www.emailjs.com/ to get your service ID, template ID and public key
-
-  document.getElementById('certificateForm').addEventListener('submit', function (e) {
+  // Form submit handler
+  document.getElementById('certificateForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const fullName = document.getElementById('fullName').value;
-    const wallet = document.getElementById('wallet').value;
-    const projectName = document.getElementById('projectName').value;
-    const githubLink = document.getElementById('githubLink').value;
-    const driveLink = document.getElementById('driveLink').value;
-    const userEmail = document.getElementById('userEmail').value;
-    const consent = document.getElementById('consentCheck').checked;
-    const projectFile = document.getElementById('projectFile').files[0];
+    // Add timestamp
+    document.getElementById("submissionTime").value = new Date().toLocaleString();
 
-    if (!consent) {
-      alert("You must give consent to continue.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("fullName", fullName);
-    formData.append("wallet", wallet);
-    formData.append("projectName", projectName);
-    formData.append("githubLink", githubLink);
-    formData.append("driveLink", driveLink);
-    formData.append("userEmail", userEmail);
-    formData.append("projectFile", projectFile);
-
-    // Send email using EmailJS
-    emailjs.sendForm('your_service_id', 'your_template_id', '#certificateForm', 'your_public_key')
-      .then(function(response) {
-        document.getElementById('status').textContent = "✅ Application submitted. We'll review and contact you soon.";
+    // Send using EmailJS
+    emailjs.sendForm('service_95eulp', 'template_p62tc0e', this)
+      .then(function() {
+        document.getElementById("emailStatus").innerText = "✅ Submitted successfully!";
+        document.getElementById("certificateForm").reset();
       }, function(error) {
-        document.getElementById('status').textContent = "❌ Submission failed: " + error.text;
+        document.getElementById("emailStatus").innerText = "❌ Error: " + error.text;
       });
   });
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-<script>
-  emailjs.init("your_public_key"); // Replace with your EmailJS public key
-</script>
 </body>
 </html>
