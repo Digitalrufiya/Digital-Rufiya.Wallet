@@ -2,101 +2,498 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFTube Login</title>
-  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFTube – Watch Videos</title>
   <style>
     body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #8B0000, #FF0000);
-      color: white;
+      padding: 0 15px;
+    }
+    /* Menu Styles */
+    .menu-bar {
+      background: #000;
       display: flex;
-      justify-content: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
       align-items: center;
-      height: 100vh;
-      flex-direction: column;
+      padding: 10px 20px;
+      border-bottom: 2px solid #0a84ff;
+      position: sticky;
+      top: 0;
+      z-index: 999;
     }
-    .container {
-      text-align: center;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 40px;
-      border-radius: 16px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    .menu-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #0a84ff;
     }
-    img {
-      width: 100px;
-      margin-bottom: 20px;
+    .menu-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .menu-links a, .menu-links button {
+      color: #fff;
+      background: #0a84ff;
+      padding: 8px 14px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background 0.3s ease;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+    }
+    .menu-links a:hover, .menu-links button:hover {
+      background: #0674d4;
+    }
+    #user-info {
+      margin-left: 10px;
+      font-size: 0.9rem;
+      color: #0affff;
     }
     h1 {
-      margin-bottom: 20px;
+      text-align: center;
+      color: #0a84ff;
+      margin: 30px 0 10px;
     }
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
+    .video-item {
+      background: #222;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px #0a84ff88;
+      max-width: 800px;
+    }
+    .video-item h3 {
+      margin: 0 0 10px 0;
+      color: #0affff;
+    }
+    .video-item p {
+      margin: 0 0 12px 0;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+    video {
+      width: 100%;
+      max-height: 360px;
+      border-radius: 10px;
+      background: #000;
+    }
+    #loading {
+      text-align: center;
+      margin: 40px 0;
+      font-size: 1.2rem;
+      color: #0aff6b;
+    }
+    /* Modal styles */
+    #loginModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+    }
+    #loginModal.active {
+      display: flex;
+    }
+    #loginModalContent {
+      background: #222;
+      padding: 20px 30px;
+      border-radius: 10px;
+      width: 320px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 0 15px #0a84ffaa;
+      position: relative;
+    }
+    #loginModalContent h3 {
+      margin-bottom: 15px;
+    }
+    #loginModalContent input {
+      width: 90%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 5px;
       border: none;
-      border-radius: 8px;
-      background: #ffffff;
-      color: #8B0000;
-      cursor: pointer;
-      margin: 10px;
-      transition: all 0.3s ease;
+      font-size: 1rem;
+      background: #333;
+      color: #eee;
     }
-    button:hover {
-      background: #f1f1f1;
-    }
-    #userInfo {
-      margin-top: 20px;
+    #loginModalContent button {
+      margin: 10px 0;
+      width: 95%;
+      padding: 10px;
+      background: #0a84ff;
+      border: none;
+      border-radius: 5px;
       font-weight: bold;
+      color: white;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+    #loginModalContent button:hover {
+      background: #0674d4;
+    }
+    #loginModalContent .close-btn {
+      background: #444;
+      margin-top: 15px;
+    }
+    #loginModalContent .toggle-mode {
+      background: transparent;
+      color: #0a84ff;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-decoration: underline;
+      margin-top: 10px;
+    }
+    #loginModalContent p.status-msg {
+      font-size: 0.9rem;
+      margin: 12px 0 0;
+      min-height: 18px;
+    }
+    #loginModalContent p.status-msg.success {
+      color: #0aff6b;
+    }
+    #loginModalContent p.status-msg.error {
+      color: #ff6666;
+    }
+    @media (max-width: 400px) {
+      #loginModalContent {
+        width: 90%;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" alt="DRFTube Logo">
-    <h1>Welcome to DRFTube</h1>
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn">Logout</button>
-    <p id="userInfo">You are not logged in.</p>
+
+  <div class="menu-bar">
+    <div class="menu-title">🎬 DRFTube</div>
+    <div class="menu-links">
+      <a href="index.html">🏠 Home</a>
+      <a href="watch.html">📺 Watch</a>
+      <a href="#" id="uploadLink">⬆️ Upload</a>
+      <button id="loginBtn">Login / Register</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+      <span id="user-info"></span>
+    </div>
+  </div>
+
+  <h1>Watch Videos</h1>
+
+  <div id="loading">Loading videos...</div>
+  <div id="videosContainer"></div>
+
+  <!-- Login/Register Modal -->
+  <div id="loginModal">
+    <div id="loginModalContent">
+      <h3 id="modalTitle">Login to DRFTube</h3>
+
+      <!-- Google sign-in always visible -->
+      <button id="googleSignInBtn">Sign in with Google</button>
+
+      <hr style="margin:15px 0; border-color:#444;">
+
+      <!-- Email & Password inputs -->
+      <input type="email" id="emailInput" placeholder="Email" autocomplete="username" />
+      <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" />
+
+      <button id="emailActionBtn">Login with Email</button>
+
+      <button id="toggleModeBtn" class="toggle-mode">Don't have an account? Register here</button>
+
+      <button id="forgotPasswordBtn" class="toggle-mode" style="margin-top:5px;">Forgot Password?</button>
+
+      <button id="closeModalBtn" class="close-btn">Cancel</button>
+
+      <p id="loginStatus" class="status-msg"></p>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      query,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithPopup,
+      GoogleAuthProvider,
+      signOut,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      sendEmailVerification,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
       authDomain: "drftube-634c6.firebaseapp.com",
       projectId: "drftube-634c6",
-      storageBucket: "drftube-634c6.firebasestorage.app",
+      storageBucket: "drftube-634c6.appspot.com",
       messagingSenderId: "819828633864",
       appId: "1:819828633864:web:513002b461259b000cbcbd",
       measurementId: "G-ZPTJE4DMNN"
     };
 
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
-    document.getElementById("loginBtn").addEventListener("click", () => {
-      signInWithPopup(auth, provider)
-        .then((result) => {
-          const user = result.user;
-          document.getElementById("userInfo").textContent = `Welcome, ${user.displayName}`;
-        })
-        .catch((error) => {
-          console.error("Login failed:", error.message);
-          alert("Login failed: " + error.message);
+    // Elements
+    const videosContainer = document.getElementById('videosContainer');
+    const loading = document.getElementById('loading');
+
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userInfo = document.getElementById('user-info');
+    const uploadLink = document.getElementById('uploadLink');
+
+    const loginModal = document.getElementById('loginModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const googleSignInBtn = document.getElementById('googleSignInBtn');
+    const emailActionBtn = document.getElementById('emailActionBtn');
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginStatus = document.getElementById('loginStatus');
+    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+    const modalTitle = document.getElementById('modalTitle');
+
+    // Escape HTML utility
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Load videos from Firestore
+    async function loadVideos() {
+      try {
+        const videosRef = collection(db, "videos");
+        const q = query(videosRef, orderBy("uploadedAt", "desc"));
+        const snapshot = await getDocs(q);
+
+        loading.style.display = "none";
+
+        if (snapshot.empty) {
+          videosContainer.innerHTML = "<p>No videos uploaded yet.</p>";
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const video = doc.data();
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${video.ipfsHash}`;
+
+          const videoDiv = document.createElement("div");
+          videoDiv.className = "video-item";
+
+          videoDiv.innerHTML = `
+            <h3>${escapeHtml(video.title)}</h3>
+            <p>${escapeHtml(video.description || '')}</p>
+            <video controls preload="metadata">
+              <source src="${ipfsUrl}" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          `;
+
+          videosContainer.appendChild(videoDiv);
         });
+
+      } catch (error) {
+        loading.textContent = "Failed to load videos: " + error.message;
+      }
+    }
+
+    // Modal controls
+    function showModal() {
+      loginStatus.textContent = '';
+      emailInput.value = '';
+      passwordInput.value = '';
+      loginModal.classList.add('active');
+      setMode('login');
+    }
+    function hideModal() {
+      loginModal.classList.remove('active');
+    }
+
+    // Modes: 'login' or 'register' or 'reset'
+    let mode = 'login';
+
+    function setMode(newMode) {
+      mode = newMode;
+      loginStatus.textContent = '';
+      if (mode === 'login') {
+        modalTitle.textContent = 'Login to DRFTube';
+        emailActionBtn.textContent = 'Login with Email';
+        toggleModeBtn.textContent = "Don't have an account? Register here";
+        forgotPasswordBtn.style.display = 'inline-block';
+        emailInput.placeholder = 'Email';
+        passwordInput.placeholder = 'Password';
+        passwordInput.style.display = 'inline-block';
+        emailInput.disabled = false;
+        passwordInput.disabled = false;
+      } else if (mode === 'register') {
+        modalTitle.textContent = 'Register a new account';
+        emailActionBtn.textContent = 'Register';
+        toggleModeBtn.textContent = "Already have an account? Login here";
+        forgotPasswordBtn.style.display = 'none';
+        emailInput.placeholder = 'Email';
+        passwordInput.placeholder = 'Password (min 6 chars)';
+        passwordInput.style.display = 'inline-block';
+        emailInput.disabled = false;
+        passwordInput.disabled = false;
+      } else if (mode === 'reset') {
+        modalTitle.textContent = 'Reset your password';
+        emailActionBtn.textContent = 'Send Reset Email';
+        toggleModeBtn.textContent = "Back to Login";
+        forgotPasswordBtn.style.display = 'none';
+        emailInput.placeholder = 'Email';
+        passwordInput.style.display = 'none';
+        emailInput.disabled = false;
+        passwordInput.disabled = true;
+      }
+    }
+
+    // Handle Google sign-in
+    googleSignInBtn.onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+        hideModal();
+      } catch(e) {
+        loginStatus.textContent = e.message;
+        loginStatus.className = 'status-msg error';
+      }
+    };
+
+    // Handle Email login/register/reset based on mode
+    emailActionBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email) {
+        loginStatus.textContent = 'Please enter your email.';
+        loginStatus.className = 'status-msg error';
+        return;
+      }
+      if ((mode === 'login' || mode === 'register') && !password) {
+        loginStatus.textContent = 'Please enter your password.';
+        loginStatus.className = 'status-msg error';
+        return;
+      }
+
+      loginStatus.textContent = '';
+      loginStatus.className = 'status-msg';
+
+      try {
+        if (mode === 'login') {
+          // Sign in user
+          await signInWithEmailAndPassword(auth, email, password);
+          hideModal();
+        } else if (mode === 'register') {
+          // Register user
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          // Send email verification
+          await sendEmailVerification(userCredential.user);
+          loginStatus.textContent = 'Registration successful! Please check your email for verification before logging in.';
+          loginStatus.className = 'status-msg success';
+          // Automatically switch to login mode but keep modal open
+          setMode('login');
+          emailInput.value = '';
+          passwordInput.value = '';
+        } else if (mode === 'reset') {
+          // Password reset
+          await sendPasswordResetEmail(auth, email);
+          loginStatus.textContent = 'Password reset email sent! Check your inbox.';
+          loginStatus.className = 'status-msg success';
+          emailInput.value = '';
+        }
+      } catch(e) {
+        loginStatus.textContent = e.message;
+        loginStatus.className = 'status-msg error';
+      }
+    };
+
+    // Toggle mode between login and register and reset
+    toggleModeBtn.onclick = () => {
+      if (mode === 'login') {
+        setMode('register');
+      } else if (mode === 'register') {
+        setMode('login');
+      } else if (mode === 'reset') {
+        setMode('login');
+      }
+    };
+    forgotPasswordBtn.onclick = () => {
+      setMode('reset');
+    };
+
+    // Logout button
+    logoutBtn.onclick = () => {
+      signOut(auth);
+    };
+
+    // On auth state change
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'inline-block';
+        // Show email verified status
+        if (!user.emailVerified) {
+          userInfo.textContent = `${user.email} (Verify your email)`;
+        } else {
+          userInfo.textContent = user.email || user.displayName || 'User';
+        }
+        uploadLink.href = "tubeupload.html";
+        uploadLink.style.pointerEvents = 'auto';
+        uploadLink.style.opacity = '1';
+      } else {
+        loginBtn.style.display = 'inline-block';
+        logoutBtn.style.display = 'none';
+        userInfo.textContent = '';
+        uploadLink.href = "#";
+        uploadLink.style.pointerEvents = 'none';
+        uploadLink.style.opacity = '0.5';
+      }
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        document.getElementById("userInfo").textContent = "You are signed out.";
-      });
-    });
+    // Login button opens modal
+    loginBtn.onclick = () => showModal();
+    closeModalBtn.onclick = () => hideModal();
+
+    // Upload link requires login
+    uploadLink.onclick = e => {
+      if (uploadLink.href === "#") {
+        e.preventDefault();
+        alert("Please log in first to upload videos.");
+        showModal();
+      }
+    };
+
+    // Load videos initially
+    loadVideos();
+
   </script>
 </body>
 </html>
