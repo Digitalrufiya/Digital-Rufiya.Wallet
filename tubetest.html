@@ -2,234 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFTube - Videos</title>
+  <title>Watch Video – DRFTube</title>
   <style>
     body {
+      background-color: #000;
+      color: #fff;
       font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      margin: 0; padding: 20px;
-      min-height: 100vh;
-    }
-    h1 {
       text-align: center;
-      margin-bottom: 10px;
+      padding: 30px;
+    }
+    video {
+      width: 95%;
+      max-width: 960px;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+    .back {
+      display: inline-block;
       color: #0af;
-    }
-    #searchBox {
-      display: block;
-      margin: 0 auto 20px;
-      padding: 10px;
-      width: 90%;
-      max-width: 500px;
-      font-size: 1rem;
-      border-radius: 5px;
-      border: none;
-      outline: none;
-    }
-    .videos-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    .video-card {
-      background: #222;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 0 10px #0af;
+      margin-top: 15px;
+      text-decoration: underline;
       cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .video-card:hover {
-      transform: scale(1.03);
-    }
-    .thumbnail {
-      width: 100%;
-      height: 160px;
-      object-fit: cover;
-      background: #444;
-    }
-    .video-info {
-      padding: 10px;
-    }
-    .video-title {
-      font-size: 1.1rem;
-      margin: 0 0 8px 0;
-      color: #0af;
-    }
-    .video-desc {
-      font-size: 0.9rem;
-      color: #bbb;
-      height: 45px;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
   </style>
 </head>
 <body>
 
-  <h1>DRFTube - Videos for the Believers</h1>
-  <input type="search" id="searchBox" placeholder="Search videos by title or description..." />
+  <h2>🎬 Watch Video</h2>
+  <video id="videoPlayer" controls autoplay></video>
+  <div class="back" onclick="history.back()">← Go Back to Videos</div>
 
-  <div class="videos-container" id="videosContainer">
-    <p style="text-align:center; color:#777;">Loading videos...</p>
-  </div>
+  <script>
+    // Get the video hash from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const hash = urlParams.get('hash');
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    const videoPlayer = document.getElementById('videoPlayer');
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
-      authDomain: "drftube-634c6.firebaseapp.com",
-      projectId: "drftube-634c6",
-      storageBucket: "drftube-634c6.appspot.com",
-      messagingSenderId: "819828633864",
-      appId: "1:819828633864:web:513002b461259b000cbcbd",
-      measurementId: "G-ZPTJE4DMNN",
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const container = document.getElementById('videosContainer');
-    const searchBox = document.getElementById('searchBox');
-
-    let videos = [];
-
-    function escapeHtml(text) {
-      if (!text) return "";
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    if (!hash) {
+      videoPlayer.outerHTML = '<p style="color:#f55;">❌ No video hash provided in the URL.</p>';
+    } else {
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
+      videoPlayer.src = ipfsUrl;
     }
-
-    // Generate thumbnail from video URL (returns Promise<string>)
-    function generateThumbnailFromVideo(videoUrl) {
-      return new Promise((resolve) => {
-        const video = document.createElement('video');
-        video.crossOrigin = "anonymous";
-        video.preload = 'metadata';
-        video.src = videoUrl;
-
-        // Set video size
-        video.width = 320;
-        video.height = 180;
-
-        video.addEventListener('loadeddata', () => {
-          // Seek to 1 second (or 0 if duration less than 1)
-          const seekTime = video.duration > 1 ? 1 : 0;
-          video.currentTime = seekTime;
-        });
-
-        video.addEventListener('seeked', () => {
-          // Create canvas and draw frame
-          const canvas = document.createElement('canvas');
-          canvas.width = 320;
-          canvas.height = 180;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataURL = canvas.toDataURL('image/jpeg');
-          resolve(dataURL);
-          video.remove(); // clean up
-        });
-
-        // On error fallback
-        video.addEventListener('error', () => {
-          resolve(null);
-        });
-      });
-    }
-
-    async function createVideoCard(video) {
-      const card = document.createElement('div');
-      card.className = 'video-card';
-
-      let thumbnailUrl = video.thumbnail || null;
-
-      // If no thumbnail, try to generate from video IPFS hash URL
-      if (!thumbnailUrl) {
-        const videoUrl = `https://ipfs.io/ipfs/${video.ipfsHash}`;
-        thumbnailUrl = await generateThumbnailFromVideo(videoUrl);
-      }
-
-      // If still no thumbnail, fallback to plain gray background image
-      if (!thumbnailUrl) {
-        thumbnailUrl = 'data:image/svg+xml;base64,' + btoa(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">
-            <rect width="320" height="180" fill="#444"/>
-            <text x="50%" y="50%" fill="#888" font-size="20" font-family="Arial" dominant-baseline="middle" text-anchor="middle">
-              No Thumbnail
-            </text>
-          </svg>
-        `);
-      }
-
-      card.innerHTML = `
-        <img class="thumbnail" src="${thumbnailUrl}" alt="Thumbnail for ${escapeHtml(video.title)}" />
-        <div class="video-info">
-          <h3 class="video-title">${escapeHtml(video.title)}</h3>
-          <p class="video-desc">${escapeHtml(video.description)}</p>
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        window.location.href = `watch.html?hash=${video.ipfsHash}`;
-      });
-
-      return card;
-    }
-
-    async function renderVideos(filter = '') {
-      container.innerHTML = '';
-      const filtered = videos.filter(v => 
-        v.title.toLowerCase().includes(filter) || 
-        (v.description && v.description.toLowerCase().includes(filter))
-      );
-      if (filtered.length === 0) {
-        container.innerHTML = `<p style="text-align:center; color:#777;">No videos found.</p>`;
-        return;
-      }
-      // Use Promise.all to await all thumbnails generation
-      const cards = await Promise.all(filtered.map(video => createVideoCard(video)));
-      cards.forEach(card => container.appendChild(card));
-    }
-
-    async function loadVideosFromFirestore() {
-      container.innerHTML = '<p style="text-align:center; color:#777;">Loading videos...</p>';
-      try {
-        const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-          container.innerHTML = `<p style="text-align:center; color:#777;">No videos uploaded yet.</p>`;
-          return;
-        }
-
-        videos = [];
-        snapshot.forEach(doc => {
-          videos.push(doc.data());
-        });
-
-        await renderVideos();
-      } catch (error) {
-        container.innerHTML = `<p style="text-align:center; color:#ff4c4c;">Failed to load videos: ${error.message}</p>`;
-        console.error(error);
-      }
-    }
-
-    searchBox.addEventListener('input', async () => {
-      const query = searchBox.value.trim().toLowerCase();
-      await renderVideos(query);
-    });
-
-    loadVideosFromFirestore();
   </script>
 
 </body>
