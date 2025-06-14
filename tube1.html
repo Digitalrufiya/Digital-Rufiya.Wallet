@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFTube Login</title>
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #8B0000, #FF0000);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .container {
+      text-align: center;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    img {
+      width: 100px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #8B0000;
+      cursor: pointer;
+      margin: 10px;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background: #f1f1f1;
+    }
+    #userInfo {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" alt="DRFTube Logo">
+    <h1>Welcome to DRFTube</h1>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn">Logout</button>
+    <p id="userInfo">You are not logged in.</p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.firebasestorage.app",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd",
+      measurementId: "G-ZPTJE4DMNN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      signInWithPopup(auth, provider)
+        .then((result) => {
+          const user = result.user;
+          document.getElementById("userInfo").textContent = `Welcome, ${user.displayName}`;
+        })
+        .catch((error) => {
+          console.error("Login failed:", error.message);
+          alert("Login failed: " + error.message);
+        });
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth).then(() => {
+        document.getElementById("userInfo").textContent = "You are signed out.";
+      });
+    });
+  </script>
+</body>
+</html>
