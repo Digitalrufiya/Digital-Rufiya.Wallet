@@ -72,7 +72,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
     import {
       getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment,
-      addDoc, getDoc, setDoc
+      addDoc, deleteDoc, getDoc
     } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
     import {
       getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
@@ -146,6 +146,7 @@
           <video controls src="${ipfsUrl}"></video>
           <div class="actions">
             <button class="like-btn" data-id="${id}">👍 Like (<span>${video.likes || 0}</span>)</button>
+            ${currentUser?.email === "digitalrufiyacoin@gmail.com" ? `<button class="delete-btn" data-id="${id}" style="background:#ff4444;color:white;margin-left:10px;">🗑️ Delete</button>` : ""}
           </div>
           <div class="comments-section">
             ${currentUser ? `
@@ -178,6 +179,7 @@
     videosContainer.addEventListener("click", async (e) => {
       const likeBtn = e.target.closest(".like-btn");
       const commentBtn = e.target.closest(".comment-btn");
+      const deleteBtn = e.target.closest(".delete-btn");
 
       if (likeBtn) {
         const id = likeBtn.dataset.id;
@@ -199,6 +201,14 @@
         });
         textBox.value = "";
         loadComments(id);
+      }
+
+      if (deleteBtn && currentUser?.email === "digitalrufiyacoin@gmail.com") {
+        const id = deleteBtn.dataset.id;
+        if (confirm("Are you sure you want to delete this video?")) {
+          await deleteDoc(doc(db, "videos", id));
+          loadVideos();
+        }
       }
     });
   </script>
