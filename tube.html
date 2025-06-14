@@ -9,14 +9,14 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #1c1c1c;
+      background-color: #121212;
       color: white;
     }
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background-color: #b30000;
+      background-color: #ff0000;
       padding: 10px 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
@@ -25,7 +25,7 @@
     }
     header button {
       background-color: white;
-      color: #b30000;
+      color: #ff0000;
       border: none;
       padding: 8px 16px;
       border-radius: 4px;
@@ -38,7 +38,7 @@
       margin: auto;
     }
     .upload-form {
-      background: #2a2a2a;
+      background: #1f1f1f;
       padding: 20px;
       border-radius: 8px;
       margin-bottom: 30px;
@@ -47,10 +47,19 @@
       width: 100%;
       margin-bottom: 10px;
       padding: 10px;
-      background: #444;
+      background: #333;
       border: none;
       color: white;
       border-radius: 4px;
+    }
+    .upload-form button {
+      background: #ff0000;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
     }
     .video-list video {
       width: 100%;
@@ -59,7 +68,7 @@
       margin-bottom: 8px;
     }
     .video-card {
-      background: #2b2b2b;
+      background: #1a1a1a;
       margin-bottom: 30px;
       padding: 15px;
       border-radius: 8px;
@@ -134,25 +143,34 @@
     });
 
     async function uploadVideo() {
-      const title = document.getElementById("title").value;
-      const description = document.getElementById("description").value;
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
       const file = document.getElementById("videoFile").files[0];
+      if (!title || !file) return alert("Please enter title and select video file");
 
-      if (!title || !file) return alert("Please enter title and select video");
+      alert("Uploading to IPFS via Pinata...");
 
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4`
-        },
-        body: formData
-      });
+      let ipfsURL = '';
+      try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4`
+          },
+          body: formData
+        });
 
-      const data = await res.json();
-      const ipfsURL = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+        if (!res.ok) throw new Error("Pinata upload failed");
+        const data = await res.json();
+        ipfsURL = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+      } catch (e) {
+        console.error(e);
+        return alert("IPFS upload failed. Please check your JWT or internet.");
+      }
+
       const videoData = {
         title,
         description,
@@ -161,8 +179,9 @@
         user: auth.currentUser.displayName,
         created: Date.now()
       };
+
       await push(ref(db, 'videos'), videoData);
-      alert("Uploaded successfully");
+      alert("Video uploaded successfully!");
     }
 
     onValue(ref(db, 'videos'), snapshot => {
