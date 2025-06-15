@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFTube - Upload Videos</title>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 18px #0a84ff88;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #0a84ff;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+    input[type="text"],
+    textarea,
+    input[type="file"] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1rem;
+      background: #222;
+      color: #eee;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: #0a84ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #0066ff;
+    }
+    #status {
+      margin-top: 15px;
+      min-height: 44px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0aff6b;
+      white-space: pre-line;
+    }
+    #uploadedVideoPreview {
+      margin-top: 25px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 15px #0a84ff88;
+    }
+    #uploadedVideoPreview video {
+      width: 100%;
+      border-radius: 10px;
+      background: #000;
+    }
+    #videoList {
+      margin-top: 35px;
+    }
+    .videoItem {
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #222;
+      border-radius: 10px;
+      box-shadow: 0 0 8px #0a84ff88;
+    }
+    .videoItem h3 {
+      margin: 0 0 8px 0;
+      color: #0affff;
+    }
+    .videoItem p {
+      margin: 4px 0;
+    }
+    .videoItem video {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>DRFTube Video Upload</h1>
+<div id="authSection">
+  <button id="loginBtn">Login with Google</button>
+</div>
+<div id="appSection" style="display:none">
+  <form id="uploadForm" autocomplete="off">
+    <label for="title">Video Title <sup>*</sup></label>
+    <input id="title" type="text" required placeholder="Enter video title" />
+
+    <label for="description">Description</label>
+    <textarea id="description" placeholder="Enter video description (optional)"></textarea>
+
+    <label for="category">Category</label>
+    <input id="category" type="text" placeholder="E.g., Reminder, Quran, Hadith" />
+
+    <label for="file">Select Video File <sup>*</sup></label>
+    <input id="file" type="file" accept="video/*" required />
+
+    <button type="submit">Upload Video</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="uploadedVideoPreview"></div>
+
+  <h2>Uploaded Videos</h2>
+  <div id="videoList">Loading videos...</div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+    authDomain: "drftube-634c6.firebaseapp.com",
+    projectId: "drftube-634c6",
+    storageBucket: "drftube-634c6.appspot.com",
+    messagingSenderId: "819828633864",
+    appId: "1:819828633864:web:513002b461259b000cbcbd",
+    measurementId: "G-ZPTJE4DMNN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"; // truncated for brevity
+
+  const authSection = document.getElementById("authSection");
+  const appSection = document.getElementById("appSection");
+  const loginBtn = document.getElementById("loginBtn");
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      authSection.style.display = "none";
+      appSection.style.display = "block";
+      loadVideos();
+    } else {
+      authSection.style.display = "block";
+      appSection.style.display = "none";
+    }
+  });
+
+  loginBtn.addEventListener("click", () => {
+    signInWithPopup(auth, provider).catch(err => alert("Login failed: " + err.message));
+  });
+
+  const form = document.getElementById("uploadForm");
+  const statusEl = document.getElementById("status");
+  const uploadedVideoPreview = document.getElementById("uploadedVideoPreview");
+  const videoList = document.getElementById("videoList");
+
+  function showStatus(message, isError = false) {
+    statusEl.textContent = message;
+    statusEl.style.color = isError ? "#ff4c4c" : "#0aff6b";
+  }
+
+  async function uploadToPinata(file, title, description, category) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("pinataMetadata", JSON.stringify({
+      name: title || file.name,
+      keyvalues: { description: description || "No description", category: category || "Uncategorized" }
+    }));
+
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${PINATA_JWT}` },
+      body: formData
+    });
+
+    if (!res.ok) throw new Error(`Pinata upload failed: ${await res.text()}`);
+    return (await res.json()).IpfsHash;
+  }
+
+  async function saveMetadataToFirestore(title, description, category, ipfsHash) {
+    await addDoc(collection(db, "videos"), {
+      title, description, category, ipfsHash, uploadedAt: new Date().toISOString()
+    });
+  }
+
+  async function loadVideos() {
+    videoList.textContent = "Loading videos...";
+    const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return videoList.textContent = "No videos uploaded yet.";
+
+    videoList.innerHTML = "";
+    snapshot.forEach((doc) => {
+      const v = doc.data();
+      videoList.innerHTML += `
+        <div class="videoItem">
+          <h3>${v.title}</h3>
+          <p><strong>Category:</strong> ${v.category}</p>
+          <p>${v.description}</p>
+          <video controls><source src="https://ipfs.io/ipfs/${v.ipfsHash}" type="video/mp4"></video>
+        </div>`;
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = form.title.value.trim();
+    const description = form.description.value.trim();
+    const category = form.category.value.trim();
+    const file = form.file.files[0];
+
+    if (!file || !title) return showStatus("File and Title required", true);
+
+    try {
+      showStatus("Uploading video to IPFS...");
+      const ipfsHash = await uploadToPinata(file, title, description, category);
+
+      showStatus("Saving metadata to Firestore...");
+      await saveMetadataToFirestore(title, description, category, ipfsHash);
+
+      showStatus("✅ Upload complete!");
+      form.reset();
+      uploadedVideoPreview.innerHTML = `<video controls><source src="https://ipfs.io/ipfs/${ipfsHash}" type="${file.type}"></video>`;
+      loadVideos();
+    } catch (err) {
+      showStatus("❌ Upload failed: " + err.message, true);
+    }
+  });
+</script>
+</body>
+</html>
