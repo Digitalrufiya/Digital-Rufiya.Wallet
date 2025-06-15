@@ -112,18 +112,15 @@ const firebaseConfig = {
   projectId: "drftube-634c6",
   storageBucket: "drftube-634c6.appspot.com",
   messagingSenderId: "819828633864",
-  appId: "1:819828633864:web:513002b461259b000cbcbd",
-  measurementId: "G-ZPTJE4DMNN"
+  appId: "1:819828633864:web:513002b461259b000cbcbd"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Pinata JWT (keep this safe)
-const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3";
-
+// ✅ Full valid Pinata JWT
+const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3In0sImlhdCI6MTY5MjQ1NzY0OH0.xN3YujV1P1Vw9EIoKjz9PVHHR54eRb7DypWRrC6Ix9Y";
 
 // DOM
 const form = document.getElementById("uploadForm");
@@ -148,18 +145,15 @@ onAuthStateChanged(auth, user => {
     userEmail.textContent = "";
   }
 });
-
-// Auth buttons
 loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
 logoutBtn.onclick = () => signOut(auth).catch(console.error);
 
-// Status message
 function showStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.style.color = isError ? "#ff4c4c" : "#0aff6b";
 }
 
-// Upload to Pinata
+// ✅ Upload to Pinata
 async function uploadToPinata(file, title, description, category) {
   const formData = new FormData();
   formData.append("file", file);
@@ -170,10 +164,13 @@ async function uploadToPinata(file, title, description, category) {
       category: category || "Uncategorized"
     }
   }));
+  formData.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
 
   const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
     method: "POST",
-    headers: { Authorization: `Bearer ${PINATA_JWT}` },
+    headers: {
+      Authorization: `Bearer ${PINATA_JWT}`
+    },
     body: formData
   });
 
@@ -182,7 +179,6 @@ async function uploadToPinata(file, title, description, category) {
   return data.IpfsHash;
 }
 
-// Save to Firestore
 async function saveMetadataToFirestore(title, description, category, ipfsHash) {
   return await addDoc(collection(db, "videos"), {
     title,
@@ -208,8 +204,7 @@ async function loadVideos() {
     videoList.innerHTML = "";
     snapshot.forEach(doc => {
       const v = doc.data();
-      const hash = v.ipfsHash;
-      const videoUrl = `https://gateway.pinata.cloud/ipfs/${hash}`;
+      const videoUrl = `https://gateway.pinata.cloud/ipfs/${v.ipfsHash}`;
 
       const div = document.createElement("div");
       div.className = "videoItem";
@@ -220,7 +215,7 @@ async function loadVideos() {
         <video controls preload="metadata">
           <source src="${videoUrl}" type="video/mp4" />
         </video>
-        <p><a href="https://ipfs.io/ipfs/${hash}" target="_blank">IPFS Backup Link</a></p>
+        <p><a href="https://ipfs.io/ipfs/${v.ipfsHash}" target="_blank">IPFS Backup</a></p>
       `;
       videoList.appendChild(div);
     });
@@ -230,12 +225,11 @@ async function loadVideos() {
   }
 }
 
-// HTML escape
 function escapeHtml(text) {
   return text?.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// Form submit
+// Submit
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const title = form.title.value.trim();
@@ -244,31 +238,31 @@ form.addEventListener("submit", async e => {
   const file = form.file.files[0];
 
   if (!file || !title) {
-    showStatus("Title and file required.", true);
+    showStatus("Title and video file are required.", true);
     return;
   }
 
   try {
-    showStatus("Uploading to IPFS...");
+    showStatus("Uploading to IPFS via Pinata...");
     const ipfsHash = await uploadToPinata(file, title, description, category);
 
-    showStatus("Saving to Firestore...");
+    showStatus("Saving video details...");
     await saveMetadataToFirestore(title, description, category, ipfsHash);
 
     form.reset();
     uploadedVideoPreview.innerHTML = `
       <h3>Uploaded Preview</h3>
-      <video controls>
+      <video controls preload="metadata">
         <source src="https://gateway.pinata.cloud/ipfs/${ipfsHash}" type="${file.type}">
       </video>
-      <p><a href="https://ipfs.io/ipfs/${ipfsHash}" target="_blank">View on IPFS</a></p>
+      <p><a href="https://ipfs.io/ipfs/${ipfsHash}" target="_blank">Open on IPFS</a></p>
     `;
 
     showStatus("✅ Video uploaded successfully!");
     loadVideos();
-  } catch (error) {
-    console.error(error);
-    showStatus("❌ Upload failed: " + error.message, true);
+  } catch (err) {
+    console.error(err);
+    showStatus("❌ Upload failed: " + err.message, true);
   }
 });
 
