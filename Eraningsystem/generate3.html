@@ -26,7 +26,6 @@
       padding: 20px 30px;
       border-radius: 12px;
       box-shadow: 0 0 12px rgba(0,0,0,0.07);
-      user-select: none;
     }
 
     label {
@@ -43,9 +42,7 @@
       border-radius: 8px;
       border: 1.5px solid #ddd;
       font-size: 15px;
-      font-family: 'Segoe UI', sans-serif;
       resize: vertical;
-      transition: border-color 0.3s ease;
     }
 
     input[type="text"]:focus, textarea:focus {
@@ -64,9 +61,6 @@
       align-items: center;
       gap: 8px;
       font-size: 14px;
-      cursor: pointer;
-      color: #555;
-      user-select: none;
     }
 
     .btn {
@@ -80,8 +74,6 @@
       font-weight: 700;
       font-size: 16px;
       width: 100%;
-      transition: background-color 0.3s ease;
-      user-select: none;
     }
 
     .btn:hover {
@@ -92,145 +84,136 @@
       margin: 30px auto 10px auto;
       max-width: 520px;
       border-radius: 16px;
-      box-shadow: 0 0 20px rgba(0,168,132,0.2);
-      position: relative;
       background: url('https://images.unsplash.com/photo-1531497865146-20e6a88e8e48?auto=format&fit=crop&w=800&q=80') no-repeat center center / cover;
       color: white;
       padding: 30px 25px;
-      user-select: none;
-      text-align: center;
-      font-family: 'Segoe UI', sans-serif;
-      min-height: 600px;
-      overflow: hidden;
-      box-sizing: border-box;
       display: none;
+      text-align: center;
+      position: relative;
+      min-height: 600px;
     }
 
     #posterOutput .logo-img {
       max-width: 180px;
-      max-height: 180px;
       margin: 0 auto 18px auto;
       display: block;
-      object-fit: contain;
       border-radius: 50%;
-      box-shadow: 0 0 12px rgba(0,168,132,0.8);
     }
 
-    #posterOutput h2 {
-      margin: 14px 0 8px 0;
-      font-size: 32px;
-      font-weight: 700;
-      text-shadow: 2px 2px 6px #007a5fcc;
+    #posterOutput h2, h4, p {
+      text-shadow: 1px 1px 5px #000;
     }
 
-    #posterOutput h4 {
-      margin: 4px 0 20px 0;
-      font-weight: 600;
-      font-size: 20px;
-      text-shadow: 1px 1px 5px #007a5fcc;
-    }
-
-    #posterOutput p {
-      font-size: 18px;
-      line-height: 1.4;
-      margin: 8px 0;
-      text-shadow: 1px 1px 4px #006644cc;
-    }
-
-    #posterOutput .referral-link {
-      margin-top: 25px;
-      padding: 12px 20px;
-      background: #00a884dd;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 20px;
-      color: white;
+    .referral-link {
+      margin: 20px 0;
       display: inline-block;
+      background: #00a884;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: bold;
       text-decoration: none;
-      box-shadow: 0 0 15px #00a884bb;
-      user-select: text;
-      word-break: break-all;
-      cursor: default;
+      word-break: break-word;
     }
 
-    .actions {
+    .share-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .share-buttons button {
+      background: #eee;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .footer {
       text-align: center;
-      margin-top: 16px;
-      display: none;
+      margin-top: 40px;
+      font-size: 14px;
+      color: #666;
     }
 
-    .actions button {
-      font-size: 18px;
-      padding: 12px 28px;
-    }
-
-    /* Responsive */
-    @media (max-width: 560px) {
-      #posterOutput {
-        min-height: 540px;
-        padding: 20px 18px;
-      }
-      #posterOutput h2 {
-        font-size: 28px;
-      }
-      #posterOutput h4 {
-        font-size: 18px;
-      }
-      #posterOutput p {
-        font-size: 16px;
-      }
-      #posterOutput .referral-link {
-        font-size: 18px;
-        padding: 10px 18px;
-      }
+    #watermark {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      color: white;
+      opacity: 0.9;
+      text-shadow: 1px 1px 3px #000;
     }
   </style>
 </head>
 <body>
 
-  <h1>DRF Referral Poster Generator</h1>
+<h1>DRF Referral Poster Generator</h1>
 
-  <div class="input-box">
-    <label for="logoInput">Upload Logo (Optional)</label>
-    <input type="file" id="logoInput" accept="image/*" />
+<div class="input-box">
+  <label for="logoInput">Upload Logo (Optional)</label>
+  <input type="file" id="logoInput" accept="image/*" />
 
-    <label class="toggle-logo">
-      <input type="checkbox" id="toggleLogo" checked />
-      Show Logo on Poster
-    </label>
+  <label class="toggle-logo">
+    <input type="checkbox" id="toggleLogo" checked /> Show Logo on Poster
+  </label>
 
-    <label for="headline">Headline</label>
-    <input id="headline" type="text" placeholder="E.g. Join the Halal Crypto Revolution!" />
+  <label for="headline">Headline</label>
+  <input id="headline" type="text" placeholder="E.g. Join the Halal Crypto Revolution!" />
 
-    <label for="subtitle">Sub Title</label>
-    <input id="subtitle" type="text" placeholder="Earn with DRF. No investment needed." />
+  <label for="subtitle">Sub Title</label>
+  <input id="subtitle" type="text" placeholder="Earn with DRF. No investment needed." />
 
-    <label for="message">Message</label>
-    <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way."></textarea>
+  <label for="message">Message</label>
+  <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way."></textarea>
 
-    <label for="referral">Referral Link</label>
-    <input id="referral" type="text" placeholder="https://yourlink.com/?ref=123" />
+  <label for="referral">Referral Link</label>
+  <input id="referral" type="text" placeholder="https://yourlink.com/?ref=123" />
 
-    <button class="btn" onclick="generatePoster()">Generate Poster</button>
+  <button class="btn" onclick="generatePoster()">Generate Poster</button>
+</div>
+
+<div id="posterOutput">
+  <img src="" id="posterLogo" class="logo-img" style="display:none;">
+  <h2 id="outHeadline"></h2>
+  <h4 id="outSubtitle"></h4>
+  <p id="outMessage"></p>
+  <a href="#" class="referral-link" id="outReferral"></a>
+
+  <div class="share-buttons" id="shareBtns">
+    <button onclick="copyReferral()">Copy Link</button>
+    <button onclick="shareTo('whatsapp')">WhatsApp</button>
+    <button onclick="shareTo('facebook')">Facebook</button>
+    <button onclick="shareTo('twitter')">Twitter</button>
+    <button onclick="shareTo('linkedin')">LinkedIn</button>
+    <button onclick="shareTo('instagram')">Instagram</button>
+    <button onclick="shareTo('tiktok')">TikTok</button>
   </div>
 
-  <div id="posterOutput">
-    <img src="" alt="Logo" class="logo-img" id="posterLogo" style="display:none;" />
-    <h2 id="outHeadline"></h2>
-    <h4 id="outSubtitle"></h4>
-    <p id="outMessage"></p>
-    <a href="#" target="_blank" class="referral-link" id="outReferral"></a>
+  <div id="watermark">
+    Powered by <strong>DRFMedia</strong> &amp; <strong>DRF Wallet</strong>
   </div>
+</div>
 
-  <div class="actions" id="downloadSection">
-    <button class="btn" onclick="downloadImage()">📥 Download Poster Image</button>
-  </div>
+<div class="actions" id="downloadSection" style="text-align:center; margin-top:20px;">
+  <button class="btn" onclick="downloadImage()">📥 Download Poster Image</button>
+</div>
+
+<div class="footer">
+  &copy; Powered by <strong>DRFMedia</strong>
+</div>
 
 <script>
   const logoInput = document.getElementById('logoInput');
   const posterLogo = document.getElementById('posterLogo');
   const toggleLogo = document.getElementById('toggleLogo');
-
   let logoDataURL = '';
 
   logoInput.addEventListener('change', (e) => {
@@ -262,19 +245,17 @@
     const referral = document.getElementById('referral').value.trim();
 
     if(!headline || !subtitle || !message || !referral) {
-      alert('Please fill all fields (except logo which is optional).');
+      alert('Please fill all fields (except logo).');
       return;
     }
 
     document.getElementById('outHeadline').innerText = headline;
     document.getElementById('outSubtitle').innerText = subtitle;
     document.getElementById('outMessage').innerText = message;
-
     const referralLink = document.getElementById('outReferral');
     referralLink.innerText = referral;
     referralLink.href = referral;
 
-    // Show or hide logo depending on toggle and file upload
     if(toggleLogo.checked && logoDataURL){
       posterLogo.src = logoDataURL;
       posterLogo.style.display = 'block';
@@ -284,19 +265,47 @@
 
     document.getElementById('posterOutput').style.display = 'block';
     document.getElementById('downloadSection').style.display = 'block';
-
-    // Scroll to poster
-    document.getElementById('posterOutput').scrollIntoView({behavior: 'smooth'});
   }
 
   function downloadImage() {
-    const poster = document.getElementById('posterOutput');
-    html2canvas(poster, {backgroundColor: null}).then(function(canvas) {
+    html2canvas(document.getElementById('posterOutput')).then(function(canvas) {
       const link = document.createElement('a');
       link.download = 'DRF-Referral-Poster.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = canvas.toDataURL();
       link.click();
     });
+  }
+
+  function copyReferral() {
+    const referral = document.getElementById('referral').value;
+    navigator.clipboard.writeText(referral).then(() => alert('Referral link copied!'));
+  }
+
+  function shareTo(platform) {
+    const url = encodeURIComponent(document.getElementById('referral').value);
+    const text = encodeURIComponent("Join me on DRFMedia. Here's my referral link: ");
+    let shareUrl = '';
+
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${text}${url}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        break;
+      case 'instagram':
+      case 'tiktok':
+        alert(`${platform} does not support direct link sharing. Copy and post manually.`);
+        return;
+    }
+
+    window.open(shareUrl, '_blank');
   }
 </script>
 
