@@ -78,7 +78,7 @@
 
     #posterOutput .logo-img {
       max-width: 140px;
-      margin-bottom: 18px;
+      margin: 0 auto 18px;
       display: none;
       border-radius: 50%;
       border: 2px solid #00ffc6;
@@ -114,7 +114,7 @@
 
     .watermark {
       position: absolute;
-      bottom: 10px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 12px;
@@ -123,11 +123,11 @@
 
     .quran-ayah {
       position: absolute;
-      bottom: 28px;
+      bottom: 5px;
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Amiri', serif;
-      font-size: 16px;
+      font-size: 8px;
       opacity: 0.45;
       color: #e0e0e0;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
@@ -161,6 +161,10 @@
     <h4 id="outSubtitle"></h4>
     <p id="outMessage"></p>
     <a href="#" class="referral-link" id="outReferral"></a>
+    <div class="share-buttons" id="shareSection" style="display:none">
+      <button onclick="copyLink()">📋 Copy Link</button>
+      <button onclick="shareImage()">📤 Share Poster</button>
+    </div>
     <div class="quran-ayah">﴿وَفِي السَّمَاءِ رِزْقُكُمْ وَمَا تُوعَدُونَ﴾</div>
     <div class="watermark">Powered by DRFMedia & DRF Wallet</div>
   </div>
@@ -201,6 +205,7 @@
       outReferral.href = referralLink;
 
       document.getElementById('posterOutput').style.display = 'block';
+      document.getElementById('shareSection').style.display = 'flex';
     }
 
     function downloadImage() {
@@ -209,6 +214,29 @@
         link.download = 'DRF-Premium-Poster.png';
         link.href = canvas.toDataURL();
         link.click();
+      });
+    }
+
+    function copyLink() {
+      navigator.clipboard.writeText(referralLink).then(() => {
+        alert("Referral link copied to clipboard!");
+      });
+    }
+
+    function shareImage() {
+      html2canvas(document.getElementById('posterOutput')).then(function(canvas) {
+        canvas.toBlob(function(blob) {
+          const file = new File([blob], "poster.png", { type: "image/png" });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({
+              files: [file],
+              title: 'DRF Poster',
+              text: 'Check out this amazing DRF poster!',
+            });
+          } else {
+            alert('Sharing not supported on this device. Please download manually.');
+          }
+        });
       });
     }
   </script>
