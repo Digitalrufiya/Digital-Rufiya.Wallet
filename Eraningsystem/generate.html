@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Referral Promo Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7f9;
+      text-align: center;
+      padding: 30px;
+    }
+
+    h1 {
+      color: #00a884;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      width: 90%;
+      max-width: 400px;
+      font-size: 16px;
+    }
+
+    canvas {
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    #downloadBtn {
+      background-color: #00a884;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+
+    #downloadBtn:hover {
+      background-color: #019171;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 DRF Referral Promo Generator</h1>
+  <p>Enter your referral code or name to generate your poster</p>
+
+  <input type="text" id="referralInput" placeholder="Your referral code or name" />
+  <br />
+  <button id="generateBtn">Generate Poster</button>
+  <br />
+  <canvas id="posterCanvas" width="600" height="400"></canvas>
+  <br />
+  <button id="downloadBtn">Download Image</button>
+
+  <script>
+    const canvas = document.getElementById('posterCanvas');
+    const ctx = canvas.getContext('2d');
+
+    document.getElementById('generateBtn').onclick = () => {
+      const referral = document.getElementById('referralInput').value || "DRF-USER";
+      generatePoster(referral);
+    };
+
+    function generatePoster(referral) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Background Box
+      ctx.fillStyle = "#00a884";
+      ctx.fillRect(0, 0, canvas.width, 80);
+      ctx.fillStyle = "#fff";
+      ctx.font = "24px Segoe UI";
+      ctx.fillText("Digital Earning System", 20, 50);
+
+      // Body Text
+      ctx.fillStyle = "#333";
+      ctx.font = "20px Segoe UI";
+      ctx.fillText("Invite & Earn Without Investment", 20, 140);
+      ctx.font = "16px Segoe UI";
+      ctx.fillText("Share your unique referral code below 👇", 20, 180);
+
+      // Referral Code Box
+      ctx.fillStyle = "#f1f1f1";
+      ctx.fillRect(20, 200, canvas.width - 40, 50);
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 20px Segoe UI";
+      ctx.fillText(referral, 30, 232);
+
+      // Footer
+      ctx.fillStyle = "#777";
+      ctx.font = "14px Segoe UI";
+      ctx.fillText("Powered by DRFMedia", 20, 380);
+    }
+
+    document.getElementById('downloadBtn').onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'drf_referral_poster.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    };
+
+    // Initialize blank
+    generatePoster("DRF-USER");
+  </script>
+</body>
+</html>
