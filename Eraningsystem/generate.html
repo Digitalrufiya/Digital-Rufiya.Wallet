@@ -3,107 +3,295 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Referral Promo Generator</title>
+  <title>DRF Referral Poster Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f4f7f9;
-      text-align: center;
-      padding: 30px;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
     }
 
     h1 {
+      text-align: center;
       color: #00a884;
+      margin-bottom: 10px;
     }
 
-    input, button {
+    .input-box {
+      max-width: 520px;
+      margin: auto;
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.07);
+    }
+
+    label {
+      display: block;
+      margin-top: 12px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
       padding: 10px;
-      margin: 10px;
-      width: 90%;
-      max-width: 400px;
-      font-size: 16px;
-    }
-
-    canvas {
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    #downloadBtn {
-      background-color: #00a884;
-      color: white;
-      border: none;
-      cursor: pointer;
+      margin-top: 6px;
       border-radius: 8px;
+      border: 1.5px solid #ddd;
+      font-size: 15px;
+      resize: vertical;
     }
 
-    #downloadBtn:hover {
-      background-color: #019171;
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #00a884;
+      box-shadow: 0 0 5px #00a884aa;
+    }
+
+    input[type="file"] {
+      margin-top: 8px;
+    }
+
+    .toggle-logo {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .btn {
+      margin-top: 22px;
+      background: #00a884;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 16px;
+      width: 100%;
+    }
+
+    .btn:hover {
+      background: #018c6b;
+    }
+
+    #posterOutput {
+      margin: 30px auto 10px auto;
+      max-width: 520px;
+      border-radius: 16px;
+      background: url('https://images.unsplash.com/photo-1531497865146-20e6a88e8e48?auto=format&fit=crop&w=800&q=80') no-repeat center center / cover;
+      color: white;
+      padding: 30px 25px;
+      display: none;
+      text-align: center;
+      position: relative;
+      min-height: 600px;
+    }
+
+    #posterOutput .logo-img {
+      max-width: 180px;
+      margin: 0 auto 18px auto;
+      display: block;
+      border-radius: 50%;
+    }
+
+    #posterOutput h2, h4, p {
+      text-shadow: 1px 1px 5px #000;
+    }
+
+    .referral-link {
+      margin: 20px 0;
+      display: inline-block;
+      background: #00a884;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: bold;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .share-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .share-buttons button {
+      background: #eee;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 14px;
+      color: #666;
     }
   </style>
 </head>
 <body>
-  <h1>🎯 DRF Referral Promo Generator</h1>
-  <p>Enter your referral code or name to generate your poster</p>
 
-  <input type="text" id="referralInput" placeholder="Your referral code or name" />
-  <br />
-  <button id="generateBtn">Generate Poster</button>
-  <br />
-  <canvas id="posterCanvas" width="600" height="400"></canvas>
-  <br />
-  <button id="downloadBtn">Download Image</button>
+<h1>DRF Referral Poster Generator</h1>
 
-  <script>
-    const canvas = document.getElementById('posterCanvas');
-    const ctx = canvas.getContext('2d');
+<div class="input-box">
+  <label for="logoInput">Upload Logo (Optional)</label>
+  <input type="file" id="logoInput" accept="image/*" />
 
-    document.getElementById('generateBtn').onclick = () => {
-      const referral = document.getElementById('referralInput').value || "DRF-USER";
-      generatePoster(referral);
-    };
+  <label class="toggle-logo">
+    <input type="checkbox" id="toggleLogo" checked /> Show Logo on Poster
+  </label>
 
-    function generatePoster(referral) {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  <label for="headline">Headline</label>
+  <input id="headline" type="text" placeholder="E.g. Join the Halal Crypto Revolution!" />
 
-      // Background Box
-      ctx.fillStyle = "#00a884";
-      ctx.fillRect(0, 0, canvas.width, 80);
-      ctx.fillStyle = "#fff";
-      ctx.font = "24px Segoe UI";
-      ctx.fillText("Digital Earning System", 20, 50);
+  <label for="subtitle">Sub Title</label>
+  <input id="subtitle" type="text" placeholder="Earn with DRF. No investment needed." />
 
-      // Body Text
-      ctx.fillStyle = "#333";
-      ctx.font = "20px Segoe UI";
-      ctx.fillText("Invite & Earn Without Investment", 20, 140);
-      ctx.font = "16px Segoe UI";
-      ctx.fillText("Share your unique referral code below 👇", 20, 180);
+  <label for="message">Message</label>
+  <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way."></textarea>
 
-      // Referral Code Box
-      ctx.fillStyle = "#f1f1f1";
-      ctx.fillRect(20, 200, canvas.width - 40, 50);
-      ctx.fillStyle = "#000";
-      ctx.font = "bold 20px Segoe UI";
-      ctx.fillText(referral, 30, 232);
+  <label for="referral">Referral Link</label>
+  <input id="referral" type="text" placeholder="https://yourlink.com/?ref=123" />
 
-      // Footer
-      ctx.fillStyle = "#777";
-      ctx.font = "14px Segoe UI";
-      ctx.fillText("Powered by DRFMedia", 20, 380);
+  <button class="btn" onclick="generatePoster()">Generate Poster</button>
+</div>
+
+<div id="posterOutput">
+  <img src="" id="posterLogo" class="logo-img" style="display:none;">
+  <h2 id="outHeadline"></h2>
+  <h4 id="outSubtitle"></h4>
+  <p id="outMessage"></p>
+  <a href="#" class="referral-link" id="outReferral"></a>
+
+  <div class="share-buttons" id="shareBtns">
+    <button onclick="copyReferral()">Copy Link</button>
+    <button onclick="shareTo('whatsapp')">WhatsApp</button>
+    <button onclick="shareTo('facebook')">Facebook</button>
+    <button onclick="shareTo('twitter')">Twitter</button>
+    <button onclick="shareTo('linkedin')">LinkedIn</button>
+    <button onclick="shareTo('instagram')">Instagram</button>
+    <button onclick="shareTo('tiktok')">TikTok</button>
+  </div>
+</div>
+
+<div class="actions" id="downloadSection" style="text-align:center; margin-top:20px;">
+  <button class="btn" onclick="downloadImage()">📥 Download Poster Image</button>
+</div>
+
+<div class="footer">
+  Powered by <strong>DRFMedia</strong>
+</div>
+
+<script>
+  const logoInput = document.getElementById('logoInput');
+  const posterLogo = document.getElementById('posterLogo');
+  const toggleLogo = document.getElementById('toggleLogo');
+  let logoDataURL = '';
+
+  logoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      logoDataURL = event.target.result;
+      if(toggleLogo.checked){
+        posterLogo.src = logoDataURL;
+        posterLogo.style.display = 'block';
+      }
+    }
+    reader.readAsDataURL(file);
+  });
+
+  toggleLogo.addEventListener('change', () => {
+    if (toggleLogo.checked && logoDataURL) {
+      posterLogo.style.display = 'block';
+    } else {
+      posterLogo.style.display = 'none';
+    }
+  });
+
+  function generatePoster() {
+    const headline = document.getElementById('headline').value.trim();
+    const subtitle = document.getElementById('subtitle').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const referral = document.getElementById('referral').value.trim();
+
+    if(!headline || !subtitle || !message || !referral) {
+      alert('Please fill all fields (except logo).');
+      return;
     }
 
-    document.getElementById('downloadBtn').onclick = () => {
+    document.getElementById('outHeadline').innerText = headline;
+    document.getElementById('outSubtitle').innerText = subtitle;
+    document.getElementById('outMessage').innerText = message;
+    const referralLink = document.getElementById('outReferral');
+    referralLink.innerText = referral;
+    referralLink.href = referral;
+
+    if(toggleLogo.checked && logoDataURL){
+      posterLogo.src = logoDataURL;
+      posterLogo.style.display = 'block';
+    } else {
+      posterLogo.style.display = 'none';
+    }
+
+    document.getElementById('posterOutput').style.display = 'block';
+    document.getElementById('downloadSection').style.display = 'block';
+  }
+
+  function downloadImage() {
+    html2canvas(document.getElementById('posterOutput')).then(function(canvas) {
       const link = document.createElement('a');
-      link.download = 'drf_referral_poster.png';
+      link.download = 'DRF-Referral-Poster.png';
       link.href = canvas.toDataURL();
       link.click();
-    };
+    });
+  }
 
-    // Initialize blank
-    generatePoster("DRF-USER");
-  </script>
+  function copyReferral() {
+    const referral = document.getElementById('referral').value;
+    navigator.clipboard.writeText(referral).then(() => alert('Referral link copied!'));
+  }
+
+  function shareTo(platform) {
+    const url = encodeURIComponent(document.getElementById('referral').value);
+    const text = encodeURIComponent("Join me on DRFMedia. Here's my referral link: ");
+    let shareUrl = '';
+
+    switch(platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${text}${url}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        break;
+      case 'instagram':
+      case 'tiktok':
+        alert(`${platform} does not support direct link sharing. Copy and post manually.`);
+        return;
+    }
+
+    window.open(shareUrl, '_blank');
+  }
+</script>
+
 </body>
 </html>
