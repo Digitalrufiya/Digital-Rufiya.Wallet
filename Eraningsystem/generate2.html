@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral Poster Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #00a884;
+      margin-bottom: 10px;
+    }
+
+    .input-box {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .btn {
+      margin-top: 15px;
+      background: #00a884;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #01926f;
+    }
+
+    .poster {
+      margin: 30px auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      padding: 20px;
+      max-width: 500px;
+      text-align: center;
+      color: #333;
+    }
+
+    .poster h2 {
+      color: #00a884;
+      margin-bottom: 10px;
+    }
+
+    .poster p {
+      margin: 6px 0;
+    }
+
+    .actions {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>DRF Referral Poster Generator</h1>
+
+  <div class="input-box">
+    <label for="headline">Headline</label>
+    <input id="headline" placeholder="E.g. Join the Halal Crypto Revolution!" />
+
+    <label for="subtitle">Sub Title</label>
+    <input id="subtitle" placeholder="Earn with DRF. No investment needed." />
+
+    <label for="message">Message</label>
+    <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way."></textarea>
+
+    <label for="referral">Referral Link</label>
+    <input id="referral" placeholder="https://yourlink.com/?ref=123" />
+
+    <button class="btn" onclick="generatePoster()">Generate Poster</button>
+  </div>
+
+  <div id="posterOutput" class="poster" style="display:none">
+    <h2 id="outHeadline"></h2>
+    <h4 id="outSubtitle"></h4>
+    <p id="outMessage"></p>
+    <p><strong id="outReferral"></strong></p>
+  </div>
+
+  <div class="actions" id="downloadSection" style="display:none">
+    <button class="btn" onclick="downloadImage()">📥 Download Image</button>
+  </div>
+
+  <script>
+    function generatePoster() {
+      document.getElementById('outHeadline').innerText = document.getElementById('headline').value;
+      document.getElementById('outSubtitle').innerText = document.getElementById('subtitle').value;
+      document.getElementById('outMessage').innerText = document.getElementById('message').value;
+      document.getElementById('outReferral').innerText = document.getElementById('referral').value;
+
+      document.getElementById('posterOutput').style.display = 'block';
+      document.getElementById('downloadSection').style.display = 'block';
+    }
+
+    function downloadImage() {
+      html2canvas(document.getElementById('posterOutput')).then(function(canvas) {
+        const link = document.createElement('a');
+        link.download = 'DRF-Referral-Poster.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+  </script>
+</body>
+</html>
