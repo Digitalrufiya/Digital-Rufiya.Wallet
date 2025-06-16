@@ -65,20 +65,19 @@
     #posterOutput {
       margin: 30px auto;
       max-width: 520px;
-      background: #000;
+      background: linear-gradient(135deg, #1e2b38, #000);
       color: white;
       padding: 30px 25px;
       border-radius: 16px;
       display: none;
       position: relative;
       text-align: center;
-      background: linear-gradient(135deg, #1e2b38, #000);
       box-shadow: 0 0 25px rgba(0, 255, 200, 0.2);
     }
 
     #posterOutput .logo-img {
       max-width: 140px;
-      margin-bottom: 18px;
+      margin: 0 auto 18px auto;
       display: none;
       border-radius: 50%;
       border: 2px solid #00ffc6;
@@ -142,7 +141,7 @@
   </div>
 
   <div id="posterOutput">
-    <img src="" id="posterLogo" class="logo-img">
+    <img src="" id="posterLogo" class="logo-img" />
     <h2 id="outHeadline"></h2>
     <h4 id="outSubtitle"></h4>
     <p id="outMessage"></p>
@@ -150,8 +149,10 @@
     <div class="watermark">Powered by DRFMedia & DRF Wallet</div>
   </div>
 
-  <div style="text-align:center;margin-top:20px;">
-    <button class="btn" onclick="downloadImage()">📥 Download Poster</button>
+  <div class="share-buttons" id="shareSection" style="display:none;">
+    <button onclick="downloadImage()">📥 Download Poster</button>
+    <button onclick="copyLink()">🔗 Copy Link</button>
+    <button onclick="shareImage()">🖼️ Share Poster Image</button>
   </div>
 
   <script>
@@ -186,6 +187,7 @@
       outReferral.href = referralLink;
 
       document.getElementById('posterOutput').style.display = 'block';
+      document.getElementById('shareSection').style.display = 'flex';
     }
 
     function downloadImage() {
@@ -194,6 +196,38 @@
         link.download = 'DRF-Premium-Poster.png';
         link.href = canvas.toDataURL();
         link.click();
+      });
+    }
+
+    function copyLink() {
+      const link = document.getElementById('outReferral').href;
+      navigator.clipboard.writeText(link).then(() => {
+        alert("Referral link copied!");
+      });
+    }
+
+    async function shareImage() {
+      const poster = document.getElementById("posterOutput");
+
+      html2canvas(poster).then(async function(canvas) {
+        canvas.toBlob(async function(blob) {
+          const file = new File([blob], "DRF_Poster.png", { type: "image/png" });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                title: "DRF Halal Referral Poster",
+                text: "Join the Halal Crypto movement with DRF!",
+                files: [file],
+                url: document.getElementById('outReferral').href,
+              });
+            } catch (err) {
+              alert("Sharing failed: " + err);
+            }
+          } else {
+            alert("Sharing not supported on this device. Please download the image and share manually.");
+          }
+        });
       });
     }
   </script>
