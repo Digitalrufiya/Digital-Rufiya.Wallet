@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRF Premium Poster Generator</title>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -13,21 +13,27 @@
       margin: 0;
       padding: 20px;
       color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     h1 {
       text-align: center;
       color: #00ffc6;
       margin-bottom: 10px;
+      font-size: 1.8rem;
     }
 
     .input-box {
       max-width: 520px;
-      margin: auto;
+      width: 100%;
       background: #16222a;
       padding: 20px 30px;
       border-radius: 16px;
       box-shadow: 0 0 20px rgba(0,255,200,0.15);
+      box-sizing: border-box;
     }
 
     label {
@@ -35,6 +41,7 @@
       margin-top: 12px;
       font-weight: 600;
       color: #ddd;
+      font-size: 0.9rem;
     }
 
     input[type="text"], textarea {
@@ -45,6 +52,9 @@
       border: 1px solid #00ffc6;
       background: #0c1b23;
       color: #fff;
+      font-size: 1rem;
+      resize: vertical;
+      box-sizing: border-box;
     }
 
     input[type="file"] {
@@ -61,19 +71,28 @@
       cursor: pointer;
       font-weight: 700;
       width: 100%;
+      font-size: 1.1rem;
+      transition: background 0.3s ease;
+    }
+
+    .btn:hover {
+      background: #00d6a1;
     }
 
     #posterOutput {
-      margin: 30px auto;
+      margin: 30px auto 60px;
       max-width: 520px;
+      width: 100%;
       background: linear-gradient(135deg, #1e2b38, #000);
       color: white;
-      padding: 30px 25px;
+      padding: 30px 25px 70px; /* bottom padding extra for footer */
       border-radius: 16px;
       display: none;
       position: relative;
       text-align: center;
       box-shadow: 0 0 25px rgba(0, 255, 200, 0.2);
+      box-sizing: border-box;
+      word-wrap: break-word;
     }
 
     #posterOutput .logo-img {
@@ -82,10 +101,13 @@
       display: none;
       border-radius: 50%;
       border: 2px solid #00ffc6;
+      object-fit: contain;
+      height: 140px;
+      width: 140px;
     }
 
     .referral-link {
-      margin: 20px 0;
+      margin: 20px 0 10px;
       display: inline-block;
       background: #00ffc6;
       color: #000;
@@ -93,6 +115,9 @@
       border-radius: 12px;
       font-weight: bold;
       text-decoration: none;
+      font-size: 1rem;
+      user-select: all;
+      word-break: break-all;
     }
 
     .share-buttons {
@@ -100,7 +125,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
-      margin-top: 10px;
+      margin-top: 15px;
     }
 
     .share-buttons button {
@@ -110,20 +135,28 @@
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
+      user-select: none;
+      min-width: 110px;
+      transition: background 0.2s ease;
+    }
+
+    .share-buttons button:hover {
+      background: #e0f7f3;
     }
 
     .watermark {
       position: absolute;
-      bottom: 20px;
+      bottom: 40px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 12px;
       color: #888;
+      user-select: none;
     }
 
     .quran-ayah {
       position: absolute;
-      bottom: 5px;
+      bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
       font-family: 'Amiri', serif;
@@ -133,6 +166,34 @@
       text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
       font-style: italic;
       direction: rtl;
+      user-select: none;
+      max-width: 90%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .input-box {
+        padding: 15px 20px;
+      }
+      #posterOutput {
+        padding: 25px 20px 80px;
+      }
+      .referral-link {
+        font-size: 0.9rem;
+        padding: 8px 16px;
+      }
+      .share-buttons button {
+        font-size: 13px;
+        padding: 7px 10px;
+        min-width: 90px;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
@@ -144,37 +205,62 @@
     <input type="file" id="logoInput" accept="image/*" />
 
     <label for="headline">Headline</label>
-    <input id="headline" type="text" placeholder="E.g. Join the Halal Crypto Revolution!" />
+    <input id="headline" type="text" placeholder="E.g. Join the Halal Crypto Revolution!" autocomplete="off" />
 
     <label for="subtitle">Sub Title</label>
-    <input id="subtitle" type="text" placeholder="Earn with DRF. No investment needed." />
+    <input id="subtitle" type="text" placeholder="Earn with DRF. No investment needed." autocomplete="off" />
 
     <label for="message">Message</label>
-    <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way."></textarea>
+    <textarea id="message" rows="3" placeholder="Use your referral link below and start earning the halal way." autocomplete="off"></textarea>
 
     <button class="btn" onclick="generatePoster()">Generate Poster</button>
   </div>
 
-  <div id="posterOutput">
-    <img src="" id="posterLogo" class="logo-img">
+  <div id="posterOutput" role="region" aria-live="polite" aria-label="Generated poster">
+    <img src="" id="posterLogo" class="logo-img" alt="User uploaded logo" />
     <h2 id="outHeadline"></h2>
     <h4 id="outSubtitle"></h4>
     <p id="outMessage"></p>
-    <a href="#" class="referral-link" id="outReferral"></a>
-    <div class="share-buttons" id="shareSection" style="display:none">
-      <button onclick="copyLink()">📋 Copy Link</button>
-      <button onclick="shareImage()">📤 Share Poster</button>
+    <a href="#" class="referral-link" id="outReferral" target="_blank" rel="noopener noreferrer"></a>
+    <div class="share-buttons" id="shareSection" style="display:none" aria-label="Share poster options">
+      <button onclick="copyLink()" aria-label="Copy referral link to clipboard">📋 Copy Link</button>
+      <button onclick="shareImage()" aria-label="Share poster image">📤 Share Poster</button>
     </div>
-    <div class="quran-ayah">﴿وَفِي السَّمَاءِ رِزْقُكُمْ وَمَا تُوعَدُونَ﴾</div>
-    <div class="watermark">Powered by DRFMedia & DRF Wallet</div>
+    <div class="watermark" aria-hidden="true">Powered by DRFMedia &amp; DRF Wallet</div>
+    <div class="quran-ayah" aria-hidden="true">﴿وَفِي السَّمَاءِ رِزْقُكُمْ وَمَا تُوعَدُونَ﴾</div>
   </div>
 
-  <div style="text-align:center;margin-top:20px;">
+  <div style="text-align:center; max-width:520px; width:100%;">
     <button class="btn" onclick="downloadImage()">📥 Download Poster</button>
   </div>
 
   <script>
     const referralLink = "https://yourlink.com/?ref=drfmedia";
+
+    // Banned keywords (case-insensitive)
+    const bannedKeywords = [
+      "sex", "porn", "lesbian", "gay", "lesbian", "escort", "adult", "gambling", "casino", "bet", "casino", "xxx",
+      "18+", "nsfw", "drugs", "violence", "harrassment", "offensive"
+    ];
+
+    // Banned URL fragments
+    const bannedURLFragments = [
+      "gambling", "casino", "porn", "xxx", "adult", "escort", "sex", "bet", "hookup", "nsfw"
+    ];
+
+    // Check if input contains banned words
+    function containsBannedWords(text) {
+      if (!text) return false;
+      text = text.toLowerCase();
+      return bannedKeywords.some(word => text.includes(word));
+    }
+
+    // Check if referral link contains banned URL fragments
+    function containsBannedURL(url) {
+      if (!url) return false;
+      url = url.toLowerCase();
+      return bannedURLFragments.some(fragment => url.includes(fragment));
+    }
 
     document.getElementById('logoInput').addEventListener('change', function(e) {
       const reader = new FileReader();
@@ -183,7 +269,9 @@
         img.src = event.target.result;
         img.style.display = 'block';
       };
-      reader.readAsDataURL(e.target.files[0]);
+      if (e.target.files[0]) {
+        reader.readAsDataURL(e.target.files[0]);
+      }
     });
 
     function generatePoster() {
@@ -193,6 +281,18 @@
 
       if (!headline || !subtitle || !message) {
         alert('Please fill all the fields.');
+        return;
+      }
+
+      // Check for banned words in inputs
+      if (containsBannedWords(headline) || containsBannedWords(subtitle) || containsBannedWords(message)) {
+        alert('Your input contains words that are not allowed. Please remove any inappropriate content.');
+        return;
+      }
+
+      // Check for banned words in referralLink (just in case)
+      if (containsBannedURL(referralLink)) {
+        alert('The referral link contains disallowed content. Please contact the admin.');
         return;
       }
 
@@ -206,6 +306,11 @@
 
       document.getElementById('posterOutput').style.display = 'block';
       document.getElementById('shareSection').style.display = 'flex';
+
+      // Scroll to poster for better UX on mobile
+      setTimeout(() => {
+        document.getElementById('posterOutput').scrollIntoView({ behavior: 'smooth' });
+      }, 200);
     }
 
     function downloadImage() {
@@ -220,18 +325,22 @@
     function copyLink() {
       navigator.clipboard.writeText(referralLink).then(() => {
         alert("Referral link copied to clipboard!");
+      }).catch(() => {
+        alert("Unable to copy. Please copy manually.");
       });
     }
 
     function shareImage() {
       html2canvas(document.getElementById('posterOutput')).then(function(canvas) {
         canvas.toBlob(function(blob) {
-          const file = new File([blob], "poster.png", { type: "image/png" });
+          const file = new File([blob], "DRF-Premium-Poster.png", { type: "image/png" });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             navigator.share({
               files: [file],
               title: 'DRF Poster',
               text: 'Check out this amazing DRF poster!',
+            }).catch(() => {
+              alert('Sharing cancelled or failed.');
             });
           } else {
             alert('Sharing not supported on this device. Please download manually.');
