@@ -3,97 +3,132 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Admin Panel - Product Approvals</title>
+  <title>DRF Admin Panel</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #101820;
-      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      background: #fdfdfd;
       margin: 0;
       padding: 20px;
+      color: #333;
     }
+
     h1 {
       text-align: center;
-      color: #00ffc6;
+      color: #dc3545;
     }
+
+    .product-list {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
     .product {
-      background: #1b2c3b;
+      background: #fff;
       padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-      box-shadow: 0 0 10px rgba(0,255,200,0.1);
+      border: 2px solid #eee;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+
+    .product img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .product h3 {
+      margin: 10px 0 5px;
+    }
+
+    .buttons {
+      margin-top: 10px;
+    }
+
     button {
-      margin-right: 10px;
-      padding: 6px 12px;
+      padding: 8px 12px;
+      margin-right: 5px;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
+      font-weight: bold;
     }
-    .approve { background: #00ff88; }
-    .reject { background: #ff5555; }
-    img { max-width: 100px; border-radius: 8px; margin-top: 10px; }
+
+    .approve {
+      background: #28a745;
+      color: white;
+    }
+
+    .reject {
+      background: #dc3545;
+      color: white;
+    }
   </style>
 </head>
 <body>
+  <h1>🛡️ DRF Admin Product Approval Panel</h1>
+  <div class="product-list" id="productList">Loading...</div>
 
-<h1>Admin Panel – Product Approvals</h1>
-<div id="productList"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
+      authDomain: "drfstore-b22d8.firebaseapp.com",
+      projectId: "drfstore-b22d8",
+      storageBucket: "drfstore-b22d8.appspot.com",
+      messagingSenderId: "127164219017",
+      appId: "1:127164219017:web:5ac8905805b11927069058",
+      measurementId: "G-KFQNDK4KEF"
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
-    authDomain: "drfstore-b22d8.firebaseapp.com",
-    projectId: "drfstore-b22d8",
-    storageBucket: "drfstore-b22d8.appspot.com",
-    messagingSenderId: "127164219017",
-    appId: "1:127164219017:web:5ac8905805b11927069058",
-    measurementId: "G-KFQNDK4KEF"
-  };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    async function loadPendingProducts() {
+      const productList = document.getElementById("productList");
+      productList.innerHTML = "";
 
-  async function loadProducts() {
-    const querySnapshot = await getDocs(collection(db, "products"));
-    const container = document.getElementById("productList");
-    container.innerHTML = "";
+      const querySnapshot = await getDocs(collection(db, "products"));
+      let found = false;
 
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.status !== "approved") {
-        const div = document.createElement("div");
-        div.className = "product";
-        div.innerHTML = `
-          <strong>${data.title}</strong><br>
-          Price: $${data.price}<br>
-          Seller: ${data.seller}<br>
-          <img src="${data.image}" alt="Product Image"><br>
-          <button class="approve">Approve</button>
-          <button class="reject">Reject</button>
-        `;
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.status !== "approved") {
+          found = true;
+          const productEl = document.createElement("div");
+          productEl.className = "product";
+          productEl.innerHTML = `
+            <img src="${data.imageUrl}" alt="Product Image">
+            <h3>${data.name}</h3>
+            <p>${data.description}</p>
+            <p><strong>Price:</strong> $${data.price}</p>
+            <div class="buttons">
+              <button class="approve" onclick="updateStatus('${docSnap.id}', 'approved')">Approve</button>
+              <button class="reject" onclick="updateStatus('${docSnap.id}', 'rejected')">Reject</button>
+            </div>
+          `;
+          productList.appendChild(productEl);
+        }
+      });
 
-        div.querySelector(".approve").onclick = async () => {
-          await updateDoc(doc(db, "products", docSnap.id), { status: "approved" });
-          alert("Product approved.");
-          loadProducts();
-        };
-
-        div.querySelector(".reject").onclick = async () => {
-          await deleteDoc(doc(db, "products", docSnap.id));
-          alert("Product deleted.");
-          loadProducts();
-        };
-
-        container.appendChild(div);
+      if (!found) {
+        productList.innerHTML = "<p>No pending products to review.</p>";
       }
-    });
-  }
+    }
 
-  loadProducts();
-</script>
+    window.updateStatus = async (id, status) => {
+      const productRef = doc(db, "products", id);
+      await updateDoc(productRef, { status });
+      alert("Product " + status);
+      loadPendingProducts();
+    };
+
+    loadPendingProducts();
+  </script>
 </body>
 </html>
