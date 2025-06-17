@@ -6,78 +6,71 @@
   <title>Admin Login - DRF Store</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f8f9fa;
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
     }
+
     .login-box {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      box-shadow: 0 0 8px #aaa;
       width: 300px;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+
     input {
       width: 100%;
       padding: 10px;
-      margin: 10px 0;
+      margin-top: 10px;
+      margin-bottom: 20px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 6px;
     }
+
     button {
       width: 100%;
       padding: 10px;
       background: #007bff;
-      color: white;
       border: none;
-      border-radius: 5px;
+      color: white;
+      border-radius: 6px;
       font-weight: bold;
+    }
+
+    .error {
+      color: red;
+      font-size: 14px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="login-box">
     <h2>Admin Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="loginAdmin()">Login</button>
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <div class="error" id="errorMsg"></div>
+    <button onclick="login()">Login</button>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  <script>
+    const adminUsername = "drfadmin";
+    const adminPassword = "drf1234";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
-      authDomain: "drfstore-b22d8.firebaseapp.com",
-      projectId: "drfstore-b22d8",
-      storageBucket: "drfstore-b22d8.appspot.com",
-      messagingSenderId: "127164219017",
-      appId: "1:127164219017:web:5ac8905805b11927069058",
-      measurementId: "G-KFQNDK4KEF"
-    };
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const errorMsg = document.getElementById("errorMsg");
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    window.loginAdmin = async () => {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      try {
-        const result = await signInWithEmailAndPassword(auth, email, password);
-        alert("Login successful");
-        localStorage.setItem("admin", "true");
-        window.location.href = "admin.html";
-      } catch (error) {
-        alert("Login failed: " + error.message);
+      if (username === adminUsername && password === adminPassword) {
+        localStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "admin.html"; // redirect to admin page
+      } else {
+        errorMsg.textContent = "Invalid username or password.";
       }
     }
   </script>
