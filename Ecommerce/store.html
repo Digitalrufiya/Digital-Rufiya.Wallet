@@ -2,47 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Ummah Store</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Storefront</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-900 text-white p-4">
-  <div class="max-w-xl mx-auto">
-    <h1 class="text-center text-2xl font-bold mb-4 text-green-400">🕌 DRF Ummah Store Builder</h1>
-
-    <label class="block mb-2">Your Wallet Address</label>
-    <input id="wallet" class="w-full p-2 rounded bg-gray-800 border border-green-400 mb-4" placeholder="0xABC..."/>
-
-    <label class="block mb-2">Store Name</label>
-    <input id="storeName" class="w-full p-2 rounded bg-gray-800 border border-green-400 mb-4" placeholder="My Halal Store"/>
-
-    <label class="block mb-2">Product Name</label>
-    <input id="productName" class="w-full p-2 rounded bg-gray-800 border border-green-400 mb-4" placeholder="Smart Watch"/>
-
-    <label class="block mb-2">Price (DRF)</label>
-    <input id="productPrice" type="number" class="w-full p-2 rounded bg-gray-800 border border-green-400 mb-4" placeholder="10"/>
-
-    <label class="block mb-2">Image URL</label>
-    <input id="productImage" class="w-full p-2 rounded bg-gray-800 border border-green-400 mb-4" placeholder="https://example.com/image.jpg"/>
-
-    <button onclick="uploadProduct()" class="bg-green-500 hover:bg-green-600 w-full p-3 rounded font-bold text-black mb-6">
-      🚀 Upload Product
-    </button>
-
-    <h2 class="text-xl font-semibold mb-3 text-yellow-300">📦 Your Products</h2>
-    <div id="productList" class="space-y-4"></div>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-7xl mx-auto p-4">
+    <h1 class="text-3xl font-bold text-center text-green-600 mb-6">🕌 DRF Charity Storefront</h1>
+    <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
+    import { getFirestore, collectionGroup, getDocs } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
       authDomain: "drfstore-b22d8.firebaseapp.com",
       projectId: "drfstore-b22d8",
-      storageBucket: "drfstore-b22d8.firebasestorage.app",
+      storageBucket: "drfstore-b22d8.appspot.com",
       messagingSenderId: "127164219017",
       appId: "1:127164219017:web:5ac8905805b11927069058",
       measurementId: "G-KFQNDK4KEF"
@@ -51,56 +29,26 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    async function uploadProduct() {
-      const wallet = document.getElementById('wallet').value.trim();
-      const store = document.getElementById('storeName').value.trim();
-      const name = document.getElementById('productName').value.trim();
-      const price = parseFloat(document.getElementById('productPrice').value.trim());
-      const image = document.getElementById('productImage').value.trim();
-
-      if (!wallet || !store || !name || !price || !image) {
-        alert("Please fill all fields");
-        return;
-      }
-
-      const netAmount = price - 0.5;
-
-      await addDoc(collection(db, "stores", wallet, "products"), {
-        store,
-        name,
-        price,
-        netAmount,
-        image,
-        created: Date.now()
-      });
-
-      alert("Product uploaded successfully!");
-      listProducts(wallet);
-    }
-
-    async function listProducts(walletAddress) {
-      const productList = document.getElementById('productList');
-      productList.innerHTML = "";
-      const q = query(collection(db, "stores", walletAddress, "products"));
-      const querySnapshot = await getDocs(q);
-
-      querySnapshot.forEach((doc) => {
+    async function loadApprovedProducts() {
+      const grid = document.getElementById('productGrid');
+      const querySnapshot = await getDocs(collectionGroup(db, "products"));
+      querySnapshot.forEach(doc => {
         const data = doc.data();
-        const productHTML = `
-          <div class="bg-gray-800 rounded-lg p-3 shadow">
-            <img src="${data.image}" class="w-full h-40 object-cover rounded mb-2"/>
-            <h3 class="text-lg font-bold">${data.name}</h3>
-            <p class="text-sm">Price: ${data.price} DRF (You Receive: ${data.netAmount} DRF)</p>
-          </div>
-        `;
-        productList.innerHTML += productHTML;
+        if (data.approved) {
+          const product = document.createElement('div');
+          product.className = "bg-white p-4 rounded shadow hover:shadow-md";
+          product.innerHTML = `
+            <img src="${data.imageURL}" class="w-full h-48 object-cover mb-2 rounded"/>
+            <h2 class="text-xl font-semibold mb-1">${data.name}</h2>
+            <p class="text-sm">Store: ${data.store}</p>
+            <p class="text-green-600 font-bold">${data.price} DRF</p>
+          `;
+          grid.appendChild(product);
+        }
       });
     }
 
-    document.getElementById('wallet').addEventListener("blur", (e) => {
-      const wallet = e.target.value.trim();
-      if(wallet.length > 5) listProducts(wallet);
-    });
+    loadApprovedProducts();
   </script>
 </body>
 </html>
