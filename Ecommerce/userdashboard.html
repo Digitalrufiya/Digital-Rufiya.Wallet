@@ -2,68 +2,58 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Dashboard - DRF Store</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
-      authDomain: "drfstore-b22d8.firebaseapp.com",
-      projectId: "drfstore-b22d8",
-      storageBucket: "drfstore-b22d8.appspot.com",
-      messagingSenderId: "127164219017",
-      appId: "1:127164219017:web:5ac8905805b11927069058",
-      measurementId: "G-KFQNDK4KEF"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    const productList = document.getElementById("productList");
-
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const q = query(collection(db, "products"), where("owner", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        productList.innerHTML = "";
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const item = document.createElement("div");
-          item.className = "product";
-          item.innerHTML = `<h3>${data.title}</h3><p>${data.description}</p><strong>$${data.price}</strong>`;
-          productList.appendChild(item);
-        });
-      } else {
-        window.location.href = "index.html"; // Redirect to login
-      }
-    });
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF User Dashboard</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #eef2f5;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
       padding: 20px;
     }
-    h2 {
+    h1 {
       text-align: center;
+      color: #2c3e50;
     }
-    .product {
+    .dashboard-box {
+      max-width: 800px;
+      margin: 30px auto;
       background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px auto;
-      box-shadow: 0 0 5px #ccc;
-      max-width: 500px;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .store-info {
+      margin-bottom: 30px;
+    }
+    .checkout-link {
+      background: #27ae60;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-block;
     }
   </style>
 </head>
 <body>
-  <h2>Welcome to Your Dashboard</h2>
-  <div id="productList">Loading your products...</div>
+  <h1>Welcome to Your Dashboard</h1>
+
+  <div class="dashboard-box">
+    <div class="store-info">
+      <h2>Your Store Information</h2>
+      <p><strong>Store Name:</strong> HalalTech Gadgets</p>
+      <p><strong>Email:</strong> user@example.com</p>
+      <p><strong>Contact:</strong> +960 9876543</p>
+      <p><strong>Store Category:</strong> Electronics</p>
+    </div>
+
+    <div class="checkout">
+      <h2>Shopping Cart & Checkout</h2>
+      <p>Click the link below to open the checkout form:</p>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSdDkK-checkoutformlink/viewform" class="checkout-link" target="_blank">🛒 Checkout Form</a>
+    </div>
+  </div>
 </body>
 </html>
