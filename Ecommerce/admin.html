@@ -2,108 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Submit Your Product - DRF Store</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-storage.js";
-    import { getDatabase, ref as dbRef, push, set } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
-      authDomain: "drfstore-b22d8.firebaseapp.com",
-      projectId: "drfstore-b22d8",
-      storageBucket: "drfstore-b22d8.appspot.com",
-      messagingSenderId: "127164219017",
-      appId: "1:127164219017:web:5ac8905805b11927069058",
-      measurementId: "G-KFQNDK4KEF",
-      databaseURL: "https://drfstore-b22d8-default-rtdb.firebaseio.com/"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const storage = getStorage(app);
-    const database = getDatabase(app);
-
-    window.uploadProduct = async function () {
-      const name = document.getElementById('productName').value.trim();
-      const price = document.getElementById('productPrice').value.trim();
-      const image = document.getElementById('productImage').files[0];
-      const storeOwner = document.getElementById('storeName').value.trim();
-      const buyerName = document.getElementById('buyerName').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const address = document.getElementById('address').value.trim();
-
-      if (!name || !price || !image || !storeOwner || !buyerName || !phone || !address) {
-        alert("Please fill all fields.");
-        return;
-      }
-
-      const imgRef = ref(storage, 'products/' + Date.now() + '-' + image.name);
-      await uploadBytes(imgRef, image);
-      const imageUrl = await getDownloadURL(imgRef);
-
-      const newProductRef = push(dbRef(database, 'products'));
-      await set(newProductRef, {
-        name,
-        price,
-        imageUrl,
-        storeOwner,
-        delivery: {
-          buyerName,
-          phone,
-          address
-        },
-        status: "pending",
-        timestamp: Date.now()
-      });
-
-      alert("Product submitted for approval!");
-      document.getElementById('productForm').reset();
-    }
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Admin Panel - Product Approvals</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #111;
+      background: #101820;
       color: #fff;
+      margin: 0;
       padding: 20px;
     }
-    input, textarea, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 12px;
-      border-radius: 6px;
-      border: none;
+    h1 {
+      text-align: center;
+      color: #00ffc6;
+    }
+    .product {
+      background: #1b2c3b;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 0 10px rgba(0,255,200,0.1);
     }
     button {
-      background: #00ffc6;
-      font-weight: bold;
+      margin-right: 10px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    .form-container {
-      max-width: 500px;
-      margin: auto;
-      background: #222;
-      padding: 20px;
-      border-radius: 10px;
-    }
+    .approve { background: #00ff88; }
+    .reject { background: #ff5555; }
+    img { max-width: 100px; border-radius: 8px; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">Submit Product to DRF Store</h2>
-  <div class="form-container">
-    <form id="productForm" onsubmit="event.preventDefault(); uploadProduct();">
-      <input type="text" id="productName" placeholder="Product Name" />
-      <input type="text" id="productPrice" placeholder="Product Price (USD)" />
-      <input type="file" id="productImage" accept="image/*" />
-      <input type="text" id="storeName" placeholder="Your Store Name" />
 
-      <hr />
-      <input type="text" id="buyerName" placeholder="Delivery Name" />
-      <input type="text" id="phone" placeholder="Phone Number" />
-      <textarea id="address" placeholder="Delivery Address"></textarea>
+<h1>Admin Panel – Product Approvals</h1>
+<div id="productList"></div>
 
-      <button type="submit">Submit Product</button>
-    </form>
-  </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
+    authDomain: "drfstore-b22d8.firebaseapp.com",
+    projectId: "drfstore-b22d8",
+    storageBucket: "drfstore-b22d8.appspot.com",
+    messagingSenderId: "127164219017",
+    appId: "1:127164219017:web:5ac8905805b11927069058",
+    measurementId: "G-KFQNDK4KEF"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function loadProducts() {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    const container = document.getElementById("productList");
+    container.innerHTML = "";
+
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.status !== "approved") {
+        const div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `
+          <strong>${data.title}</strong><br>
+          Price: $${data.price}<br>
+          Seller: ${data.seller}<br>
+          <img src="${data.image}" alt="Product Image"><br>
+          <button class="approve">Approve</button>
+          <button class="reject">Reject</button>
+        `;
+
+        div.querySelector(".approve").onclick = async () => {
+          await updateDoc(doc(db, "products", docSnap.id), { status: "approved" });
+          alert("Product approved.");
+          loadProducts();
+        };
+
+        div.querySelector(".reject").onclick = async () => {
+          await deleteDoc(doc(db, "products", docSnap.id));
+          alert("Product deleted.");
+          loadProducts();
+        };
+
+        container.appendChild(div);
+      }
+    });
+  }
+
+  loadProducts();
+</script>
 </body>
 </html>
