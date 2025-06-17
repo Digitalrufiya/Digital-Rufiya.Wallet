@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Login - DRF Store</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>Admin Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="loginAdmin()">Login</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbBW1DwJYnCg4Y3EiCavSvpB3i_OCsQQE",
+      authDomain: "drfstore-b22d8.firebaseapp.com",
+      projectId: "drfstore-b22d8",
+      storageBucket: "drfstore-b22d8.appspot.com",
+      messagingSenderId: "127164219017",
+      appId: "1:127164219017:web:5ac8905805b11927069058",
+      measurementId: "G-KFQNDK4KEF"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    window.loginAdmin = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        alert("Login successful");
+        localStorage.setItem("admin", "true");
+        window.location.href = "admin.html";
+      } catch (error) {
+        alert("Login failed: " + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
