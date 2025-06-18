@@ -1,87 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Charity Donation - Save Orphans</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digital Rufiya (DrF) Charity Token Sale</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" crossorigin="anonymous" />
+
+  <!-- Ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <!-- Web3Modal v2 + WalletConnect v2 -->
+  <script src="https://unpkg.com/@web3modal/html@2.8.0/dist/index.js"></script>
+  <script src="https://unpkg.com/@web3modal/ethereum@2.8.0/dist/index.js"></script>
+  <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.8.1/dist/index.min.js"></script>
+
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      font-family: 'Roboto', sans-serif;
-      height: 100vh;
-      background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.8)), url('https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821') no-repeat center center/cover;
-      color: white;
+    body {
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
+      background-size: cover;
+      color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
     }
     .overlay {
-      background-color: rgba(0,0,0,0.7);
-      padding: 40px;
-      border-radius: 15px;
-      box-shadow: 0 0 25px rgba(0,255,0,0.3);
+      background: rgba(0,0,0,0.75);
+      min-height: 100vh;
+      padding: 2rem;
     }
-    h1, h2, h3 {
-      text-shadow: 1px 1px 4px #000;
+    h1, h3 {
+      color: #7adeff;
+      text-shadow: 0 0 10px #0d6efd;
     }
-    .quote {
-      font-size: 1.2rem;
-      font-style: italic;
-      margin-bottom: 20px;
-    }
-    #referralCode {
-      font-size: 0.9rem;
-      background: #198754;
-      padding: 6px 12px;
-      border-radius: 8px;
-      display: inline-block;
-    }
-    .btn-green {
-      background-color: #28a745;
+    .btn-primary {
+      background: #0d6efd;
       border: none;
+      box-shadow: 0 0 10px #0d6efd;
     }
-    .btn-green:hover {
-      background-color: #218838;
+    .btn-primary:hover {
+      background: #084cd9;
     }
-    .donation-box {
-      background-color: rgba(255,255,255,0.05);
-      padding: 20px;
-      border-radius: 10px;
+    #walletInfo, #donationStatus {
+      margin-top: 1rem;
+    }
+    .referral-section {
+      background: #1a1a1a;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 2rem;
+      text-align: center;
+      color: #66ffcc;
+      user-select: all;
+      word-break: break-all;
+    }
+    footer {
+      margin-top: 3rem;
+      color: #ccc;
+      text-align: center;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
 
-<div class="container d-flex flex-column justify-content-center align-items-center h-100 text-center">
-  <div class="overlay col-md-8">
-    <h1 class="mb-3">💚 Donate to Save a Life 💧</h1>
-    <p class="quote">“Whoever saves a life, it is as if he had saved mankind entirely.” <br><strong>(Qur'an 5:32)</strong></p>
+  <div class="overlay container col-xl-8 col-xxl-10 px-4 py-5 rounded">
 
-    <div class="donation-box">
-      <div class="mb-3">
-        <label for="donationAmount" class="form-label">Enter USDC Amount</label>
-        <input type="number" class="form-control text-center" id="donationAmount" placeholder="e.g. 10">
-      </div>
-
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="anonymousToggle">
-        <label class="form-check-label" for="anonymousToggle">Donate Anonymously</label>
-      </div>
-
-      <div class="d-grid gap-2 mb-2">
-        <button class="btn btn-green btn-lg" id="connectWallet">🔗 Connect Wallet</button>
-        <button class="btn btn-success btn-lg" id="donateNow">❤️ Donate Now</button>
-      </div>
-
-      <div class="mt-3">
-        <p><strong>Referral:</strong> <span id="referralCode" style="display:none"></span></p>
-        <small class="text-light">Donations are rewarded with DRF | Receive instant downloadable receipt</small>
-      </div>
+    <div class="text-center mb-4">
+      <img src="https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg" alt="Digital Rufiya Logo" height="100" class="mb-3" />
+      <h1>Digital Rufiya (DrF) Charity Token Sale</h1>
+      <p class="lead">Support orphan children by donating USDC. Buy DrF tokens & earn rewards instantly.</p>
     </div>
-  </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="app.js"></script>
+    <!-- Wallet Connect Button -->
+    <div class="text-center mb-3">
+      <button id="btnConnect" class="btn btn-primary btn-lg">Connect Wallet</button>
+    </div>
+
+    <!-- Wallet Info -->
+    <div id="walletInfo" style="display:none;" class="text-center">
+      Connected wallet: <span id="walletAddress" style="font-weight:bold;"></span><br />
+      <button id="btnAddToken" class="btn btn-outline-info btn-sm mt-2" style="display:none;">Add DRF Token to Wallet</button>
+    </div>
+
+    <!-- Donation Form -->
+    <div class="my-4">
+      <label for="donationAmount" class="form-label">Enter donation amount (USDC):</label>
+      <input type="number" id="donationAmount" class="form-control" min="0.1" step="0.1" placeholder="e.g. 10" />
+      <button id="btnDonate" class="btn btn-success mt-3" disabled>Donate Now</button>
+      <div id="donationStatus" style="display:none;" class="alert mt-3"></div>
+    </div>
+
+    <!-- Referral Section -->
+    <div class="referral-section">
+      <h3>Your Referral Link</h3>
+      <p id="referralLink">Connect your wallet to generate referral link</p>
+    </div>
+
+  </div>
+
+  <footer>
+    &copy; 2025 Digital Rufiya. May Allah bless our efforts.
+  </footer>
+
+  <script>
+    const DRF_TOKEN = {
+      address: '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6',
+      symbol: 'DrF',
+      decimals: 18,
+      image: 'https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg'
+    };
+
+    const CHARITY_USDC_ADDRESS = '0x88253D87990EdD1E647c3B6eD21F57fb061a3040'; // Your charity USDC receiving address
+    const BSC_CHAIN_ID = 56;
+
+    let provider, signer, userAddress, web3Modal;
+
+    async function init() {
+      const walletConnectProvider = new window.WalletConnectEthereumProvider.WalletConnectProvider({
+        projectId: '9332014bbcedde12a87a2deb0e57c147',
+        chains: [BSC_CHAIN_ID],
+        showQrModal: true,
+      });
+
+      const ethereumClient = new window.Web3ModalEthereum.EthereumClient(walletConnectProvider, [BSC_CHAIN_ID]);
+
+      web3Modal = new window.Web3ModalHtml.Web3Modal({
+        projectId: '9332014bbcedde12a87a2deb0e57c147',
+        ethereumClient,
+        themeMode: 'dark',
+        themeColor: 'blue',
+      });
+
+      document.getElementById('btnConnect').addEventListener('click', async () => {
+        try {
+          provider = await web3Modal.connect();
+          const ethersProvider = new ethers.providers.Web3Provider(provider);
+          signer = ethersProvider.getSigner();
+          userAddress = await signer.getAddress();
+
+          document.getElementById('walletAddress').textContent = userAddress;
+          document.getElementById('walletInfo').style.display = 'block';
+          document.getElementById('btnConnect').textContent = 'Wallet Connected';
+          document.getElementById('btnConnect').disabled = true;
+          document.getElementById('btnDonate').disabled = false;
+          document.getElementById('btnAddToken').style.display = 'inline-block';
+
+          // Switch to BSC network
+          const network = await ethersProvider.getNetwork();
+          if (network.chainId !== BSC_CHAIN_ID) {
+            try {
+              await provider.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x38' }],
+              });
+            } catch (switchError) {
+              if (switchError.code === 4902) {
+                await provider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: '0x38',
+                    chainName: 'Binance Smart Chain Mainnet',
+                    nativeCurrency: { name: 'Binance Coin', symbol: 'BNB', decimals: 18 },
+                    rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                    blockExplorerUrls: ['https://bscscan.com'],
+                  }],
+                });
+              }
+            }
+          }
+
+          // Generate referral link
+          const refLink = `${window.location.origin}?ref=${userAddress}`;
+          document.getElementById('referralLink').textContent = refLink;
+
+        } catch (error) {
+          alert('Wallet connection failed. Please try again.');
+          console.error(error);
+        }
+      });
+
+      // Donate button
+      document.getElementById('btnDonate').addEventListener('click', async () => {
+        const amount = document.getElementById('donationAmount').value.trim();
+        if (!signer) return alert('Please connect your wallet first!');
+        if (!amount || parseFloat(amount) <= 0) return alert('Please enter a valid donation amount.');
+
+        const erc20Abi = [
+          "function transfer(address to, uint amount) external returns (bool)",
+          "function decimals() view returns (uint8)"
+        ];
+
+        const usdcContract = new ethers.Contract('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', erc20Abi, signer);
+
+        try {
+          // USDC decimals = 6
+          const decimals = await usdcContract.decimals();
+          const amountParsed = ethers.utils.parseUnits(amount, decimals);
+
+          document.getElementById('donationStatus').style.display = 'block';
+          document.getElementById('donationStatus').className = 'alert alert-info';
+          document.getElementById('donationStatus').textContent = 'Waiting for transaction confirmation...';
+
+          const tx = await usdcContract.transfer(CHARITY_USDC_ADDRESS, amountParsed);
+          await tx.wait();
+
+          document.getElementById('donationStatus').className = 'alert alert-success';
+          document.getElementById('donationStatus').textContent = `Thank you for your donation of ${amount} USDC!`;
+
+          document.getElementById('donationAmount').value = '';
+
+        } catch (error) {
+          console.error(error);
+          document.getElementById('donationStatus').className = 'alert alert-danger';
+          document.getElementById('donationStatus').textContent = 'Transaction failed or rejected.';
+        }
+      });
+
+      // Add DRF token to wallet button
+      document.getElementById('btnAddToken').addEventListener('click', async () => {
+        if (!provider) return alert('Please connect your wallet first!');
+
+        try {
+          await provider.request({
+            method: 'wallet_watchAsset',
+            params: {
+              type: 'ERC20',
+              options: {
+                address: DRF_TOKEN.address,
+                symbol: DRF_TOKEN.symbol,
+                decimals: DRF_TOKEN.decimals,
+                image: DRF_TOKEN.image,
+              },
+            },
+          });
+        } catch (error) {
+          alert('Failed to add token to wallet.');
+          console.error(error);
+        }
+      });
+    }
+
+    window.onload = init;
+  </script>
+
 </body>
 </html>
