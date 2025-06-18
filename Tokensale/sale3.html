@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digital Rufiya Charity</title>
+  <title>Digital Rufiya Donation</title>
   <style>
     body {
       background: #0a2e1c;
@@ -33,122 +33,51 @@
       border: none;
       font-size: 1.1em;
     }
-    input {
-      background: #0a2e1c;
-      color: #c8e6c9;
-      border: 1.5px solid #238636;
-    }
     button {
       background: #238636;
       color: white;
       cursor: pointer;
       font-weight: bold;
     }
-    button:disabled {
-      background: #2ea043aa;
-      cursor: not-allowed;
+    input {
+      background: #0a2e1c;
+      color: #c8e6c9;
+      border: 1.5px solid #238636;
     }
-    a.referral-link {
-      color: #a9d18e;
-      word-break: break-word;
+    .info {
+      font-size: 0.9em;
+      color: #d4edda;
     }
-    .alert {
-      background: #2c3e2f;
-      padding: 12px;
-      margin-top: 15px;
-      border-radius: 6px;
+    .status {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #88ffb7;
     }
   </style>
-
-  <!-- WalletConnect Web3Modal V2 -->
-  <script type="module">
-    import { Web3Modal } from 'https://unpkg.com/@web3modal/html@2.4.4/dist/index.esm.js';
-    import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.min.js';
-
-    const projectId = '9332014bbcedde12a87a2deb0e57c147';
-    const DRF_TOKEN_ADDRESS = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6';
-    const USDC_TOKEN_ADDRESS = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'; // BSC USDC
-    const CHARITY_RECEIVER = '0x88253D87990EdD1E647c3B6eD21F57fb061a3040';
-    const BSC_CHAIN_ID = 56;
-
-    const erc20Abi = [
-      "function balanceOf(address owner) view returns (uint256)",
-      "function transfer(address to, uint amount) returns (bool)",
-      "function decimals() view returns (uint8)"
-    ];
-
-    let web3Modal, provider, signer, userAddress;
-
-    async function init() {
-      web3Modal = new Web3Modal({ projectId });
-      const connectBtn = document.getElementById("connectWalletBtn");
-      const donateBtn = document.getElementById("donateBtn");
-      const amountInput = document.getElementById("donationAmount");
-
-      connectBtn.addEventListener("click", async () => {
-        try {
-          provider = await web3Modal.connect();
-          const ethersProvider = new ethers.BrowserProvider(provider);
-          signer = await ethersProvider.getSigner();
-          userAddress = await signer.getAddress();
-          connectBtn.textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-          amountInput.disabled = false;
-          donateBtn.disabled = false;
-          setReferral();
-        } catch (e) {
-          alert("Connection error: " + e.message);
-        }
-      });
-
-      donateBtn.addEventListener("click", async () => {
-        const amount = parseFloat(amountInput.value);
-        if (!amount || amount <= 0) return alert("Enter valid amount");
-
-        const usdc = new ethers.Contract(USDC_TOKEN_ADDRESS, erc20Abi, signer);
-        const usdcDecimals = 6;
-        const amtInUnits = ethers.parseUnits(amount.toString(), usdcDecimals);
-
-        try {
-          const tx = await usdc.transfer(CHARITY_RECEIVER, amtInUnits);
-          await tx.wait();
-          const reward = (amount * 15.42).toFixed(2);
-          document.getElementById("donationStatus").textContent = `You donated ${amount} USDC & earned ${reward} DrF`;
-          document.getElementById("donationStatus").style.display = 'block';
-        } catch (err) {
-          alert("Donation failed: " + err.message);
-        }
-      });
-    }
-
-    function setReferral() {
-      const ref = userAddress;
-      const url = `${window.location.origin}${window.location.pathname}?ref=${ref}`;
-      const linkEl = document.getElementById("referralLink");
-      linkEl.href = url;
-      linkEl.textContent = url;
-      document.getElementById("copyReferralBtn").onclick = () => {
-        navigator.clipboard.writeText(url).then(() => alert("Copied"));
-      };
-    }
-
-    window.addEventListener("DOMContentLoaded", init);
-  </script>
 </head>
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="DRF Logo" class="logo" />
-    <h1>Give Charity, Earn DrF</h1>
-    <p>Donate USDC (on BSC) to help orphans, feed families, and unite the Ummah.</p>
+<div class="container">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="Digital Rufiya Logo" class="logo" />
+  <h1>Charity Donation</h1>
+  <p class="info">Support orphans & save lives. Donate USDC and get DRF tokens automatically.</p>
 
-    <button id="connectWalletBtn">Connect Wallet</button>
-    <input id="donationAmount" placeholder="Amount in USDC" type="number" step="0.01" disabled />
-    <button id="donateBtn" disabled>Donate</button>
+  <button id="connectBtn">Connect Wallet</button>
+  <p class="status" id="walletAddress">Wallet: Not connected</p>
+</div>
 
-    <div id="donationStatus" class="alert" style="display:none;"></div>
+<!-- Web3Modal Bundle -->
+<script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
 
-    <h3>Your Referral Link</h3>
-    <a id="referralLink" class="referral-link" href="#"></a>
-    <button id="copyReferralBtn">Copy Link</button>
-  </div>
-</body>
-</html>
+<script>
+  const connectBtn = document.getElementById("connectBtn");
+  const walletAddress = document.getElementById("walletAddress");
+
+  let web3;
+  let provider;
+
+  connectBtn.onclick = async () => {
+    try {
+      provider = new WalletConnectProvider.default({
+        rpc: {
+          56: "https://bsc-dataseed.
