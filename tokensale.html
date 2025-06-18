@@ -1,258 +1,371 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <meta charset="UTF-8" />
-      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-      <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Digital Rufiya  (DrF) Token Sale</title>
-      <script>
-          // Your walletconnect project ID (use your own project ID - get it for free at https://cloud.walletconnect.com/)
-          const projectId = '9332014bbcedde12a87a2deb0e57c147'
-          // Metadata for walletconnect - please set correct domain to prevent CORS issues
-          const metadata = {
-              name: 'Digital Rufiya  (DrF)',
-              description: 'Digital Rufiya  (DrF) Token Sale',
-              url: 'https://web3modal.com', // origin must match your domain & subdomain
-              icons: ['https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg'] // logo
-          }
-          // Your tokens sale contract address and chain ID
-          const ca = '0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7';
-          const net = 56;
-      </script>
-    <script type="module" crossorigin="anonymous" src="https://dappbuilder.org/ext/assets/tokensaleuiv1.js"></script>
-  </head>
-  <body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFchain Charity Donation - Save Lives</title>
 
-  <div class="container">
-      <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
-          <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-              <!--You can remove class "projectlogo" from images so that they are not loaded from chain-->
-              <img src="https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg" alt="Digital Rufiya  (DrF) Token" height="35" class="projectlogo d-inline-block align-text-top align-self-center">
-              <span class="fs-2">&nbsp;Token sale&nbsp;</span>
-          </a>
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
 
-          <ul class="nav nav-pills">
-    <li class="nav-item"><a class="nav-link" href="#buy" aria-current="page">Buy token</a></li>
-    <li class="nav-item"><a class="nav-link" href="#referral" aria-current="page">Referral</a></li>
-    <li class="nav-item">
-        <!--This is the Wallet Connect button. You can place it anywhere, several buttons are allowed also. Please leave at least one on the page.-->
-        <w3m-button />
-    </li>
-</ul>
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-      </header>
+<!-- Ethers.js -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<!-- WalletConnect & Web3Modal -->
+<script src="https://unpkg.com/@web3modal/html@2.4.0/dist/index.js"></script>
+
+<style>
+  /* Modern theme with warm gradient + subtle shapes */
+
+  body {
+    background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+    color: #f1f1f1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: rgba(0,0,0,0.6);
+    padding: 1rem;
+    text-align: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  header h1 {
+    font-weight: 900;
+    letter-spacing: 0.1em;
+  }
+  .container {
+    max-width: 600px;
+    margin: 2rem auto 3rem;
+    background: rgba(255 255 255 / 0.1);
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(12px);
+  }
+  label.form-label {
+    font-weight: 600;
+  }
+  input.form-control, select.form-control {
+    background: rgba(255 255 255 / 0.15);
+    border: none;
+    color: #eee;
+    font-size: 1.1rem;
+    transition: background 0.3s ease;
+  }
+  input.form-control:focus {
+    background: rgba(255 255 255 / 0.3);
+    outline: none;
+    box-shadow: 0 0 6px #8bc34a;
+    color: #fff;
+  }
+  button.btn-primary {
+    background: #8bc34a;
+    border: none;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: background 0.3s ease;
+  }
+  button.btn-primary:hover {
+    background: #a4d047;
+  }
+  #donation-info {
+    font-size: 1.2rem;
+    margin-top: 1rem;
+    font-weight: 600;
+  }
+  #total-donations {
+    font-size: 1.5rem;
+    color: #c5e1a5;
+    font-weight: 900;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  #receipt-modal .modal-content {
+    background: #121212;
+    color: #eee;
+  }
+  #receipt-modal h5 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  #referral-link {
+    background: rgba(255 255 255 / 0.1);
+    border-radius: 0.3rem;
+    padding: 0.6rem 1rem;
+    user-select: all;
+    cursor: pointer;
+  }
+  #wallet-address {
+    font-family: monospace;
+    letter-spacing: 0.1em;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    word-break: break-all;
+  }
+  .art-container {
+    margin-top: 2rem;
+    text-align: center;
+  }
+  .art-container svg {
+    width: 150px;
+    height: 150px;
+    fill: #8bc34a;
+    opacity: 0.8;
+  }
+  footer {
+    text-align: center;
+    color: #999;
+    margin: 2rem 0;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Save a Life with DRFchain Charity</h1>
+  <p>Donate USDC on BSC and help orphans & children worldwide</p>
+</header>
+
+<div class="container">
+
+  <div id="wallet-section" class="mb-3 text-center">
+    <button id="connect-wallet" class="btn btn-primary">Connect Wallet</button>
+    <div id="wallet-address" class="mt-2"></div>
   </div>
 
-  <!--Loading alert at the top of the page-->
-  <div id="loadmain" class="alert alert-primary" role="alert" style="display: none">
-      <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span> Loading token sale data... please wait...
+  <div id="total-donations">Total Donations: 0 USDC</div>
+
+  <form id="donation-form">
+    <div class="mb-3">
+      <label for="donation-amount" class="form-label">Donation Amount (USDC):</label>
+      <input type="number" min="1" step="0.01" class="form-control" id="donation-amount" placeholder="Enter amount" required />
+    </div>
+
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" id="anonymous-donation" />
+      <label class="form-check-label" for="anonymous-donation">Donate anonymously</label>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Referral Link (Share & Earn Rewards):</label>
+      <div id="referral-link" title="Click to copy referral link"></div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100" id="donate-btn" disabled>Donate USDC</button>
+  </form>
+
+  <div id="donation-info" class="text-center mt-3"></div>
+
+  <div class="art-container">
+    <!-- Simple SVG heart and hand to symbolize charity -->
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" >
+      <path d="M32 58c-6.627 0-12-5.373-12-12 0-4 2.5-7.5 6-9.5 3 2 6 5 6 9.5 0-4.5 3-7.5 6-9.5 3.5 2 6 5.5 6 9.5 0 6.627-5.373 12-12 12z"/>
+      <path d="M14 44v10h36v-6l-11-9-4 3-4-4-8 6z" fill="#c5e1a5"/>
+    </svg>
   </div>
+</div>
 
-  <!--Alert for token sale admin in case there are not enough tokens on the token sale contract balance-->
-  <div id="supply" class="alert alert-danger" role="alert" style="display: none">
-      For token sale admin: please supply tokens to the token sale contract (check token sale admin panel).
+<!-- Receipt Modal -->
+<div class="modal fade" id="receipt-modal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <h5 id="receipt-title">Donation Receipt</h5>
+      <p><strong>Donor Wallet:</strong> <span id="receipt-wallet"></span></p>
+      <p><strong>Donation Amount:</strong> <span id="receipt-amount"></span> USDC</p>
+      <p><strong>Anonymous:</strong> <span id="receipt-anonymous"></span></p>
+      <p><strong>Date:</strong> <span id="receipt-date"></span></p>
+      <button class="btn btn-success" id="print-receipt-btn">Print / Download Receipt</button>
+      <button class="btn btn-secondary mt-2" data-bs-dismiss="modal">Close</button>
+    </div>
   </div>
+</div>
 
-  <div id="wrongnetmain" class="alert alert-warning" role="alert" style="display: none">
-      Please switch to BNB Smart Chain <button id="switch" class="btn btn-primary">Switch</button>
-  </div>
+<!-- Bootstrap Bundle (with Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
-  <!--Area with token logo, token name, description, socials and token sale information.
-  Data is loaded from chain but you can hardcode it by removing the ids or classes where applicable.
-  Leave the ids of the contract address fields because they are used for COPY functionality (of course if you need it)-->
-  
-  <div class="container col-xl-10 col-xxl-8 px-4 py-2">
-      <div class="row align-items-start g-5 py-2">
-          <div class="col-lg-7 text-center text-lg-start">
-              <!--You can remove class "projectlogo" from images so that they are not loaded from chain-->
-              <img src="https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg" class="img-thumbnail projectlogo" style="max-height: 200px">
-              <h1 class="display-5 fw-bold lh-1 text-body-emphasis mb-3">Digital Rufiya  (DrF)</h1>
-              <p class="text-break">
-                  <span id="address">0x7788a60dbC85AB46767F413EC7d51F149AA1bec6</span>&nbsp;<i id="copy" class="bi bi-clipboard text-primary" data-toggle="tooltip" title="Copy to clipboard" style="cursor: pointer"></i>
-                  <a target="_blank" href="https://bscscan.com/token/0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"><i id="open" class="bi bi-box-arrow-up-right" data-toggle="tooltip" title="View on tracker" style="cursor: pointer"></i></a>
-                  <br /><span class="text-danger">Do not send funds to the token address!</span>
-              </p>
-              
-              <!-- Description text -->
-              <p id="desc" class="col-lg-10" style="white-space: pre-line">Digital Rufiya (DrF) coin Maldives First Decenterlised Digital coin </p>
-              
-              <!--Social icons and links-->
-              <ul class="nav nav-pills d-flex mx-auto">
-                  <li id="www" class="nav-item" style="display: none">
-                      <a id="wwwlink" target="_blank" href="https://drfcoin.blogspot.com/?m=1" class="nav-link">
-                          <i class="bi bi-globe" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="fb" class="nav-item" style="display: none">
-                      <a id="fblink" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-facebook" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="tg" class="nav-item" style="display: none">
-                      <a id="tglink" target="_blank" href="https://t.me/digitalRufiyaa" class="nav-link">
-                          <i class="bi bi-telegram" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="tw" class="nav-item" style="display: none">
-                      <a id="twlink" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-twitter" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="insta" class="nav-item" style="display: none">
-                      <a id="instalink" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-instagram" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="github" class="nav-item" style="display: none">
-                      <a id="githublink" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-github" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="yt" class="nav-item" style="display: none">
-                      <a id="ytlink" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-youtube" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="link1" class="nav-item" style="display: none">
-                      <a id="link1link" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-box-arrow-up-right" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-                  <li id="link2" class="nav-item" style="display: none">
-                      <a id="link2link" target="_blank" href="" class="nav-link">
-                          <i class="bi bi-box-arrow-up-right" style="font-size: 1.7rem;"></i>
-                      </a>
-                  </li>
-              </ul>
+<script type="module">
 
-              <h3 class="display-6 fw-bold lh-1 text-body-emphasis mb-3">Token sale info</h3>
-              
-              
-              
-              
-              <div class="text-center">
-    Tokens are sent to investors instantly when they invest
-              </div>
-              
-              <div class="text-break text-center">
-                  Token sale contract:
-                  <span id="address2">0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7</span>&nbsp;<i id="copy2" class="bi bi-clipboard text-primary" data-toggle="tooltip" title="Copy to clipboard" style="cursor: pointer"></i>
-                  <a target="_blank" href="https://bscscan.com/address/0x82dAa32579728EDAd1b940Ad26f9336845C8A3c7"><i id="open2" class="bi bi-box-arrow-up-right" data-toggle="tooltip" title="View on tracker" style="cursor: pointer"></i></a>
-                  <br/>
-                  <span class="text-danger">Do not send funds or tokens directly to the token sale contract! Use this UI to buy tokens properly.</span>
-              </div>
-              
-          </div>
+  import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.4.0/dist/index.js";
 
-          <!--Token sale status area, statuses are shown/hidden according to the actual on-chain data loaded-->
+  const usdcAddress = '0x88253D87990EdD1E647c3B6eD21F57fb061a3040'; // Your USDC charity address on BSC
+  const bscChainId = 56;
 
-          <div id="buy" class="col-md-10 text-center text-lg-start col-lg-5">
-              <h3 class="display-6 fw-bold lh-1 text-body-emphasis mb-3">Token sale status</h3>
-              <h3 id="loading" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3"><span class="badge text-bg-primary"><span class="spinner-grow" aria-hidden="true"></span> loading status...</span></h3>
-              <h3 id="live" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-success">LIVE</span></h3>
-              <h3 id="livetime" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-success">Ends in <span id="timer2"></span></span></h3>
-              <h3 id="upcoming" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-primary">Starts in <span id="timer"></span></span></h3>
-              <h3 id="fail" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-secondary">Failed</span></h3>
-              <h3 id="cancel" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-secondary">Canceled</span></h3>
-              <h3 id="finished" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-secondary">Finished</span></h3>
-              <h3 id="success" class="statuses display-6 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-success">SUCCESS</span></h3>
-              <h4 id="scfilled" class="statuses display-7 fw-bold lh-1 text-body-emphasis mb-3" style="display: none"><span class="badge text-bg-success">Softcap filled</span></h4>
-              <!--Progress bar is visible for token sales with hardcap-->
-              <div id="progress-outer" class="progress" role="progressbar" aria-valuenow="" aria-valuemin="0" aria-valuemax="100" style="height: 20px; display: none">
-                  <div id="progress-inner" class="progress-bar" style="width: 0%"></div>
-              </div>
-              <div class="text-center">
-                  Raised: <span id="raised"></span>USDC
-              </div>
-              
-              
-              <!--Buy tokens area-->
+  let provider, signer, userAddress;
+  let web3Modal;
 
-              <h3 class="display-6 fw-bold lh-1 text-body-emphasis mb-3">Buy tokens</h3>
-              
-              <!-- Tokens rate/price -->
-              <h4 class="display-7 fw-bold lh-1 text-body-emphasis mb-3 text-center">
-  1USDC = 15.42 DrF
-              </h4>
+  let totalDonations = 0;
 
-              <label for="amount" class="form-label">Input investment amount<span id="mymax"></span>:</label>
-              <!--Keep the ID "amount" unchanged-->
-              <div class="input-group mb-3">
-                  <input type="number" min="0" step="0.1" class="form-control text-center" id="amount" aria-describedby="helper">
-                  <span class="input-group-text">USDC</span>
-              </div>
-              <div class="form-text" id="helper">You will get: <span id="qty">...</span>DrF</div>
-              
-              <!--Keep the required buttons IDs unchanged-->
-              <div class="d-grid gap-2">
-                  <button id="buybtn" class="butns btn btn-primary btn-lg" type="button">Buy</button>
-                  <button id="approvebtn" class="butns btn btn-primary btn-lg" type="button" style="display: none">Approve</button>
-              </div>
-              <div id="wrongnetbuy" class="alert alert-warning" role="alert" style="display: none">
-                  Please switch to BNB Smart Chain
-              </div>
+  // Initialize Web3Modal
+  web3Modal = new Web3Modal({
+    projectId: '9332014bbcedde12a87a2deb0e57c147', // Your WalletConnect project ID
+    themeMode: 'dark',
+    walletConnectOptions: {
+      projectId: '9332014bbcedde12a87a2deb0e57c147'
+    }
+  });
 
-              <!--User area-->
-              <h3 class="display-6 fw-bold lh-1 text-body-emphasis mb-3">My tokens</h3>
+  const connectWalletBtn = document.getElementById('connect-wallet');
+  const walletAddressDiv = document.getElementById('wallet-address');
+  const donateBtn = document.getElementById('donate-btn');
+  const donationAmountInput = document.getElementById('donation-amount');
+  const anonymousCheckbox = document.getElementById('anonymous-donation');
+  const referralLinkDiv = document.getElementById('referral-link');
+  const donationInfoDiv = document.getElementById('donation-info');
+  const totalDonationsDiv = document.getElementById('total-donations');
 
-              <div class="alert alert-warning disconnected" role="alert" style="display: none">
-                  Please connect wallet
-              </div>
+  const receiptModal = new bootstrap.Modal(document.getElementById('receipt-modal'));
+  const receiptWallet = document.getElementById('receipt-wallet');
+  const receiptAmount = document.getElementById('receipt-amount');
+  const receiptAnonymous = document.getElementById('receipt-anonymous');
+  const receiptDate = document.getElementById('receipt-date');
+  const printReceiptBtn = document.getElementById('print-receipt-btn');
 
-              <div class="connected" role="alert" style="display: none">
-                  <div class="hstack">
-                      <div>Invested: <span id="myinvested"></span>USDC</div>
-                      <div class="ms-auto">Purchased: <span class="mypurchased"></span>DrF</div>
-                  </div>
-                  
-                  
-              </div>
-              
-              
-          </div>
-      </div>
-  </div>
-  
-  
-  <div id="referral" class="px-4 py-3 my-3 text-center">
-      <h1 class="display-5 fw-bold text-body-emphasis">Referral program</h1>
-      <div>
-          Referral commission: 10%
-      </div>
-      <p>
-          Share your referral link and earn free DrF
-      </p>
+  // Utility: shorten address
+  function shortenAddress(addr) {
+    if (!addr) return "";
+    return addr.slice(0, 6) + '...' + addr.slice(-4);
+  }
 
-      <p>
-          <span id="reflink" class="text-break"></span>&nbsp;<i id="copy3" class="bi bi-clipboard text-primary" data-toggle="tooltip" title="Copy to clipboard" style="cursor: pointer"></i>
-      </p>
+  // Copy referral link on click
+  referralLinkDiv.addEventListener('click', () => {
+    if (referralLinkDiv.textContent) {
+      navigator.clipboard.writeText(referralLinkDiv.textContent).then(() => {
+        alert('Referral link copied to clipboard!');
+      });
+    }
+  });
 
-      <div class="alert alert-warning disconnected" role="alert" style="display: none">
-          Please connect your wallet to generate your referral link and track your referral earnings
-      </div>
+  connectWalletBtn.addEventListener('click', async () => {
+    try {
+      provider = new ethers.providers.Web3Provider(await web3Modal.connect());
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      walletAddressDiv.textContent = "Connected: " + shortenAddress(userAddress);
+      donateBtn.disabled = false;
+      connectWalletBtn.textContent = 'Wallet Connected';
 
-      <div class="connected" style="display: none">
-          Your referral earnings: <span id="myref"></span> DrF
-      </div>
-        
-      <p id="refinstant">
-          DrF are sent to you instantly every time someone invests via your referral link
-      </p>
-      <p>
-          Investor's wallet must be different from referrer's wallet otherwise commission is not paid (you can't refer yourself)
-      </p>
-  </div>
-  
+      // Check if network is BSC, else request switch
+      const { chainId } = await provider.getNetwork();
+      if (chainId !== bscChainId) {
+        try {
+          await provider.send("wallet_switchEthereumChain", [{ chainId: '0x38' }]);
+        } catch (switchError) {
+          alert('Please switch your wallet network to BSC (Binance Smart Chain) to donate.');
+          throw switchError;
+        }
+      }
 
-  <!-- Footer -->
-  <footer class="text-center text-lg-center">
-      <!--You can use this footer or delete it-->
-  </footer>
+      // Set referral link: your site + ?ref=walletAddress
+      referralLinkDiv.textContent = `${window.location.origin}${window.location.pathname}?ref=${userAddress}`;
+      referralLinkDiv.title = "Click to copy referral link";
 
-  </body>
+    } catch (err) {
+      console.error(err);
+      alert('Wallet connection failed. Please try again.');
+    }
+  });
+
+  donationAmountInput.addEventListener('input', () => {
+    const val = parseFloat(donationAmountInput.value);
+    if (val > 0) {
+      donationInfoDiv.textContent = `You will donate ${val.toFixed(2)} USDC`;
+    } else {
+      donationInfoDiv.textContent = '';
+    }
+  });
+
+  document.getElementById('donation-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!signer) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+
+    const amount = parseFloat(donationAmountInput.value);
+    if (isNaN(amount) || amount < 1) {
+      alert('Please enter a valid donation amount (minimum 1 USDC).');
+      return;
+    }
+
+    try {
+      donateBtn.disabled = true;
+      donateBtn.textContent = "Processing...";
+
+      // USDC uses 18 decimals on BSC sometimes, but sometimes 6 decimals
+      // Let's assume 18 decimals (adjust if needed)
+      const decimals = 18;
+
+      const usdcContract = new ethers.Contract(usdcAddress, [
+        "function transfer(address to, uint amount) public returns (bool)"
+      ], signer);
+
+      // Convert amount to BigNumber (with decimals)
+      const amountBn = ethers.utils.parseUnits(amount.toString(), decimals);
+
+      const tx = await usdcContract.transfer(usdcAddress, amountBn); // Send to charity address
+      await tx.wait();
+
+      // Update total donations in this session
+      totalDonations += amount;
+      totalDonationsDiv.textContent = `Total Donations: ${totalDonations.toFixed(2)} USDC`;
+
+      donationInfoDiv.textContent = 'Thank you for your donation! Transaction Hash: ' + tx.hash;
+      donationAmountInput.value = '';
+      anonymousCheckbox.checked = false;
+
+      // Show receipt modal with info
+      receiptWallet.textContent = anonymousCheckbox.checked ? 'Anonymous' : userAddress;
+      receiptAmount.textContent = amount.toFixed(2);
+      receiptAnonymous.textContent = anonymousCheckbox.checked ? 'Yes' : 'No';
+      receiptDate.textContent = new Date().toLocaleString();
+      receiptModal.show();
+
+    } catch (err) {
+      console.error(err);
+      alert('Donation failed. Please try again.');
+    } finally {
+      donateBtn.disabled = false;
+      donateBtn.textContent = "Donate USDC";
+    }
+  });
+
+  printReceiptBtn.addEventListener('click', () => {
+    const printContent = `
+      <h2>DRFchain Charity Donation Receipt</h2>
+      <p><strong>Donor Wallet:</strong> ${receiptWallet.textContent}</p>
+      <p><strong>Donation Amount:</strong> ${receiptAmount.textContent} USDC</p>
+      <p><strong>Anonymous Donation:</strong> ${receiptAnonymous.textContent}</p>
+      <p><strong>Date:</strong> ${receiptDate.textContent}</p>
+      <p>Thank you for supporting the orphans and needy children worldwide.</p>
+    `;
+    const printWindow = window.open('', '', 'width=600,height=400');
+    printWindow.document.write('<html><head><title>Donation Receipt</title></head><body>');
+    printWindow.document.write(printContent);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  });
+
+  // On page load, check URL for referral param & show alert if present
+  window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref) {
+      alert('You were referred by: ' + shortenAddress(ref) + '. Share your own referral link when you connect your wallet!');
+    }
+  });
+
+</script>
+
+<footer>
+  &copy; 2025 Digital Rufiya Ecosystem | Powered by DRFchain.org
+</footer>
+
+</body>
 </html>
-  
