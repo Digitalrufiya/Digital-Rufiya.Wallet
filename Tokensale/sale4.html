@@ -1,153 +1,360 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Charity Donation</title>
-  <style>
-    body {
-      background: #041c14;
-      color: #e6f8ee;
-      font-family: Arial, sans-serif;
-      padding: 30px 10px;
-      text-align: center;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #0c3124;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 0 18px #00c980aa;
-    }
-    img {
-      width: 130px;
-      margin-bottom: 15px;
-    }
-    button, input {
-      padding: 12px;
-      margin-top: 12px;
-      width: 100%;
-      border-radius: 10px;
-      border: none;
-      font-size: 1.1em;
-    }
-    button {
-      background: #00c980;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    input {
-      background: #082b1e;
-      color: #caffdd;
-      border: 1px solid #00c980;
-    }
-    #referralLink {
-      word-break: break-word;
-      font-size: 0.85em;
-      margin-top: 8px;
-      color: #a1f3ce;
-    }
-    #status {
-      margin-top: 15px;
-      font-size: 0.9em;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Digital Rufiya Charitable Donation</title>
+<style>
+  body {
+    background: #0a2e1c;
+    color: #e0f0d9;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 480px;
+    margin: auto;
+    background: #114b2e;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px #238636cc;
+    text-align: center;
+  }
+  h1 {
+    margin-bottom: 0.5em;
+  }
+  img.logo {
+    width: 150px;
+    margin-bottom: 1em;
+  }
+  button, input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+    font-size: 1.1em;
+  }
+  input {
+    background: #0a2e1c;
+    color: #c8e6c9;
+    border: 1.5px solid #238636;
+  }
+  button {
+    background: #238636;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+  button:disabled {
+    background: #2ea043aa;
+    cursor: not-allowed;
+  }
+  a.referral-link {
+    color: #a9d18e;
+    word-break: break-word;
+  }
+  .info {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: #d4edda;
+  }
+  .alert {
+    background: #2c3e2f;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 15px;
+    color: #d4edda;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 0.85em;
+    color: #a3c59d;
+  }
+</style>
+
+<!-- Ethers.js v6 -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+<!-- Web3Modal v2 -->
+<script type="module" src="https://unpkg.com/@web3modal/html@2.4.4/dist/index.global.js"></script>
 </head>
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="DRF Logo" />
-    <h2>Donate USDC & Earn DrF Tokens</h2>
-    <p>Support orphans, save lives, and build Ummah unity.</p>
-    <button id="connectBtn">Connect Wallet</button>
-    <div id="walletAddress">Not connected</div>
+<div class="container">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="Digital Rufiya Logo" class="logo" />
+  <h1>Give Charity & Earn DrF Tokens</h1>
+  <p class="info">Support orphans, save lives, and unify the Ummah by donating USDC on BSC.</p>
 
-    <input type="number" id="donationAmount" placeholder="Donation amount in USDC" />
-    <button id="donateBtn" disabled>Donate</button>
+  <button id="connectWalletBtn">Connect Wallet</button>
+  <button id="switchNetworkBtn" style="display:none; margin-top:10px;">Switch to BSC Network</button>
 
-    <p id="referralLink"></p>
-    <div id="status"></div>
-  </div>
+  <input type="number" id="donationAmount" min="0" step="0.01" placeholder="Enter donation amount in USDC" disabled />
+  <button id="donateBtn" disabled>Donate & Receive DrF</button>
 
-  <!-- Web3Modal v2 + Ethers -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-  <script type="module">
-    import {
-      EthereumClient,
-      modalConnectors,
-      walletConnectProvider
-    } from 'https://unpkg.com/@web3modal/ethereum@2.7.1';
-    import { Web3Modal } from 'https://unpkg.com/@web3modal/html@2.7.1';
+  <div class="alert" id="donationStatus" style="display:none;"></div>
 
-    const projectId = '9332014bbcedde12a87a2deb0e57c147';
-    const chains = [{ chainId: 56, name: 'BSC', rpcUrl: 'https://bsc-dataseed.binance.org/' }];
-    const provider = walletConnectProvider({ projectId, chains });
-    const ethereumClient = new EthereumClient(provider, chains);
-    const web3Modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient);
+  <h3>Your Referral Link</h3>
+  <a id="referralLink" class="referral-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+  <button id="copyReferralBtn">Copy Referral Link</button>
 
-    const connectBtn = document.getElementById('connectBtn');
-    const walletAddressDiv = document.getElementById('walletAddress');
-    const donateBtn = document.getElementById('donateBtn');
-    const amountInput = document.getElementById('donationAmount');
-    const referralLink = document.getElementById('referralLink');
-    const statusDiv = document.getElementById('status');
+  <h3>Your DRF Balance</h3>
+  <p id="drfBalance">-</p>
+</div>
 
-    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-    const DRF_TOKEN_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-    const CHARITY_RECEIVER = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+<w3m-modal projectId="9332014bbcedde12a87a2deb0e57f147"></w3m-modal>
 
-    const erc20Abi = [
-      "function transfer(address to, uint256 amount) returns (bool)",
-      "function balanceOf(address owner) view returns (uint256)",
-      "function decimals() view returns (uint8)"
-    ];
+<script type="module">
+  import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.4.4/dist/index.esm.js";
 
-    let signer, address;
+  const projectId = "9332014bbcedde12a87a2deb0e57f147"; // YOUR WalletConnect Project ID
+  const DRF_TOKEN_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+  const USDC_TOKEN_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // BSC USDC
+  const CHARITY_RECEIVER = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040"; // Charity wallet address
 
-    connectBtn.onclick = async () => {
-      try {
-        await web3Modal.openModal();
-        const ethersProvider = new ethers.BrowserProvider(provider);
-        signer = await ethersProvider.getSigner();
-        address = await signer.getAddress();
+  const BSC_CHAIN_ID = 56;
 
-        connectBtn.innerText = "Connected";
-        walletAddressDiv.innerText = address;
-        donateBtn.disabled = false;
+  const connectWalletBtn = document.getElementById("connectWalletBtn");
+  const switchNetworkBtn = document.getElementById("switchNetworkBtn");
+  const donationAmountInput = document.getElementById("donationAmount");
+  const donateBtn = document.getElementById("donateBtn");
+  const donationStatus = document.getElementById("donationStatus");
+  const referralLinkEl = document.getElementById("referralLink");
+  const copyReferralBtn = document.getElementById("copyReferralBtn");
+  const drfBalanceEl = document.getElementById("drfBalance");
 
-        // Set referral
-        const url = new URL(window.location.href);
-        const ref = url.searchParams.get("ref") || address;
-        const link = `${window.location.origin}${window.location.pathname}?ref=${address}`;
-        referralLink.innerText = "Your Referral Link: " + link;
-      } catch (err) {
-        statusDiv.innerText = "Connection failed: " + err.message;
+  let web3Modal;
+  let provider;
+  let signer;
+  let userAddress = null;
+  let drfDecimals = 18;
+
+  // ABI for ERC20 minimal (balanceOf, decimals, transfer)
+  const erc20Abi = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function transfer(address to, uint amount) returns (bool)"
+  ];
+
+  function init() {
+    web3Modal = new Web3Modal({
+      projectId,
+      themeMode: "dark",
+      walletConnectVersion: 2,
+      themeColor: "#238636",
+      standaloneChains: [BSC_CHAIN_ID], // limit to BSC chain only
+    });
+    web3Modal.mountModal();
+  }
+
+  async function connectWallet() {
+    try {
+      await web3Modal.openModal();
+      provider = await web3Modal.connect();
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      signer = await ethersProvider.getSigner();
+      userAddress = await signer.getAddress();
+
+      connectWalletBtn.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+      connectWalletBtn.disabled = true;
+      donationAmountInput.disabled = false;
+      donateBtn.disabled = true; // will enable when amount valid and network correct
+      donationStatus.style.display = "none";
+
+      setReferralLink();
+
+      const network = await ethersProvider.getNetwork();
+      if (network.chainId !== BSC_CHAIN_ID) {
+        switchNetworkBtn.style.display = "block";
+        donateBtn.disabled = true;
+      } else {
+        switchNetworkBtn.style.display = "none";
+        validateDonationInput();
       }
-    };
 
-    donateBtn.onclick = async () => {
-      const amount = parseFloat(amountInput.value);
-      if (!amount || isNaN(amount) || amount <= 0) {
-        return alert("Enter a valid amount");
+      provider.on("accountsChanged", (accounts) => {
+        if (accounts.length === 0) {
+          reset();
+          return;
+        }
+        userAddress = accounts[0];
+        connectWalletBtn.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+        setReferralLink();
+        updateDrfBalance();
+      });
+
+      provider.on("chainChanged", async (chainIdHex) => {
+        const chainId = parseInt(chainIdHex, 16);
+        if (chainId !== BSC_CHAIN_ID) {
+          switchNetworkBtn.style.display = "block";
+          donateBtn.disabled = true;
+          donationStatus.textContent = "Please switch to BSC network.";
+          donationStatus.style.display = "block";
+        } else {
+          switchNetworkBtn.style.display = "none";
+          donationStatus.style.display = "none";
+          validateDonationInput();
+          await updateDrfBalance();
+        }
+      });
+
+      await fetchDrfDecimals();
+      await updateDrfBalance();
+
+    } catch (err) {
+      alert("Wallet connection failed: " + (err.message || err));
+      reset();
+    }
+  }
+
+  async function switchNetwork() {
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x38" }],
+      });
+      switchNetworkBtn.style.display = "none";
+      donationStatus.style.display = "none";
+      validateDonationInput();
+      await updateDrfBalance();
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        try {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: "0x38",
+              chainName: "Binance Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org/"],
+              blockExplorerUrls: ["https://bscscan.com"],
+            }],
+          });
+        } catch (addError) {
+          alert("Add network failed: " + (addError.message || addError));
+        }
+      } else {
+        alert("Switch network failed: " + (switchError.message || switchError));
       }
+    }
+  }
 
-      try {
-        const usdc = new ethers.Contract(USDC_ADDRESS, erc20Abi, signer);
-        const decimals = 6;
-        const value = ethers.parseUnits(amount.toString(), decimals);
-        const tx = await usdc.transfer(CHARITY_RECEIVER, value);
-        await tx.wait();
+  function reset() {
+    userAddress = null;
+    connectWalletBtn.textContent = "Connect Wallet";
+    connectWalletBtn.disabled = false;
+    donationAmountInput.value = "";
+    donationAmountInput.disabled = true;
+    donateBtn.disabled = true;
+    donationStatus.style.display = "none";
+    referralLinkEl.textContent = "";
+    referralLinkEl.href = "#";
+    drfBalanceEl.textContent = "-";
+  }
 
-        // Reward DrF tokens (simulate - real logic should be on backend)
-        const drfAmount = amount * 15.42;
-        statusDiv.innerText = `Thank you! ${amount} USDC donated. You earned ${drfAmount.toFixed(2)} DrF (simulated).`;
+  function setReferralLink() {
+    const url = new URL(window.location.href);
+    const refParam = url.searchParams.get("ref");
+    const ref = refParam && refParam !== userAddress ? refParam : userAddress;
+    const referralUrl = `${window.location.origin}${window.location.pathname}?ref=${ref}`;
+    referralLinkEl.textContent = referralUrl;
+    referralLinkEl.href = referralUrl;
+  }
 
-        amountInput.value = "";
-      } catch (err) {
-        statusDiv.innerText = "Donation failed: " + err.message;
-      }
-    };
-  </script>
+  copyReferralBtn.onclick = () => {
+    navigator.clipboard.writeText(referralLinkEl.textContent)
+      .then(() => alert("Referral link copied!"))
+      .catch(() => alert("Failed to copy referral link"));
+  };
+
+  donationAmountInput.addEventListener("input", validateDonationInput);
+
+  function validateDonationInput() {
+    const amount = parseFloat(donationAmountInput.value);
+    if (userAddress && amount > 0 && switchNetworkBtn.style.display === "none") {
+      donateBtn.disabled = false;
+    } else {
+      donateBtn.disabled = true;
+    }
+  }
+
+  async function fetchDrfDecimals() {
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const drfContract = new ethers.Contract(DRF_TOKEN_ADDRESS, erc20Abi, ethersProvider);
+      drfDecimals = await drfContract.decimals();
+    } catch {
+      drfDecimals = 18;
+    }
+  }
+
+  async function updateDrfBalance() {
+    if (!userAddress) {
+      drfBalanceEl.textContent = "-";
+      return;
+    }
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const drfContract = new ethers.Contract(DRF_TOKEN_ADDRESS, erc20Abi, ethersProvider);
+      const balance = await drfContract.balanceOf(userAddress);
+      drfBalanceEl.textContent = ethers.formatUnits(balance, drfDecimals) + " DrF";
+    } catch {
+      drfBalanceEl.textContent = "Error fetching balance";
+    }
+  }
+
+  async function donate() {
+    const amount = parseFloat(donationAmountInput.value);
+    if (!userAddress || isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid donation amount.");
+      return;
+    }
+
+    donateBtn.disabled = true;
+    donationStatus.style.display = "none";
+
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+
+      // USDC contract instance
+      const usdcContract = new ethers.Contract(USDC_TOKEN_ADDRESS, erc20Abi, signer);
+
+      // USDC has 6 decimals on BSC
+      const decimals = 6;
+      const amountInUnits = ethers.parseUnits(amount.toString(), decimals);
+
+      // Referral param from URL if different from user
+      const url = new URL(window.location.href);
+      const refParam = url.searchParams.get("ref");
+      const referral = (refParam && refParam.toLowerCase() !== userAddress.toLowerCase()) ? refParam : ethers.ZeroAddress;
+
+      // Send USDC to charity wallet
+      const tx = await usdcContract.transfer(CHARITY_RECEIVER, amountInUnits);
+      await tx.wait();
+
+      // Simulate DrF tokens reward (replace with actual token transfer logic as needed)
+      const drfAmount = amount * 15.42;
+      donationStatus.textContent = `Thank you for donating ${amount} USDC! You earned ${drfAmount.toFixed(2)} DrF tokens.`;
+      donationStatus.style.display = "block";
+
+      donationAmountInput.value = "";
+      donateBtn.disabled = true;
+
+      await updateDrfBalance();
+    } catch (err) {
+      alert("Donation failed: " + (err.message || err));
+      donateBtn.disabled = false;
+    }
+  }
+
+  init();
+  reset();
+
+  connectWalletBtn.addEventListener("click", connectWallet);
+  switchNetworkBtn.addEventListener("click", switchNetwork);
+  donateBtn.addEventListener("click", donate);
+</script>
 </body>
 </html>
