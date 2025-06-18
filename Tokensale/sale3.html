@@ -209,5 +209,218 @@
 
       // Network check
       const network = await ethersProvider.getNetwork();
-      if (network.chain
-  
+      if (network.chainId !== bscChainId) {
+        switchNetworkBtn.style.display = "block";
+        donateBtn.disabled = true;
+      } else {
+        switchNetworkBtn.style.display = "none";
+        donateBtn.disabled = donationAmountInput.value <= 0;
+      }
+
+      // Event listeners for account and chain changes
+      provider.on("accountsChanged", (accounts) => {
+        if (accounts.length === 0) {
+          reset();
+          return;
+        }
+        userAddress = accounts[0];
+        userWalletSpan.textContent = userAddress;
+        bscscanLink.href = `https://bscscan.com/address/${userAddress}`;
+        updateReferralLink();
+        updateDrfBalance();
+        updateReferralEarnings();
+      });
+
+      provider.on("chainChanged", (chainIdHex) => {
+        const chainIdNum = parseInt(chainIdHex, 16);
+        if (chainIdNum !== bscChainId) {
+          switchNetworkBtn.style.display = "block";
+          donateBtn.disabled = true;
+        } else {
+          switchNetworkBtn.style.display = "none";
+          donateBtn.disabled = donationAmountInput.value <= 0;
+        }
+      });
+
+      // Load DrF decimals and balances
+      await fetchDrfDecimals();
+      await updateDrfBalance();
+      updateReferralLink();
+      updateReferralEarnings();
+
+    } catch (err) {
+      alert("Failed to connect wallet: " + err.message);
+    }
+  }
+
+  async function switchNetwork() {
+    if (!provider) return;
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: bscChainIdHex }],
+      });
+      switchNetworkBtn.style.display = "none";
+      donateBtn.disabled = donationAmountInput.value <= 0;
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        try {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: bscChainIdHex,
+              chainName: "Binance Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org/"],
+              blockExplorerUrls: ["https://bscscan.com"],
+            }],
+          });
+        } catch (addError) {
+          alert("Failed to add BSC network: " + addError.message);
+        }
+      } else {
+        alert("Failed to switch network: " + switchError.message);
+      }
+    }
+  }
+
+  donationAmountInput.addEventListener("input", () => {
+    if (donationAmountInput.value > 0 && !switchNetworkBtn.style.display) {
+      donateBtn.disabled = false;
+    } else {
+      donateBtn.disabled = true;
+    }
+  });
+
+  donateBtn.addEventListener("click", async () => {
+    if (!signer) {
+      alert("Connect wallet first");
+      return;
+    }
+
+    const amount = parseFloat(donationAmountInput.value);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Enter a valid amount");
+      return;
+    }
+
+    // Convert amount to USDC decimals (6)
+    const amountInUnits = ethers.parseUnits(amount.toString(), 6);
+
+    // Prepare data for transfer(address,uint256)
+    const data = transferSelector +
+      charityWallet.slice(2).padStart(64, "0") +
+      amountInUnits.toString(16).padStart(64, "0");
+
+    try {
+      donateBtn.disabled = true;
+      donationStatus.style.display = "block";
+      donationStatus.className = "alert alert-info";
+      donationStatus.textContent = "Waiting for transaction approval...";
+
+      const tx = await signer.sendTransaction({
+        to: usdcAddress,
+        data: data,
+      });
+
+      donationStatus.textContent = "Transaction sent! Waiting for confirmation...";
+      await tx.wait();
+
+      donationStatus.className = "alert alert-success";
+      donationStatus.textContent = `Thank you for your donation of ${amount} USDC! Tx: ${tx.hash}`;
+
+      donationAmountInput.value = "";
+      await updateDrfBalance();
+      updateReferralEarnings();
+
+    } catch (error) {
+      donationStatus.className = "alert alert-danger";
+      donationStatus.textContent = "Transaction failed: " + error.message;
+    } finally {
+      donateBtn.disabled = false;
+    }
+  });
+
+  copyReferralBtn.addEventListener("click", () => {
+    referralLinkInput.select();
+    navigator.clipboard.writeText(referralLinkInput.value);
+    alert("Referral link copied!");
+  });
+
+  copyWalletBtn.addEventListener("click", () => {
+    if (userAddress) {
+      navigator.clipboard.writeText(userAddress);
+      alert("Wallet address copied!");
+    }
+  });
+
+  function updateReferralLink() {
+    if (!userAddress) {
+      referralLinkInput.value = "";
+      referralEarningsDiv.style.display = "none";
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("ref", userAddress);
+    referralLinkInput.value = url.toString();
+  }
+
+  async function fetchDrfDecimals() {
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const drfContract = new ethers.Contract(drfTokenAddress, erc20Abi, ethersProvider);
+      drfDecimals = await drfContract.decimals();
+    } catch (e) {
+      console.error("Failed to fetch DrF decimals", e);
+    }
+  }
+
+  async function updateDrfBalance() {
+    if (!userAddress) {
+      drfBalanceSpan.textContent = "0";
+      return;
+    }
+    try {
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const drfContract = new ethers.Contract(drfTokenAddress, erc20Abi, ethersProvider);
+      const balanceRaw = await drfContract.balanceOf(userAddress);
+      const balance = ethers.formatUnits(balanceRaw, drfDecimals);
+      drfBalanceSpan.textContent = parseFloat(balance).toFixed(4);
+    } catch (e) {
+      console.error("Failed to fetch DrF balance", e);
+      drfBalanceSpan.textContent = "0";
+    }
+  }
+
+  // Placeholder for referral earnings (needs backend or contract events to implement)
+  function updateReferralEarnings() {
+    referralEarningsDiv.style.display = "block";
+    refEarnSpan.textContent = "0"; // Replace with actual data when you have it
+  }
+
+  function reset() {
+    userAddress = "";
+    provider = null;
+    signer = null;
+    connectWalletBtn.textContent = "Connect Wallet";
+    connectWalletBtn.disabled = false;
+    donateBtn.disabled = true;
+    donationAmountInput.value = "";
+    donationAmountInput.disabled = true;
+    donationStatus.style.display = "none";
+    switchNetworkBtn.style.display = "none";
+    referralLinkInput.value = "";
+    referralEarningsDiv.style.display = "none";
+    drfBalanceSpan.textContent = "0";
+    userWalletSpan.textContent = "-";
+  }
+
+  // Init on page load
+  init();
+
+  connectWalletBtn.addEventListener("click", connectWallet);
+  switchNetworkBtn.addEventListener("click", switchNetwork);
+</script>
+
+</body>
+</html>
