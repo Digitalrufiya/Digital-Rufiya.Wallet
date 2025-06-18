@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digital Rufiya (DrF) Charity Donation</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <style>
+    body {
+      background: #161b22;
+      color: #eee;
+      min-height: 100vh;
+      padding-top: 20px;
+    }
+    .container {
+      max-width: 600px;
+      background: #0d1117;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    input, button {
+      border-radius: 6px;
+      font-size: 1.1rem;
+    }
+    input {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #eee;
+      padding: 10px;
+    }
+    button {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:disabled {
+      background: #2ea043;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .address-box {
+      font-family: monospace;
+      background: #21262d;
+      padding: 10px;
+      border-radius: 6px;
+      user-select: all;
+    }
+    .alert-warning, .alert-danger {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container text-center">
+  <h2 class="mb-4">Digital Rufiya (DrF) Charity Donation</h2>
+
+  <div>
+    <strong>Charity Wallet Address (USDC):</strong><br />
+    <div class="address-box" id="charityAddress">0x88253D87990EdD1E647c3B6eD21F57fb061a3040</div>
+  </div>
+
+  <button id="connectWalletBtn" class="my-3">Connect Wallet</button>
+
+  <div class="input-group mb-3">
+    <input id="donateAmount" type="number" min="0" step="0.01" placeholder="Amount to donate in USDC" aria-label="Donation amount" />
+    <span class="input-group-text">USDC</span>
+  </div>
+
+  <button id="donateBtn" disabled>Donate Charity</button>
+
+  <button id="switchNetworkBtn" class="btn btn-warning mt-3" style="display:none;">Switch to BSC Network</button>
+
+  <div id="statusMsg" class="mt-3"></div>
+
+  <hr />
+
+  <h4>Your Referral Link (Optional)</h4>
+  <input id="refLinkInput" type="text" readonly class="form-control mb-2" />
+  <button id="copyReferralBtn" class="btn btn-secondary mb-3">Copy Referral Link</button>
+</div>
+
+<script>
+  const charityAddress = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040"; // Charity USDC wallet
+  const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // BSC USDC contract
+
+  let userAddress = null;
+
+  const connectBtn = document.getElementById("connectWalletBtn");
+  const donateBtn = document.getElementById("donateBtn");
+  const switchBtn = document.getElementById("switchNetworkBtn");
+  const donateAmountInput = document.getElementById("donateAmount");
+  const statusMsg = document.getElementById("statusMsg");
+  const refLinkInput = document.getElementById("refLinkInput");
+  const copyReferralBtn = document.getElementById("copyReferralBtn");
+
+  // Connect wallet using MetaMask
+  async function connectWallet() {
+    if (window.ethereum) {
+      try {
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        userAddress = accounts[0];
+        connectBtn.textContent = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        connectBtn.disabled = true;
+        checkDonateButton();
+        setupReferralLink();
+        statusMsg.textContent = "";
+        await checkNetwork();
+      } catch (e) {
+        alert("Wallet connection rejected.");
+      }
+    } else {
+      alert("MetaMask or compatible wallet not found.");
+    }
+  }
+
+  // Check if network is BSC (56) and show switch button if not
+  async function checkNetwork() {
+    if (!window.ethereum) return;
+
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== "0x38") {
+      statusMsg.innerHTML = '<div class="alert alert-warning">Please switch to Binance Smart Chain to donate.</div>';
+      switchBtn.style.display = "block";
+      donateBtn.disabled = true;
+    } else {
+      statusMsg.innerHTML = "";
+      switchBtn.style.display = "none";
+      checkDonateButton();
+    }
+  }
+
+  // Switch network to BSC
+  async function switchNetwork() {
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x38' }]
+      });
+      statusMsg.innerHTML = '<div class="alert alert-success">Switched to BSC network.</div>';
+      switchBtn.style.display = "none";
+      checkDonateButton();
+    } catch (err) {
+      statusMsg.innerHTML = `<div class="alert alert-danger">Failed to switch network: ${err.message}</div>`;
+    }
+  }
+
+  // Enable/disable donate button based on input & connection
+  function checkDonateButton() {
+    const amount = parseFloat(donateAmountInput.value);
+    if (userAddress && amount > 0) {
+      donateBtn.disabled = false;
+    } else {
+      donateBtn.disabled = true;
+    }
+  }
+
+  // Send USDC tokens to charity wallet
+  async function donateCharity() {
+    const amount = parseFloat(donateAmountInput.value);
+    if (!userAddress || isNaN(amount) || amount <= 0) {
+      alert("Please connect wallet and enter a valid amount.");
+      return;
+    }
+
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== "0x38") {
+      alert("Please switch to BSC network first.");
+      return;
+    }
+
+    // Calculate amount in USDC decimals (6 decimals)
+    const amountInDecimals = BigInt(amount * 1e6).toString();
+
+    // ERC20 transfer function signature: transfer(address,uint256) => 0xa9059cbb
+    // data = methodId + toAddress (32 bytes) + amount (32 bytes)
+    const methodId = "0xa9059cbb";
+    const toAddressPadded = charityAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const amountPadded = amountInDecimals.toString(16).padStart(64, "0");
+    const data = methodId + toAddressPadded + amountPadded;
+
+    const txParams = {
+      from: userAddress,
+      to: usdcAddress,
+      data: data,
+    };
+
+    try {
+      statusMsg.innerHTML = '<div class="alert alert-info">Sending transaction...</div>';
+      const txHash = await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [txParams]
+      });
+      statusMsg.innerHTML = `<div class="alert alert-success">Transaction sent! Hash: <a href="https://bscscan.com/tx/${txHash}" target="_blank">${txHash}</a></div>`;
+      donateAmountInput.value = "";
+      donateBtn.disabled = true;
+    } catch (error) {
+      statusMsg.innerHTML = `<div class="alert alert-danger">Transaction failed: ${error.message}</div>`;
+    }
+  }
+
+  // Setup referral link (optional)
+  function setupReferralLink() {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get("ref") || userAddress || "";
+    const link = `${window.location.origin}${window.location.pathname}?ref=${ref}`;
+    refLinkInput.value = link;
+  }
+
+  // Copy referral link button
+  copyReferralBtn.onclick = () => {
+    refLinkInput.select();
+    navigator.clipboard.writeText(refLinkInput.value).then(() => {
+      alert("Referral link copied!");
+    });
+  };
+
+  // Event listeners
+  connectBtn.onclick = connectWallet;
+  switchBtn.onclick = switchNetwork;
+  donateAmountInput.addEventListener("input", checkDonateButton);
+  donateBtn.onclick = donateCharity;
+
+  // Detect network changes & account changes
+  if (window.ethereum) {
+    window.ethereum.on("chainChanged", () => window.location.reload());
+    window.ethereum.on("accountsChanged", () => window.location.reload());
+  }
+</script>
+
+</body>
+</html>
