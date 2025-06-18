@@ -1,96 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Charity DApp</title>
-  <style>
-    body {
-      background: #041c14;
-      color: #d6f8e4;
-      font-family: Arial, sans-serif;
-      padding: 40px 20px;
-      text-align: center;
-    }
-    .container {
-      max-width: 480px;
-      margin: auto;
-      background: #0b2e22;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 0 18px #00c98088;
-    }
-    img {
-      width: 140px;
-      margin-bottom: 20px;
-    }
-    h2 {
-      margin-bottom: 12px;
-    }
-    button {
-      background-color: #00c980;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 1.1em;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    #walletAddress {
-      margin-top: 15px;
-      font-size: 0.95em;
-      word-break: break-word;
-    }
-  </style>
-</head>
+<head><meta charset="UTF-8" /><title>WalletConnect Test</title></head>
 <body>
-  <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="DRF Logo" />
-    <h2>Connect to DRF Wallet</h2>
-    <button id="connectBtn">Connect Wallet</button>
-    <div id="walletAddress">Not connected</div>
-  </div>
+<button id="connectBtn">Connect Wallet</button>
+<w3m-modal projectId="9332014bbcedde12a87a2deb0e57f147"></w3m-modal>
+<script type="module">
+import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.4.4/dist/index.esm.js";
 
-  <!-- Ethers.js & Web3Modal v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-  <script type="module">
-    import { EthereumClient, modalConnectors, walletConnectProvider } from 'https://unpkg.com/@web3modal/ethereum@2.7.1';
-    import { Web3Modal } from 'https://unpkg.com/@web3modal/html@2.7.1';
+const web3Modal = new Web3Modal({
+  projectId: "9332014bbcedde12a87a2deb0e57f147", // Your valid project ID here
+  themeMode: "dark"
+});
+web3Modal.mountModal();
 
-    const projectId = '9332014bbcedde12a87a2deb0e57c147'; // ✅ Your WalletConnect Project ID
-
-    const chains = [
-      {
-        chainId: 56,
-        name: 'BNB Smart Chain',
-        currency: 'BNB',
-        rpcUrl: 'https://bsc-dataseed.binance.org/',
-        blockExplorerUrl: 'https://bscscan.com'
-      }
-    ];
-
-    const provider = walletConnectProvider({ projectId, chains });
-    const ethereumClient = new EthereumClient(provider, chains);
-    const web3Modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient);
-
-    const connectBtn = document.getElementById('connectBtn');
-    const walletAddress = document.getElementById('walletAddress');
-
-    let signer;
-
-    connectBtn.onclick = async () => {
-      try {
-        const session = await web3Modal.openModal();
-        const ethersProvider = new ethers.BrowserProvider(provider);
-        signer = await ethersProvider.getSigner();
-        const address = await signer.getAddress();
-        walletAddress.innerText = 'Connected: ' + address;
-        connectBtn.innerText = 'Connected';
-      } catch (err) {
-        alert("Wallet connection failed: " + err.message);
-      }
-    };
-  </script>
+document.getElementById("connectBtn").onclick = async () => {
+  try {
+    const provider = await web3Modal.connect();
+    alert("Wallet connected!");
+  } catch (e) {
+    alert("Connection failed: " + (e.message || e));
+  }
+};
+</script>
 </body>
 </html>
