@@ -3,81 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digital Rufiya Donation</title>
+  <title>DRF Charity Wallet DApp</title>
   <style>
     body {
-      background: #0a2e1c;
-      color: #e0f0d9;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #061e14;
+      color: #c7f2db;
+      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 480px;
-      margin: auto;
-      background: #114b2e;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px #238636cc;
+      padding: 30px;
       text-align: center;
     }
-    img.logo {
-      width: 150px;
-      margin-bottom: 1em;
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #0c2c1d;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #16c57e55;
     }
-    button, input {
-      width: 100%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: none;
-      font-size: 1.1em;
+    .logo {
+      width: 150px;
+      margin-bottom: 15px;
     }
     button {
-      background: #238636;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    input {
-      background: #0a2e1c;
-      color: #c8e6c9;
-      border: 1.5px solid #238636;
-    }
-    .info {
-      font-size: 0.9em;
-      color: #d4edda;
-    }
-    .status {
+      padding: 12px 18px;
+      font-size: 1.1em;
+      border-radius: 10px;
+      border: none;
+      background: #16c57e;
+      color: #fff;
       margin-top: 10px;
-      font-size: 0.9em;
-      color: #88ffb7;
+      cursor: pointer;
+    }
+    .address {
+      margin-top: 15px;
+      font-size: 0.95em;
+      word-break: break-word;
     }
   </style>
 </head>
 <body>
-<div class="container">
-  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="Digital Rufiya Logo" class="logo" />
-  <h1>Charity Donation</h1>
-  <p class="info">Support orphans & save lives. Donate USDC and get DRF tokens automatically.</p>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" class="logo" alt="DRF Logo" />
+    <h2>Connect to DRF Charity Wallet</h2>
+    <button id="connectBtn">Connect Wallet</button>
+    <div class="address" id="walletAddress">Not connected</div>
+  </div>
 
-  <button id="connectBtn">Connect Wallet</button>
-  <p class="status" id="walletAddress">Wallet: Not connected</p>
-</div>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
 
-<!-- Web3Modal Bundle -->
-<script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <script>
+    const connectBtn = document.getElementById("connectBtn");
+    const walletDisplay = document.getElementById("walletAddress");
+    let web3;
 
-<script>
-  const connectBtn = document.getElementById("connectBtn");
-  const walletAddress = document.getElementById("walletAddress");
+    connectBtn.onclick = async () => {
+      if (window.ethereum) {
+        // ✅ Browser wallet (MetaMask, Brave, etc.)
+        try {
+          await window.ethereum.request({ method: 'eth_requestAccounts' });
+          web3 = new Web3(window.ethereum);
+          const accounts = await web3.eth.getAccounts();
+          walletDisplay.innerText = "Connected: " + accounts[0];
+          connectBtn.innerText = "Connected";
+        } catch (err) {
+          alert("User denied connection: " + err.message);
+        }
+      } else {
+        // ✅ Mobile fallback to WalletConnect
+        const provider = new WalletConnectProvider.default({
+          rpc: { 56: "https://bsc-dataseed.binance.org/" },
+          chainId: 56
+        });
 
-  let web3;
-  let provider;
+        await provider.enable();
+        web3 = new Web3(provider);
+        const accounts = await web3.eth.getAccounts();
+        walletDisplay.innerText = "Connected: " + accounts[0];
+        connectBtn.innerText = "Connected";
 
-  connectBtn.onclick = async () => {
-    try {
-      provider = new WalletConnectProvider.default({
-        rpc: {
-          56: "https://bsc-dataseed.
+        // Optional: Handle disconnect
+        provider.on("disconnect", () => {
+          walletDisplay.innerText = "Wallet disconnected";
+          connectBtn.innerText = "Connect Wallet";
+        });
+      }
+    };
+  </script>
+</body>
+</html>
