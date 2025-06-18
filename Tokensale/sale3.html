@@ -3,39 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Charity Wallet DApp</title>
+  <title>DRF Charity DApp</title>
   <style>
     body {
-      background: #061e14;
-      color: #c7f2db;
+      background: #041c14;
+      color: #d6f8e4;
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 30px;
+      padding: 40px 20px;
       text-align: center;
     }
     .container {
-      max-width: 500px;
+      max-width: 480px;
       margin: auto;
-      background: #0c2c1d;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 0 20px #16c57e55;
+      background: #0b2e22;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 18px #00c98088;
     }
-    .logo {
-      width: 150px;
-      margin-bottom: 15px;
+    img {
+      width: 140px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      margin-bottom: 12px;
     }
     button {
-      padding: 12px 18px;
+      background-color: #00c980;
+      color: white;
+      border: none;
+      padding: 12px 20px;
       font-size: 1.1em;
       border-radius: 10px;
-      border: none;
-      background: #16c57e;
-      color: #fff;
-      margin-top: 10px;
       cursor: pointer;
+      margin-top: 10px;
     }
-    .address {
+    #walletAddress {
       margin-top: 15px;
       font-size: 0.95em;
       word-break: break-word;
@@ -44,51 +46,49 @@
 </head>
 <body>
   <div class="container">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" class="logo" alt="DRF Logo" />
-    <h2>Connect to DRF Charity Wallet</h2>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="DRF Logo" />
+    <h2>Connect to DRF Wallet</h2>
     <button id="connectBtn">Connect Wallet</button>
-    <div class="address" id="walletAddress">Not connected</div>
+    <div id="walletAddress">Not connected</div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <!-- Ethers.js & Web3Modal v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+  <script type="module">
+    import { EthereumClient, modalConnectors, walletConnectProvider } from 'https://unpkg.com/@web3modal/ethereum@2.7.1';
+    import { Web3Modal } from 'https://unpkg.com/@web3modal/html@2.7.1';
 
-  <script>
-    const connectBtn = document.getElementById("connectBtn");
-    const walletDisplay = document.getElementById("walletAddress");
-    let web3;
+    const projectId = '9332014bbcedde12a87a2deb0e57c147'; // ✅ Your WalletConnect Project ID
+
+    const chains = [
+      {
+        chainId: 56,
+        name: 'BNB Smart Chain',
+        currency: 'BNB',
+        rpcUrl: 'https://bsc-dataseed.binance.org/',
+        blockExplorerUrl: 'https://bscscan.com'
+      }
+    ];
+
+    const provider = walletConnectProvider({ projectId, chains });
+    const ethereumClient = new EthereumClient(provider, chains);
+    const web3Modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient);
+
+    const connectBtn = document.getElementById('connectBtn');
+    const walletAddress = document.getElementById('walletAddress');
+
+    let signer;
 
     connectBtn.onclick = async () => {
-      if (window.ethereum) {
-        // ✅ Browser wallet (MetaMask, Brave, etc.)
-        try {
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          web3 = new Web3(window.ethereum);
-          const accounts = await web3.eth.getAccounts();
-          walletDisplay.innerText = "Connected: " + accounts[0];
-          connectBtn.innerText = "Connected";
-        } catch (err) {
-          alert("User denied connection: " + err.message);
-        }
-      } else {
-        // ✅ Mobile fallback to WalletConnect
-        const provider = new WalletConnectProvider.default({
-          rpc: { 56: "https://bsc-dataseed.binance.org/" },
-          chainId: 56
-        });
-
-        await provider.enable();
-        web3 = new Web3(provider);
-        const accounts = await web3.eth.getAccounts();
-        walletDisplay.innerText = "Connected: " + accounts[0];
-        connectBtn.innerText = "Connected";
-
-        // Optional: Handle disconnect
-        provider.on("disconnect", () => {
-          walletDisplay.innerText = "Wallet disconnected";
-          connectBtn.innerText = "Connect Wallet";
-        });
+      try {
+        const session = await web3Modal.openModal();
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        signer = await ethersProvider.getSigner();
+        const address = await signer.getAddress();
+        walletAddress.innerText = 'Connected: ' + address;
+        connectBtn.innerText = 'Connected';
+      } catch (err) {
+        alert("Wallet connection failed: " + err.message);
       }
     };
   </script>
