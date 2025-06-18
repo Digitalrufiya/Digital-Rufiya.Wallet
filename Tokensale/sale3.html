@@ -1,26 +1,399 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8" /><title>WalletConnect Test</title></head>
-<body>
-<button id="connectBtn">Connect Wallet</button>
-<w3m-modal projectId="9332014bbcedde12a87a2deb0e57f147"></w3m-modal>
-<script type="module">
-import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.4.4/dist/index.esm.js";
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Charity Donation - Save Children's Lives</title>
 
-const web3Modal = new Web3Modal({
-  projectId: "9332014bbcedde12a87a2deb0e57f147", // Your valid project ID here
-  themeMode: "dark"
-});
-web3Modal.mountModal();
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
 
-document.getElementById("connectBtn").onclick = async () => {
-  try {
-    const provider = await web3Modal.connect();
-    alert("Wallet connected!");
-  } catch (e) {
-    alert("Connection failed: " + (e.message || e));
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+
+<!-- Ethers.js -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<!-- Web3Modal & WalletConnect v2 -->
+<script src="https://unpkg.com/@web3modal/js@2.8.0/dist/index.js"></script>
+<script src="https://unpkg.com/@walletconnect/web3modal@2.8.0/dist/index.js"></script>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #2e8b57, #6bbf59);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    color: #fff;
   }
-};
+  .container {
+    max-width: 600px;
+    margin-top: 50px;
+    background: rgba(255 255 255 / 0.1);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.2);
+  }
+  h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  }
+  .btn-primary {
+    background: #27ae60;
+    border: none;
+  }
+  .btn-primary:hover {
+    background: #1e8449;
+  }
+  .form-label {
+    font-weight: 600;
+  }
+  #referralLink {
+    word-break: break-all;
+    background: rgba(255 255 255 / 0.15);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .alert-custom {
+    background: rgba(255 255 255 / 0.15);
+    color: #fff;
+  }
+  #donateButton[disabled] {
+    background: gray !important;
+    cursor: not-allowed;
+  }
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Save Children's Lives - Donate USDC</h1>
+
+  <div class="mb-3 text-center">
+    <img src="https://i.postimg.cc/W3RjxqRZ/charity-children.png" alt="Save Children" style="max-width:150px;" />
+  </div>
+
+  <div id="walletSection" class="mb-3 text-center">
+    <button id="connectWallet" class="btn btn-primary mb-2">Connect Wallet</button>
+    <div id="walletAddress" style="font-weight: 600;"></div>
+  </div>
+
+  <div class="mb-3">
+    <label for="donationAmount" class="form-label">Donation Amount (USDC) <small>(min $5)</small></label>
+    <input type="number" min="5" step="0.1" id="donationAmount" class="form-control" placeholder="Enter amount" />
+  </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="anonymousToggle" />
+    <label class="form-check-label" for="anonymousToggle">Donate anonymously</label>
+  </div>
+
+  <button id="donateButton" class="btn btn-primary w-100" disabled>Donate</button>
+
+  <div id="feedback" class="alert alert-custom mt-3" role="alert" style="display:none;"></div>
+
+  <hr class="my-4" />
+
+  <h5>Your Referral Link</h5>
+  <div id="referralLink" title="Click to copy your referral link">Not connected</div>
+
+  <hr class="my-4" />
+
+  <h5>Total Donations Received</h5>
+  <div id="totalDonations" style="font-size: 1.2rem; font-weight: 600;">Loading...</div>
+
+  <hr class="my-4" />
+
+  <button id="addDrfTokenBtn" class="btn btn-outline-light w-100">Add DRF Token to Wallet</button>
+
+</div>
+
+<footer>
+  &copy; 2025 DRFChain.org — Powered by Digital Rufiya Ecosystem
+</footer>
+
+<script>
+  const charityUSDCAddress = '0x88253D87990EdD1E647c3B6eD21F57fb061a3040';
+  const drfTokenAddress = '0x7788a60dbC85AB46767F413EC7d51F149AA1bec6';
+  const minDonation = 5;
+
+  let provider, signer, userAddress;
+
+  // Initialize Web3Modal with WalletConnect v2 and MetaMask support
+  const web3Modal = new window.Web3Modal.Web3Modal({
+    projectId: '9332014bbcedde12a87a2deb0e57c147',
+    themeMode: 'dark',
+    walletConnectVersion: 2,
+    modalOptions: {
+      // Optionally you can add caching here
+    }
+  });
+
+  const connectWalletBtn = document.getElementById('connectWallet');
+  const walletAddressDiv = document.getElementById('walletAddress');
+  const donateBtn = document.getElementById('donateButton');
+  const donationAmountInput = document.getElementById('donationAmount');
+  const feedbackDiv = document.getElementById('feedback');
+  const referralLinkDiv = document.getElementById('referralLink');
+  const addDrfTokenBtn = document.getElementById('addDrfTokenBtn');
+  const anonymousToggle = document.getElementById('anonymousToggle');
+  const totalDonationsDiv = document.getElementById('totalDonations');
+
+  // USDC token ABI (minimal, for transfer)
+  const usdcAbi = [
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address) view returns (uint256)",
+    "function transfer(address to, uint amount) returns (bool)",
+    "event Transfer(address indexed from, address indexed to, uint amount)"
+  ];
+
+  // DRF token ABI (ERC20, minimal for add token)
+  const drfTokenData = {
+    type: 'ERC20',
+    options: {
+      address: drfTokenAddress,
+      symbol: 'DrF',
+      decimals: 18,
+      image: 'https://i.postimg.cc/NFzPRcLc/IMG-20250421-210707-234.jpg'
+    }
+  };
+
+  async function switchToBSC() {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x38' }] // BSC Mainnet
+      });
+      return true;
+    } catch (switchError) {
+      // If chain not added, try to add it
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x38',
+              chainName: 'Binance Smart Chain Mainnet',
+              nativeCurrency: { name: 'Binance Coin', symbol: 'BNB', decimals: 18 },
+              rpcUrls: ['https://bsc-dataseed.binance.org/'],
+              blockExplorerUrls: ['https://bscscan.com']
+            }]
+          });
+          return true;
+        } catch (addError) {
+          feedbackDiv.style.display = 'block';
+          feedbackDiv.textContent = 'Failed to add BSC network to wallet.';
+          return false;
+        }
+      } else {
+        feedbackDiv.style.display = 'block';
+        feedbackDiv.textContent = 'Failed to switch to BSC network.';
+        return false;
+      }
+    }
+  }
+
+  async function connectWallet() {
+    try {
+      const instance = await web3Modal.connect();
+      provider = new ethers.providers.Web3Provider(instance);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      // Detect network and switch if needed
+      const network = await provider.getNetwork();
+      if (network.chainId !== 56) {
+        const switched = await switchToBSC();
+        if (!switched) {
+          return;
+        }
+      }
+
+      walletAddressDiv.textContent = `Connected: ${userAddress.substring(0,6)}...${userAddress.slice(-4)}`;
+      donateBtn.disabled = false;
+      referralLinkDiv.textContent = `${window.location.origin}?ref=${userAddress}`;
+      referralLinkDiv.title = 'Click to copy referral link';
+      feedbackDiv.style.display = 'none';
+
+      // Copy referral on click
+      referralLinkDiv.onclick = () => {
+        navigator.clipboard.writeText(referralLinkDiv.textContent).then(() => {
+          feedbackDiv.style.display = 'block';
+          feedbackDiv.textContent = 'Referral link copied to clipboard!';
+          setTimeout(() => feedbackDiv.style.display = 'none', 3000);
+        });
+      };
+
+      // Listen for accounts changed
+      instance.on("accountsChanged", (accounts) => {
+        if (accounts.length === 0) {
+          walletAddressDiv.textContent = '';
+          donateBtn.disabled = true;
+          referralLinkDiv.textContent = 'Not connected';
+        } else {
+          userAddress = accounts[0];
+          walletAddressDiv.textContent = `Connected: ${userAddress.substring(0,6)}...${userAddress.slice(-4)}`;
+          referralLinkDiv.textContent = `${window.location.origin}?ref=${userAddress}`;
+        }
+      });
+
+      // Listen for chain changes
+      instance.on("chainChanged", (chainId) => {
+        if (parseInt(chainId, 16) !== 56) {
+          feedbackDiv.style.display = 'block';
+          feedbackDiv.textContent = 'Please switch to Binance Smart Chain to donate.';
+          donateBtn.disabled = true;
+        } else {
+          feedbackDiv.style.display = 'none';
+          donateBtn.disabled = false;
+        }
+      });
+
+    } catch (err) {
+      feedbackDiv.style.display = 'block';
+      feedbackDiv.textContent = 'Wallet connection failed: ' + (err.message || err);
+    }
+  }
+
+  async function donate() {
+    const amount = parseFloat(donationAmountInput.value);
+    if (isNaN(amount) || amount < minDonation) {
+      feedbackDiv.style.display = 'block';
+      feedbackDiv.textContent = `Minimum donation amount is $${minDonation}.`;
+      return;
+    }
+
+    donateBtn.disabled = true;
+    feedbackDiv.style.display = 'block';
+    feedbackDiv.textContent = 'Processing donation... Please confirm in your wallet.';
+
+    try {
+      const usdcContract = new ethers.Contract('0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d', usdcAbi, signer); // USDC token on BSC
+
+      // USDC decimals (normally 18 or 6, USDC uses 18 on BSC)
+      const decimals = await usdcContract.decimals();
+      const value = ethers.utils.parseUnits(amount.toString(), decimals);
+
+      // Transfer USDC from user to charity address
+      const tx = await usdcContract.transfer(charityUSDCAddress, value);
+      await tx.wait();
+
+      // Receipt & confirmation
+      feedbackDiv.textContent = `Thank you for your donation of $${amount.toFixed(2)} USDC! Tx Hash: ${tx.hash}`;
+
+      // Generate & offer a simple receipt download
+      generateReceipt(amount, tx.hash);
+
+      // Clear input
+      donationAmountInput.value = '';
+      anonymousToggle.checked = false;
+
+      // Update total donations display
+      fetchTotalDonations();
+
+    } catch (err) {
+      feedbackDiv.textContent = 'Donation failed: ' + (err.message || err);
+    } finally {
+      donateBtn.disabled = false;
+    }
+  }
+
+  // Generate a simple donation receipt and trigger PDF print/download
+  function generateReceipt(amount, txHash) {
+    const date = new Date().toLocaleString();
+    const anonymous = anonymousToggle.checked ? 'Yes' : 'No';
+    const receiptHTML = `
+      <html><head><title>Donation Receipt</title></head><body style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2>Donation Receipt</h2>
+      <p><strong>Amount Donated:</strong> $${amount.toFixed(2)} USDC</p>
+      <p><strong>Date:</strong> ${date}</p>
+      <p><strong>Transaction Hash:</strong> <a href="https://bscscan.com/tx/${txHash}" target="_blank">${txHash}</a></p>
+      <p><strong>Donor Wallet:</strong> ${anonymousToggle.checked ? 'Anonymous' : userAddress}</p>
+      <hr />
+      <p>Thank you for your generous support! Your donation helps save children's lives.</p>
+      </body></html>
+    `;
+    const newWin = window.open('', '_blank');
+    newWin.document.write(receiptHTML);
+    newWin.document.close();
+    newWin.focus();
+  }
+
+  // Fetch total donations sent to charity address using BscScan API (Public API key)
+  async function fetchTotalDonations() {
+    try {
+      // Using BscScan API to get USDC token transfers to charity address
+      const apiKey = 'YourBscScanAPIKey'; // You can get free key at bscscan.com
+      const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d&address=${charityUSDCAddress}&page=1&offset=100&sort=asc&apikey=${apiKey}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if(data.status !== '1' || !data.result) {
+        totalDonationsDiv.textContent = 'Data unavailable';
+        return;
+      }
+
+      let total = ethers.BigNumber.from(0);
+      for(const tx of data.result) {
+        if(tx.to.toLowerCase() === charityUSDCAddress.toLowerCase()) {
+          total = total.add(ethers.BigNumber.from(tx.value));
+        }
+      }
+
+      // USDC decimals 18 on BSC
+      const totalFormatted = ethers.utils.formatUnits(total, 18);
+
+      totalDonationsDiv.textContent = `${parseFloat(totalFormatted).toFixed(2)} USDC`;
+
+    } catch (err) {
+      totalDonationsDiv.textContent = 'Error loading total donations';
+    }
+  }
+
+  // Add DRF token to wallet function
+  async function addDrfToken() {
+    if(!window.ethereum) {
+      alert('No Ethereum wallet detected');
+      return;
+    }
+    try {
+      const wasAdded = await window.ethereum.request({
+        method: 'wallet_watchAsset',
+        params: drfTokenData,
+      });
+      if(wasAdded) {
+        alert('DRF token added to your wallet!');
+      } else {
+        alert('DRF token not added.');
+      }
+    } catch(e) {
+      alert('Error adding token: ' + e.message);
+    }
+  }
+
+  // Event listeners
+  connectWalletBtn.addEventListener('click', connectWallet);
+  donateBtn.addEventListener('click', donate);
+  addDrfTokenBtn.addEventListener('click', addDrfToken);
+
+  // Disable donate button if amount is below minimum or wallet disconnected
+  donationAmountInput.addEventListener('input', () => {
+    const val = parseFloat(donationAmountInput.value);
+    donateBtn.disabled = !userAddress || isNaN(val) || val < minDonation;
+  });
+
+  // Load total donations on page load
+  fetchTotalDonations();
 </script>
+
 </body>
 </html>
