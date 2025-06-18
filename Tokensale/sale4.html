@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Digital Rufiya Charitable Donation</title>
+  <style>
+    body {
+      background: #0a2e1c;
+      color: #e0f0d9;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background: #114b2e;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px #238636cc;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 0.5em;
+    }
+    img.logo {
+      width: 150px;
+      margin-bottom: 1em;
+    }
+    button, input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 1.1em;
+    }
+    input {
+      background: #0a2e1c;
+      color: #c8e6c9;
+      border: 1.5px solid #238636;
+    }
+    button {
+      background: #238636;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    button:disabled {
+      background: #2ea043aa;
+      cursor: not-allowed;
+    }
+    a.referral-link {
+      color: #a9d18e;
+      word-break: break-word;
+    }
+    .info {
+      margin-top: 15px;
+      font-size: 0.9em;
+      color: #d4edda;
+    }
+    .alert {
+      background: #2c3e2f;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 15px;
+      color: #d4edda;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.85em;
+      color: #a3c59d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%2018,%202025,%2002_42_21%20AM.png?updatedAt=1750200769821" alt="Digital Rufiya Logo" class="logo" />
+    <h1>Give Charity & Earn DrF Tokens</h1>
+    <p class="info">Support orphans, save lives, and unify the Ummah by donating USDC on BSC.</p>
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="switchBtn" style="display:none">Switch to BSC</button>
+    <input type="number" id="donationAmount" placeholder="Enter USDC amount" min="0.1" step="0.01" disabled />
+    <button id="donateBtn" disabled>Donate & Get DrF</button>
+    <p id="statusMsg" class="alert" style="display:none"></p>
+    <h3>Your Referral Link</h3>
+    <p><a id="referralLink" class="referral-link" href="#">-</a></p>
+    <button id="copyRefBtn">Copy Link</button>
+    <h3>Your DRF Balance</h3>
+    <p id="drfBalance">-</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+  <script type="module">
+    import { Web3Modal } from 'https://unpkg.com/@web3modal/html@2.4.4/dist/index.js';
+
+    const DRF = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDC = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const RECEIVER = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+    const chainId = 56;
+    const projectId = "9332014bbcedde12a87a2deb0e57c147";
+    const abi = ["function balanceOf(address) view returns (uint)", "function decimals() view returns (uint8)", "function transfer(address,uint) returns (bool)"];
+
+    const connectBtn = document.getElementById("connectBtn");
+    const switchBtn = document.getElementById("switchBtn");
+    const donateBtn = document.getElementById("donateBtn");
+    const input = document.getElementById("donationAmount");
+    const statusMsg = document.getElementById("statusMsg");
+    const refEl = document.getElementById("referralLink");
+    const copyBtn = document.getElementById("copyRefBtn");
+    const drfBal = document.getElementById("drfBalance");
+
+    const modal = new Web3Modal({ projectId });
+    let signer, address, provider;
+
+    connectBtn.onclick = async () => {
+      try {
+        const instance = await modal.connect();
+        provider = new ethers.BrowserProvider(instance);
+        signer = await provider.getSigner();
+        address = await signer.getAddress();
+        connectBtn.textContent = address.slice(0, 6) + "..." + address.slice(-4);
+        input.disabled = false;
+        checkChain();
+        setRefLink();
+        updateBalance();
+      } catch (e) {
+        alert("Connection failed");
+      }
+    };
+
+    switchBtn.onclick = async () => {
+      await provider.send("wallet_switchEthereumChain", [{ chainId: "0x38" }]);
+      switchBtn.style.display = "none";
+    };
+
+    input.oninput = () => {
+      donateBtn.disabled = !(input.value > 0 && switchBtn.style.display === "none");
+    };
+
+    donateBtn.onclick = async () => {
+      const amount = ethers.parseUnits(input.value, 6);
+      const usdc = new ethers.Contract(USDC, abi, signer);
+      await usdc.transfer(RECEIVER, amount);
+
+      // simulate DRF sent
+      const drfAmt = ethers.parseUnits((parseFloat(input.value) * 15.42).toFixed(2), 18);
+      const drf = new ethers.Contract(DRF, abi, signer);
+      // await drf.transfer(address, drfAmt); // optionally only if signer controls DRF
+
+      statusMsg.textContent = `Thank you! ${input.value} USDC donated. You earned ${(parseFloat(input.value) * 15.42).toFixed(2)} DrF.`;
+      statusMsg.style.display = "block";
+      input.value = "";
+      donateBtn.disabled = true;
+      updateBalance();
+    };
+
+    function setRefLink() {
+      const base = window.location.origin + window.location.pathname;
+      const ref = new URLSearchParams(window.location.search).get("ref") || address;
+      refEl.href = `${base}?ref=${address}`;
+      refEl.textContent = `${base}?ref=${address}`;
+    }
+
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(refEl.href);
+      alert("Referral link copied!");
+    };
+
+    async function updateBalance() {
+      const token = new ethers.Contract(DRF, abi, provider);
+      const bal = await token.balanceOf(address);
+      const dec = await token.decimals();
+      drfBal.textContent = ethers.formatUnits(bal, dec) + " DrF";
+    }
+
+    async function checkChain() {
+      const net = await provider.getNetwork();
+      if (net.chainId !== chainId) {
+        switchBtn.style.display = "block";
+        donateBtn.disabled = true;
+      } else {
+        switchBtn.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
