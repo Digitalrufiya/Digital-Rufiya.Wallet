@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boost Content - DRFMedia</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0066cc; }
+    input, textarea, select, button {
+      width: 100%; margin-bottom: 15px; padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc;
+    }
+    button {
+      background-color: #0066cc; color: white; font-weight: bold; border: none; cursor: pointer;
+    }
+    button:hover { background-color: #004a99; }
+    .qr-container { text-align: center; margin-top: 20px; }
+    .meta-button { background-color: #34a853; margin-bottom: 10px; }
+    .note { font-size: 14px; color: #555; margin-top: -10px; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🚀 Boost a Post</h2>
+
+    <label for="link">Post Link to Boost</label>
+    <input type="url" id="link" placeholder="https://drfchain.org/media/video-id" required />
+
+    <label for="amount">Boost Amount</label>
+    <select id="amount">
+      <option value="1">$1 - Supporter</option>
+      <option value="10">$10 - Helper of Ummah</option>
+      <option value="50">$50 - Waqf Contributor</option>
+    </select>
+
+    <label for="dua">Optional Message / Du'a</label>
+    <textarea id="dua" placeholder="May Allah accept this from me..."></textarea>
+
+    <button id="payWithMetaMask" class="meta-button">Pay with MetaMask</button>
+
+    <div class="qr-container">
+      <p class="note">Or scan QR to pay manually:</p>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=0xYourDRFWalletAddressHere" alt="QR Code" />
+      <p style="word-break: break-all;">Wallet: <strong>0xYourDRFWalletAddressHere</strong></p>
+    </div>
+  </div>
+
+  <script>
+    async function sendBoost() {
+      const link = document.getElementById('link').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const dua = document.getElementById('dua').value.trim();
+      const adminWallet = "0xYourDRFWalletAddressHere"; // Replace with your wallet address
+
+      if (!link || !/^https?:\/\//.test(link)) {
+        alert("Please enter a valid link."); return;
+      }
+
+      if (typeof window.ethereum === 'undefined') {
+        alert("Please install MetaMask."); return;
+      }
+
+      const web3 = new Web3(window.ethereum);
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await web3.eth.getAccounts();
+        const from = accounts[0];
+
+        const tx = {
+          from,
+          to: adminWallet,
+          value: web3.utils.toWei(amount.toString(), 'ether'), // assuming ETH or BNB
+        };
+
+        const txHash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [tx] });
+
+        alert("Boost sent! Tx Hash: " + txHash);
+
+        // Optional: save boost info to Firebase or log
+        // Save {link, amount, dua, txHash} for future boosting
+
+      } catch (e) {
+        console.error(e);
+        alert("Transaction failed: " + e.message);
+      }
+    }
+
+    document.getElementById('payWithMetaMask').onclick = sendBoost;
+  </script>
+
+  <!-- Web3.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+</body>
+</html>
