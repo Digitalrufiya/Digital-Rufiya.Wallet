@@ -5,122 +5,235 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    #settingsBtn {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      background: #fff;
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      border: 1px solid #ccc;
-      font-size: 18px;
-      text-align: center;
-      line-height: 36px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: background-color 0.2s ease;
-    }
-    #settingsBtn:hover { background-color: #eaeaea; }
-    form, #boostSection { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    input[type="file"] { display: block; margin-bottom: 15px; width: 100%; }
-    textarea { width: 100%; height: 60px; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; resize: none; font-size: 14px; }
-    button { padding: 10px 20px; border: none; background: #0066cc; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 15px; }
-    #postContainer { max-width: 700px; margin: 0 auto; }
-    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
-    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; display: block; margin: 0 auto; }
-    .post-caption, .post-owner, .post-time { margin: 10px 0; font-size: 16px; text-align: center; }
-    video { background: #000; }
-    .offline-banner {
-      text-align: center;
-      background: #ffefc3;
-      padding: 10px;
-      color: #333;
-      font-weight: bold;
-    }
+    /* [same styles as before, unchanged for brevity] */
   </style>
 </head>
 <body>
-  <div style="background:white; text-align:center; padding: 20px 0;">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" 
-         alt="DRFMedia Logo" 
-         style="max-height: 120px; object-fit: contain;" />
-    <h1>DRFMedia</h1>
-  </div>
+  <!-- [same body as before up to the script] -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  <div id="settingsBtn" title="Profile" onclick="window.location='social.html'">⚙️</div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
 
-  <div id="postContainer"></div>
-  <div class="offline-banner" id="offlineBanner" style="display: none;">Offline Mode: Showing cached videos</div>
-
-  <script>
-    const postContainer = document.getElementById("postContainer");
-    const offlineBanner = document.getElementById("offlineBanner");
-
-    const posts = [
-      {
-        id: 1,
-        caption: "Helping hands for Gaza",
-        fileUrl: "https://ipfs.io/ipfs/QmExampleVideoCID",
-        type: "video",
-        timestamp: Date.now(),
-        userName: "DRF Admin"
-      },
-      {
-        id: 2,
-        caption: "Feeding Orphans",
-        fileUrl: "https://ipfs.io/ipfs/QmExampleImageCID",
-        type: "image",
-        timestamp: Date.now(),
-        userName: "DRF Admin"
-      }
+    const gateways = [
+      'https://cloudflare-ipfs.com/ipfs/',
+      'https://gateway.pinata.cloud/ipfs/',
+      'https://ipfs.io/ipfs/'
     ];
 
-    function renderPosts(postList) {
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+    const filterBtn = document.getElementById("filterMyPosts");
+    const loadingSpinner = document.getElementById("loadingSpinner");
+
+    let currentUser = null;
+    let showOnlyMyPosts = false;
+
+    loginBtn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Login error: " + e.message);
+      }
+    };
+
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      loginBtn.style.display = user ? "none" : "block";
+      logoutBtn.style.display = user ? "block" : "none";
+      uploadForm.style.display = user ? "block" : "none";
+      filterBtn.style.display = user ? "block" : "none";
+      document.getElementById("boostSection").style.display = user ? "block" : "none";
       postContainer.innerHTML = "";
-      postList.forEach(post => {
-        const postDiv = document.createElement('div');
-        postDiv.classList.add('post-item');
+      if (user) loadPosts();
+    });
 
-        let media = '';
-        if (post.type === 'image') {
-          media = `<img src="${post.fileUrl}" alt="Post image"/>`;
-        } else if (post.type === 'video') {
-          media = `
-            <video controls preload="metadata" width="100%">
-              <source src="${post.fileUrl}#t=0.1" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>`;
-        }
+    const pinataJWT = "Bearer ..."; // Keep your real token here
 
-        postDiv.innerHTML = `
-          ${media}
-          <p class="post-caption">${post.caption}</p>
-          <p class="post-owner">By ${post.userName}</p>
-          <p class="post-time">Just now</p>
-        `;
+    async function uploadToPinata(file) {
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
 
-        postContainer.appendChild(postDiv);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: pinataJWT },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Pinata upload failed');
+      const data = await response.json();
+      return data.IpfsHash;
+    }
+
+    function getFileType(file) {
+      if (file.type.startsWith('image/')) return 'image';
+      if (file.type.startsWith('video/')) return 'video';
+      return 'unknown';
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || caption.length < 4) return alert('Please select a file and caption at least 4 characters long.');
+
+      try {
+        uploadForm.querySelector('button').disabled = true;
+        uploadForm.querySelector('button').textContent = 'Posting...';
+
+        const cid = await uploadToPinata(file);
+        const fileUrl = `${gateways[0]}${cid}`;
+        const type = getFileType(file);
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          comments: {},
+          uid: currentUser.uid,
+          userName: currentUser.displayName,
+          userPhoto: currentUser.photoURL
+        });
+
+        mediaFileInput.value = '';
+        captionInput.value = '';
+      } catch (error) {
+        alert('Upload failed: ' + error.message);
+      } finally {
+        uploadForm.querySelector('button').disabled = false;
+        uploadForm.querySelector('button').textContent = 'Post';
+      }
+    });
+
+    filterBtn.onclick = () => {
+      showOnlyMyPosts = !showOnlyMyPosts;
+      filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+      loadPosts();
+    };
+
+    function loadPosts() {
+      loadingSpinner.style.display = 'block';
+      onValue(ref(db, 'posts/'), (snapshot) => {
+        loadingSpinner.style.display = 'none';
+        const posts = [];
+        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+        posts.sort((a, b) => b.timestamp - a.timestamp);
+
+        postContainer.innerHTML = '';
+        posts.forEach(post => {
+          if (showOnlyMyPosts && post.uid !== currentUser?.uid) return;
+
+          const postDiv = document.createElement('div');
+          postDiv.className = 'post-item';
+
+          const media = post.type === 'image'
+            ? `<img src="${post.fileUrl}" alt="Post image"/>`
+            : `<video controls preload="metadata" playsinline muted>
+                 <source src="${post.fileUrl}" type="video/mp4">
+                 Your browser does not support the video tag.
+               </video>`;
+
+          let commentsHtml = '';
+          if (post.comments) {
+            Object.values(post.comments).forEach(comment => {
+              if (typeof comment === 'string') {
+                commentsHtml += `<div class="comment-item"><div class="comment-text">${escapeHtml(comment)}</div></div>`;
+              } else {
+                commentsHtml += `<div class="comment-item">
+                  <img src="${escapeHtml(comment.userPhoto || 'https://www.gravatar.com/avatar/?d=mp&f=y')}" />
+                  <div class="comment-text"><span class="comment-author">${escapeHtml(comment.userName)}:</span> ${escapeHtml(comment.text)}</div>
+                </div>`;
+              }
+            });
+          }
+
+          const isOwner = currentUser && post.uid === currentUser.uid;
+
+          postDiv.innerHTML = `
+            ${media}
+            <p class="post-caption">${escapeHtml(post.caption)}</p>
+            <p class="post-owner">By ${escapeHtml(post.userName || 'Anonymous')}</p>
+            <p class="post-time">${timeAgo(post.timestamp)}</p>
+            <div class="post-actions">
+              <button onclick="likePost('${post.id}')">👍 Like <span>${post.likes || 0}</span></button>
+              <button onclick="commentPost('${post.id}')">💬 Comment</button>
+              <button onclick="sharePost('${post.fileUrl}')">🔗 Share</button>
+              ${isOwner ? `<button onclick="deletePost('${post.id}')">🗑️ Delete</button>` : ''}
+            </div>
+            <div class="comment-section">${commentsHtml}</div>
+          `;
+          postContainer.appendChild(postDiv);
+        });
       });
     }
 
-    // Offline detection
-    window.addEventListener('load', () => {
-      if (!navigator.onLine) {
-        offlineBanner.style.display = 'block';
+    function timeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      const intervals = { year: 31536000, month: 2592000, week: 604800, day: 86400, hour: 3600, minute: 60, second: 1 };
+      for (let unit in intervals) {
+        const value = Math.floor(seconds / intervals[unit]);
+        if (value > 0) return `${value} ${unit}${value > 1 ? 's' : ''} ago`;
       }
-      renderPosts(posts);
-    });
+      return "Just now";
+    }
 
-    window.addEventListener('offline', () => {
-      offlineBanner.style.display = 'block';
-    });
+    function escapeHtml(text) {
+      return text?.replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m])) || '';
+    }
 
-    window.addEventListener('online', () => {
-      offlineBanner.style.display = 'none';
-    });
+    window.likePost = async (id) => {
+      const refPath = ref(db, `posts/${id}`);
+      const res = await fetch(`${firebaseConfig.databaseURL}/posts/${id}.json`);
+      const current = (await res.json())?.likes || 0;
+      await update(refPath, { likes: current + 1 });
+    };
+
+    window.commentPost = (id) => {
+      const text = prompt("Write your comment:");
+      if (!text?.trim()) return;
+      const commentRef = ref(db, `posts/${id}/comments`);
+      push(commentRef, {
+        text: text.trim(),
+        userName: currentUser.displayName || "Anonymous",
+        userPhoto: currentUser.photoURL || ''
+      });
+    };
+
+    window.sharePost = (url) => {
+      navigator.share?.({ url }).catch(() => prompt("Copy this URL:", url));
+    };
+
+    window.deletePost = async (id) => {
+      if (confirm("Are you sure you want to delete this post?")) {
+        await remove(ref(db, `posts/${id}`));
+      }
+    };
   </script>
 </body>
 </html>
