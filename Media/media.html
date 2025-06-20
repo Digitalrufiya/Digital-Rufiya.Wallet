@@ -7,9 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0066cc" />
-
   <style>
-    /* Basic styles */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -24,8 +22,6 @@
       top: 0;
       z-index: 1000;
       box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-    }
-    .navbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -174,37 +170,55 @@
       border-radius: 6px;
       margin-top: 10px;
       background: black;
+      display: block;
+    }
+
+    /* Search bar */
+    #searchBar {
+      max-width: 700px;
+      margin: 10px auto 20px auto;
+      padding: 0 15px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="navbar">
-    <div class="navbar-left">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-      <h1>DRFMedia</h1>
-    </div>
-
-    <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-
-    <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
-      <a href="#">Home</a>
-      <a href="#">Timeline</a>
-      <a href="#">Upload</a>
-      <a href="#" id="profileLink" style="display:none;">Profile</a>
-      <a href="#" id="loginNavLink">Login</a>
-      <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
-    </nav>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia</h1>
   </div>
+
+  <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+    <a href="#">Home</a>
+    <a href="#">Timeline</a>
+    <a href="#">Upload</a>
+    <a href="#" id="profileLink" style="display:none;">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
 </header>
 
-<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
-<button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
+<div id="searchBar">
+  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
+</div>
+
+<button id="loginBtn" aria-label="Sign in with Google" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
+<button id="logoutBtn" aria-label="Logout" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
 
 <form id="uploadForm" aria-label="Upload new post form" style="display:none; max-width:700px; margin:20px auto;">
   <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
@@ -220,11 +234,27 @@
   // Menu toggle button
   const menuToggle = document.getElementById('menuToggle');
   const primaryNav = document.getElementById('primaryNav');
-
   menuToggle.addEventListener('click', () => {
     const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
     menuToggle.setAttribute('aria-expanded', !expanded);
     primaryNav.classList.toggle('open');
+  });
+
+  // Simple search filter (client side)
+  const searchInput = document.getElementById('searchInput');
+  const postContainer = document.getElementById('postContainer');
+
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    const posts = postContainer.querySelectorAll('.post-item');
+    posts.forEach(post => {
+      const caption = post.querySelector('.post-caption').textContent.toLowerCase();
+      if (caption.includes(query)) {
+        post.style.display = '';
+      } else {
+        post.style.display = 'none';
+      }
+    });
   });
 </script>
 
