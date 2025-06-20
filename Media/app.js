@@ -8,6 +8,7 @@ import {
   onValue,
   update,
   get,
+  remove,
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import {
   getAuth,
@@ -36,6 +37,14 @@ const db = getDatabase(app);
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
+// Admin emails allowed to delete posts
+const adminEmails = new Set([
+  "digitalrufiyauniversity@gmail.com",
+  "digitalrufiya@gmail.com",
+  "digitalrufiyacoin@gmail.com",
+  "onenone91000@gmail.com",
+]);
+
 // DOM Elements
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -52,7 +61,7 @@ onAuthStateChanged(auth, (user) => {
   uploadForm.style.display = user ? "block" : "none";
   loginBtn.style.display = user ? "none" : "block";
   logoutBtn.style.display = user ? "block" : "none";
-  renderPosts(); // Re-render posts to update like/comment buttons visibility
+  renderPosts(); // Re-render posts with updated user info
 });
 
 // Login & Logout
@@ -112,7 +121,7 @@ uploadForm.addEventListener("submit", async (e) => {
   }
 });
 
-// Fetch and render posts (with likes & comments)
+// Fetch and render posts (with likes, comments, delete, share)
 function renderPosts() {
   const postsRef = ref(db, "posts");
   onValue(postsRef, (snapshot) => {
@@ -131,6 +140,8 @@ function renderPosts() {
       if (currentUser && post.likes && post.likes[currentUser.uid]) {
         userLiked = post.likes[currentUser.uid] === true;
       }
+
+      const isAdmin = currentUser && adminEmails.has(currentUser.email);
 
       const card = document.createElement("div");
       card.className = "post-item";
@@ -153,6 +164,10 @@ function renderPosts() {
           <button class="comment-toggle-btn" data-postid="${postId}" aria-expanded="false">
             💬 <span class="comment-count">${commentsCount}</span>
           </button>
+          <button class="share-btn" data-postid="${postId}">
+            🔗 Share
+          </button>
+          ${isAdmin ? `<button class="delete-btn" data-postid="${postId}" aria-label="Delete post">🗑️ Delete</button>` : ""}
         </div>
 
         <div class="comments-section" id="comments-${postId}" style="display:none;">
@@ -200,6 +215,29 @@ function renderPosts() {
           }
         };
       }
+
+      // Delete button event (admin only)
+      if (isAdmin) {
+        const deleteBtn = card.querySelector(".delete-btn");
+        if (deleteBtn) {
+          deleteBtn.onclick = () => {
+            if (confirm("Are you sure you want to delete this post?")) {
+              deletePost(postId);
+            }
+          };
+        }
+      }
+
+      // Share button event
+      const shareBtn = card.querySelector(".share-btn");
+      shareBtn.onclick = () => {
+        const postUrl = `${window.location.origin}${window.location.pathname}?postId=${postId}`;
+        navigator.clipboard.writeText(postUrl).then(() => {
+          alert("Post URL copied to clipboard!");
+        }).catch(() => {
+          alert("Failed to copy URL. Try manually: " + postUrl);
+        });
+      };
     }
   });
 }
@@ -283,6 +321,22 @@ async function postComment(postId, text) {
   const snap = await get(postRef);
   const commentsCount = snap.val()?.commentsCount || 0;
   await update(postRef, { commentsCount: commentsCount + 1 });
+}
+
+// Delete post (admin only)
+async function deletePost(postId) {
+  if (!currentUser || !adminEmails.has(currentUser.email)) {
+    alert("You do not have permission to delete posts.");
+    return;
+  }
+  try {
+    await remove(ref(db, `posts/${postId}`));
+    await remove(ref(db, `comments/${postId}`));
+    alert("Post deleted successfully.");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete post: " + err.message);
+  }
 }
 
 // Escape HTML utility
