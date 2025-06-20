@@ -13,9 +13,9 @@
     }
     .profile-container {
       max-width: 400px;
-      margin: 60px auto;
+      margin: 30px auto;
       background: #fff;
-      padding: 30px;
+      padding: 20px;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
       text-align: center;
@@ -58,6 +58,26 @@
     input[type="file"] {
       display: none;
     }
+
+    /* Uploaded video styles */
+    #myVideos {
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    #myVideos h4 {
+      margin: 10px 0 4px;
+      color: #333;
+    }
+    #myVideos video {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    #myVideos p {
+      color: #555;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -71,7 +91,6 @@
     <button onclick="updateName()">Edit Name</button>
     
     <p id="email">email@example.com</p>
-
     <p id="drfmAddress">DRFM Token Address: <small>Not set</small></p>
     <button onclick="updateDRFM()">Edit Token Address</button>
 
@@ -81,6 +100,9 @@
     <button class="logout" onclick="logout()">Logout</button>
     <a class="back-link" href="index.html">⬅ Back to Timeline</a>
   </div>
+
+  <h3 style="text-align:center; margin-top:10px;">🎞️ My Uploaded Videos</h3>
+  <div id="myVideos">Loading videos...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -115,10 +137,10 @@
     const drfmAddress = document.getElementById('drfmAddress');
     const country = document.getElementById('country');
     const uploadInput = document.getElementById('uploadPic');
+    const myVideosDiv = document.getElementById("myVideos");
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Set default values
         profilePic.src = user.photoURL || 'https://via.placeholder.com/100';
         displayName.textContent = user.displayName || 'Anonymous';
         email.textContent = user.email;
@@ -129,6 +151,30 @@
 
         drfmAddress.innerHTML = `DRFM Token Address: <small>${data.drfm || 'Not set'}</small>`;
         country.innerHTML = `Country: <small>${data.country || 'Not set'}</small>`;
+
+        // Fetch user videos
+        const postsRef = dbRef(database, 'posts');
+        const postSnap = await get(postsRef);
+        const postData = postSnap.exists() ? postSnap.val() : {};
+        const userVideos = Object.values(postData).filter(v => v.userId === user.uid);
+
+        if (userVideos.length === 0) {
+          myVideosDiv.innerHTML = "<p style='text-align:center;'>No videos uploaded yet.</p>";
+        } else {
+          myVideosDiv.innerHTML = "";
+          userVideos.reverse().forEach(v => {
+            const card = document.createElement("div");
+            card.innerHTML = `
+              <h4>${v.title || "Untitled Video"}</h4>
+              <video controls>
+                <source src="https://ipfs.io/ipfs/${v.ipfsHash}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+              <p>${v.description || ""}</p>
+            `;
+            myVideosDiv.appendChild(card);
+          });
+        }
       } else {
         window.location.href = 'index.html';
       }
@@ -172,14 +218,13 @@
     uploadInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file && auth.currentUser) {
-        const storagePath = `profilePhotos/${auth.currentUser.uid}`;
-        const sRef = storageRef(storage, storagePath);
+        const path = `profilePhotos/${auth.currentUser.uid}`;
+        const sRef = storageRef(storage, path);
         try {
           await uploadBytes(sRef, file);
           const url = await getDownloadURL(sRef);
           await updateProfile(auth.currentUser, { photoURL: url });
           profilePic.src = url;
-
           alert("Profile photo updated!");
         } catch (err) {
           alert("Upload failed: " + err.message);
