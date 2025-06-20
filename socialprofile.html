@@ -5,77 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Profile</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f4f4f4;
-      color: #222;
-    }
-    header {
-      background-color: #0066cc;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    #profile {
-      max-width: 700px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #coverPhoto {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 10px 10px 0 0;
-      background: #ddd;
-      cursor: pointer;
-    }
-    #profilePhotoWrapper {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin: -70px auto 10px;
-      border-radius: 50%;
-      border: 4px solid white;
-      overflow: hidden;
-      cursor: pointer;
-      background: #eee;
-    }
-    #profilePhoto {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    input[type="file"] {
-      display: none;
-    }
-    input, textarea {
-      width: 100%;
-      margin-top: 10px;
-      padding: 10px;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    #saveProfileBtn {
-      background-color: #0066cc;
-      color: white;
-      padding: 12px;
-      width: 100%;
-      margin-top: 20px;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    header { background: #0066cc; color: white; padding: 20px; text-align: center; }
+    #profile { max-width: 700px; margin: 20px auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    #coverPhoto { width: 100%; height: 180px; object-fit: cover; border-radius: 10px 10px 0 0; cursor: pointer; background: #ddd; }
+    #profilePhotoWrapper { width: 120px; height: 120px; margin: -70px auto 10px; border: 4px solid white; border-radius: 50%; overflow: hidden; background: #eee; cursor: pointer; }
+    #profilePhoto { width: 100%; height: 100%; object-fit: cover; }
+    input, textarea, button { display: block; width: 100%; margin: 10px auto; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #0066cc; color: white; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
 
-<header><h1>DRFMedia Profile</h1></header>
+<header>
+  <h1>DRFMedia Profile</h1>
+</header>
 
 <div id="profile">
   <img id="coverPhoto" src="" alt="Cover Photo" title="Click to change cover photo" />
@@ -83,19 +27,19 @@
     <img id="profilePhoto" src="" alt="Profile Photo" />
   </div>
 
-  <input type="file" id="coverPhotoInput" accept="image/*" />
-  <input type="file" id="profilePhotoInput" accept="image/*" />
+  <input type="file" id="coverPhotoInput" accept="image/*" hidden />
+  <input type="file" id="profilePhotoInput" accept="image/*" hidden />
 
-  <input type="text" id="editName" placeholder="Your Name" />
-  <textarea id="editBio" placeholder="Your Bio (optional)"></textarea>
-  <input type="text" id="drfmWallet" placeholder="Your DRFM Wallet Address (Required)" />
+  <input type="text" id="editName" placeholder="Your name" />
+  <textarea id="editBio" placeholder="Your bio (optional)"></textarea>
+  <input type="text" id="drfmAddress" placeholder="Your DRFM Token Address" />
   <button id="saveProfileBtn">Save Profile</button>
 </div>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
   import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
-  import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -107,8 +51,7 @@
     appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
   };
 
-  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb...";
-  const PINATA_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";"; // ✅ Add full JWT here
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
@@ -116,96 +59,90 @@
 
   const coverPhoto = document.getElementById('coverPhoto');
   const profilePhoto = document.getElementById('profilePhoto');
-  const coverPhotoInput = document.getElementById('coverPhotoInput');
-  const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const coverInput = document.getElementById('coverPhotoInput');
+  const profileInput = document.getElementById('profilePhotoInput');
   const editName = document.getElementById('editName');
   const editBio = document.getElementById('editBio');
-  const drfmWallet = document.getElementById('drfmWallet');
-  const saveProfileBtn = document.getElementById('saveProfileBtn');
+  const drfmAddress = document.getElementById('drfmAddress');
+  const saveBtn = document.getElementById('saveProfileBtn');
 
   let currentUser = null;
+
+  coverPhoto.onclick = () => coverInput.click();
+  profilePhoto.onclick = () => profileInput.click();
+
   let coverFile = null;
   let profileFile = null;
 
+  coverInput.onchange = e => {
+    coverFile = e.target.files[0];
+    if (coverFile) coverPhoto.src = URL.createObjectURL(coverFile);
+  };
+
+  profileInput.onchange = e => {
+    profileFile = e.target.files[0];
+    if (profileFile) profilePhoto.src = URL.createObjectURL(profileFile);
+  };
+
   async function uploadToPinata(file) {
     const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch(PINATA_UPLOAD_URL, {
-      method: 'POST',
-      headers: { Authorization: PINATA_JWT },
+    formData.append("file", file);
+
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: PINATA_JWT
+      },
       body: formData
     });
+
     const data = await res.json();
     return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
   }
 
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      alert("Please login to view your profile.");
-      return;
-    }
-    currentUser = user;
-    const userRef = ref(db, `users/${user.uid}`);
-
-    onValue(userRef, snapshot => {
-      const data = snapshot.val() || {};
-      editName.value = data.displayName || "";
-      editBio.value = data.bio || "";
-      drfmWallet.value = data.drfm || "";
-      coverPhoto.src = data.coverPhoto || "https://via.placeholder.com/700x180?text=Cover+Photo";
-      profilePhoto.src = data.photoURL || "https://i.pravatar.cc/150";
-    });
-  });
-
-  coverPhoto.addEventListener('click', () => coverPhotoInput.click());
-  profilePhoto.addEventListener('click', () => profilePhotoInput.click());
-
-  coverPhotoInput.addEventListener('change', e => {
-    coverFile = e.target.files[0];
-    coverPhoto.src = URL.createObjectURL(coverFile);
-  });
-
-  profilePhotoInput.addEventListener('change', e => {
-    profileFile = e.target.files[0];
-    profilePhoto.src = URL.createObjectURL(profileFile);
-  });
-
-  saveProfileBtn.addEventListener('click', async () => {
+  saveBtn.onclick = async () => {
     if (!currentUser) return;
 
-    const name = editName.value.trim();
-    const bio = editBio.value.trim();
-    const wallet = drfmWallet.value.trim();
-
-    if (!wallet.startsWith("0x") || wallet.length !== 42) {
-      alert("Please enter a valid DRFM wallet address.");
-      return;
-    }
+    const updates = {};
+    saveBtn.textContent = "Saving...";
 
     try {
-      const updates = {
-        displayName: name,
-        bio: bio,
-        drfm: wallet
-      };
-
       if (coverFile) {
         const coverUrl = await uploadToPinata(coverFile);
         updates.coverPhoto = coverUrl;
       }
-
       if (profileFile) {
         const profileUrl = await uploadToPinata(profileFile);
         updates.photoURL = profileUrl;
-        await updateProfile(currentUser, { photoURL: profileUrl });
       }
+
+      updates.displayName = editName.value.trim();
+      updates.bio = editBio.value.trim();
+      updates.drfm = drfmAddress.value.trim();
 
       await update(ref(db, `users/${currentUser.uid}`), updates);
       alert("Profile saved successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to save profile. Please try again.");
+      alert("Error saving profile.");
     }
+
+    saveBtn.textContent = "Save Profile";
+  };
+
+  onAuthStateChanged(auth, user => {
+    if (!user) return;
+    currentUser = user;
+
+    const userRef = ref(db, `users/${user.uid}`);
+    onValue(userRef, snapshot => {
+      const data = snapshot.val() || {};
+      coverPhoto.src = data.coverPhoto || "https://via.placeholder.com/700x180?text=Cover+Photo";
+      profilePhoto.src = data.photoURL || "https://i.pravatar.cc/150";
+      editName.value = data.displayName || "";
+      editBio.value = data.bio || "";
+      drfmAddress.value = data.drfm || "";
+    });
   });
 </script>
 
