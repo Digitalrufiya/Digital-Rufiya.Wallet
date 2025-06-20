@@ -8,37 +8,68 @@
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0066cc" />
   <style>
-    /* Your existing post styles */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #fafafa;
+    }
+
     .post-item {
       border: 1px solid #ccc;
       padding: 1em;
       margin-bottom: 1em;
       border-radius: 6px;
-      background: #f9f9f9;
+      background: #fff;
     }
+
     .post-owner {
       display: flex;
       align-items: center;
       gap: 0.5em;
       font-weight: bold;
     }
+
     .avatar {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       object-fit: cover;
     }
+
     .post-time {
       font-size: 0.8em;
       color: #777;
       margin: 0.3em 0;
     }
+
     .post-caption {
       margin: 0.5em 0;
     }
+
+    .post-media {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 0.5em;
+    }
+
+    video.post-media {
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      background: #000;
+      border: 1px solid #ccc;
+    }
+
+    img.post-media {
+      max-height: 400px;
+      object-fit: cover;
+    }
+
     .post-actions {
       margin-top: 0.5em;
     }
+
     .post-actions button {
       margin-right: 0.5em;
       cursor: pointer;
@@ -47,177 +78,61 @@
       border: none;
       padding: 0.3em;
     }
+
     .post-actions button[aria-pressed="true"] {
       color: red;
     }
+
     .comments-section {
       margin-top: 0.5em;
       border-top: 1px solid #ddd;
       padding-top: 0.5em;
     }
+
     .comment-item {
       margin-bottom: 0.3em;
       font-size: 0.9em;
     }
+
     .comment-time {
       font-size: 0.7em;
       color: #666;
     }
+
     .comment-form {
       display: flex;
       gap: 0.5em;
       margin-top: 0.5em;
     }
+
     .comment-form input {
       flex: 1;
       padding: 0.3em;
     }
+
     .comment-form button {
       padding: 0.3em 0.7em;
       cursor: pointer;
     }
+
     .delete-btn {
       color: #900;
       font-weight: bold;
       font-size: 0.9em;
       cursor: pointer;
     }
+
     .share-btn {
       color: #0077cc;
       font-weight: bold;
       font-size: 0.9em;
     }
 
-    /* Menu toggle button styles */
-    #menuToggle {
-      background: #fff;
-      border: 2px solid #0066cc;
-      border-radius: 6px;
-      cursor: pointer;
-      width: 36px;
-      height: 30px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-around;
-      padding: 5px;
-      margin-left: 1em;
-      transition: background-color 0.3s ease;
-    }
-    #menuToggle:hover {
-      background-color: #e6f0ff;
-    }
-    #menuToggle span {
-      display: block;
-      height: 4px;
-      background: #0066cc;
-      border-radius: 2px;
-      transition: all 0.3s ease;
-    }
-
-    /* Primary nav styles */
-    #primaryNav {
-      display: none;
-      position: absolute;
-      background: white;
-      top: 60px; /* adjust depending on your header height */
-      left: 0;
-      right: 0;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-      padding: 10px 0;
-      z-index: 1000;
-    }
-    #primaryNav.open {
-      display: block;
-    }
-    #primaryNav a {
-      display: block;
-      padding: 10px 20px;
-      color: #000;
-      text-decoration: none;
-    }
-    #primaryNav a:hover {
-      background-color: #f0f0f0;
-    }
-
-    /* Dark mode toggle button */
-    #darkModeToggle {
-      margin-left: auto;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      font-size: 1.5em;
-      padding: 0 10px;
-    }
-
-    /* Navbar flex container */
-    .navbar {
-      display: flex;
-      align-items: center;
-      padding: 10px 20px;
-      position: relative;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      z-index: 1100;
-    }
-
-    .navbar-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .navbar-left img {
-      height: 40px;
-    }
-
-    /* Responsive styles for bigger screens */
-    @media (min-width: 768px) {
-      #menuToggle {
-        display: none;
-      }
-      #primaryNav {
-        display: flex !important;
-        position: static;
-        background: transparent;
-        box-shadow: none;
-        padding: 0;
-        margin-left: 2em;
-      }
-      #primaryNav a {
-        display: inline-block;
-        padding: 10px 15px;
-        color: #000;
-      }
-      #primaryNav a:hover {
-        background-color: transparent;
-        text-decoration: underline;
-      }
-      #darkModeToggle {
-        margin-left: auto;
-      }
-    }
-
-    /* Dark mode styles */
-    .dark-mode {
-      background: #121212;
-      color: #eee;
-    }
-    .dark-mode header {
-      background: #222;
-      box-shadow: none;
-    }
-    .dark-mode #primaryNav {
-      background: #333;
-      color: #eee;
-    }
-    .dark-mode #primaryNav a {
-      color: #eee;
-    }
-    .dark-mode #primaryNav a:hover {
-      background: #444;
-    }
-    .dark-mode #menuToggle span {
-      background: #a3c2f9;
+    #loadingSpinner {
+      text-align: center;
+      padding: 1em;
+      font-weight: bold;
+      color: #444;
     }
   </style>
 </head>
@@ -226,8 +141,8 @@
 <header>
   <div class="navbar">
     <div class="navbar-left">
-      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-      <h1>DRFMedia</h1>
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" height="40" />
+      <h1 style="margin-left: 10px;">DRFMedia</h1>
     </div>
 
     <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
@@ -245,7 +160,7 @@
       <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
     </nav>
 
-    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙</button>
   </div>
 </header>
 
@@ -261,30 +176,31 @@
   <button type="submit">Post</button>
 </form>
 
-<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
-<div id="postContainer" aria-live="polite" aria-atomic="false"></div>
+<div id="loadingSpinner" aria-live="polite" aria-busy="true">Loading posts...</div>
 
-<!-- Main script -->
+<div id="postContainer" aria-live="polite" aria-atomic="false">
+  <!-- Example static post with fast video -->
+  <div class="post-item">
+    <div class="post-owner">
+      <img class="avatar" src="https://i.pravatar.cc/40" alt="User" loading="lazy" />
+      <span>@user123</span>
+    </div>
+    <div class="post-time">1 minute ago</div>
+    <div class="post-caption">This is a test video post for DRFMedia!</div>
+    <video class="post-media" controls preload="metadata" poster="https://via.placeholder.com/480x270?text=Video+Preview" loading="lazy">
+      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4" />
+      <p>Your browser does not support the video tag.</p>
+    </video>
+    <div class="post-actions">
+      <button aria-pressed="false">❤️ Like</button>
+      <button class="share-btn">🔗 Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main JS app -->
 <script type="module" src="app.js"></script>
 
 <script>
-  // Menu toggle script
-  const menuToggle = document.getElementById('menuToggle');
-  const primaryNav = document.getElementById('primaryNav');
-
-  menuToggle.addEventListener('click', () => {
-    const expanded = menuToggle.getAttribute('aria-expanded') === 'true' || false;
-    menuToggle.setAttribute('aria-expanded', !expanded);
-    primaryNav.classList.toggle('open');
-  });
-
-  // Dark mode toggle script
-  const darkModeToggle = document.getElementById('darkModeToggle');
-  darkModeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    darkModeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
-  });
-</script>
-
-</body>
-</html>
+  // Toggle menu
+  const menuTog
