@@ -9,6 +9,7 @@ import {
   update,
   get,
   remove,
+  set
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import {
   getAuth,
@@ -18,7 +19,7 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-// Firebase config
+// ─── 1) Your Firebase config ───────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -29,15 +30,16 @@ const firebaseConfig = {
   appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
 };
 
-// ✅ Full Pinata JWT Token — DO NOT SHARE PUBLICLY!
+// ─── 2) Full Pinata JWT (must include the `Bearer ` prefix) ────────────────────
 const pinataJWT = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// ─── 3) Initialize Firebase & Auth ─────────────────────────────────────────────
+const app  = initializeApp(firebaseConfig);
+const db   = getDatabase(app);
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
-// Admin emails allowed to delete posts
+// ─── 4) Admin emails who can delete ────────────────────────────────────────────
 const adminEmails = new Set([
   "digitalrufiyauniversity@gmail.com",
   "digitalrufiya@gmail.com",
@@ -45,75 +47,69 @@ const adminEmails = new Set([
   "onenone91000@gmail.com",
 ]);
 
-// DOM Elements
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const uploadForm = document.getElementById("uploadForm");
+// ─── 5) DOM References ─────────────────────────────────────────────────────────
+const loginBtn       = document.getElementById("loginBtn");
+const logoutBtn      = document.getElementById("logoutBtn");
+const uploadForm     = document.getElementById("uploadForm");
 const mediaFileInput = document.getElementById("mediaFile");
-const captionInput = document.getElementById("caption");
-const postContainer = document.getElementById("postContainer");
+const captionInput   = document.getElementById("caption");
+const postContainer  = document.getElementById("postContainer");
 
 let currentUser = null;
 
-// Auth listeners
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  uploadForm.style.display = user ? "block" : "none";
-  loginBtn.style.display = user ? "none" : "block";
-  logoutBtn.style.display = user ? "block" : "none";
-  renderPosts(); // Re-render posts with updated user info
+// ─── 6) Auth State Changes ────────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  currentUser       = user;
+  uploadForm.style.display  = user ? "block" : "none";
+  loginBtn.style.display    = user ? "none"  : "block";
+  logoutBtn.style.display   = user ? "block" : "none";
+  renderPosts();
 });
 
-// Login & Logout
-loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+// Login / Logout
+loginBtn.onclick  = () => signInWithPopup(auth, provider).catch(console.error);
 logoutBtn.onclick = () => signOut(auth);
 
-// Upload media
-uploadForm.addEventListener("submit", async (e) => {
+// ─── 7) Upload a new Post with Pinata ─────────────────────────────────────────
+uploadForm.addEventListener("submit", async e => {
   e.preventDefault();
-  if (!currentUser || !mediaFileInput.files.length || captionInput.value.length < 4) {
-    alert("Missing media, caption, or login.");
-    return;
+  if (!currentUser || !mediaFileInput.files.length || captionInput.value.trim().length < 4) {
+    return alert("Missing media, caption, or not logged in.");
   }
-
-  const file = mediaFileInput.files[0];
-  const formData = new FormData();
-  formData.append("file", file);
-
   uploadForm.querySelector("button").disabled = true;
 
   try {
-    const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    // 1) Send file to Pinata
+    const formData = new FormData();
+    formData.append("file", mediaFileInput.files[0]);
+    const pinRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
-      headers: {
-        Authorization: pinataJWT,
-      },
-      body: formData,
+      headers: { Authorization: pinataJWT },
+      body: formData
     });
-
-    if (!pinataRes.ok) throw new Error(`Pinata error: ${pinataRes.statusText}`);
-
-    const { IpfsHash } = await pinataRes.json();
+    if (!pinRes.ok) throw new Error(pinRes.statusText);
+    const { IpfsHash } = await pinRes.json();
     const mediaUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
 
-    const post = {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName,
-      photoURL: currentUser.photoURL,
-      caption: captionInput.value.trim(),
+    // 2) Push new post to RTDB
+    const newRef = push(ref(db, "posts"));
+    await set(newRef, {
+      userId:        currentUser.uid,
+      displayName:   currentUser.displayName,
+      photoURL:      currentUser.photoURL,
+      caption:       captionInput.value.trim(),
       mediaUrl,
-      mediaType: file.type.startsWith("video") ? "video" : "image",
-      timestamp: Date.now(),
-      likesCount: 0,
-      commentsCount: 0,
-    };
+      mediaType:     mediaFileInput.files[0].type.startsWith("video") ? "video" : "image",
+      timestamp:     Date.now(),
+      likesCount:    0,
+      commentsCount: 0
+    });
 
-    await push(ref(db, "posts"), post);
-
+    // Clear form
     mediaFileInput.value = "";
-    captionInput.value = "";
-    alert("Uploaded successfully.");
-  } catch (err) {
+    captionInput.value   = "";
+    alert("Post uploaded!");
+  } catch(err) {
     console.error(err);
     alert("Upload failed: " + err.message);
   } finally {
@@ -121,230 +117,167 @@ uploadForm.addEventListener("submit", async (e) => {
   }
 });
 
-// Fetch and render posts (with likes, comments, delete, share)
+// ─── 8) Render Posts (with likes, comments, share, delete) ─────────────────────
 function renderPosts() {
-  const postsRef = ref(db, "posts");
-  onValue(postsRef, (snapshot) => {
+  onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
-    const data = snapshot.val();
+    const data = snap.val();
     if (!data) return;
 
-    // Sort posts by timestamp descending
-    const posts = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+    // Sort newest → oldest
+    Object.entries(data)
+      .sort(([,a],[,b]) => b.timestamp - a.timestamp)
+      .forEach(([postId, post]) => {
+        const liked   = currentUser && post.likes?.[currentUser.uid];
+        const isAdmin = currentUser && adminEmails.has(currentUser.email);
+        const card = document.createElement("div");
+        card.className = "post-item";
 
-    for (const [postId, post] of posts) {
-      const likesCount = post.likesCount || 0;
-      const commentsCount = post.commentsCount || 0;
+        card.innerHTML = `
+          <div class="post-owner">
+            <img src="${post.photoURL||""}" class="avatar" />
+            <span>${post.displayName||"User"}</span>
+          </div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          ${post.mediaType==="video"
+            ? `<video src="${post.mediaUrl}" controls preload="metadata"></video>`
+            : `<img src="${post.mediaUrl}" />`}
+          <div class="post-caption">${post.caption}</div>
+          <div class="post-actions">
+            <button class="like-btn" data-id="${postId}" aria-pressed="${liked?1:0}">
+              ❤️ <span>${post.likesCount||0}</span>
+            </button>
+            <button class="comment-toggle-btn" data-id="${postId}" aria-expanded="false">
+              💬 <span>${post.commentsCount||0}</span>
+            </button>
+            <button class="share-btn" data-id="${postId}">🔗</button>
+            ${isAdmin
+              ? `<button class="delete-btn" data-id="${postId}">🗑️</button>`
+              : ""}
+          </div>
+          <div class="comments-section" id="comments-${postId}" style="display:none;">
+            <div class="comments-list"></div>
+            ${currentUser
+              ? `<form class="comment-form" data-id="${postId}">
+                   <input type="text" required placeholder="Comment…" />
+                   <button>Send</button>
+                 </form>`
+              : `<p><em>Login to comment</em></p>`}
+          </div>
+        `;
+        postContainer.append(card);
 
-      let userLiked = false;
-      if (currentUser && post.likes && post.likes[currentUser.uid]) {
-        userLiked = post.likes[currentUser.uid] === true;
-      }
+        // — Like/unlike
+        card.querySelector(".like-btn").onclick = () =>
+          toggleLike(postId, !!liked);
 
-      const isAdmin = currentUser && adminEmails.has(currentUser.email);
+        // — Toggle comments
+        const ctBtn = card.querySelector(".comment-toggle-btn");
+        const csSec = card.querySelector(`#comments-${postId}`);
+        ctBtn.onclick = () => {
+          const open = csSec.style.display==="block";
+          csSec.style.display = open ? "none" : "block";
+          ctBtn.setAttribute("aria-expanded", open?0:1);
+          if (!open) loadComments(postId, csSec.querySelector(".comments-list"));
+        };
 
-      const card = document.createElement("div");
-      card.className = "post-item";
-
-      card.innerHTML = `
-        <div class="post-owner">
-          <img src="${post.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" class="avatar" />
-          <span>${post.displayName || "User"}</span>
-        </div>
-        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-        ${post.mediaType === "video"
-          ? `<video src="${post.mediaUrl}" controls></video>`
-          : `<img src="${post.mediaUrl}" alt="Post media" />`}
-        <div class="post-caption">${post.caption}</div>
-
-        <div class="post-actions">
-          <button class="like-btn" data-postid="${postId}" aria-pressed="${userLiked}">
-            ❤️ <span class="like-count">${likesCount}</span>
-          </button>
-          <button class="comment-toggle-btn" data-postid="${postId}" aria-expanded="false">
-            💬 <span class="comment-count">${commentsCount}</span>
-          </button>
-          <button class="share-btn" data-postid="${postId}">
-            🔗 Share
-          </button>
-          ${isAdmin ? `<button class="delete-btn" data-postid="${postId}" aria-label="Delete post">🗑️ Delete</button>` : ""}
-        </div>
-
-        <div class="comments-section" id="comments-${postId}" style="display:none;">
-          <div class="comments-list"></div>
-          ${currentUser ? `
-          <form class="comment-form" data-postid="${postId}">
-            <input type="text" placeholder="Write a comment..." required minlength="1" />
-            <button type="submit">Send</button>
-          </form>
-          ` : `<p><em>Login to comment</em></p>`}
-        </div>
-      `;
-
-      postContainer.appendChild(card);
-
-      // Like button event
-      const likeBtn = card.querySelector(".like-btn");
-      likeBtn.onclick = () => toggleLike(postId, userLiked);
-
-      // Comment toggle button event
-      const commentToggleBtn = card.querySelector(".comment-toggle-btn");
-      const commentsSection = card.querySelector(`#comments-${postId}`);
-      commentToggleBtn.onclick = () => {
-        const isVisible = commentsSection.style.display === "block";
-        commentsSection.style.display = isVisible ? "none" : "block";
-        commentToggleBtn.setAttribute("aria-expanded", !isVisible);
-        if (!isVisible) loadComments(postId, commentsSection.querySelector(".comments-list"));
-      };
-
-      // Comment form submit
-      const commentForm = card.querySelector(".comment-form");
-      if (commentForm) {
-        commentForm.onsubmit = async (e) => {
+        // — Post a comment
+        const cf = card.querySelector(".comment-form");
+        if (cf) cf.onsubmit = async e => {
           e.preventDefault();
-          const input = commentForm.querySelector("input");
-          const text = input.value.trim();
-          if (text.length < 1) return;
-
+          const txt = cf.querySelector("input").value.trim();
+          if (!txt) return;
           try {
-            await postComment(postId, text);
-            input.value = "";
-            loadComments(postId, commentsSection.querySelector(".comments-list"));
-          } catch (err) {
-            alert("Failed to post comment: " + err.message);
+            await postComment(postId, txt);
+            cf.reset();
+            loadComments(postId, csSec.querySelector(".comments-list"));
+          } catch(err) {
+            alert("Comment failed: "+err.message);
           }
         };
-      }
 
-      // Delete button event (admin only)
-      if (isAdmin) {
-        const deleteBtn = card.querySelector(".delete-btn");
-        if (deleteBtn) {
-          deleteBtn.onclick = () => {
-            if (confirm("Are you sure you want to delete this post?")) {
-              deletePost(postId);
-            }
-          };
+        // — Delete (admin only)
+        if (isAdmin) {
+          card.querySelector(".delete-btn").onclick = () =>
+            deletePost(postId);
         }
-      }
 
-      // Share button event
-      const shareBtn = card.querySelector(".share-btn");
-      shareBtn.onclick = () => {
-        const postUrl = `${window.location.origin}${window.location.pathname}?postId=${postId}`;
-        navigator.clipboard.writeText(postUrl).then(() => {
-          alert("Post URL copied to clipboard!");
-        }).catch(() => {
-          alert("Failed to copy URL. Try manually: " + postUrl);
-        });
-      };
-    }
+        // — Share
+        card.querySelector(".share-btn").onclick = () => {
+          const url = `${location.origin}${location.pathname}?postId=${postId}`;
+          navigator.clipboard.writeText(url)
+            .then(()=>alert("Copied!"))
+            .catch(()=>alert("Copy this: "+url));
+        };
+      });
   });
 }
 
-// Toggle like/unlike
-async function toggleLike(postId, currentlyLiked) {
-  if (!currentUser) {
-    alert("Please login to like posts.");
-    return;
-  }
+// ─── 9) Like toggle ─────────────────────────────────────────────────────────────
+async function toggleLike(postId, liked) {
+  if (!currentUser) return alert("Login to like");
   const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
   const postRef = ref(db, `posts/${postId}`);
+  const snap    = await get(postRef);
+  let cnt       = snap.val().likesCount||0;
 
-  try {
-    if (currentlyLiked) {
-      // Remove like
-      await update(likeRef, null);
-      const snap = await get(postRef);
-      const likesCount = snap.val()?.likesCount || 0;
-      await update(postRef, { likesCount: Math.max(0, likesCount - 1) });
-    } else {
-      // Add like
-      await update(likeRef, true);
-      const snap = await get(postRef);
-      const likesCount = snap.val()?.likesCount || 0;
-      await update(postRef, { likesCount: likesCount + 1 });
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Error updating like: " + err.message);
+  if (liked) {
+    await remove(likeRef);
+    cnt = Math.max(0, cnt-1);
+  } else {
+    await set(likeRef, true);
+    cnt++;
   }
+  await update(postRef, { likesCount: cnt });
 }
 
-// Load comments for post
-async function loadComments(postId, container) {
-  container.innerHTML = "Loading comments...";
-  const commentsRef = ref(db, `comments/${postId}`);
-
-  onValue(
-    commentsRef,
-    (snapshot) => {
-      container.innerHTML = "";
-      const comments = snapshot.val();
-      if (!comments) {
-        container.innerHTML = "<p>No comments yet.</p>";
-        return;
-      }
-      const sortedComments = Object.values(comments).sort((a, b) => a.timestamp - b.timestamp);
-
-      for (const comment of sortedComments) {
-        const commentDiv = document.createElement("div");
-        commentDiv.className = "comment-item";
-        commentDiv.innerHTML = `
-          <strong>${escapeHTML(comment.displayName || "User")}</strong>: ${escapeHTML(comment.text)}
-          <div class="comment-time">${new Date(comment.timestamp).toLocaleString()}</div>
+// ─── 10) Load & render comments ────────────────────────────────────────────────
+function loadComments(postId, container) {
+  onValue(ref(db, `comments/${postId}`), snap => {
+    container.innerHTML = "";
+    const com = snap.val();
+    if (!com) return container.innerHTML = "<p>No comments</p>";
+    Object.values(com)
+      .sort((a,b)=>a.timestamp-b.timestamp)
+      .forEach(c => {
+        const d = document.createElement("div");
+        d.className = "comment-item";
+        d.innerHTML = `
+          <strong>${c.displayName}</strong>: ${c.text}
+          <div class="comment-time">${new Date(c.timestamp).toLocaleString()}</div>
         `;
-        container.appendChild(commentDiv);
-      }
-    },
-    { onlyOnce: true }
-  );
+        container.append(d);
+      });
+  }, { onlyOnce: true });
 }
 
-// Post a comment
+// ─── 11) Post a comment ────────────────────────────────────────────────────────
 async function postComment(postId, text) {
-  if (!currentUser) throw new Error("Not logged in");
-  const commentsRef = ref(db, `comments/${postId}`);
-  const newCommentRef = push(commentsRef);
-
-  const commentObj = {
-    userId: currentUser.uid,
-    displayName: currentUser.displayName,
+  if (!currentUser) throw new Error("Login first");
+  const comRef = ref(db, `comments/${postId}`);
+  const newC   = push(comRef);
+  await set(newC, {
+    userId:       currentUser.uid,
+    displayName:  currentUser.displayName,
     text,
-    timestamp: Date.now(),
-  };
-
-  await newCommentRef.set(commentObj);
-
-  // Update commentsCount
-  const postRef = ref(db, `posts/${postId}`);
-  const snap = await get(postRef);
-  const commentsCount = snap.val()?.commentsCount || 0;
-  await update(postRef, { commentsCount: commentsCount + 1 });
+    timestamp:    Date.now()
+  });
+  // bump counter
+  const pRef = ref(db, `posts/${postId}`);
+  const snap = await get(pRef);
+  const cCnt = (snap.val().commentsCount||0) + 1;
+  await update(pRef, { commentsCount: cCnt });
 }
 
-// Delete post (admin only)
+// ─── 12) Delete a post (admin) ────────────────────────────────────────────────
 async function deletePost(postId) {
   if (!currentUser || !adminEmails.has(currentUser.email)) {
-    alert("You do not have permission to delete posts.");
-    return;
+    return alert("Not authorized");
   }
-  try {
-    await remove(ref(db, `posts/${postId}`));
-    await remove(ref(db, `comments/${postId}`));
-    alert("Post deleted successfully.");
-  } catch (err) {
-    console.error(err);
-    alert("Failed to delete post: " + err.message);
-  }
+  if (!confirm("Delete this post?")) return;
+  await remove(ref(db, `posts/${postId}`));
+  await remove(ref(db, `comments/${postId}`));
 }
 
-// Escape HTML utility
-function escapeHTML(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Initial render
+// ─── 13) Start it! ─────────────────────────────────────────────────────────────
 renderPosts();
