@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  
+  <style>
+    :root {
+      --bg-light: #f7f7f7;
+      --bg-dark: #121212;
+      --text-light: #222;
+      --text-dark: #eee;
+      --primary-color: #0066cc;
+      --primary-hover: #004a99;
+      --overlay-bg: rgba(0,0,0,0.6);
+      --overlay-text: #f9f9f9;
+    }
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      margin: 0; padding: 0 12px 60px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    /* Menubar */
+    header {
+      position: sticky;
+      top: 0;
+      background: inherit;
+      border-bottom: 1px solid #ccc;
+      z-index: 100;
+      user-select: none;
+    }
+    .navbar {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .navbar-left img {
+      max-height: 50px;
+      object-fit: contain;
+    }
+    .navbar-left h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1.4rem;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* Nav links */
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    nav a {
+      text-decoration: none;
+      font-weight: 600;
+      color: var(--primary-color);
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    nav a:hover, nav a:focus {
+      background-color: var(--primary-hover);
+      color: white;
+      outline: none;
+    }
+
+    /* Buttons in menubar */
+    #darkModeToggle {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #darkModeToggle:hover, #darkModeToggle:focus {
+      background-color: var(--primary-hover);
+      outline: none;
+    }
+
+    /* Hamburger menu */
+    #menuToggle {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      user-select: none;
+    }
+    #menuToggle span {
+      width: 25px;
+      height: 3px;
+      background-color: var(--primary-color);
+      margin: 4px 0;
+      transition: 0.3s;
+      border-radius: 2px;
+    }
+
+    /* Responsive nav toggling */
+    #menuToggle[aria-expanded="true"] span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    #menuToggle[aria-expanded="true"] span:nth-child(2) {
+      opacity: 0;
+    }
+    #menuToggle[aria-expanded="true"] span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      nav {
+        display: none;
+        flex-direction: column;
+        background: var(--bg-light);
+        position: absolute;
+        top: 60px;
+        right: 12px;
+        width: 180px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 8px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 101;
+      }
+      body.dark nav {
+        background: var(--bg-dark);
+        border-color: #444;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.9);
+      }
+      nav a {
+        padding: 10px 16px;
+        color: var(--primary-color);
+        white-space: nowrap;
+      }
+      #menuToggle {
+        display: flex;
+      }
+      #menuToggle[aria-expanded="true"] + nav {
+        display: flex;
+      }
+    }
+
+    /* Search bar */
+    #searchBar {
+      display: block;
+      max-width: 700px;
+      margin: 12px auto 15px;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+      user-select: text;
+    }
+    #searchBar:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 6px var(--primary-color);
+    }
+    body.dark #searchBar {
+      background: #222;
+      color: var(--text-dark);
+      border-color: #444;
+    }
+    body.dark #searchBar:focus {
+      border-color: var(--primary-hover);
+      box-shadow: 0 0 8px var(--primary-hover);
+    }
+
+    /* Buttons */
+    #loginBtn, #logoutBtn, #filterMyPosts {
+      max-width: 240px;
+      width: 100%;
+      display: block;
+      margin: 8px auto;
+      padding: 12px 0;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #loginBtn:hover, #logoutBtn:hover, #filterMyPosts:hover {
+      background-color: var(--primary-hover);
+    }
+    #filterMyPosts {
+      background-color: #ddd;
+      color: #222;
+      margin-bottom: 24px;
+    }
+    #filterMyPosts:hover {
+      background-color: #bbb;
+    }
+
+    /* Upload form */
+    form#uploadForm {
+      max-width: 700px;
+      margin: 0 auto 30px;
+      background: white;
+      padding: 16px 18px 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      display: none;
+      user-select: none;
+    }
+    body.dark form#uploadForm {
+      background: #222;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    }
+    form#uploadForm input[type="file"] {
+      width: 100%;
+      margin-bottom: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 6px;
+    }
+    body.dark form#uploadForm input[type="file"] {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      margin-bottom: 14px;
+      color: var(--text-light);
+      background: white;
+      font-family: inherit;
+    }
+    body.dark form#uploadForm textarea {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm button {
+      width: 100%;
+      padding: 14px 0;
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      font-size: 17px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    form#uploadForm button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    form#uploadForm button:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    /* Posts container */
+    #postContainer {
+      max-width: 700px;
+      margin: 0 auto 60px;
+      user-select: none;
+    }
+    .post-item {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 16px;
+      margin-bottom: 30px;
+      word-break: break-word;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark .post-item {
+      background: #222;
+      color: var(--text-dark);
+      box-shadow: 0 2px 14px rgba(0,0,0,0.8);
+    }
+    .post-item img,
+    .post-item video {
+      max-width: 100%;
+      border-radius: 12px;
+      display: block;
+      margin: 0 auto 14px;
+      background: #000;
+    }
+    .post-item video {
+      max-height: 400px;
+      outline: none;
+    }
+    .post-caption {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+    .post-owner {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: var(--primary-color);
+      user-select: text;
+    }
+    .post-time {
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 12px;
+      user-select: text;
+    }
+    body.dark .post-time {
+      color: #bbb;
+    }
+
+    /* Loading spinner */
+    #loadingSpinner {
+      max-width: 700px;
+      margin: 40px auto;
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      user-select: none;
+    }
+    body.dark #loadingSpinner {
+      color: #bbb;
+    }
+    
+    @media (max-width: 600px) {
+      body {
+        padding: 0 10px 50px;
+      }
+      header .navbar-left img {
+        max-height: 40px;
+      }
+      form#uploadForm {
+        padding: 14px 16px 16px;
+      }
+    }
+  </style>
+  
+</head>
+<body>
+
+<header>
+  <div class="navbar">
+    <div class="navbar-left">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+      <h1>DRFMedia</h1>
+    </div>
+
+    <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+      <a href="#" tabindex="0">Home</a>
+      <a href="#" tabindex="0">Timeline</a>
+      <a href="#" tabindex="0">Upload</a>
+      <a href="#" tabindex="0" id="profileLink" style="display:none;">Profile</a>
+      <a href="#" tabindex="0" id="loginNavLink">Login</a>
+      <a href="#" tabindex="0" id="logoutNavLink" style="display:none;">Logout</a>
+    </nav>
+
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+  </div>
+</header>
+
+<input type="search" id="searchBar" placeholder="Search posts or users..." aria-label="Search posts or users" autocomplete="off" />
+
+<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+<button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
+<button id="filterMyPosts" style="display:none" aria-label="Show only my posts">Show Only My Posts</button>
+
+<form id="uploadForm" aria-label="Upload new post form">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
+  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption"></textarea>
+  <button type="submit">Post</button>
+</form>
+
+<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
+<div id="postContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
+
+  // Firebase config - replace with your own config if needed
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth();
+  const storage = getStorage(app);
+
+  const provider = new GoogleAuthProvider();
+
+  // Elements
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const filterMyPostsBtn = document.getElementById("filterMyPosts");
+  const uploadForm = document.getElementById("uploadForm");
+  const mediaFileInput = document.getElementById("mediaFile");
+  const captionInput = document.getElementById("caption");
+  const postContainer = document.getElementById("postContainer");
+  const loadingSpinner = document.getElementById("loadingSpinner");
+  const searchBar = document.getElementById("searchBar");
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  const loginNavLink = document.getElementById("loginNavLink");
+  const logoutNavLink = document.getElementById("logoutNavLink");
+  const profileLink = document.getElementById("profileLink");
+
+  let currentUser = null;
+  let allPosts = [];
+  let filteredPosts = [];
+  let showOnlyMyPosts = false;
+
+  // Dark mode toggle
+  function updateDarkModeUI() {
+    if (document.body.classList.contains("dark")) {
+      darkModeToggle.textContent = "☀️ Light Mode";
+    } else {
+      darkModeToggle.textContent = "🌙 Dark Mode";
+    }
+  }
+  darkModeToggle.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    updateDarkModeUI();
+  });
+  updateDarkModeUI();
+
+  // Responsive menu toggle
+  menuToggle.addEventListener("click", () => {
+    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+    menuToggle.setAttribute("aria-expanded", String(!expanded));
+  });
+  // Close menu if user clicks a nav link
+  primaryNav.querySelectorAll("a").forEach(a => {
+    a.addEventListener("click", () => {
+      menuToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  // Auth state changed
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    updateUIForAuth();
+    if (user) {
+      fetchAndRenderPosts();
+    } else {
+      clearPosts();
+    }
+  });
+
+  // Update UI on auth change
+  function updateUIForAuth() {
+    if (currentUser) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "block";
+      filterMyPostsBtn.style.display = "block";
+      uploadForm.style.display = "block";
+      loginNavLink.style.display = "none";
+      logoutNavLink.style.display = "inline";
+      profileLink.style.display = "inline";
+      profileLink.textContent = currentUser.displayName || currentUser.email || "Profile";
+      profileLink.href = "#"; // Can link to profile page
+    } else {
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      filterMyPostsBtn.style.display = "none";
+      uploadForm.style.display = "none";
+      loginNavLink.style.display = "inline";
+      logoutNavLink.style.display = "none";
+      profileLink.style.display = "none";
+    }
+  }
+
+  // Sign in
+  loginBtn.addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      alert("Login failed: " + e.message);
+    }
+  });
+  loginNavLink.addEventListener("click", async (e) => {
+    e.preventDefault();
+    loginBtn.click();
+  });
+
+  // Sign out
+  logoutBtn.addEventListener("click", async () => {
+    await signOut(auth);
+    clearPosts();
+  });
+  logoutNavLink.addEventListener("click", async (e) => {
+    e.preventDefault();
+    logoutBtn.click();
+  });
+
+  // Upload form submit
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      alert("You must be logged in to post.");
+      return;
+    }
+    const file = mediaFileInput.files[0];
+    const caption = captionInput.value.trim();
+
+    if (!file || !caption) {
+      alert("Please select a media file and write a caption.");
+      return;
+    }
+
+    uploadForm.querySelector("button").disabled = true;
+    uploadForm.querySelector("button").textContent = "Uploading...";
+
+    try {
+      // Upload file to Firebase Storage
+      const storagePath = `media/${currentUser.uid}_${Date.now()}_${file.name}`;
+      const storageReference = storageRef(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageReference, file);
+
+      uploadTask.on("state_changed", 
+        (snapshot) => {
+          // Progress can be displayed if needed
+        },
+        (error) => {
+          alert("Upload failed: " + error.message);
+          uploadForm.querySelector("button").disabled = false;
+          uploadForm.querySelector("button").textContent = "Post";
+        },
+        async () => {
+          // Upload completed
+          const mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
+
+          // Push post to database
+          const postData = {
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email || "Unknown",
+            mediaUrl,
+            caption,
+            timestamp: Date.now(),
+            mediaType: file.type.startsWith("video") ? "video" : "image"
+          };
+          await push(ref(db, "posts"), postData);
+
+          // Clear form
+          uploadForm.reset();
+          uploadForm.querySelector("button").disabled = false;
+          uploadForm.querySelector("button").textContent = "Post";
+
+          // Refresh posts (auto updates but we call for immediate)
+          fetchAndRenderPosts();
+        }
+      );
+    } catch (e) {
+      alert("Failed to upload post: " + e.message);
+      uploadForm.querySelector("button").disabled = false;
+      uploadForm.querySelector("button").textContent = "Post";
+    }
+  });
+
+  // Fetch and render posts
+  function fetchAndRenderPosts() {
+    loadingSpinner.style.display = "block";
+    const postsRef = ref(db, "posts");
+
+    onValue(postsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      allPosts = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+      filterAndRenderPosts();
+      loadingSpinner.style.display = "none";
+    }, {
+      onlyOnce: false,
+    });
+  }
+
+  // Render posts with current filter/search
+  function filterAndRenderPosts() {
+    let posts = allPosts;
+    if (showOnlyMyPosts && currentUser) {
+      posts = posts.filter(post => post.userId === currentUser.uid);
+    }
+
+    const searchText = searchBar.value.trim().toLowerCase();
+    if (searchText.length > 0) {
+      posts = posts.filter(post => 
+        (post.caption && post.caption.toLowerCase().includes(searchText)) ||
+        (post.userName && post.userName.toLowerCase().includes(searchText))
+      );
+    }
+
+    filteredPosts = posts;
+    renderPosts(posts);
+  }
+
+  // Render posts
+  function renderPosts(posts) {
+    if (posts.length === 0) {
+      postContainer.innerHTML = "<p style='text-align:center; user-select:none;'>No posts found.</p>";
+      return;
+    }
+    const html = posts.map(post => {
+      const postedAt = new Date(post.timestamp).toLocaleString();
+      let mediaHTML = "";
+      if (post.mediaType === "video") {
+        mediaHTML = `<video controls preload="metadata" aria-label="Video post by ${post.userName}"><source src="${post.mediaUrl}" type="video/mp4">Your browser does not support video.</video>`;
+      } else {
+        mediaHTML = `<img src="${post.mediaUrl}" alt="Image post by ${post.userName}" loading="lazy" decoding="async" />`;
+      }
+      return `
+        <article class="post-item" tabindex="0" aria-label="Post by ${post.userName}">
+          <div class="post-owner">${escapeHTML(post.userName)}</div>
+          <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">${postedAt}</time>
+          ${mediaHTML}
+          <p class="post-caption">${escapeHTML(post.caption)}</p>
+        </article>
+      `;
+    }).join("");
+    postContainer.innerHTML = html;
+  }
+
+  // Escape HTML for security
+  function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"
