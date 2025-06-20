@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>User Profile | DRFMedia</title>
   <style>
     body {
@@ -18,36 +18,84 @@
       text-align: center;
     }
     #profile {
-      max-width: 600px;
+      max-width: 700px;
       margin: 20px auto;
       background: white;
       border-radius: 10px;
       padding: 20px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    #profile img {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
+    #coverPhoto {
+      width: 100%;
+      height: 180px;
       object-fit: cover;
-      border: 2px solid #ccc;
+      border-radius: 10px 10px 0 0;
+      background: #ddd;
+      cursor: pointer;
+      margin-bottom: 10px;
+      position: relative;
     }
-    #profile h2 {
-      margin: 10px 0 5px;
+    #profilePhotoWrapper {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin: -70px auto 10px;
+      border-radius: 50%;
+      border: 4px solid white;
+      overflow: hidden;
+      cursor: pointer;
+      background: #eee;
     }
-    #profile p {
-      margin: 5px 0;
-      color: #555;
+    #profilePhoto {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
-    .post {
+    #editName {
+      width: 100%;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+      border: none;
+      margin-bottom: 5px;
+      padding: 5px;
+      border-radius: 6px;
+    }
+    #editBio {
+      width: 100%;
+      min-height: 60px;
+      resize: vertical;
+      font-size: 1rem;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 12px;
+    }
+    #saveProfileBtn {
+      display: block;
+      margin: 0 auto 20px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #saveProfileBtn:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+    #postsContainer .post {
       background: #fff;
       border-radius: 10px;
       margin: 15px auto;
       padding: 15px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      max-width: 600px;
+      max-width: 700px;
     }
-    .post img, .post video {
+    #postsContainer .post img, #postsContainer .post video {
       max-width: 100%;
       border-radius: 8px;
       margin-bottom: 10px;
@@ -56,80 +104,220 @@
       white-space: pre-wrap;
       margin-bottom: 8px;
     }
+    input[type="file"] {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>DRFMedia Profile</h1>
-  </header>
+
+<header>
+  <h1>DRFMedia Profile</h1>
+</header>
+
+<div id="profile">
+  <img id="coverPhoto" src="" alt="Cover Photo" title="Click to change cover photo" tabindex="0" />
   
-  <div id="profile" style="text-align:center">
-    <img id="userPhoto" src="" alt="User Photo">
-    <h2 id="userName">Loading...</h2>
-    <p id="userEmail"></p>
+  <div id="profilePhotoWrapper" title="Click to change profile photo" tabindex="0">
+    <img id="profilePhoto" src="" alt="Profile Photo" />
   </div>
+  
+  <input type="file" id="coverPhotoInput" accept="image/*" />
+  <input type="file" id="profilePhotoInput" accept="image/*" />
 
-  <div id="postsContainer"></div>
+  <input type="text" id="editName" placeholder="Your name" maxlength="50" aria-label="Edit your name" />
+  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250" aria-label="Edit your bio"></textarea>
+  <button id="saveProfileBtn" disabled>Save Profile</button>
+</div>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-    import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
-    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+<div id="postsContainer"></div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+  import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+  import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
 
-    const userPhoto = document.getElementById("userPhoto");
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
-    const postsContainer = document.getElementById("postsContainer");
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
 
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        userPhoto.src = user.photoURL || "https://i.pravatar.cc/100";
-        userName.textContent = user.displayName || "Unknown User";
-        userEmail.textContent = user.email;
+  const coverPhoto = document.getElementById('coverPhoto');
+  const profilePhoto = document.getElementById('profilePhoto');
+  const profilePhotoWrapper = document.getElementById('profilePhotoWrapper');
+  const coverPhotoInput = document.getElementById('coverPhotoInput');
+  const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const editName = document.getElementById('editName');
+  const editBio = document.getElementById('editBio');
+  const saveProfileBtn = document.getElementById('saveProfileBtn');
+  const postsContainer = document.getElementById('postsContainer');
 
-        const postsRef = ref(db, "posts");
-        onValue(postsRef, snapshot => {
-          postsContainer.innerHTML = "";
-          const posts = snapshot.val();
-          if (!posts) return;
+  let currentUser = null;
+  let profileData = {};
 
-          Object.keys(posts).reverse().forEach(key => {
-            const post = posts[key];
-            if (post.userId === user.uid) {
-              const div = document.createElement("div");
-              div.className = "post";
-              let media = "";
-              if (post.mediaUrl) {
-                media = post.mediaType && post.mediaType.startsWith("video")
-                  ? `<video controls src="${post.mediaUrl}"></video>`
-                  : `<img src="${post.mediaUrl}" alt="Post Media">`;
-              }
-              div.innerHTML = `
-                ${media}
-                <div class="caption">${post.caption || ""}</div>
-              `;
-              postsContainer.appendChild(div);
-            }
-          });
-        });
-      } else {
-        userName.textContent = "Please log in to view your profile.";
+  // Enable save button when form changes
+  function enableSave() {
+    saveProfileBtn.disabled = false;
+  }
+
+  // Upload photo to Firebase Storage and return URL
+  async function uploadPhoto(file, path) {
+    const photoRef = storageRef(storage, path);
+    await uploadBytes(photoRef, file);
+    const url = await getDownloadURL(photoRef);
+    return url;
+  }
+
+  // Handle file input changes
+  coverPhotoInput.addEventListener('change', async e => {
+    if (!currentUser) return;
+    const file = e.target.files[0];
+    if (!file) return;
+    coverPhoto.src = URL.createObjectURL(file);
+    enableSave();
+  });
+
+  profilePhotoInput.addEventListener('change', async e => {
+    if (!currentUser) return;
+    const file = e.target.files[0];
+    if (!file) return;
+    profilePhoto.src = URL.createObjectURL(file);
+    enableSave();
+  });
+
+  // Clicking cover or profile photo triggers file input
+  coverPhoto.addEventListener('click', () => coverPhotoInput.click());
+  profilePhotoWrapper.addEventListener('click', () => profilePhotoInput.click());
+
+  coverPhoto.addEventListener('keypress', e => { if(e.key === 'Enter') coverPhotoInput.click(); });
+  profilePhotoWrapper.addEventListener('keypress', e => { if(e.key === 'Enter') profilePhotoInput.click(); });
+
+  // Listen for input changes to name and bio
+  editName.addEventListener('input', enableSave);
+  editBio.addEventListener('input', enableSave);
+
+  // Save profile info to Firebase Auth user profile and DB
+  saveProfileBtn.addEventListener('click', async () => {
+    if (!currentUser) return;
+
+    saveProfileBtn.disabled = true;
+
+    try {
+      const updates = {};
+
+      // Upload new photos if changed (check if src is local blob url)
+      if (coverPhoto.src.startsWith('blob:')) {
+        const file = coverPhotoInput.files[0];
+        if (file) {
+          const coverUrl = await uploadPhoto(file, `users/${currentUser.uid}/coverPhoto`);
+          updates.coverPhoto = coverUrl;
+          coverPhoto.src = coverUrl;
+        }
       }
+      if (profilePhoto.src.startsWith('blob:')) {
+        const file = profilePhotoInput.files[0];
+        if (file) {
+          const profileUrl = await uploadPhoto(file, `users/${currentUser.uid}/profilePhoto`);
+          updates.photoURL = profileUrl;
+          profilePhoto.src = profileUrl;
+
+          // Also update Firebase Auth user profile photoURL
+          await updateProfile(currentUser, { photoURL: profileUrl });
+        }
+      }
+
+      // Name and bio updates
+      if (editName.value.trim() !== currentUser.displayName) {
+        updates.displayName = editName.value.trim();
+        await updateProfile(currentUser, { displayName: updates.displayName });
+      }
+      if (editBio.value.trim() !== (profileData.bio || "")) {
+        updates.bio = editBio.value.trim();
+      }
+
+      // Save extra profile data (bio, coverPhoto) in Realtime Database
+      if (Object.keys(updates).length > 0) {
+        await update(ref(db, `users/${currentUser.uid}`), updates);
+      }
+
+      alert("Profile updated successfully!");
+      saveProfileBtn.disabled = true;
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save profile. Try again.");
+      saveProfileBtn.disabled = false;
+    }
+  });
+
+  // Load profile info from Firebase Auth and DB
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (!user) {
+      // Not logged in
+      profileData = {};
+      coverPhoto.src = "";
+      profilePhoto.src = "";
+      editName.value = "";
+      editBio.value = "";
+      postsContainer.innerHTML = "<p>Please log in to view your profile.</p>";
+      saveProfileBtn.disabled = true;
+      return;
+    }
+
+    // Load user profile from DB
+    const userRef = ref(db, `users/${user.uid}`);
+    onValue(userRef, snapshot => {
+      profileData = snapshot.val() || {};
+      coverPhoto.src = profileData.coverPhoto || "https://via.placeholder.com/700x180?text=Cover+Photo";
+      profilePhoto.src = user.photoURL || "https://i.pravatar.cc/100";
+      editName.value = user.displayName || "";
+      editBio.value = profileData.bio || "";
+      saveProfileBtn.disabled = true;
     });
-  </script>
+
+    // Load posts by user
+    const postsRef = ref(db, "posts");
+    onValue(postsRef, snapshot => {
+      postsContainer.innerHTML = "";
+      const posts = snapshot.val();
+      if (!posts) {
+        postsContainer.innerHTML = "<p>No posts yet.</p>";
+        return;
+      }
+
+      Object.keys(posts).reverse().forEach(key => {
+        const post = posts[key];
+        if (post.userId === user.uid) {
+          const div = document.createElement("div");
+          div.className = "post";
+
+          let media = "";
+          if (post.mediaUrl) {
+            media = post.mediaType && post.mediaType.startsWith("video")
+              ? `<video controls src="${post.mediaUrl}"></video>`
+              : `<img src="${post.mediaUrl}" alt="Post Media">`;
+          }
+          div.innerHTML = `
+            ${media}
+            <div class="caption">${post.caption || ""}</div>
+          `;
+          postsContainer.appendChild(div);
+        }
+      });
+    });
+  });
+</script>
+
 </body>
 </html>
