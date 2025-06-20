@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia — Spread Kindness & Truth</title>
+  <!-- Styles are unchanged for brevity -->
+</head>
+<body>
+  <!-- UI Elements (unchanged for brevity) -->
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, update, onValue, remove, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+    });
+
+    function attachLikeHandler(postElem, postKey) {
+      const likeBtn = postElem.querySelector(".like-btn");
+      const likesRef = ref(db, `posts/${postKey}/likes`);
+      onValue(likesRef, (snapshot) => {
+        const likesData = snapshot.val() || {};
+        const count = Object.keys(likesData).length;
+        const liked = currentUser && likesData[currentUser.uid];
+        likeBtn.innerHTML = `${liked ? "💙" : "🤍"} <span>${count}</span>`;
+      });
+
+      likeBtn.addEventListener("click", async () => {
+        if (!currentUser) return alert("Please login to like.");
+        const userLikeRef = ref(db, `posts/${postKey}/likes/${currentUser.uid}`);
+        const snapshot = await get(userLikeRef);
+        if (snapshot.exists()) {
+          await remove(userLikeRef);
+        } else {
+          await update(userLikeRef, {
+            userId: currentUser.uid,
+            userName: currentUser.displayName || "Anon",
+            timestamp: Date.now()
+          });
+        }
+      });
+    }
+
+    function attachCommentHandler(postElem, postKey) {
+      const commentBtn = postElem.querySelector(".comment-btn");
+      commentBtn.addEventListener("click", () => {
+        showCommentInput(postElem, postKey);
+      });
+    }
+
+    function showCommentInput(postElem, postKey) {
+      const commentSection = postElem.querySelector(".comment-section");
+      if (commentSection.style.display === "block") {
+        commentSection.style.display = "none";
+        commentSection.innerHTML = "";
+        return;
+      }
+      commentSection.style.display = "block";
+
+      const form = document.createElement("form");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "Write a comment...";
+      input.required = true;
+      form.appendChild(input);
+      commentSection.appendChild(form);
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!currentUser) return alert("Please login to comment.");
+        const text = input.value.trim();
+        if (!text) return;
+
+        const newCommentRef = push(ref(db, `comments/${postKey}`));
+        const commentData = {
+          text,
+          userId: currentUser.uid,
+          userName: currentUser.displayName || "Anon",
+          userPhotoURL: currentUser.photoURL || "",
+          timestamp: Date.now()
+        };
+        await update(newCommentRef, commentData);
+        await update(ref(db, `posts/${postKey}/comments/${newCommentRef.key}`), commentData);
+
+        input.value = "";
+      });
+    }
+
+    function createPostElement(post) {
+      const div = document.createElement("article");
+      div.className = "post-item";
+      div.innerHTML = `
+        <div class="post-owner">${post.userName || "Anonymous"}</div>
+        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+        <div class="post-caption">${post.caption || ""}</div>
+        <div class="post-actions">
+          <button class="like-btn">🤍 <span>0</span></button>
+          <button class="comment-btn">💬 <span>0</span></button>
+        </div>
+        <div class="comment-section" style="display:none"></div>
+      `;
+      attachLikeHandler(div, post.key);
+      attachCommentHandler(div, post.key);
+      return div;
+    }
+
+    function loadPosts() {
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, (snapshot) => {
+        const postContainer = document.getElementById("postContainer");
+        postContainer.innerHTML = "";
+        snapshot.forEach(child => {
+          const post = child.val();
+          post.key = child.key;
+          const postElem = createPostElement(post);
+          postContainer.appendChild(postElem);
+        });
+      });
+    }
+
+    loadPosts();
+  </script>
+</body>
+</html>
