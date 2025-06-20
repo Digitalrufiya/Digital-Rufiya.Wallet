@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  
+  <style>
+    :root {
+      --bg-light: #f7f7f7;
+      --bg-dark: #121212;
+      --text-light: #222;
+      --text-dark: #eee;
+      --primary-color: #0066cc;
+      --primary-hover: #004a99;
+      --overlay-bg: rgba(0,0,0,0.6);
+      --overlay-text: #f9f9f9;
+    }
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      margin: 0; padding: 0 12px 60px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    /* Menubar */
+    header {
+      position: sticky;
+      top: 0;
+      background: inherit;
+      border-bottom: 1px solid #ccc;
+      z-index: 100;
+      user-select: none;
+    }
+    .navbar {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .navbar-left img {
+      max-height: 50px;
+      object-fit: contain;
+    }
+    .navbar-left h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1.4rem;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    /* Nav links */
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    nav a {
+      text-decoration: none;
+      font-weight: 600;
+      color: var(--primary-color);
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    nav a:hover, nav a:focus {
+      background-color: var(--primary-hover);
+      color: white;
+      outline: none;
+    }
+
+    /* Buttons in menubar */
+    #darkModeToggle {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #darkModeToggle:hover, #darkModeToggle:focus {
+      background-color: var(--primary-hover);
+      outline: none;
+    }
+
+    /* Hamburger menu */
+    #menuToggle {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+      user-select: none;
+    }
+    #menuToggle span {
+      width: 25px;
+      height: 3px;
+      background-color: var(--primary-color);
+      margin: 4px 0;
+      transition: 0.3s;
+      border-radius: 2px;
+    }
+
+    /* Responsive nav toggling */
+    #menuToggle[aria-expanded="true"] span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    #menuToggle[aria-expanded="true"] span:nth-child(2) {
+      opacity: 0;
+    }
+    #menuToggle[aria-expanded="true"] span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      nav {
+        display: none;
+        flex-direction: column;
+        background: var(--bg-light);
+        position: absolute;
+        top: 60px;
+        right: 12px;
+        width: 180px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 8px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+        z-index: 101;
+      }
+      body.dark nav {
+        background: var(--bg-dark);
+        border-color: #444;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.9);
+      }
+      nav a {
+        padding: 10px 16px;
+        color: var(--primary-color);
+        white-space: nowrap;
+      }
+      #menuToggle {
+        display: flex;
+      }
+      #menuToggle[aria-expanded="true"] + nav {
+        display: flex;
+      }
+    }
+
+    /* Search bar */
+    #searchBar {
+      display: block;
+      max-width: 700px;
+      margin: 12px auto 15px;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+      user-select: text;
+    }
+    #searchBar:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 6px var(--primary-color);
+    }
+    body.dark #searchBar {
+      background: #222;
+      color: var(--text-dark);
+      border-color: #444;
+    }
+    body.dark #searchBar:focus {
+      border-color: var(--primary-hover);
+      box-shadow: 0 0 8px var(--primary-hover);
+    }
+
+    /* Buttons */
+    #loginBtn, #logoutBtn, #filterMyPosts {
+      max-width: 240px;
+      width: 100%;
+      display: block;
+      margin: 8px auto;
+      padding: 12px 0;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #loginBtn:hover, #logoutBtn:hover, #filterMyPosts:hover {
+      background-color: var(--primary-hover);
+    }
+    #filterMyPosts {
+      background-color: #ddd;
+      color: #222;
+      margin-bottom: 24px;
+    }
+    #filterMyPosts:hover {
+      background-color: #bbb;
+    }
+
+    /* Upload form */
+    form#uploadForm {
+      max-width: 700px;
+      margin: 0 auto 30px;
+      background: white;
+      padding: 16px 18px 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      display: none;
+      user-select: none;
+    }
+    body.dark form#uploadForm {
+      background: #222;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    }
+    form#uploadForm input[type="file"] {
+      width: 100%;
+      margin-bottom: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 6px;
+    }
+    body.dark form#uploadForm input[type="file"] {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      margin-bottom: 14px;
+      color: var(--text-light);
+      background: white;
+      font-family: inherit;
+    }
+    body.dark form#uploadForm textarea {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm button {
+      width: 100%;
+      padding: 14px 0;
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      font-size: 17px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    form#uploadForm button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    form#uploadForm button:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    /* Posts container */
+    #postContainer {
+      max-width: 700px;
+      margin: 0 auto 60px;
+      user-select: none;
+    }
+    .post-item {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 16px;
+      margin-bottom: 30px;
+      word-break: break-word;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark .post-item {
+      background: #222;
+      color: var(--text-dark);
+      box-shadow: 0 2px 14px rgba(0,0,0,0.8);
+    }
+    .post-item img,
+    .post-item video {
+      max-width: 100%;
+      border-radius: 12px;
+      display: block;
+      margin: 0 auto 14px;
+      background: #000;
+    }
+    .post-item video {
+      max-height: 400px;
+      outline: none;
+    }
+    .post-caption {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+    .post-owner {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: var(--primary-color);
+      user-select: text;
+    }
+    .post-time {
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 12px;
+      user-select: text;
+    }
+    body.dark .post-time {
+      color: #bbb;
+    }
+    .post-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .post-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary-color);
+      user-select: none;
+      transition: color 0.2s ease;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .post-actions button:hover {
+      color: var(--primary-hover);
+      background: rgba(0, 102, 204, 0.1);
+    }
+    .post-actions span {
+      font-weight: bold;
+      user-select: none;
+    }
+    
+    .comment-section {
+      margin-top: 16px;
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+    }
+    body.dark .comment-section {
+      border-color: #444;
+    }
+    .comment-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      background: #f1f1f1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-top: 8px;
+      gap: 12px;
+      user-select: text;
+    }
+    body.dark .comment-item {
+      background: #333;
+    }
+    .comment-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.8px solid #ccc;
+      user-select: none;
+    }
+    body.dark .comment-item img {
+      border-color: #555;
+    }
+    .comment-text {
+      flex: 1;
+    }
+    .comment-author {
+      font-weight: 700;
+      margin-right: 6px;
+      color: #333;
+      user-select: text;
+    }
+    body.dark .comment-author {
+      color: #aaa;
+    }
+
+    /* Loading spinner */
+    #loadingSpinner {
+      max-width: 700px;
+      margin: 40px auto;
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      user-select: none;
+    }
+    body.dark #loadingSpinner {
+      color: #bbb;
+    }
+    
+    @media (max-width: 600px) {
+      body {
+        padding: 0 10px 50px;
+      }
+      header .navbar-left img {
+        max-height: 40px;
+      }
+      form#uploadForm {
+        padding: 14px 16px 16px;
+      }
+    }
+  </style>
+  
+</head>
+<body>
+
+<header>
+  <div class="navbar">
+    <div class="navbar-left">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+      <h1>DRFMedia</h1>
+    </div>
+
+    <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+      <a href="#" tabindex="0">Home</a>
+      <a href="#" tabindex="0">Timeline</a>
+      <a href="#" tabindex="0">Upload</a>
+      <a href="#" tabindex="0" id="profileLink" style="display:none;">Profile</a>
+      <a href="#" tabindex="0" id="loginNavLink">Login</a>
+      <a href="#" tabindex="0" id="logoutNavLink" style="display:none;">Logout</a>
+    </nav>
+
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+  </div>
+</header>
+
+<input type="search" id="searchBar" placeholder="Search posts or users..." aria-label="Search posts or users" autocomplete="off" />
+
+<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+<button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
+<button id="filterMyPosts" style="display:none" aria-label="Show only my posts">Show Only My Posts</button>
+
+<form id="uploadForm" aria-label="Upload new post form">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
+  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption"></textarea>
+  <button type="submit">Post</button>
+</form>
+
+<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
+<div id="postContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, update, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  // Firebase config - replace with your own config if needed
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
+
+  // Pinata JWT for media upload - replace with your own for security
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth();
+
+  const provider = new GoogleAuthProvider();
+
+  // Elements
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const filterMyPostsBtn = document.getElementById("filterMyPosts");
+  const uploadForm = document.getElementById("uploadForm");
+  const mediaFileInput = document.getElementById("mediaFile");
+  const captionInput = document.getElementById("caption");
+  const postContainer = document.getElementById("postContainer");
+  const loadingSpinner = document.getElementById("loadingSpinner");
+  const searchBar = document.getElementById("searchBar");
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  const loginNavLink = document.getElementById("loginNavLink");
+  const logoutNavLink = document.getElementById("logoutNavLink");
+  const profileLink = document.getElementById("profileLink");
+
+  let currentUser = null;
+  let allPosts = [];
+  let filteredPosts = [];
+  let showOnlyMyPosts = false;
+
+  // Dark mode toggle
+  function updateDarkModeUI() {
+    if (document.body.classList.contains("dark")) {
+      darkModeToggle.textContent = "☀️ Light Mode";
+    } else {
+      darkModeToggle.textContent = "🌙 Dark Mode";
+    }
+  }
+  darkModeToggle.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    updateDarkModeUI();
+  });
+  updateDarkModeUI();
+
+  // Responsive menu toggle
+  menuToggle.addEventListener("click", () => {
+    const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+    menuToggle.setAttribute("aria-expanded", String(!expanded));
+  });
+  // Close menu if user clicks a nav link
+  primaryNav.querySelectorAll("a").forEach(a => {
+    a.addEventListener("click", () => {
+      menuToggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  // Auth state change
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "block";
+      filterMyPostsBtn.style.display = "block";
+      loginNavLink.style.display = "none";
+      logoutNavLink.style.display = "inline-block";
+      profileLink.style.display = "inline-block";
+      profileLink.textContent = user.displayName || "Profile";
+      uploadForm.style.display = "block";
+    } else {
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      filterMyPostsBtn.style.display = "none";
+      uploadForm.style.display = "none";
+      loginNavLink.style.display = "inline-block";
+      logoutNavLink.style.display = "none";
+      profileLink.style.display = "none";
+      showOnlyMyPosts = false;
+      filterMyPostsBtn.textContent = "Show Only My Posts";
+    }
+    renderPosts();
+  });
+
+  loginBtn.addEventListener("click", () => {
+    signInWithPopup(auth, provider).catch(console.error);
+  });
+  loginNavLink.addEventListener("click", e => {
+    e.preventDefault();
+    signInWithPopup(auth, provider).catch(console.error);
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth);
+  });
+  logoutNavLink.addEventListener("click", e => {
+    e.preventDefault();
+    signOut(auth);
+  });
+
+  // Upload form submit
+  uploadForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!mediaFileInput.files.length) {
+      alert("Please select a media file");
+      return;
+    }
+    if (captionInput.value.trim().length < 4) {
+      alert("Caption must be at least 4 characters");
+      return;
+    }
+
+    const file = mediaFileInput.files[0];
+    const caption = captionInput.value.trim();
+
+    // Disable form while uploading
+    uploadForm.querySelector("button").disabled = true;
+
+    try {
+      // Upload file to Pinata (IPFS)
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: pinataJWT
+        },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error("Failed to upload media to IPFS");
+
+      const data = await res.json();
+      const ipfsHash = data.IpfsHash;
+
+      // Save post metadata to Firebase Realtime DB
+      const postsRef = ref(db, "posts");
+      await push(postsRef, {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        caption,
+        mediaHash: ipfsHash,
+        mediaType: file.type.startsWith("video") ? "video" : "image",
+        timestamp: Date.now(),
+        likes: {},
+        comments: {}
+      });
+
+      // Reset form
+      mediaFileInput.value = "";
+      captionInput.value = "";
+      uploadForm.style.display = "none";
+
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+    }
+  });
+
+  // Load posts from Firebase and render
+  function renderPosts() {
+    postContainer.innerHTML = "";
+    let postsToShow = filteredPosts.length ? filteredPosts : allPosts;
+
+    if (showOnlyMyPosts && currentUser) {
+      postsToShow = postsToShow.filter(post => post.uid === currentUser.uid);
+      filterMyPostsBtn.textContent = "Show All Posts";
+    } else {
+      filterMyPostsBtn.textContent = "Show Only My Posts";
+    }
+
+    if (!postsToShow.length) {
+      postContainer.innerHTML = "<p style='text-align:center; font-weight:600; padding:30px;'>No posts found.</p>";
+      return;
+    }
+
+    for (const post of postsToShow) {
+      const postEl = document.createElement("article");
+      postEl.className = "post-item";
+      postEl.tabIndex = 0;
+
+      const ownerHTML = `<div class="post-owner">${escapeHTML(post.displayName)}</div>`;
+      const timeHTML = `<div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>`;
+      const captionHTML = `<div class="post-caption">${escapeHTML(post.caption)}</div>`;
+
+      let mediaHTML = "";
+      const url = `https://gateway.pinata.cloud/ipfs/${post.mediaHash}`;
+      if (post.mediaType === "video") {
+        mediaHTML = `<video controls preload="metadata" muted playsinline src="${url}" alt="Video post"></video>`;
+      } else {
+        mediaHTML = `<img loading="lazy" decoding="async" src="${url}" alt="Image post" />`;
+      }
+
+      // Likes count
+      const likesCount = post.likes ? Object.keys(post.likes).length : 0;
+
+      postEl.innerHTML = `
+        ${ownerHTML}
+        ${timeHTML}
+        ${mediaHTML}
+        ${captionHTML}
+        <div class="post-actions">
+          <button aria-label="Like post" data-postid="${post.id}" class="like-btn">👍 Like <span>${likesCount}</span></button>
+          <button aria-label="Comment on post" data-postid="${post.id}" class="comment-toggle-btn">💬 Comments</button>
+        </div>
+        <section class="comment-section" style="display:none;" aria-live="polite"></section>
+      `;
+
+      postContainer.appendChild(postEl);
+    }
+
+    // Attach like and comment event listeners
+    attachPostEventListeners();
+  }
+
+  // Attach listeners for like and comment buttons
+  function attachPostEventListeners() {
+    document.querySelectorAll(".like-btn").forEach(btn => {
+      btn.onclick = () => {
+        if (!currentUser) {
+          alert("Please sign in to like posts.");
+          return;
+        }
+        const postId = btn.dataset.postid;
+        toggleLike(postId, btn);
+      };
+    });
+
+    document.querySelectorAll(".comment-toggle-btn").forEach(btn => {
+      btn.onclick = () => {
+        const postEl = btn.closest(".post-item");
+        const commentSection = postEl.querySelector(".comment-section");
+        if (commentSection.style.display === "none") {
+          commentSection.style.display = "block";
+          loadComments(btn.dataset.postid, commentSection);
+          btn.textContent = "🔽 Hide Comments";
+        } else {
+          commentSection.style.display = "none";
+          btn.textContent = "💬 Comments";
+        }
+      };
+    });
+  }
+
+  // Toggle like status in DB
+  async function toggleLike(postId, btn) {
+    const userId = currentUser.uid;
+    const likesRef = ref(db, `posts/${postId}/likes/${userId}`);
+
+    // Read current like status
+    let liked = false;
+    // To check if liked, get value once:
+    // But we can just toggle blindly for demo — better to get value first
+    try {
+      const snapshot = await new Promise(resolve => onValue(likesRef, resolve, { onlyOnce: true }));
+      liked = snapshot.exists();
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (liked) {
+      await update(likesRef, null); // remove like
+    } else {
+      await update(likesRef, true); // add like
+    }
+  }
+
+  // Load comments for a post
+  function loadComments(postId, container) {
+    container.innerHTML = "<p>Loading comments...</p>";
+    const commentsRef = ref(db, `posts/${postId}/comments`);
+
+    onValue(commentsRef, snapshot => {
+      container.innerHTML = "";
+      if (!snapshot.exists()) {
+        container.innerHTML = "<p>No comments yet.</p>";
+        addCommentForm(postId, container);
+        return;
+      }
+      const comments = snapshot.val();
+      for (const cid in comments) {
+        const comment = comments[cid];
+        const commentEl = document.createElement("div");
+        commentEl.className = "comment-item";
+
+        commentEl.innerHTML = `
+          <img src="${escapeHTML(comment.photoURL || 'https://via.placeholder.com/32')}" alt="${escapeHTML(comment.displayName)} profile picture" />
+          <div class="comment-text"><strong class="comment-author">${escapeHTML(comment.displayName)}</strong>${escapeHTML(comment.text)}</div>
+        `;
+        container.appendChild(commentEl);
+      }
+      addCommentForm(postId, container);
+    }, { onlyOnce: false });
+  }
+
+  // Add comment form below comments list
+  function addCommentForm(postId, container) {
+    if (!currentUser) {
+      const loginMsg = document.createElement("p");
+      loginMsg.textContent = "Please sign in to comment.";
+      container.appendChild(loginMsg);
+      return;
+    }
+    const form = document.createElement("form");
+    form.innerHTML = `
+      <textarea aria-label="Write a comment" required placeholder="Write a comment..." rows="2" style="width:100%; margin-top:8px; border-radius:8px; border:1px solid #ccc; padding:8px;"></textarea>
+      <button type="submit" style="margin-top:6px; padding:8px 12px; border:none; background:${varPrimaryColor()}; color:white; font-weight:bold; border-radius:8px; cursor:pointer;">Post Comment</button>
+    `;
+    container.appendChild(form);
+
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const text = form.querySelector("textarea").value.trim();
+      if (text.length < 1) return;
+
+      const commentRef = ref(db, `posts/${postId}/comments`);
+      await push(commentRef, {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        text,
+        timestamp: Date.now()
+      });
+      form.reset();
+    });
+  }
+
+  // Utility escape to prevent injection
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[m]);
+  }
+  
+  function varPrimaryColor() {
+    return getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#0066cc';
+  }
+
+  // Load all posts live from Firebase DB
+  function listenForPosts() {
+    const postsRef = ref(db, "posts");
+    loadingSpinner.style.display = "block";
+    onValue(postsRef, snapshot => {
+      loadingSpinner.style.display = "none";
+      if (!snapshot.exists()) {
+        allPosts = [];
+        renderPosts();
+        return;
+      }
+      const postsData = snapshot.val();
+      allPosts = Object.entries(postsData).map(([id, data]) => ({
+        id,
+        ...data
+      })).sort((a,b) => b.timestamp - a.timestamp);
+      applySearchFilter();
+    }, { onlyOnce: false });
+  }
+
+  // Filter posts by search input
+  function applySearchFilter() {
+    const query = searchBar.value.trim().toLowerCase();
+    if (!query) {
+      filteredPosts = [];
+    } else {
+      filteredPosts = allPosts.filter(post =>
+        post.caption.toLowerCase().includes(query) ||
+        (post.displayName && post.displayName.toLowerCase().includes(query))
+      );
+    }
+    renderPosts();
+  }
+
+  searchBar.addEventListener("input", applySearchFilter);
+
+  filterMyPostsBtn.addEventListener("click", () => {
+    showOnlyMyPosts = !showOnlyMyPosts;
+    renderPosts();
+  });
+
+  // Show upload form when logged in
+  loginBtn.addEventListener("click", () => {
+    uploadForm.style.display = "block";
+  });
+
+  // Initial
+  listenForPosts();
+</script>
+
+</body>
+</html>
