@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boost Your Post — DRFMedia</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 15px;
+      background: #f9f9f9;
+      color: #222;
+    }
+    h1 {
+      color: #007bff;
+      text-align: center;
+    }
+    form {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    input[type="url"], input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1em;
+      width: 100%;
+    }
+    button:disabled {
+      background: #bbb;
+      cursor: not-allowed;
+    }
+    .info {
+      background: #e7f1ff;
+      border-left: 4px solid #007bff;
+      padding: 10px 15px;
+      margin-bottom: 20px;
+      font-size: 0.95em;
+      line-height: 1.4;
+    }
+    .success {
+      color: green;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Boost Your Post</h1>
+
+  <div class="info">
+    <p>Boost your photo or video post for <strong>$30 USD in USDC</strong> and get it highlighted for 30 days!</p>
+    <p>Send <strong>exactly 30 USDC</strong> to this address:</p>
+    <p><code>0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b</code></p>
+    <p>Then enter the URL link of the post you want to boost below and submit your request.</p>
+    <p>After verification, your post will be highlighted on the timeline for 30 days.</p>
+  </div>
+
+  <form id="boostForm">
+    <label for="postLink">Post URL to Boost</label>
+    <input type="url" id="postLink" placeholder="https://yourdomain.com/?postId=abc123" required />
+
+    <label for="walletAddress">Your USDC Wallet Address (for payment verification)</label>
+    <input type="text" id="walletAddress" placeholder="0x..." required pattern="^0x[a-fA-F0-9]{40}$" />
+
+    <button type="submit">Submit Boost Request</button>
+  </form>
+
+  <div id="message" class="success" role="alert" aria-live="assertive" style="display:none;"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      set,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signInWithPopup,
+      GoogleAuthProvider
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const boostForm = document.getElementById('boostForm');
+    const postLinkInput = document.getElementById('postLink');
+    const walletInput = document.getElementById('walletAddress');
+    const messageDiv = document.getElementById('message');
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (!user) {
+        // If not logged in, sign in with Google
+        signInWithPopup(auth, provider).catch(console.error);
+      }
+    });
+
+    boostForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!currentUser) {
+        alert("Please sign in with Google before submitting.");
+        return;
+      }
+
+      const postLink = postLinkInput.value.trim();
+      const walletAddr = walletInput.value.trim();
+
+      if (!postLink || !walletAddr) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      boostForm.querySelector('button').disabled = true;
+      messageDiv.style.display = 'none';
+
+      try {
+        // Save boost request
+        const boostRef = ref(db, 'boostRequests');
+        await push(boostRef, {
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          postLink,
+          walletAddress: walletAddr,
+          status: "pending",  // Admin can update this to "approved"
+          requestedAt: serverTimestamp()
+        });
+
+        messageDiv.textContent = "Your boost request has been submitted successfully! Please send 30 USDC to the given address. Once verified, your post will be boosted.";
+        messageDiv.style.display = 'block';
+
+        boostForm.reset();
+      } catch (error) {
+        alert("Error submitting boost request: " + error.message);
+      } finally {
+        boostForm.querySelector('button').disabled = false;
+      }
+    });
+  </script>
+
+</body>
+</html>
