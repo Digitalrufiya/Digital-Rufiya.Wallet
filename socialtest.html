@@ -1,143 +1,867 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia — Spread Kindness & Truth</title>
-  <!-- Styles are unchanged for brevity -->
+  
+  <style>
+    :root {
+      --bg-light: #f7f7f7;
+      --bg-dark: #121212;
+      --text-light: #222;
+      --text-dark: #eee;
+      --primary-color: #0066cc;
+      --primary-hover: #004a99;
+      --overlay-bg: rgba(0,0,0,0.6);
+      --overlay-text: #f9f9f9;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-light);
+      margin: 0; padding: 0 12px 60px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
+    }
+    header {
+      text-align: center;
+      padding: 12px 0 20px;
+      position: sticky;
+      top: 0;
+      background: inherit;
+      z-index: 10;
+    }
+    header img {
+      max-height: 90px;
+      object-fit: contain;
+      margin-bottom: 8px;
+    }
+    header h1 {
+      margin: 0 0 10px;
+      font-weight: 700;
+      font-size: 1.8rem;
+      user-select: none;
+    }
+    #settingsBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      border: none;
+      font-size: 22px;
+      line-height: 40px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 20;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #settingsBtn:hover {
+      background-color: var(--primary-hover);
+    }
+    #darkModeToggle {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      background: var(--primary-color);
+      color: white;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 20;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    #darkModeToggle:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    #loginBtn, #logoutBtn, #filterMyPosts {
+      max-width: 240px;
+      width: 100%;
+      display: block;
+      margin: 12px auto;
+      padding: 14px 0;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    #loginBtn:hover, #logoutBtn:hover, #filterMyPosts:hover {
+      background-color: var(--primary-hover);
+    }
+    #filterMyPosts {
+      background-color: #ddd;
+      color: #222;
+      margin-bottom: 24px;
+    }
+    #filterMyPosts:hover {
+      background-color: #bbb;
+    }
+    
+    form#uploadForm {
+      max-width: 600px;
+      margin: 0 auto 32px;
+      background: white;
+      padding: 16px 18px 20px;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      display: none;
+      user-select: none;
+    }
+    body.dark form#uploadForm {
+      background: #222;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.9);
+    }
+    form#uploadForm input[type="file"] {
+      width: 100%;
+      margin-bottom: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 6px;
+    }
+    body.dark form#uploadForm input[type="file"] {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      margin-bottom: 14px;
+      color: var(--text-light);
+      background: white;
+      font-family: inherit;
+    }
+    body.dark form#uploadForm textarea {
+      border-color: #444;
+      background: #111;
+      color: var(--text-dark);
+    }
+    form#uploadForm button {
+      width: 100%;
+      padding: 14px 0;
+      border: none;
+      background: var(--primary-color);
+      color: white;
+      font-weight: 700;
+      font-size: 17px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    form#uploadForm button:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    form#uploadForm button:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    
+    #postContainer {
+      max-width: 700px;
+      margin: 0 auto 100px;
+      user-select: none;
+    }
+    .post-item {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      padding: 16px;
+      margin-bottom: 30px;
+      word-break: break-word;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    body.dark .post-item {
+      background: #222;
+      color: var(--text-dark);
+      box-shadow: 0 2px 14px rgba(0,0,0,0.8);
+    }
+    .post-item img,
+    .post-item video {
+      max-width: 100%;
+      border-radius: 12px;
+      display: block;
+      margin: 0 auto 14px;
+      background: #000;
+    }
+    .post-item video {
+      max-height: 400px;
+      outline: none;
+    }
+    .post-caption {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+    .post-owner {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+      color: var(--primary-color);
+      user-select: text;
+    }
+    .post-time {
+      font-size: 0.8rem;
+      color: #555;
+      margin-bottom: 12px;
+      user-select: text;
+    }
+    body.dark .post-time {
+      color: #bbb;
+    }
+    .post-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .post-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary-color);
+      user-select: none;
+      transition: color 0.2s ease;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+    .post-actions button:hover {
+      color: var(--primary-hover);
+      background: rgba(0, 102, 204, 0.1);
+    }
+    .post-actions span {
+      font-weight: bold;
+      user-select: none;
+    }
+    
+    .comment-section {
+      margin-top: 16px;
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+    }
+    body.dark .comment-section {
+      border-color: #444;
+    }
+    .comment-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      background: #f1f1f1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-top: 8px;
+      gap: 12px;
+      user-select: text;
+    }
+    body.dark .comment-item {
+      background: #333;
+    }
+    .comment-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.8px solid #ccc;
+      user-select: none;
+    }
+    body.dark .comment-item img {
+      border-color: #555;
+    }
+    .comment-text {
+      flex: 1;
+    }
+    .comment-author {
+      font-weight: 700;
+      margin-right: 6px;
+      color: #333;
+      user-select: text;
+    }
+    body.dark .comment-author {
+      color: #aaa;
+    }
+    
+    #loadingSpinner {
+      max-width: 700px;
+      margin: 40px auto;
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+      user-select: none;
+    }
+    body.dark #loadingSpinner {
+      color: #bbb;
+    }
+    
+    /* Quran ayah overlay */
+    #quranOverlay {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: var(--overlay-bg);
+      color: var(--overlay-text);
+      border-radius: 14px;
+      padding: 14px 20px;
+      font-size: 1.1rem;
+      line-height: 1.4;
+      user-select: text;
+      font-weight: 600;
+      max-width: 900px;
+      margin: 0 auto;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.7);
+      cursor: default;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-family: "Scheherazade New", serif, "Arial", sans-serif;
+      direction: rtl;
+    }
+    #quranOverlay .translation {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #ddd;
+      direction: ltr;
+    }
+    
+    @media (max-width: 600px) {
+      body {
+        padding: 0 10px 50px;
+      }
+      header img {
+        max-height: 70px;
+      }
+      form#uploadForm {
+        padding: 14px 16px 16px;
+      }
+      #quranOverlay {
+        font-size: 1rem;
+        padding: 12px 16px;
+        bottom: 6px;
+      }
+    }
+  </style>
+  
 </head>
 <body>
-  <!-- UI Elements (unchanged for brevity) -->
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, push, update, onValue, remove, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<header>
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+  <h1>DRFMedia — Spread Kindness & Truth</h1>
+</header>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
+<button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+<button id="settingsBtn" title="Profile">⚙️</button>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+<button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
+<button id="filterMyPosts" style="display:none" aria-label="Filter posts">Show Only My Posts</button>
 
-    let currentUser = null;
-    onAuthStateChanged(auth, user => {
-      currentUser = user;
+<form id="uploadForm" aria-label="Upload new post form">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
+  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption"></textarea>
+  <button type="submit">Post</button>
+</form>
+
+<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
+<div id="postContainer" aria-live="polite"></div>
+
+<div id="quranOverlay" aria-live="polite" role="region" aria-label="Daily Quranic verse" style="display:none;">
+  <div class="arabic"></div>
+  <div class="translation"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, update, onValue, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
+
+  // Pinata JWT - YOUR OWN KEY recommended to replace for security
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // UI references
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const filterBtn = document.getElementById("filterMyPosts");
+  const uploadForm = document.getElementById("uploadForm");
+  const mediaFileInput = document.getElementById("mediaFile");
+  const captionInput = document.getElementById("caption");
+  const postContainer = document.getElementById("postContainer");
+  const loadingSpinner = document.getElementById("loadingSpinner");
+  const darkModeToggle = document.getElementById("darkModeToggle");
+  const settingsBtn = document.getElementById("settingsBtn");
+  const quranOverlay = document.getElementById("quranOverlay");
+  const quranArabic = quranOverlay.querySelector(".arabic");
+  const quranTranslation = quranOverlay.querySelector(".translation");
+
+  let currentUser = null;
+  let showOnlyMyPosts = false;
+
+  // Save dark mode preference locally
+  function saveDarkModePref(enabled) {
+    try { localStorage.setItem("drfmedia-darkmode", enabled ? "1" : "0"); } catch {}
+  }
+  function loadDarkModePref() {
+    try {
+      return localStorage.getItem("drfmedia-darkmode") === "1";
+    } catch { return false; }
+  }
+
+  // Toggle dark mode UI
+  function toggleDarkMode(setTo) {
+    let enabled = setTo === undefined ? !document.body.classList.contains("dark") : setTo;
+    document.body.classList.toggle("dark", enabled);
+    darkModeToggle.textContent = enabled ? "☀️ Light Mode" : "🌙 Dark Mode";
+    saveDarkModePref(enabled);
+  }
+  darkModeToggle.onclick = () => toggleDarkMode();
+
+  // Escape HTML to prevent injection
+  function escapeHtml(text) {
+    if (!text) return "";
+    return text.replace(/[&<>"']/g, (m) => {
+      switch (m) {
+        case "&": return "&amp;";
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case "\"": return "&quot;";
+        case "'": return "&#39;";
+        default: return m;
+      }
+    });
+  }
+
+  // Format timestamp as local date/time string
+  function formatDate(ts) {
+    if (!ts) return "";
+    let date = new Date(ts);
+    return date.toLocaleString(undefined, {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  // Show Quran ayah overlay
+  function showQuranAyah(ayah, translation) {
+    quranArabic.textContent = ayah;
+    quranTranslation.textContent = translation;
+    quranOverlay.style.display = "flex";
+  }
+
+  // For demo - static ayah, replace with your own API or DB
+  showQuranAyah(
+    "وَمَا تُقَدِّمُوا لِأَنفُسِكُم مِّنْ خَيْرٍ تَجِدُوهُ عِندَ اللَّهِ ۗ",
+    "And whatever good you put forward for yourselves – you will find it with Allah."
+  );
+
+  // Helper: Upload file to Pinata and get IPFS URL
+  async function uploadToPinata(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: pinataJWT
+      },
+      body: formData
     });
 
-    function attachLikeHandler(postElem, postKey) {
-      const likeBtn = postElem.querySelector(".like-btn");
-      const likesRef = ref(db, `posts/${postKey}/likes`);
-      onValue(likesRef, (snapshot) => {
-        const likesData = snapshot.val() || {};
-        const count = Object.keys(likesData).length;
-        const liked = currentUser && likesData[currentUser.uid];
-        likeBtn.innerHTML = `${liked ? "💙" : "🤍"} <span>${count}</span>`;
-      });
+    if (!res.ok) throw new Error("Pinata upload failed");
+    const json = await res.json();
+    return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
+  }
 
-      likeBtn.addEventListener("click", async () => {
-        if (!currentUser) return alert("Please login to like.");
-        const userLikeRef = ref(db, `posts/${postKey}/likes/${currentUser.uid}`);
-        const snapshot = await get(userLikeRef);
-        if (snapshot.exists()) {
-          await remove(userLikeRef);
-        } else {
-          await update(userLikeRef, {
-            userId: currentUser.uid,
-            userName: currentUser.displayName || "Anon",
-            timestamp: Date.now()
-          });
-        }
-      });
-    }
+  // Create a post element for UI
+  function createPostElement(post) {
+    const div = document.createElement("article");
+    div.className = "post-item";
+    div.dataset.key = post.key;
 
-    function attachCommentHandler(postElem, postKey) {
-      const commentBtn = postElem.querySelector(".comment-btn");
-      commentBtn.addEventListener("click", () => {
-        showCommentInput(postElem, postKey);
-      });
-    }
-
-    function showCommentInput(postElem, postKey) {
-      const commentSection = postElem.querySelector(".comment-section");
-      if (commentSection.style.display === "block") {
-        commentSection.style.display = "none";
-        commentSection.innerHTML = "";
-        return;
+    // Media tag based on type
+    let mediaHTML = "";
+    if (post.mediaUrl) {
+      if (post.mediaType && post.mediaType.startsWith("video")) {
+        mediaHTML = `<video controls preload="metadata" muted loop>
+          <source src="${escapeHtml(post.mediaUrl)}" type="${escapeHtml(post.mediaType)}" />
+          Your browser does not support video.
+        </video>`;
+      } else {
+        mediaHTML = `<img loading="lazy" src="${escapeHtml(post.mediaUrl)}" alt="User post media" />`;
       }
+    }
+
+    // Likes count
+    let likesCount = post.likes ? Object.keys(post.likes).length : 0;
+    // Has current user liked?
+    let likedByUser = currentUser && post.likes && post.likes[currentUser.uid];
+
+    div.innerHTML = `
+      <div class="post-owner" title="Post owner">${escapeHtml(post.userName || "Anonymous")}</div>
+      <div class="post-time">${formatDate(post.timestamp)}</div>
+      <div class="post-caption">${escapeHtml(post.caption)}</div>
+      ${mediaHTML}
+      <div class="post-actions" role="group" aria-label="Post actions">
+        <button class="like-btn" aria-pressed="${likedByUser ? "true" : "false"}" aria-label="${likedByUser ? "Unlike" : "Like"} post">
+          ${likedByUser ? "💙" : "🤍"} <span>${likesCount}</span>
+        </button>
+        <button class="comment-btn" aria-label="Show comments">💬 Comments</button>
+        ${currentUser && currentUser.uid === post.userId ? '<button class="delete-btn" aria-label="Delete post">🗑️ Delete</button>' : ""}
+      </div>
+    `;
+
+    // Comments container (hidden initially)
+    const commentSection = document.createElement("section");
+    commentSection.className = "comment-section";
+    commentSection.style.display = "none";
+    div.appendChild(commentSection);
+
+    // Setup actions after DOM insert
+    setTimeout(() => setupPostActions(div, post), 0);
+
+    return div;
+  }
+
+  // Render comments for a post inside container
+  function renderComments(post, container) {
+    container.innerHTML = "";
+    if (!post.comments) return;
+    // Sort by timestamp ascending
+    const sorted = Object.entries(post.comments).sort((a,b) => a[1].timestamp - b[1].timestamp);
+    for (const [_, comment] of sorted) {
+      const cDiv = document.createElement("div");
+      cDiv.className = "comment-item";
+      cDiv.innerHTML = `
+        <img src="${comment.userPhotoURL || 'https://i.pravatar.cc/40'}" alt="User avatar" />
+        <div class="comment-text"><span class="comment-author">${escapeHtml(comment.userName || "Anon")}</span> ${escapeHtml(comment.text)}</div>
+      `;
+      container.appendChild(cDiv);
+    }
+  }
+
+  // Show comment input box and comments
+  function showCommentInput(postElem, postKey) {
+    const commentSection = postElem.querySelector(".comment-section");
+    if (!commentSection) return;
+
+    if (commentSection.style.display === "none") {
       commentSection.style.display = "block";
 
+      // Clear previous content
+      commentSection.innerHTML = "";
+
+      // Create comment list container
+      const commentsList = document.createElement("div");
+      commentsList.className = "comments-list";
+      commentSection.appendChild(commentsList);
+
+      // Render existing comments
+      let post = allPosts.find(p => p.key === postKey);
+      renderComments(post, commentsList);
+
+      // If user not logged in show login prompt
+      if (!currentUser) {
+        const loginPrompt = document.createElement("p");
+        loginPrompt.textContent = "Please sign in to add comments.";
+        loginPrompt.style.marginTop = "10px";
+        commentSection.appendChild(loginPrompt);
+        return;
+      }
+
+      // Create form to add comment
       const form = document.createElement("form");
-      const input = document.createElement("input");
-      input.type = "text";
-      input.placeholder = "Write a comment...";
-      input.required = true;
-      form.appendChild(input);
+      form.style.marginTop = "12px";
+      form.setAttribute("aria-label", "Add comment form");
+      form.innerHTML = `
+        <textarea placeholder="Write a comment..." required minlength="1" aria-required="true" aria-label="Comment text"></textarea>
+        <button type="submit">Post Comment</button>
+      `;
       commentSection.appendChild(form);
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        if (!currentUser) return alert("Please login to comment.");
-        const text = input.value.trim();
-        if (!text) return;
+      const textarea = form.querySelector("textarea");
 
-        const newCommentRef = push(ref(db, `comments/${postKey}`));
-        const commentData = {
-          text,
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        if (!textarea.value.trim()) return;
+
+        // Prepare comment data
+        const newComment = {
           userId: currentUser.uid,
           userName: currentUser.displayName || "Anon",
-          userPhotoURL: currentUser.photoURL || "",
+          userPhotoURL: currentUser.photoURL || "https://i.pravatar.cc/40",
+          text: textarea.value.trim(),
           timestamp: Date.now()
         };
-        await update(newCommentRef, commentData);
-        await update(ref(db, `posts/${postKey}/comments/${newCommentRef.key}`), commentData);
 
-        input.value = "";
+        try {
+          // Push to comments node
+          const commentRef = push(ref(db, `comments/${postKey}`));
+          await update(commentRef, newComment);
+
+          // Also update inside posts/{postKey}/comments
+          const postCommentsRef = ref(db, `posts/${postKey}/comments/${commentRef.key}`);
+          await update(postCommentsRef, newComment);
+
+          // Update local post cache for UI refresh
+          let post = allPosts.find(p => p.key === postKey);
+          if (!post.comments) post.comments = {};
+          post.comments[commentRef.key] = newComment;
+
+          // Refresh comments list UI
+          renderComments(post, commentsList);
+
+          textarea.value = "";
+        } catch (err) {
+          alert("Failed to post comment: " + err.message);
+        }
+      };
+
+    } else {
+      // Hide comments section
+      commentSection.style.display = "none";
+    }
+  }
+
+  // Setup event listeners for Like, Comment, Delete buttons
+  function setupPostActions(postElem, post) {
+    const likeBtn = postElem.querySelector(".like-btn");
+    const commentBtn = postElem.querySelector(".comment-btn");
+    const deleteBtn = postElem.querySelector(".delete-btn");
+
+    if (likeBtn) {
+      likeBtn.onclick = async () => {
+        if (!currentUser) {
+          alert("Please login to like posts.");
+          return;
+        }
+        const userId = currentUser.uid;
+        const likesRef = ref(db, `posts/${post.key}/likes`);
+
+        const liked = post.likes && post.likes[userId];
+        if (liked) {
+          // Unlike
+          await update(likesRef, { [userId]: null });
+          delete post.likes[userId];
+          likeBtn.setAttribute("aria-pressed", "false");
+          likeBtn.innerHTML = `🤍 <span>${Object.keys(post.likes).length}</span>`;
+        } else {
+          // Like
+          await update(likesRef, { [userId]: true });
+          post.likes = post.likes || {};
+          post.likes[userId] = true;
+          likeBtn.setAttribute("aria-pressed", "true");
+          likeBtn.innerHTML = `💙 <span>${Object.keys(post.likes).length}</span>`;
+        }
+      };
+    }
+
+    if (commentBtn) {
+      commentBtn.onclick = () => {
+        showCommentInput(postElem, post.key);
+      };
+    }
+
+    if (deleteBtn) {
+      deleteBtn.onclick = async () => {
+        if (confirm("Delete this post?")) {
+          try {
+            await remove(ref(db, `posts/${post.key}`));
+            postElem.remove();
+            allPosts = allPosts.filter(p => p.key !== post.key);
+          } catch (err) {
+            alert("Failed to delete post: " + err.message);
+          }
+        }
+      };
+    }
+  }
+
+  // Global posts array for caching
+  let allPosts = [];
+
+  // Render all posts
+  function renderAllPosts(posts) {
+    postContainer.innerHTML = "";
+    const filtered = showOnlyMyPosts && currentUser
+      ? posts.filter(p => p.userId === currentUser.uid)
+      : posts;
+
+    if (filtered.length === 0) {
+      postContainer.innerHTML = `<p style="text-align:center; color:#888;">No posts found.</p>`;
+      return;
+    }
+
+    for (const post of filtered) {
+      const postElem = createPostElement(post);
+      postContainer.appendChild(postElem);
+    }
+  }
+
+  // Load posts from Firebase and listen for changes
+  function listenPosts() {
+    loadingSpinner.style.display = "block";
+    const postsRef = ref(db, "posts");
+    onValue(postsRef, (snapshot) => {
+      const postsData = snapshot.val() || {};
+      allPosts = Object.entries(postsData).map(([key, val]) => {
+        val.key = key;
+        return val;
       });
+      // Sort descending by timestamp
+      allPosts.sort((a,b) => b.timestamp - a.timestamp);
+      renderAllPosts(allPosts);
+      loadingSpinner.style.display = "none";
+    });
+  }
+
+  // Upload form submit handler
+  uploadForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      alert("Please sign in first.");
+      return;
+    }
+    if (!mediaFileInput.files[0]) {
+      alert("Please select a media file.");
+      return;
+    }
+    if (captionInput.value.trim().length < 4) {
+      alert("Caption should be at least 4 characters.");
+      return;
     }
 
-    function createPostElement(post) {
-      const div = document.createElement("article");
-      div.className = "post-item";
-      div.innerHTML = `
-        <div class="post-owner">${post.userName || "Anonymous"}</div>
-        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-        <div class="post-caption">${post.caption || ""}</div>
-        <div class="post-actions">
-          <button class="like-btn">🤍 <span>0</span></button>
-          <button class="comment-btn">💬 <span>0</span></button>
-        </div>
-        <div class="comment-section" style="display:none"></div>
-      `;
-      attachLikeHandler(div, post.key);
-      attachCommentHandler(div, post.key);
-      return div;
-    }
+    uploadForm.querySelector("button").disabled = true;
+    uploadForm.querySelector("button").textContent = "Uploading...";
 
-    function loadPosts() {
-      const postsRef = ref(db, "posts");
-      onValue(postsRef, (snapshot) => {
-        const postContainer = document.getElementById("postContainer");
-        postContainer.innerHTML = "";
-        snapshot.forEach(child => {
-          const post = child.val();
-          post.key = child.key;
-          const postElem = createPostElement(post);
-          postContainer.appendChild(postElem);
-        });
-      });
-    }
+    try {
+      const file = mediaFileInput.files[0];
+      const mediaUrl = await uploadToPinata(file);
 
-    loadPosts();
-  </script>
+      // Create new post object
+      const newPost = {
+        userId: currentUser.uid,
+        userName: currentUser.displayName || "Anonymous",
+        userPhotoURL: currentUser.photoURL || "",
+        mediaUrl,
+        mediaType: file.type,
+        caption: captionInput.value.trim(),
+        timestamp: Date.now(),
+        likes: {},
+        comments: {}
+      };
+
+      // Push to Firebase
+      const postRef = push(ref(db, "posts"));
+      await update(postRef, newPost);
+
+      // Reset form
+      uploadForm.reset();
+      uploadForm.querySelector("button").disabled = false;
+      uploadForm.querySelector("button").textContent = "Post";
+
+    } catch (err) {
+      alert("Failed to upload post: " + err.message);
+      uploadForm.querySelector("button").disabled = false;
+      uploadForm.querySelector("button").textContent = "Post";
+    }
+  };
+
+  // Sign in/out handlers
+  loginBtn.onclick = () => {
+    signInWithPopup(auth, provider).catch(err => {
+      alert("Sign-in failed: " + err.message);
+    });
+  };
+  logoutBtn.onclick = () => {
+    signOut(auth).catch(err => {
+      alert("Logout failed: " + err.message);
+    });
+  };
+
+  // Listen for auth state changes
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "block";
+      uploadForm.style.display = "block";
+      filterBtn.style.display = "block";
+      settingsBtn.title = `Signed in as ${user.displayName || user.email}`;
+    } else {
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      uploadForm.style.display = "none";
+      filterBtn.style.display = "none";
+      settingsBtn.title = "Profile";
+    }
+  });
+
+  // Filter toggle button
+  filterBtn.onclick = () => {
+    showOnlyMyPosts = !showOnlyMyPosts;
+    filterBtn.textContent = showOnlyMyPosts ? "Show All Posts" : "Show Only My Posts";
+    renderAllPosts(allPosts);
+  };
+
+  // Settings button (optional)
+  settingsBtn.onclick = () => {
+    alert(currentUser
+      ? `Logged in as ${currentUser.displayName || currentUser.email}`
+      : "You are not signed in."
+    );
+  };
+
+  // Initialize dark mode preference
+  toggleDarkMode(loadDarkModePref());
+
+  // Start listening posts after auth ready
+  listenPosts();
+</script>
+
 </body>
 </html>
