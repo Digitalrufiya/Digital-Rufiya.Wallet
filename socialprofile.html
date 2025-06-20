@@ -1,112 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Profile | DRFMedia</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFMedia Profile</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f4f4f4;
-      color: #222;
-    }
-    header {
-      background-color: #0066cc;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    #profile {
-      max-width: 700px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #coverPhoto {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 10px 10px 0 0;
-      background: #ddd;
-      cursor: pointer;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    #profilePhotoWrapper {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin: -70px auto 10px;
-      border-radius: 50%;
-      border: 4px solid white;
-      overflow: hidden;
-      cursor: pointer;
-      background: #eee;
-    }
-    #profilePhoto {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    #editName {
-      width: 100%;
-      font-size: 1.5rem;
-      font-weight: bold;
-      text-align: center;
-      border: none;
-      margin-bottom: 5px;
-      padding: 5px;
-      border-radius: 6px;
-    }
-    #editBio {
-      width: 100%;
-      min-height: 60px;
-      resize: vertical;
-      font-size: 1rem;
-      padding: 6px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      margin-bottom: 12px;
-    }
-    #saveProfileBtn {
-      display: block;
-      margin: 0 auto 20px;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #saveProfileBtn:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-    #postsContainer .post {
-      background: #fff;
-      border-radius: 10px;
-      margin: 15px auto;
-      padding: 15px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      max-width: 700px;
-    }
-    #postsContainer .post img, #postsContainer .post video {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .caption {
-      white-space: pre-wrap;
-      margin-bottom: 8px;
-    }
-    input[type="file"] {
-      display: none;
-    }
+    body { font-family: Arial; background: #f4f4f4; margin: 0; }
+    header { background: #0066cc; color: #fff; padding: 20px; text-align: center; }
+    #profile { max-width: 700px; margin: 20px auto; background: #fff; border-radius: 10px; padding: 20px; }
+    #coverPhoto { width: 100%; height: 180px; object-fit: cover; cursor: pointer; border-radius: 10px 10px 0 0; }
+    #profilePhotoWrapper { position: relative; width: 120px; height: 120px; margin: -60px auto 10px; border-radius: 50%; border: 4px solid white; overflow: hidden; cursor: pointer; background: #eee; }
+    #profilePhoto { width: 100%; height: 100%; object-fit: cover; }
+    input[type="text"], textarea { width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+    button { display: block; margin: 10px auto; padding: 12px 30px; background: #0066cc; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    input[type="file"] { display: none; }
   </style>
 </head>
 <body>
@@ -116,206 +23,118 @@
 </header>
 
 <div id="profile">
-  <img id="coverPhoto" src="" alt="Cover Photo" title="Click to change cover photo" tabindex="0" />
-  
-  <div id="profilePhotoWrapper" title="Click to change profile photo" tabindex="0">
+  <img id="coverPhoto" src="" alt="Cover Photo" />
+  <div id="profilePhotoWrapper">
     <img id="profilePhoto" src="" alt="Profile Photo" />
   </div>
-  
-  <input type="file" id="coverPhotoInput" accept="image/*" />
-  <input type="file" id="profilePhotoInput" accept="image/*" />
+  <input type="file" id="coverPhotoInput" accept="image/*">
+  <input type="file" id="profilePhotoInput" accept="image/*">
 
-  <input type="text" id="editName" placeholder="Your name" maxlength="50" aria-label="Edit your name" />
-  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250" aria-label="Edit your bio"></textarea>
-  <button id="saveProfileBtn" disabled>Save Profile</button>
+  <input type="text" id="editName" placeholder="Your name" maxlength="50">
+  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250"></textarea>
+  <button id="saveProfileBtn">Save Profile</button>
 </div>
 
-<div id="postsContainer"></div>
-
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-  import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
-  import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+import { getDatabase, ref, update, onValue } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
+const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";"; // shortened
 
-  // Your Pinata JWT token already known from before
-  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // (replace with your full token)
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
-  async function uploadPhotoToPinata(file) {
-    const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-    const formData = new FormData();
-    formData.append('file', file);
+const coverPhoto = document.getElementById('coverPhoto');
+const profilePhoto = document.getElementById('profilePhoto');
+const coverPhotoInput = document.getElementById('coverPhotoInput');
+const profilePhotoInput = document.getElementById('profilePhotoInput');
+const editName = document.getElementById('editName');
+const editBio = document.getElementById('editBio');
+const saveBtn = document.getElementById('saveProfileBtn');
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`,
-      },
-      body: formData,
-    });
+let currentUser;
 
-    if (!res.ok) throw new Error('Pinata upload failed: ' + res.statusText);
-    const data = await res.json();
-    if (!data.IpfsHash) throw new Error('No IpfsHash returned from Pinata');
-    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+const pinToIPFS = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: "POST",
+    headers: { Authorization: PINATA_JWT },
+    body: formData
+  });
+
+  const json = await res.json();
+  return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
+};
+
+saveBtn.addEventListener('click', async () => {
+  if (!currentUser) return;
+
+  saveBtn.textContent = "Saving...";
+
+  const updates = {};
+
+  if (coverPhotoInput.files[0]) {
+    const url = await pinToIPFS(coverPhotoInput.files[0]);
+    updates.coverPhoto = url;
+    coverPhoto.src = url;
   }
 
-  const coverPhoto = document.getElementById('coverPhoto');
-  const profilePhoto = document.getElementById('profilePhoto');
-  const profilePhotoWrapper = document.getElementById('profilePhotoWrapper');
-  const coverPhotoInput = document.getElementById('coverPhotoInput');
-  const profilePhotoInput = document.getElementById('profilePhotoInput');
-  const editName = document.getElementById('editName');
-  const editBio = document.getElementById('editBio');
-  const saveProfileBtn = document.getElementById('saveProfileBtn');
-  const postsContainer = document.getElementById('postsContainer');
-
-  let currentUser = null;
-  let profileData = {};
-
-  function checkChanges() {
-    if (!currentUser) {
-      saveProfileBtn.disabled = true;
-      return;
-    }
-    const nameChanged = editName.value.trim() !== (currentUser.displayName || "");
-    const bioChanged = editBio.value.trim() !== (profileData.bio || "");
-    const coverChanged = coverPhoto.src.startsWith('blob:');
-    const profileChanged = profilePhoto.src.startsWith('blob:');
-    saveProfileBtn.disabled = !(nameChanged || bioChanged || coverChanged || profileChanged);
+  if (profilePhotoInput.files[0]) {
+    const url = await pinToIPFS(profilePhotoInput.files[0]);
+    updates.photoURL = url;
+    profilePhoto.src = url;
+    await updateProfile(currentUser, { photoURL: url });
   }
 
-  coverPhotoInput.addEventListener('change', e => {
-    if (!currentUser) return;
-    const file = e.target.files[0];
-    if (!file) return;
-    coverPhoto.src = URL.createObjectURL(file);
-    checkChanges();
+  if (editName.value.trim() !== "") {
+    updates.displayName = editName.value.trim();
+    await updateProfile(currentUser, { displayName: updates.displayName });
+  }
+
+  if (editBio.value.trim() !== "") {
+    updates.bio = editBio.value.trim();
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await update(ref(db, `users/${currentUser.uid}`), updates);
+  }
+
+  alert("Profile saved successfully!");
+  saveBtn.textContent = "Save Profile";
+});
+
+coverPhoto.addEventListener('click', () => coverPhotoInput.click());
+profilePhotoWrapper.addEventListener('click', () => profilePhotoInput.click());
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    alert("Not logged in");
+    return;
+  }
+  currentUser = user;
+  const userRef = ref(db, `users/${user.uid}`);
+  onValue(userRef, snap => {
+    const data = snap.val() || {};
+    coverPhoto.src = data.coverPhoto || "https://via.placeholder.com/700x180";
+    profilePhoto.src = data.photoURL || "https://i.pravatar.cc/120";
+    editName.value = user.displayName || "";
+    editBio.value = data.bio || "";
   });
-
-  profilePhotoInput.addEventListener('change', e => {
-    if (!currentUser) return;
-    const file = e.target.files[0];
-    if (!file) return;
-    profilePhoto.src = URL.createObjectURL(file);
-    checkChanges();
-  });
-
-  coverPhoto.addEventListener('click', () => coverPhotoInput.click());
-  profilePhotoWrapper.addEventListener('click', () => profilePhotoInput.click());
-  coverPhoto.addEventListener('keypress', e => { if(e.key === 'Enter') coverPhotoInput.click(); });
-  profilePhotoWrapper.addEventListener('keypress', e => { if(e.key === 'Enter') profilePhotoInput.click(); });
-  editName.addEventListener('input', checkChanges);
-  editBio.addEventListener('input', checkChanges);
-
-  saveProfileBtn.addEventListener('click', async () => {
-    if (!currentUser) return;
-    saveProfileBtn.disabled = true;
-    saveProfileBtn.textContent = "Saving...";
-    try {
-      const updates = {};
-
-      if (coverPhoto.src.startsWith('blob:')) {
-        const file = coverPhotoInput.files[0];
-        if (file) {
-          const coverUrl = await uploadPhotoToPinata(file);
-          updates.coverPhoto = coverUrl;
-          coverPhoto.src = coverUrl;
-        }
-      }
-      if (profilePhoto.src.startsWith('blob:')) {
-        const file = profilePhotoInput.files[0];
-        if (file) {
-          const profileUrl = await uploadPhotoToPinata(file);
-          updates.photoURL = profileUrl;
-          profilePhoto.src = profileUrl;
-          await updateProfile(currentUser, { photoURL: profileUrl });
-        }
-      }
-      if (editName.value.trim() !== (currentUser.displayName || "")) {
-        updates.displayName = editName.value.trim();
-        await updateProfile(currentUser, { displayName: updates.displayName });
-      }
-      if (editBio.value.trim() !== (profileData.bio || "")) {
-        updates.bio = editBio.value.trim();
-      }
-      if (Object.keys(updates).length > 0) {
-        await update(ref(db, `users/${currentUser.uid}`), updates);
-      }
-      alert("Profile updated successfully!");
-      saveProfileBtn.textContent = "Save Profile";
-      checkChanges();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save profile. Please try again.");
-      saveProfileBtn.disabled = false;
-      saveProfileBtn.textContent = "Save Profile";
-    }
-  });
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    if (!user) {
-      profileData = {};
-      coverPhoto.src = "";
-      profilePhoto.src = "";
-      editName.value = "";
-      editBio.value = "";
-      postsContainer.innerHTML = "<p>Please log in to view your profile.</p>";
-      saveProfileBtn.disabled = true;
-      return;
-    }
-    const userRef = ref(db, `users/${user.uid}`);
-    onValue(userRef, snapshot => {
-      profileData = snapshot.val() || {};
-      coverPhoto.src = profileData.coverPhoto || "https://via.placeholder.com/700x180?text=Cover+Photo";
-      profilePhoto.src = user.photoURL || "https://i.pravatar.cc/100";
-      editName.value = user.displayName || "";
-      editBio.value = profileData.bio || "";
-      saveProfileBtn.disabled = true;
-    });
-    // Optional posts loading - can remove if not needed
-    const postsRef = ref(db, "posts");
-    onValue(postsRef, snapshot => {
-      postsContainer.innerHTML = "";
-      const posts = snapshot.val();
-      if (!posts) {
-        postsContainer.innerHTML = "<p>No posts yet.</p>";
-        return;
-      }
-      Object.keys(posts).reverse().forEach(key => {
-        const post = posts[key];
-        if (post.userId === user.uid) {
-          const div = document.createElement("div");
-          div.className = "post";
-          let media = "";
-          if (post.mediaUrl) {
-            media = post.mediaType && post.mediaType.startsWith("video")
-              ? `<video controls src="${post.mediaUrl}"></video>`
-              : `<img src="${post.mediaUrl}" alt="Post Media">`;
-          }
-          div.innerHTML = `
-            ${media}
-            <div class="caption">${post.caption || ""}</div>
-          `;
-          postsContainer.appendChild(div);
-        }
-      });
-    });
-  });
+});
 </script>
 
 </body>
