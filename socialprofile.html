@@ -136,7 +136,6 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
   import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
   import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
-  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -151,7 +150,28 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
-  const storage = getStorage(app);
+
+  // Your Pinata JWT token already known from before
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // (replace with your full token)
+
+  async function uploadPhotoToPinata(file) {
+    const url = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error('Pinata upload failed: ' + res.statusText);
+    const data = await res.json();
+    if (!data.IpfsHash) throw new Error('No IpfsHash returned from Pinata');
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+  }
 
   const coverPhoto = document.getElementById('coverPhoto');
   const profilePhoto = document.getElementById('profilePhoto');
@@ -166,7 +186,6 @@
   let currentUser = null;
   let profileData = {};
 
-  // Track if any changes exist to enable save button
   function checkChanges() {
     if (!currentUser) {
       saveProfileBtn.disabled = true;
@@ -176,18 +195,9 @@
     const bioChanged = editBio.value.trim() !== (profileData.bio || "");
     const coverChanged = coverPhoto.src.startsWith('blob:');
     const profileChanged = profilePhoto.src.startsWith('blob:');
-
     saveProfileBtn.disabled = !(nameChanged || bioChanged || coverChanged || profileChanged);
   }
 
-  // Upload photo to Firebase Storage and return URL
-  async function uploadPhoto(file, path) {
-    const photoRef = storageRef(storage, path);
-    await uploadBytes(photoRef, file);
-    return await getDownloadURL(photoRef);
-  }
-
-  // File input handlers
   coverPhotoInput.addEventListener('change', e => {
     if (!currentUser) return;
     const file = e.target.files[0];
@@ -206,62 +216,45 @@
 
   coverPhoto.addEventListener('click', () => coverPhotoInput.click());
   profilePhotoWrapper.addEventListener('click', () => profilePhotoInput.click());
-
   coverPhoto.addEventListener('keypress', e => { if(e.key === 'Enter') coverPhotoInput.click(); });
   profilePhotoWrapper.addEventListener('keypress', e => { if(e.key === 'Enter') profilePhotoInput.click(); });
-
-  // Listen for input changes to name and bio
   editName.addEventListener('input', checkChanges);
   editBio.addEventListener('input', checkChanges);
 
-  // Save profile button click
   saveProfileBtn.addEventListener('click', async () => {
     if (!currentUser) return;
-
     saveProfileBtn.disabled = true;
     saveProfileBtn.textContent = "Saving...";
-
     try {
       const updates = {};
 
-      // Upload cover photo if changed
       if (coverPhoto.src.startsWith('blob:')) {
         const file = coverPhotoInput.files[0];
         if (file) {
-          const coverUrl = await uploadPhoto(file, `users/${currentUser.uid}/coverPhoto`);
+          const coverUrl = await uploadPhotoToPinata(file);
           updates.coverPhoto = coverUrl;
           coverPhoto.src = coverUrl;
         }
       }
-
-      // Upload profile photo if changed
       if (profilePhoto.src.startsWith('blob:')) {
         const file = profilePhotoInput.files[0];
         if (file) {
-          const profileUrl = await uploadPhoto(file, `users/${currentUser.uid}/profilePhoto`);
+          const profileUrl = await uploadPhotoToPinata(file);
           updates.photoURL = profileUrl;
           profilePhoto.src = profileUrl;
-          // Update Firebase Auth profile photoURL
           await updateProfile(currentUser, { photoURL: profileUrl });
         }
       }
-
-      // Update display name if changed
       if (editName.value.trim() !== (currentUser.displayName || "")) {
         updates.displayName = editName.value.trim();
         await updateProfile(currentUser, { displayName: updates.displayName });
       }
-
-      // Update bio if changed (note: bio is in DB only)
       if (editBio.value.trim() !== (profileData.bio || "")) {
         updates.bio = editBio.value.trim();
       }
-
-      // Write remaining updates to database
       if (Object.keys(updates).length > 0) {
         await update(ref(db, `users/${currentUser.uid}`), updates);
       }
-
       alert("Profile updated successfully!");
       saveProfileBtn.textContent = "Save Profile";
       checkChanges();
@@ -273,7 +266,6 @@
     }
   });
 
-  // Load profile and posts on auth state change
   onAuthStateChanged(auth, user => {
     currentUser = user;
     if (!user) {
@@ -286,8 +278,6 @@
       saveProfileBtn.disabled = true;
       return;
     }
-
-    // Load profile data from DB and Auth
     const userRef = ref(db, `users/${user.uid}`);
     onValue(userRef, snapshot => {
       profileData = snapshot.val() || {};
@@ -297,8 +287,7 @@
       editBio.value = profileData.bio || "";
       saveProfileBtn.disabled = true;
     });
-
-    // Load user posts
+    // Optional posts loading - can remove if not needed
     const postsRef = ref(db, "posts");
     onValue(postsRef, snapshot => {
       postsContainer.innerHTML = "";
@@ -307,13 +296,11 @@
         postsContainer.innerHTML = "<p>No posts yet.</p>";
         return;
       }
-
       Object.keys(posts).reverse().forEach(key => {
         const post = posts[key];
         if (post.userId === user.uid) {
           const div = document.createElement("div");
           div.className = "post";
-
           let media = "";
           if (post.mediaUrl) {
             media = post.mediaType && post.mediaType.startsWith("video")
