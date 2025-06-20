@@ -7,90 +7,50 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0066cc" />
+
   <style>
-    /* Your existing post styles */
-    .post-item {
-      border: 1px solid #ccc;
-      padding: 1em;
-      margin-bottom: 1em;
-      border-radius: 6px;
-      background: #f9f9f9;
+    /* Basic styles */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #222;
     }
-    .post-owner {
+    header {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+    }
+    .navbar {
       display: flex;
       align-items: center;
-      gap: 0.5em;
-      font-weight: bold;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1.5px solid #ccc;
-      box-shadow: 0 0 3px rgba(0,0,0,0.1);
-    }
-    .post-time {
-      font-size: 0.8em;
-      color: #777;
-      margin: 0.3em 0;
-    }
-    .post-caption {
-      margin: 0.5em 0;
-    }
-    .post-actions {
-      margin-top: 0.5em;
-    }
-    .post-actions button {
-      margin-right: 0.5em;
-      cursor: pointer;
-      font-size: 1em;
-      background: none;
-      border: none;
-      padding: 0.3em;
-    }
-    .post-actions button[aria-pressed="true"] {
-      color: red;
-    }
-    .comments-section {
-      margin-top: 0.5em;
-      border-top: 1px solid #ddd;
-      padding-top: 0.5em;
-    }
-    .comment-item {
-      margin-bottom: 0.3em;
-      font-size: 0.9em;
-    }
-    .comment-time {
-      font-size: 0.7em;
-      color: #666;
-    }
-    .comment-form {
+    .navbar-left {
       display: flex;
-      gap: 0.5em;
-      margin-top: 0.5em;
+      align-items: center;
+      gap: 10px;
     }
-    .comment-form input {
-      flex: 1;
-      padding: 0.3em;
+    .navbar-left img {
+      height: 40px;
+      width: 40px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: white;
+      padding: 2px;
     }
-    .comment-form button {
-      padding: 0.3em 0.7em;
-      cursor: pointer;
-    }
-    .delete-btn {
-      color: #900;
-      font-weight: bold;
-      font-size: 0.9em;
-      cursor: pointer;
-    }
-    .share-btn {
-      color: #0077cc;
-      font-weight: bold;
-      font-size: 0.9em;
+    .navbar-left h1 {
+      margin: 0;
+      font-size: 1.4em;
+      font-weight: 700;
     }
 
-    /* Menu toggle button styles */
+    /* Menu toggle button */
     #menuToggle {
       background: transparent;
       border: none;
@@ -100,120 +60,120 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      margin-left: 1em;
+      padding: 0;
     }
     #menuToggle span {
       display: block;
-      height: 4px;
-      background: #007bff; /* Changed to blue for visibility */
-      border-radius: 2px;
+      height: 3.5px;
+      background: white;
+      border-radius: 3px;
       transition: background 0.3s ease;
     }
 
-    /* Primary nav styles */
+    /* Navigation */
     #primaryNav {
+      width: 100%;
       display: none;
-      position: absolute;
-      background: white;
-      top: 60px; /* adjust depending on your header height */
-      left: 0;
-      right: 0;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-      padding: 10px 0;
-      z-index: 1000;
+      flex-direction: column;
+      background: #0069d9;
+      margin-top: 10px;
+      border-radius: 4px;
     }
     #primaryNav.open {
-      display: block;
+      display: flex;
     }
     #primaryNav a {
-      display: block;
-      padding: 10px 20px;
-      color: #000;
+      padding: 12px 20px;
+      color: white;
       text-decoration: none;
+      font-weight: 600;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      transition: background 0.2s ease;
+    }
+    #primaryNav a:first-child {
+      border-top: none;
     }
     #primaryNav a:hover {
-      background-color: #f0f0f0;
+      background: rgba(255,255,255,0.2);
     }
 
-    /* Dark mode toggle button */
-    #darkModeToggle {
-      margin-left: auto;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      font-size: 1.5em;
-      padding: 0 10px;
-    }
-
-    /* Navbar flex container */
-    .navbar {
-      display: flex;
-      align-items: center;
-      padding: 10px 20px;
-      position: relative;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      z-index: 1100;
-    }
-
-    .navbar-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .navbar-left img {
-      height: 40px;
-    }
-
-    /* Responsive styles for bigger screens */
+    /* Larger screen nav */
     @media (min-width: 768px) {
       #menuToggle {
         display: none;
       }
       #primaryNav {
         display: flex !important;
-        position: static;
+        flex-direction: row;
+        width: auto;
         background: transparent;
-        box-shadow: none;
-        padding: 0;
-        margin-left: 2em;
+        margin-top: 0;
+        border-radius: 0;
       }
       #primaryNav a {
-        display: inline-block;
+        border: none;
         padding: 10px 15px;
-        color: #000;
+        color: white;
       }
       #primaryNav a:hover {
-        background-color: transparent;
-        text-decoration: underline;
-      }
-      #darkModeToggle {
-        margin-left: auto;
+        background: rgba(255,255,255,0.3);
       }
     }
 
-    /* Dark mode styles */
-    .dark-mode {
-      background: #121212;
-      color: #eee;
+    /* Avatar styles */
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 3px rgba(0,0,0,0.1);
     }
-    .dark-mode header {
-      background: #222;
-      box-shadow: none;
+
+    /* Post container */
+    #postContainer {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 0 15px;
     }
-    .dark-mode #primaryNav {
-      background: #333;
-      color: #eee;
+    .post-item {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #fafafa;
     }
-    .dark-mode #primaryNav a {
-      color: #eee;
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
     }
-    .dark-mode #primaryNav a:hover {
-      background: #444;
+    .post-time {
+      font-size: 0.85em;
+      color: #555;
+      margin-top: 4px;
     }
-    .dark-mode #menuToggle span {
-      background: #eee;
+    .post-caption {
+      margin-top: 10px;
+      font-size: 1em;
+      white-space: pre-wrap;
+    }
+    .post-actions button {
+      margin-right: 12px;
+      cursor: pointer;
+      font-size: 1.1em;
+      background: none;
+      border: none;
+    }
+    .post-actions button[aria-pressed="true"] {
+      color: red;
+    }
+    video, img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+      background: black;
     }
   </style>
 </head>
@@ -240,45 +200,31 @@
       <a href="#" id="loginNavLink">Login</a>
       <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
     </nav>
-
-    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
   </div>
 </header>
 
-<input type="search" id="searchBar" placeholder="Search posts or users..." aria-label="Search posts or users" autocomplete="off" />
-
 <button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
 <button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
-<button id="filterMyPosts" style="display:none" aria-label="Show only my posts">Show Only My Posts</button>
 
-<form id="uploadForm" aria-label="Upload new post form" style="display:none;">
+<form id="uploadForm" aria-label="Upload new post form" style="display:none; max-width:700px; margin:20px auto;">
   <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
-  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption"></textarea>
-  <button type="submit">Post</button>
+  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption" style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
+  <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">Post</button>
 </form>
 
-<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
 <div id="postContainer" aria-live="polite" aria-atomic="false"></div>
 
-<!-- Main script -->
 <script type="module" src="app.js"></script>
 
 <script>
-  // Menu toggle script
+  // Menu toggle button
   const menuToggle = document.getElementById('menuToggle');
   const primaryNav = document.getElementById('primaryNav');
 
   menuToggle.addEventListener('click', () => {
-    const expanded = menuToggle.getAttribute('aria-expanded') === 'true' || false;
+    const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
     menuToggle.setAttribute('aria-expanded', !expanded);
     primaryNav.classList.toggle('open');
-  });
-
-  // Dark mode toggle script
-  const darkModeToggle = document.getElementById('darkModeToggle');
-  darkModeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    darkModeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
   });
 </script>
 
