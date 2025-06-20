@@ -1,4 +1,4 @@
-// app.js - Firebase + Pinata + Timeline Logic
+// app.js
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import {
@@ -15,6 +15,7 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -25,99 +26,103 @@ const firebaseConfig = {
   appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
 };
 
-const pinataJWT = "Bearer eyJhbGciOiJI...<truncated_for_safety>...";
+// ✅ Full JWT Token
+const pinataJWT = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
+// DOM Elements
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const uploadForm = document.getElementById("uploadForm");
 const mediaFileInput = document.getElementById("mediaFile");
 const captionInput = document.getElementById("caption");
 const postContainer = document.getElementById("postContainer");
-const loadingSpinner = document.getElementById("loadingSpinner");
 
 let currentUser = null;
-let allPosts = [];
 
+// Auth listeners
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
+  uploadForm.style.display = user ? "block" : "none";
   loginBtn.style.display = user ? "none" : "block";
   logoutBtn.style.display = user ? "block" : "none";
-  uploadForm.style.display = user ? "block" : "none";
-  renderPosts();
 });
 
-loginBtn.onclick = () => signInWithPopup(auth, provider);
+// Login & Logout
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
 logoutBtn.onclick = () => signOut(auth);
 
-uploadForm.onsubmit = async (e) => {
+// Upload media
+uploadForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!mediaFileInput.files.length || captionInput.value.length < 4) return;
+  if (!currentUser || !mediaFileInput.files.length || captionInput.value.length < 4) {
+    alert("Missing media, caption, or login.");
+    return;
+  }
 
   const file = mediaFileInput.files[0];
-  const caption = captionInput.value.trim();
+  const formData = new FormData();
+  formData.append("file", file);
+
   uploadForm.querySelector("button").disabled = true;
 
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    const pinataRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
-      headers: { Authorization: pinataJWT },
+      headers: {
+        Authorization: pinataJWT
+      },
       body: formData
     });
 
-    const { IpfsHash } = await res.json();
+    const { IpfsHash } = await pinataRes.json();
+    const mediaUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
 
-    await push(ref(db, "posts"), {
+    const post = {
       userId: currentUser.uid,
       displayName: currentUser.displayName,
       photoURL: currentUser.photoURL,
-      caption,
-      mediaUrl: IpfsHash,
+      caption: captionInput.value.trim(),
+      mediaUrl,
       mediaType: file.type.startsWith("video") ? "video" : "image",
-      timestamp: Date.now(),
-      likes: {},
-      comments: {}
-    });
+      timestamp: Date.now()
+    };
+
+    await push(ref(db, "posts"), post);
 
     mediaFileInput.value = "";
     captionInput.value = "";
-    uploadForm.style.display = "none";
+    alert("Uploaded successfully.");
   } catch (err) {
-    alert("Failed to upload: " + err.message);
+    console.error(err);
+    alert("Upload failed: " + err.message);
   } finally {
     uploadForm.querySelector("button").disabled = false;
   }
-};
-
-onValue(ref(db, "posts"), (snapshot) => {
-  const posts = snapshot.val() || {};
-  allPosts = Object.values(posts).sort((a, b) => b.timestamp - a.timestamp);
-  renderPosts();
 });
 
-function renderPosts() {
+// Fetch and render posts
+onValue(ref(db, "posts"), (snapshot) => {
   postContainer.innerHTML = "";
-  for (const post of allPosts) {
-    const div = document.createElement("div");
-    div.className = "post-item";
+  const data = snapshot.val();
+  if (!data) return;
 
-    const media = post.mediaType === "video"
-      ? `<video controls src='https://gateway.pinata.cloud/ipfs/${post.mediaUrl}'></video>`
-      : `<img src='https://gateway.pinata.cloud/ipfs/${post.mediaUrl}' alt='Media' />`;
-
-    div.innerHTML = `
-      <div class="post-owner">${post.displayName}</div>
+  const posts = Object.values(data).sort((a, b) => b.timestamp - a.timestamp);
+  posts.forEach((post) => {
+    const card = document.createElement("div");
+    card.className = "post-item";
+    card.innerHTML = `
+      <div class="post-owner">${post.displayName || "User"}</div>
       <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+      ${post.mediaType === "video"
+        ? `<video src="${post.mediaUrl}" controls></video>`
+        : `<img src="${post.mediaUrl}" alt="Post media" />`}
       <div class="post-caption">${post.caption}</div>
-      ${media}
     `;
-    postContainer.appendChild(div);
-  }
-}
+    postContainer.appendChild(card);
+  });
+});
