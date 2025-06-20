@@ -28,16 +28,14 @@ const firebaseConfig = {
   messagingSenderId: "608135115201",
   appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
 };
-
-// — Full Pinata JWT (read from your env / vault in production!)
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const auth = getAuth();
+const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// — Admin emails
+// — **FULL** Pinata JWT (copy this entire string exactly)
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
 const admins = new Set([
   "digitalrufiyauniversity@gmail.com",
   "digitalrufiya@gmail.com",
@@ -45,7 +43,7 @@ const admins = new Set([
   "onenone91000@gmail.com"
 ]);
 
-// — DOM refs
+// DOM
 const loginBtn      = document.getElementById("loginBtn");
 const logoutBtn     = document.getElementById("logoutBtn");
 const uploadForm    = document.getElementById("uploadForm");
@@ -55,45 +53,43 @@ const postContainer = document.getElementById("postContainer");
 
 let currentUser = null;
 
-// — Auth state
+// Auth state
 onAuthStateChanged(auth, user => {
   currentUser = user;
   uploadForm.style.display = user ? "block" : "none";
-  loginBtn.style.display  = user ? "none" : "block";
+  loginBtn.style.display  = user ? "none"  : "block";
   logoutBtn.style.display = user ? "block" : "none";
   renderPosts();
 });
 
-// — Login / Logout
+// Login/Logout
 loginBtn.onclick  = () => signInWithPopup(auth, provider).catch(console.error);
 logoutBtn.onclick = () => signOut(auth);
 
-// — Upload handler
+// Upload handler
 uploadForm.addEventListener("submit", async e => {
   e.preventDefault();
-  if (!currentUser
-    || !mediaFile.files.length
-    || captionInput.value.trim().length < 4
-  ) {
-    return alert("Missing login/media/caption");
+  if (!currentUser || !mediaFile.files.length || captionInput.value.trim().length < 4) {
+    return alert("Missing login, file or caption");
   }
-
   uploadForm.querySelector("button").disabled = true;
+
   const file = mediaFile.files[0];
-  const fd   = new FormData();
+  const fd = new FormData();
   fd.append("file", file);
 
   try {
-    // 1) pin to Pinata
-    const resp = await fetch(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      { method: "POST", headers: { Authorization: pinataJWT }, body: fd }
-    );
+    // Pin to Pinata
+    const resp = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: { Authorization: pinataJWT },
+      body: fd
+    });
     if (!resp.ok) throw new Error(resp.statusText);
     const { IpfsHash } = await resp.json();
     const mediaUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
 
-    // 2) push to RTDB
+    // Save to RTDB
     const newRef = push(ref(db, "posts"));
     await set(newRef, {
       userId:      currentUser.uid,
@@ -117,106 +113,89 @@ uploadForm.addEventListener("submit", async e => {
   }
 });
 
-// — Render timeline
+// Render posts
 function renderPosts() {
-  const postsRef = ref(db, "posts");
-  onValue(postsRef, snap => {
+  onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
     const data = snap.val();
     if (!data) return;
 
-    // sort desc
-    const entries = Object.entries(data)
-      .sort((a,b) => b[1].timestamp - a[1].timestamp);
+    Object.entries(data)
+      .sort((a,b) => b[1].timestamp - a[1].timestamp)
+      .forEach(([postId, post]) => {
+        const liked = currentUser && post.likes && post.likes[currentUser.uid];
+        const isAdmin = currentUser && admins.has(currentUser.email);
 
-    for (const [postId, post] of entries) {
-      const liked = currentUser
-        && post.likes
-        && post.likes[currentUser.uid];
-
-      const isAdmin = currentUser
-        && admins.has(currentUser.email);
-
-      const card = document.createElement("div");
-      card.className = "post-item";
-      card.innerHTML = `
-        <div class="post-owner">
-          <img src="${post.photoURL||''}" class="avatar" />
-          <strong>${post.displayName||"Anonymous"}</strong>
-        </div>
-        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-        ${post.mediaType==="video"
-          ? `<video src="${post.mediaUrl}" controls preload="metadata"></video>`
-          : `<img src="${post.mediaUrl}" loading="lazy"/>`
-        }
-        <div class="post-caption">${escapeHTML(post.caption)}</div>
-        <div class="post-actions">
-          <button class="like-btn" data-id="${postId}" aria-pressed="${liked?1:0}">
-            ❤️ <span>${post.likesCount||0}</span>
-          </button>
-          <button class="comment-toggle" data-id="${postId}">
-            💬 <span>${post.commentsCount||0}</span>
-          </button>
-          <button class="share-btn" data-id="${postId}">🔗</button>
-          ${isAdmin
-            ? `<button class="delete-btn" data-id="${postId}">🗑️</button>`
-            : ""
-          }
-        </div>
-        <div class="comments" id="cmts-${postId}" style="display:none">
-          <div class="list"></div>
-          ${
-            currentUser
+        const card = document.createElement("div");
+        card.className = "post-item";
+        card.innerHTML = `
+          <div class="post-owner">
+            <img src="${post.photoURL||''}" class="avatar"/>
+            <strong>${post.displayName||"Anonymous"}</strong>
+          </div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          ${post.mediaType==="video"
+            ? `<video src="${post.mediaUrl}" controls preload="metadata"></video>`
+            : `<img src="${post.mediaUrl}" loading="lazy"/>`}
+          <div class="post-caption">${escapeHTML(post.caption)}</div>
+          <div class="post-actions">
+            <button class="like-btn" data-id="${postId}" aria-pressed="${liked?1:0}">
+              ❤️ <span>${post.likesCount||0}</span>
+            </button>
+            <button class="comment-toggle" data-id="${postId}">
+              💬 <span>${post.commentsCount||0}</span>
+            </button>
+            <button class="share-btn" data-id="${postId}">🔗</button>
+            ${isAdmin
+              ? `<button class="delete-btn" data-id="${postId}">🗑️</button>`
+              : ""}
+          </div>
+          <div class="comments" id="cmts-${postId}" style="display:none">
+            <div class="list"></div>
+            ${currentUser
               ? `<form class="cmt-form" data-id="${postId}">
                    <input required minlength="1" placeholder="Add a comment…"/>
                    <button>Send</button>
                  </form>`
-              : `<em>Login to comment</em>`
-          }
-        </div>
-      `;
-      postContainer.appendChild(card);
+              : `<em>Login to comment</em>`}
+          </div>
+        `;
+        postContainer.appendChild(card);
 
-      // attach events
-      card.querySelector(".like-btn").onclick = () =>
-        toggleLike(postId, Boolean(liked));
-
-      card.querySelector(".comment-toggle").onclick = e => {
-        const csec = document.getElementById(`cmts-${postId}`);
-        const show = csec.style.display==="block";
-        csec.style.display = show ? "none" : "block";
-        if (!show) loadComments(postId);
-      };
-
-      card.querySelector(".share-btn").onclick = () => {
-        const url = `${location.href.split('?')[0]}?postId=${postId}`;
-        navigator.clipboard.writeText(url)
-          .then(_=> alert("URL copied!"))
-          .catch(_=> prompt("Copy this:",url));
-      };
-
-      if (isAdmin) {
-        card.querySelector(".delete-btn").onclick = () =>
-          deletePost(postId);
-      }
-
-      const cf = card.querySelector(".cmt-form");
-      if (cf) cf.onsubmit = e => {
-        e.preventDefault();
-        const txt = cf[0].value.trim();
-        if (txt) postComment(postId, txt);
-        cf.reset();
-      };
-    }
+        // Attach events
+        card.querySelector(".like-btn").onclick = () =>
+          toggleLike(postId, !!liked);
+        card.querySelector(".comment-toggle").onclick = () => {
+          const cs = document.getElementById(`cmts-${postId}`);
+          const show = cs.style.display==="block";
+          cs.style.display = show?"none":"block";
+          if (!show) loadComments(postId);
+        };
+        card.querySelector(".share-btn").onclick = () => {
+          const url = `${location.href.split('?')[0]}?postId=${postId}`;
+          navigator.clipboard.writeText(url)
+            .then(_=>alert("Copied!"))
+            .catch(_=>prompt("URL:",url));
+        };
+        if (isAdmin) {
+          card.querySelector(".delete-btn").onclick = () => deletePost(postId);
+        }
+        const cf = card.querySelector(".cmt-form");
+        if (cf) cf.onsubmit = e => {
+          e.preventDefault();
+          const txt = cf[0].value.trim();
+          if (txt) postComment(postId, txt);
+          cf.reset();
+        };
+      });
   });
 }
 
-// — Like/unlike
+// Like/unlike
 async function toggleLike(postId, liked) {
   if (!currentUser) return alert("Login to like");
   const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
   const postRef = ref(db, `posts/${postId}`);
-
   const snap = await get(postRef);
   let cnt = snap.val().likesCount||0;
 
@@ -234,30 +213,27 @@ async function toggleLike(postId, liked) {
   }
 }
 
-// — Load comments
+// Load comments
 function loadComments(postId) {
-  const clist = document.querySelector(`#cmts-${postId} .list`);
-  clist.innerHTML = "Loading…";
+  const list = document.querySelector(`#cmts-${postId} .list`);
+  list.innerHTML = "Loading…";
   onValue(ref(db, `comments/${postId}`), snap => {
-    clist.innerHTML = "";
+    list.innerHTML = "";
     const cm = snap.val();
-    if (!cm) return clist.innerHTML = "<em>No comments</em>";
-    Object.values(cm)
-      .sort((a,b)=>a.timestamp-b.timestamp)
-      .forEach(c=>{
+    if (!cm) return list.innerHTML = "<em>No comments</em>";
+    Object.values(cm).sort((a,b)=>a.timestamp-b.timestamp)
+      .forEach(c => {
         const d = document.createElement("div");
         d.className = "comment-item";
-        d.innerHTML = `<strong>${escapeHTML(c.displayName)}</strong>:
-                       ${escapeHTML(c.text)}
-                       <div class="comment-time">
-                         ${new Date(c.timestamp).toLocaleString()}
-                       </div>`;
-        clist.appendChild(d);
+        d.innerHTML = `<strong>${escapeHTML(c.displayName)}</strong>: ${
+          escapeHTML(c.text)
+        }<div class="comment-time">${new Date(c.timestamp).toLocaleString()}</div>`;
+        list.appendChild(d);
       });
   });
 }
 
-// — Post comment
+// Post comment
 async function postComment(postId, text) {
   if (!currentUser) return;
   const cref = push(ref(db, `comments/${postId}`));
@@ -274,23 +250,24 @@ async function postComment(postId, text) {
   await update(pr, { commentsCount: cc });
 }
 
-// — Delete (admins)
+// Delete post
 async function deletePost(postId) {
-  if (!currentUser || !admins.has(currentUser.email))
-    return alert("No permission");
-  if (!confirm("Delete post?")) return;
-  try {
-    await remove(ref(db, `posts/${postId}`));
-    await remove(ref(db, `comments/${postId}`));
-  } catch(e){
-    alert("Delete failed: "+e.message);
-  }
+  if (!currentUser || !admins.has(currentUser.email)) return alert("No permission");
+  if (!confirm("Delete this post?")) return;
+  await remove(ref(db, `posts/${postId}`));
+  await remove(ref(db, `comments/${postId}`));
 }
 
-// — Escape
+// Escape HTML
 function escapeHTML(s){
-  return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  return s.replace(/[&<>"']/g,c=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[c]));
 }
 
-// — Kick off
+// Start
 renderPosts();
