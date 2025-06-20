@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFTube - Watch</title>
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #0a84ff;
+    }
+    .videoItem {
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #222;
+      border-radius: 10px;
+      box-shadow: 0 0 8px #0a84ff88;
+    }
+    .videoItem h3 {
+      color: #0affff;
+      margin-bottom: 4px;
+    }
+    .videoItem video {
+      width: 100%;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .videoItem .meta {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .actions button {
+      background: transparent;
+      border: none;
+      color: #0a84ff;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .actions button:hover {
+      text-decoration: underline;
+    }
+    .commentBox {
+      margin-top: 10px;
+    }
+    .commentBox input {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      background: #333;
+      color: #fff;
+      margin-top: 6px;
+    }
+    .comments {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+<h1>🎥 DRFTube Watch</h1>
+<div id="videoList">Loading videos...</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    onSnapshot,
+    doc,
+    updateDoc,
+    arrayUnion
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+    authDomain: "drftube-634c6.firebaseapp.com",
+    projectId: "drftube-634c6",
+    storageBucket: "drftube-634c6.appspot.com",
+    messagingSenderId: "819828633864",
+    appId: "1:819828633864:web:513002b461259b000cbcbd",
+    measurementId: "G-ZPTJE4DMNN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const videoList = document.getElementById("videoList");
+
+  const q = query(collection(db, "videos"), orderBy("uploadedAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    videoList.innerHTML = "";
+    snapshot.forEach(docSnap => {
+      const v = docSnap.data();
+      const docId = docSnap.id;
+      const container = document.createElement("div");
+      container.className = "videoItem";
+      container.innerHTML = `
+        <h3>${v.title}</h3>
+        <div class="meta">Category: ${v.category}</div>
+        <video controls>
+          <source src="https://ipfs.io/ipfs/${v.ipfsHash}" type="video/mp4" />
+        </video>
+        <p>${v.description || ""}</p>
+        <div class="actions">
+          <button onclick="likeVideo('${docId}')">❤️ Like</button>
+          <button onclick="shareVideo('${v.ipfsHash}')">📣 Share</button>
+        </div>
+        <div class="commentBox">
+          <input type="text" placeholder="Add a comment..." onkeydown="handleComment(event, '${docId}')" />
+        </div>
+        <div class="comments" id="comments-${docId}">Loading comments...</div>
+      `;
+      videoList.appendChild(container);
+      loadComments(docId);
+    });
+  });
+
+  window.likeVideo = async (id) => {
+    const ref = doc(db, "videos", id);
+    await updateDoc(ref, { likes: arrayUnion(new Date().toISOString()) });
+    alert("You liked the video!");
+  };
+
+  window.shareVideo = (hash) => {
+    const link = `https://ipfs.io/ipfs/${hash}`;
+    navigator.clipboard.writeText(link);
+    alert("Video link copied to clipboard!");
+  };
+
+  window.handleComment = async (e, id) => {
+    if (e.key === "Enter" && e.target.value.trim() !== "") {
+      const ref = doc(db, "videos", id);
+      await updateDoc(ref, {
+        comments: arrayUnion({ text: e.target.value.trim(), date: new Date().toISOString() })
+      });
+      e.target.value = "";
+      loadComments(id);
+    }
+  };
+
+  async function loadComments(docId) {
+    const ref = doc(db, "videos", docId);
+    const snap = await onSnapshot(ref, (docSnap) => {
+      const data = docSnap.data();
+      const comments = data.comments || [];
+      const container = document.getElementById("comments-" + docId);
+      if (!comments.length) return container.innerText = "No comments yet.";
+      container.innerHTML = comments.map(c => `• ${c.text}`).join("<br>");
+    });
+  }
+</script>
+</body>
+</html>
