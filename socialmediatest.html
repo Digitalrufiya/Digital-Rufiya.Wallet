@@ -4,36 +4,186 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia</title>
-  <!-- [CSS and style preserved here] -->
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    #settingsBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: #fff;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      border: 1px solid #ccc;
+      font-size: 18px;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    form, #boostSection, #uploadForm { max-width: 600px; margin: 0 auto 30px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    textarea, input[type="file"] { width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+    button { padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+    #postContainer { max-width: 700px; margin: 0 auto; }
+    .post-item { background: white; padding: 15px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); }
+    .post-item img, .post-item video { max-width: 100%; border-radius: 8px; }
+    .post-caption { margin: 10px 0; font-size: 16px; }
+    .comment-item { background: #f1f1f1; padding: 8px 10px; border-radius: 5px; margin-top: 8px; font-size: 14px; display: flex; gap: 10px; align-items: center; }
+    .comment-item img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+    .comment-author { font-weight: 600; color: #333; }
+  </style>
 </head>
 <body>
-  <!-- [HTML structure remains unchanged] -->
 
-  <!-- [All buttons, inputs, forms, and divs remain the same] -->
+  <div style="background:white; text-align:center; padding: 20px 0;">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" style="max-height: 120px;" />
+    <h1>DRFMedia</h1>
+  </div>
+
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
+
+  <form id="uploadForm" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption here..." required></textarea>
+    <button type="submit">Post</button>
+  </form>
+
+  <div id="postContainer"></div>
 
   <script type="module">
-    // [Firebase and other imports remain unchanged]
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    // FIX: Add preload and fallback poster to improve video loading
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const postContainer = document.getElementById("postContainer");
+
+    const mediaFileInput = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+
+    let currentUser = null;
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+        loadPosts();
+      } else {
+        currentUser = null;
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+        postContainer.innerHTML = "";
+      }
+    });
+
     function createMediaElement(type, url) {
       if (type === 'image') {
-        return `<img src="${url}" alt="Post image" loading="lazy" />`;
+        return `<img src="${url}" alt="Image" loading="lazy" />`;
       } else if (type === 'video') {
-        return `<video controls preload="metadata" poster="https://via.placeholder.com/640x360?text=Loading+Video">
-                  <source src="${url}" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video>`;
-      } else {
-        return `<p>Unsupported media type.</p>`;
+        return `
+        <video controls preload="metadata" poster="https://via.placeholder.com/640x360?text=Loading..." style="width:100%; border-radius: 8px;">
+          <source src="${url}" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>`;
       }
+      return "";
     }
 
-    // In loadPosts(), replace this line:
-    // const media = post.type === 'image' ? `<img src="${post.fileUrl}" alt="Post image"/>` : `<video controls src="${post.fileUrl}"></video>`;
-    // WITH:
-    // const media = createMediaElement(post.type, post.fileUrl);
+    async function uploadToPinata(file) {
+      const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // keep your JWT here
+      const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+      const formData = new FormData();
+      formData.append('file', file);
+      const metadata = JSON.stringify({ name: file.name });
+      formData.append('pinataMetadata', metadata);
 
-    // [Everything else remains the same. Ensure "loadPosts()" uses createMediaElement() to render videos better.]
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: pinataJWT },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      return data.IpfsHash;
+    }
+
+    uploadForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+      if (!file || caption.length < 3) return alert("Add file & caption!");
+
+      try {
+        uploadForm.querySelector('button').textContent = "Uploading...";
+        const cid = await uploadToPinata(file);
+        const fileUrl = `https://gateway.pinata.cloud/ipfs/${cid}`;
+        const type = file.type.startsWith("video") ? "video" : "image";
+
+        await push(ref(db, 'posts'), {
+          caption,
+          fileUrl,
+          type,
+          timestamp: Date.now(),
+          likes: 0,
+          uid: currentUser.uid,
+          userName: currentUser.displayName,
+          userPhoto: currentUser.photoURL
+        });
+
+        mediaFileInput.value = "";
+        captionInput.value = "";
+        uploadForm.querySelector('button').textContent = "Post";
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+        uploadForm.querySelector('button').textContent = "Post";
+      }
+    });
+
+    function loadPosts() {
+      const postsRef = ref(db, 'posts/');
+      onValue(postsRef, snapshot => {
+        postContainer.innerHTML = "";
+        const posts = [];
+        snapshot.forEach(child => posts.push({ id: child.key, ...child.val() }));
+        posts.sort((a, b) => b.timestamp - a.timestamp);
+        posts.forEach(post => {
+          const div = document.createElement('div');
+          div.className = "post-item";
+          div.innerHTML = `
+            ${createMediaElement(post.type, post.fileUrl)}
+            <p class="post-caption">${post.caption}</p>
+            <p style="font-size: 13px; color: #777;">Posted by ${post.userName || "Anonymous"}</p>
+          `;
+          postContainer.appendChild(div);
+        });
+      });
+    }
   </script>
 </body>
 </html>
