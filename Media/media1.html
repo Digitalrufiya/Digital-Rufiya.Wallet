@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0066cc" />
+  <style>
+    /* Simple styles for buttons and posts */
+    .post-item {
+      border: 1px solid #ccc;
+      padding: 1em;
+      margin-bottom: 1em;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      font-weight: bold;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .post-actions {
+      margin-top: 0.5em;
+    }
+    .post-actions button {
+      margin-right: 0.5em;
+      cursor: pointer;
+      font-size: 1.1em;
+      background: none;
+      border: none;
+    }
+    .post-actions button[aria-pressed="true"] {
+      color: red;
+    }
+    .comments-section {
+      margin-top: 0.5em;
+      border-top: 1px solid #ddd;
+      padding-top: 0.5em;
+    }
+    .comment-item {
+      margin-bottom: 0.3em;
+      font-size: 0.9em;
+    }
+    .comment-time {
+      font-size: 0.7em;
+      color: #666;
+    }
+    .comment-form {
+      display: flex;
+      gap: 0.5em;
+      margin-top: 0.5em;
+    }
+    .comment-form input {
+      flex: 1;
+      padding: 0.3em;
+    }
+    .comment-form button {
+      padding: 0.3em 0.7em;
+      cursor: pointer;
+    }
+    .delete-btn {
+      color: #900;
+      font-weight: bold;
+      font-size: 0.9em;
+      float: right;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar">
+    <div class="navbar-left">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+      <h1>DRFMedia</h1>
+    </div>
+
+    <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+      <a href="#" tabindex="0">Home</a>
+      <a href="#" tabindex="0">Timeline</a>
+      <a href="#" tabindex="0">Upload</a>
+      <a href="#" tabindex="0" id="profileLink" style="display:none;">Profile</a>
+      <a href="#" tabindex="0" id="loginNavLink">Login</a>
+      <a href="#" tabindex="0" id="logoutNavLink" style="display:none;">Logout</a>
+    </nav>
+
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+  </div>
+</header>
+
+<input type="search" id="searchBar" placeholder="Search posts or users..." aria-label="Search posts or users" autocomplete="off" />
+
+<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+<button id="logoutBtn" style="display:none" aria-label="Logout">Logout</button>
+<button id="filterMyPosts" style="display:none" aria-label="Show only my posts">Show Only My Posts</button>
+
+<form id="uploadForm" aria-label="Upload new post form" style="display:none;">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" aria-label="Select media file to upload" />
+  <textarea id="caption" placeholder="Write your caption here..." required minlength="4" aria-required="true" aria-label="Post caption"></textarea>
+  <button type="submit">Post</button>
+</form>
+
+<div id="loadingSpinner" style="display:none" aria-live="polite" aria-busy="true">Loading posts...</div>
+<div id="postContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script type="module" src="app.js"></script>
+<script>
+  // Admin emails list
+  const adminEmails = [
+    "digitalrufiyauniversity@gmail.com",
+    "digitalrufiya@gmail.com",
+    "digitalrufiyacoin@gmail.com",
+    "onenone91000@gmail.com"
+  ];
+
+  // This small snippet enables the delete button visibility and handles delete clicks
+  // Modify your app.js renderPosts() function to also pass the currentUser email
+  // Or do this here as a helper event delegation after posts are rendered
+
+  // Wait until firebase auth is ready and currentUser is available
+  import { getAuth } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { getDatabase, ref, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+  const auth = getAuth();
+  const db = getDatabase();
+
+  // Delegate click events on postContainer for delete buttons
+  document.getElementById("postContainer").addEventListener("click", async (e) => {
+    if (e.target.classList.contains("delete-btn")) {
+      if (!auth.currentUser) {
+        alert("You must be logged in as admin to delete posts.");
+        return;
+      }
+      if (!adminEmails.includes(auth.currentUser.email)) {
+        alert("Only admins can delete posts.");
+        return;
+      }
+      const postId = e.target.dataset.postid;
+      if (confirm("Are you sure you want to delete this post?")) {
+        try {
+          await remove(ref(db, `posts/${postId}`));
+          // Optionally also remove comments
+          await remove(ref(db, `comments/${postId}`));
+          alert("Post deleted.");
+        } catch (err) {
+          alert("Failed to delete post: " + err.message);
+        }
+      }
+    }
+  });
+
+  // You need to modify the app.js renderPosts() function to add this Delete button markup if current user is admin
+  // Here's the snippet to add inside each post card's innerHTML, just before closing the main div:
+
+  /*
+    ${adminEmails.includes(currentUser?.email) ? 
+      `<button class="delete-btn" data-postid="${postId}" aria-label="Delete post">🗑️ Delete</button>` 
+      : ""}
+  */
+
+  // Make sure your app.js exports currentUser or pass currentUser email to renderPosts() for this to work.
+</script>
+
+</body>
+</html>
