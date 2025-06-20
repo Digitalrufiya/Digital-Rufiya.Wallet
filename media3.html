@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu Toggle Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #333;
+      color: white;
+      padding: 10px 20px;
+      position: relative;
+    }
+
+    #menuToggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 30px;
+      height: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    #menuToggle span {
+      display: block;
+      height: 4px;
+      background: white;
+      border-radius: 2px;
+    }
+
+    nav#primaryNav {
+      display: none;
+      background: #444;
+      padding: 10px 0;
+      position: absolute;
+      top: 50px;
+      left: 0;
+      right: 0;
+    }
+
+    nav#primaryNav.open {
+      display: block;
+    }
+
+    nav#primaryNav a {
+      display: block;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+    }
+
+    nav#primaryNav a:hover {
+      background: #555;
+    }
+
+    #darkModeToggle {
+      position: absolute;
+      right: 20px;
+      top: 12px;
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    /* Optional: bigger screen - show menu inline */
+    @media (min-width: 600px) {
+      #menuToggle {
+        display: none;
+      }
+      nav#primaryNav {
+        display: flex !important;
+        position: static;
+        background: transparent;
+        padding: 0;
+      }
+      nav#primaryNav a {
+        display: inline-block;
+        padding: 0 15px;
+      }
+      #darkModeToggle {
+        position: static;
+        margin-left: auto;
+        color: white;
+      }
+      header {
+        display: flex;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+      <a href="#" tabindex="0">Home</a>
+      <a href="#" tabindex="0">Timeline</a>
+      <a href="#" tabindex="0">Upload</a>
+      <a href="#" tabindex="0" id="profileLink" style="display:none;">Profile</a>
+      <a href="#" tabindex="0" id="loginNavLink">Login</a>
+      <a href="#" tabindex="0" id="logoutNavLink" style="display:none;">Logout</a>
+    </nav>
+
+    <button id="darkModeToggle" aria-label="Toggle dark mode">🌙 Dark Mode</button>
+  </header>
+
+  <script>
+    const menuToggle = document.getElementById('menuToggle');
+    const primaryNav = document.getElementById('primaryNav');
+
+    menuToggle.addEventListener('click', () => {
+      const expanded = menuToggle.getAttribute('aria-expanded') === 'true' || false;
+      menuToggle.setAttribute('aria-expanded', !expanded);
+      primaryNav.classList.toggle('open');
+    });
+
+    // Optional dark mode toggle just for demo
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    darkModeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      darkModeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
+
+    // Dark mode styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .dark-mode {
+        background: #121212;
+        color: #eee;
+      }
+      .dark-mode header {
+        background: #222;
+      }
+      .dark-mode nav#primaryNav {
+        background: #333;
+      }
+      .dark-mode nav#primaryNav a:hover {
+        background: #444;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
