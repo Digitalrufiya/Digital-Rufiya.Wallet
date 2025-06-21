@@ -1,6 +1,71 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+// boost.js
+import Web3 from "https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js";
+
+const DRF_TOKEN_ADDRESS = "0xYourDRFTokenAddress"; // Replace with real
+const BOOST_RECEIVER = "0xYourBoostReceiverWallet"; // Your treasury wallet
+const ABI = [
+  // Minimal ERC20 ABI
+  {
+    "constant": false,
+    "inputs": [
+      { "name": "_to", "type": "address" },
+      { "name": "_value", "type": "uint256" }
+    ],
+    "name": "transfer",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      { "name": "_owner", "type": "address" }
+    ],
+    "name": "balanceOf",
+    "outputs": [{ "name": "balance", "type": "uint256" }],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{ "name": "", "type": "uint8" }],
+    "type": "function"
+  }
+];
+
+let web3;
+let userAccount;
+
+async function connectWallet() {
+  if (window.ethereum) {
+    web3 = new Web3(window.ethereum);
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    const accounts = await web3.eth.getAccounts();
+    userAccount = accounts[0];
+    return userAccount;
+  } else {
+    alert("MetaMask not found");
+    return null;
+  }
+}
+
+async function sendDRFBoost(postId, amountInDRF) {
+  const token = new web3.eth.Contract(ABI, DRF_TOKEN_ADDRESS);
+  const decimals = await token.methods.decimals().call();
+  const amount = web3.utils.toBN(amountInDRF).mul(web3.utils.toBN(10).pow(web3.utils.toBN(decimals)));
+
+  try {
+    await token.methods.transfer(BOOST_RECEIVER, amount).send({ from: userAccount });
+    await markBoostInFirebase(postId, amountInDRF, "DRF");
+    alert("Boost successful");
+  } catch (err) {
+    alert("Boost failed: " + err.message);
+  }
+}
+
+async function markBoostInFirebase(postId, amount, token) {
+  const { getDatabase, ref, update } = await import("https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js");
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js");
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -14,60 +79,24 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const boostData = {
+    boostAmount: amount,
+    boostToken: token,
+    boostBy: userAccount,
+    boostTimestamp: Date.now(),
+    boostExpiry: Date.now() + 3 * 24 * 60 * 60 * 1000 // 3 days
+  };
 
-  let allPosts = [];
+  await update(ref(db, `posts/${postId}`), boostData);
+}
 
-  const postContainer = document.getElementById("postContainer");
-
-  function renderPosts(posts) {
-    postContainer.innerHTML = "";
-    posts.forEach(post => {
-      const isBoosted = post.boostedUntil && post.boostedUntil > Date.now();
-      const boostTag = isBoosted ? `<span class="boost-badge">🔥 BOOSTED</span>` : "";
-
-      const html = `
-        <div class="post-card">
-          <img src="${post.mediaUrl}" style="width: 100%; border-radius: 8px;" />
-          <p>${post.caption}</p>
-          ${boostTag}
-        </div>
-      `;
-      postContainer.innerHTML += html;
-    });
-  }
-
-  function showAllPosts() {
-    const now = Date.now();
-    const boosted = [];
-    const normal = [];
-
-    allPosts.forEach(post => {
-      if (post.boostedUntil && post.boostedUntil > now) {
-        boosted.push(post);
-      } else {
-        normal.push(post);
-      }
-    });
-
-    const sorted = [...boosted, ...normal];
-    renderPosts(sorted);
-  }
-
-  function showBoostedPosts() {
-    const now = Date.now();
-    const boostedOnly = allPosts.filter(p => p.boostedUntil && p.boostedUntil > now);
-    renderPosts(boostedOnly);
-  }
-
-  // Fetch posts from Firebase
-  onValue(ref(db, "posts"), snapshot => {
-    const data = snapshot.val();
-    allPosts = [];
-
-    for (const id in data) {
-      allPosts.push({ ...data[id], id });
-    }
-
-    showAllPosts(); // default view
-  });
-</script>
+// Example trigger (you can link this to a button on the frontend)
+document.querySelectorAll(".boost-btn").forEach(btn => {
+  btn.onclick = async () => {
+    const postId = btn.dataset.id;
+    const amount = prompt("Enter DRF amount to boost:");
+    if (!amount || isNaN(amount)) return alert("Invalid amount");
+    await connectWallet();
+    await sendDRFBoost(postId, amount);
+  };
+});
