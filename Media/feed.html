@@ -1,185 +1,217 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia — Boosted Feed</title>
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 0;
-      padding: 1em;
-      background: #f9f9f9;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1em;
-    }
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 1em;
-    }
-    .post-item {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      padding: 1em;
-      margin-bottom: 1.5em;
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
-    .post-caption {
-      margin: 0.5em 0;
-      font-size: 1.1em;
-    }
-    .post-time {
-      font-size: 0.8em;
-      color: gray;
-    }
-    video, img {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-top: 10px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFChain Feed</title>
+<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
+  #connectBtn { margin-bottom: 20px; padding: 10px 20px; font-size: 18px; }
+  .post { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+  .post img, .post video { max-width: 100%; max-height: 300px; margin: 10px 0; border-radius: 8px; }
+  .likes, .comments-count { font-weight: bold; margin-right: 15px; }
+  button { margin-right: 10px; padding: 8px 12px; cursor: pointer; }
+  #newPostForm { margin-bottom: 30px; }
+  textarea { width: 100%; height: 80px; }
+  input[type=text] { width: 100%; padding: 8px; margin-top: 5px; }
+  .comments { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
+  .comment { border-bottom: 1px solid #eee; padding: 5px 0; }
+  .flagged { background-color: #ffd6d6; }
+</style>
 </head>
 <body>
 
-<header>
-  <h2>📢 DRFMedia Boosted Feed</h2>
-  <div>
-    <button id="loginBtn">Login</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</header>
+<h1>DRFChain Social Feed</h1>
+<button id="connectBtn">Connect Wallet</button>
+<div id="account"></div>
 
-<div class="filters">
-  <input type="search" id="searchInput" placeholder="Search posts…" />
-  <select id="sortSelect">
-    <option value="latest">🕒 Latest</option>
-    <option value="mostLiked">❤️ Most Liked</option>
-    <option value="mostBoosted">⚡ Most Boosted</option>
+<div id="newPostForm" style="display:none;">
+  <h3>Create New Post</h3>
+  <label>IPFS Hash:</label>
+  <input type="text" id="ipfsHashInput" placeholder="Enter IPFS hash (CID)" required />
+  <label>Media Type:</label>
+  <select id="mediaTypeSelect">
+    <option value="image">Image</option>
+    <option value="video">Video</option>
   </select>
+  <button id="postBtn">Post</button>
+  <div id="postStatus"></div>
 </div>
 
-<div id="postContainer"></div>
+<hr />
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, onValue
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut,
-    GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<div id="posts"></div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+<script>
+  const contractAddress = "0xYourContractAddressHere"; // Replace with your contract address
+  const contractABI = [
+    // Relevant parts of ABI
+    "function totalPosts() view returns (uint256)",
+    "function getPost(uint256) view returns (address,string,string,uint256,bool,uint256)",
+    "function post(string ipfsHash, string mediaType)",
+    "function likePost(uint256)",
+    "function commentOnPost(uint256, string memory)",
+    "function getComments(uint256) view returns (tuple(address,string,uint256)[])",
+    "function owner() view returns (address)"
+  ];
+
+  let provider, signer, contract, userAddress;
+
+  const connectBtn = document.getElementById('connectBtn');
+  const accountDiv = document.getElementById('account');
+  const postsDiv = document.getElementById('posts');
+  const newPostForm = document.getElementById('newPostForm');
+  const ipfsHashInput = document.getElementById('ipfsHashInput');
+  const mediaTypeSelect = document.getElementById('mediaTypeSelect');
+  const postBtn = document.getElementById('postBtn');
+  const postStatus = document.getElementById('postStatus');
+
+  connectBtn.onclick = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask or compatible wallet");
+      return;
+    }
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+      accountDiv.textContent = `Connected: ${userAddress}`;
+      connectBtn.style.display = 'none';
+      newPostForm.style.display = 'block';
+
+      loadPosts();
+    } catch (err) {
+      alert("Connection error: " + err.message);
+    }
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+  postBtn.onclick = async () => {
+    const ipfsHash = ipfsHashInput.value.trim();
+    const mediaType = mediaTypeSelect.value;
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postContainer = document.getElementById("postContainer");
-  const searchInput = document.getElementById("searchInput");
-  const sortSelect = document.getElementById("sortSelect");
-
-  let currentUser = null;
-  let allPosts = [];
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    loginBtn.style.display = user ? "none" : "inline-block";
-    logoutBtn.style.display = user ? "inline-block" : "none";
-  });
-
-  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
-  logoutBtn.onclick = () => signOut(auth);
-
-  onValue(ref(db, "posts"), snap => {
-    allPosts = [];
-    const data = snap.val();
-    if (data) {
-      allPosts = Object.entries(data).map(([id, post]) => ({ id, ...post }));
-      renderFilteredPosts();
-    }
-  });
-
-  searchInput.addEventListener("input", renderFilteredPosts);
-  sortSelect.addEventListener("change", renderFilteredPosts);
-
-  function renderFilteredPosts() {
-    const query = searchInput.value.toLowerCase();
-    const sortBy = sortSelect.value;
-    let filtered = allPosts.filter(p =>
-      (p.caption?.toLowerCase().includes(query) ||
-      p.displayName?.toLowerCase().includes(query))
-    );
-
-    // Sorting
-    if (sortBy === "latest") {
-      filtered.sort((a,b) => b.timestamp - a.timestamp);
-    } else if (sortBy === "mostLiked") {
-      filtered.sort((a,b) => (b.likesCount||0) - (a.likesCount||0));
-    } else if (sortBy === "mostBoosted") {
-      filtered.sort((a,b) => (b.boostAmount||0) - (a.boostAmount||0));
+    if (!ipfsHash) {
+      alert("Please enter IPFS hash");
+      return;
     }
 
-    postContainer.innerHTML = "";
-    if (filtered.length === 0) {
-      postContainer.innerHTML = "<p>No posts found.</p>";
-    } else {
-      filtered.forEach(post => {
-        const div = document.createElement("div");
-        div.className = "post-item";
-        div.innerHTML = `
-          <div class="post-owner">
-            <img src="${post.photoURL||''}" class="avatar"/>
-            <strong>${post.displayName||'Anonymous'}</strong>
-          </div>
-          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          ${post.mediaType === "video"
-            ? `<video src="${post.mediaUrl}" controls></video>`
-            : `<img src="${post.mediaUrl}" alt="Post Image" />`}
-          <div class="post-caption">${escapeHTML(post.caption||"")}</div>
+    try {
+      postStatus.textContent = "Posting...";
+      const tx = await contract.post(ipfsHash, mediaType);
+      await tx.wait();
+      postStatus.textContent = "Post created successfully!";
+      ipfsHashInput.value = "";
+      loadPosts();
+    } catch (err) {
+      postStatus.textContent = "Post failed: " + (err.data?.message || err.message);
+    }
+  };
+
+  async function loadPosts() {
+    postsDiv.innerHTML = "Loading posts...";
+    try {
+      const total = await contract.totalPosts();
+      postsDiv.innerHTML = "";
+      for (let i = total - 1; i >= 0; i--) {
+        const post = await contract.getPost(i);
+        const [poster, ipfsHash, mediaType, timestamp, flagged, likes] = post;
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        if(flagged) postDiv.classList.add('flagged');
+
+        const mediaUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+        postDiv.innerHTML = `
+          <div><strong>Poster:</strong> ${poster}</div>
+          <div><strong>Time:</strong> ${new Date(timestamp * 1000).toLocaleString()}</div>
           <div>
-            ❤️ ${post.likesCount || 0}
-            &nbsp;&nbsp;💬 ${post.commentsCount || 0}
-            ${post.boostAmount ? `&nbsp;&nbsp;⚡ Boosted: ${post.boostAmount} DRF` : ""}
+            ${mediaType === 'video' ? 
+              `<video src="${mediaUrl}" controls></video>` : 
+              `<img src="${mediaUrl}" alt="Post Media" />`}
           </div>
+          <div><strong>Likes:</strong> ${likes.toString()}</div>
+          <button onclick="likePost(${i})">Like</button>
+          <button onclick="toggleCommentForm(${i})">Comment</button>
+          <div id="commentForm-${i}" style="display:none; margin-top:10px;">
+            <textarea id="commentInput-${i}" placeholder="Write a comment"></textarea><br/>
+            <button onclick="submitComment(${i})">Submit Comment</button>
+            <div id="commentStatus-${i}"></div>
+            <div id="commentsList-${i}"></div>
+          </div>
+          <div id="commentsContainer-${i}" style="margin-top:10px;"></div>
         `;
-        postContainer.appendChild(div);
-      });
+
+        postsDiv.appendChild(postDiv);
+      }
+    } catch (err) {
+      postsDiv.innerHTML = "Error loading posts: " + err.message;
     }
   }
 
-  function escapeHTML(str) {
-    return str.replace(/[&<>"']/g, c => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[c]);
+  async function likePost(postId) {
+    try {
+      const tx = await contract.likePost(postId);
+      await tx.wait();
+      alert("Liked post!");
+      loadPosts();
+    } catch (err) {
+      alert("Like failed: " + (err.data?.message || err.message));
+    }
+  }
+
+  function toggleCommentForm(postId) {
+    const form = document.getElementById(`commentForm-${postId}`);
+    if (form.style.display === 'block') {
+      form.style.display = 'none';
+    } else {
+      form.style.display = 'block';
+      loadComments(postId);
+    }
+  }
+
+  async function submitComment(postId) {
+    const input = document.getElementById(`commentInput-${postId}`);
+    const status = document.getElementById(`commentStatus-${postId}`);
+    const commentText = input.value.trim();
+
+    if (!commentText) {
+      alert("Comment cannot be empty");
+      return;
+    }
+
+    try {
+      status.textContent = "Submitting comment...";
+      const tx = await contract.commentOnPost(postId, commentText);
+      await tx.wait();
+      status.textContent = "Comment submitted!";
+      input.value = "";
+      loadComments(postId);
+      loadPosts();
+    } catch (err) {
+      status.textContent = "Comment failed: " + (err.data?.message || err.message);
+    }
+  }
+
+  async function loadComments(postId) {
+    const commentsList = document.getElementById(`commentsList-${postId}`);
+    try {
+      const comments = await contract.getComments(postId);
+      commentsList.innerHTML = "<strong>Comments:</strong><br/>";
+      if (comments.length === 0) {
+        commentsList.innerHTML += "<em>No comments yet</em>";
+        return;
+      }
+      comments.forEach(c => {
+        const [commenter, message, time] = c;
+        const d = new Date(time * 1000).toLocaleString();
+        commentsList.innerHTML += `<div><strong>${commenter}</strong> (${d}):<br/>${message}</div><hr/>`;
+      });
+    } catch (err) {
+      commentsList.innerHTML = "Failed to load comments";
+    }
   }
 </script>
 
