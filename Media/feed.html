@@ -3,187 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🔥 DRFMedia Boosted Feed with Search & Filter</title>
+  <title>DRFMedia Feed — Boosted Awareness</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="feed-app.js"></script>
   <style>
-    body { font-family: Arial; background: #f4f6f9; padding: 20px; }
-    .tabs {
-      display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;
-    }
-    .tabs button {
-      padding: 10px 20px; border: none; background: #007bff;
-      color: white; border-radius: 20px; cursor: pointer; font-weight: bold;
-    }
-    .tabs button:hover { background: #0056b3; }
-    .post-card {
-      background: white; padding: 16px; margin-bottom: 20px;
-      border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .boost-badge {
-      display: inline-block; background: #ff7b00; color: white;
-      padding: 4px 10px; border-radius: 20px; font-size: 12px; margin-top: 6px;
-    }
-    #pagination { text-align: center; margin-top: 20px; }
-    #pagination button {
-      padding: 6px 14px; border-radius: 6px; border: 1px solid #ccc;
-      margin: 0 6px; cursor: pointer;
-    }
-    #filters {
-      text-align: center; margin-bottom: 20px;
-    }
-    #filters input, #filters select {
-      padding: 8px; margin: 0 8px 12px 0; min-width: 160px;
-    }
+    body { font-family: sans-serif; background: #f9f9f9; margin: 0; padding: 1em; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #007bff; color: white; padding: 1em; }
+    h1 { margin: 0; font-size: 1.5em; }
+    .filters { margin: 1em 0; display: flex; gap: 0.5em; flex-wrap: wrap; }
+    .filters input, .filters select { padding: 0.5em; }
+    .post { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    .boosted { border-left: 5px solid gold; }
+    .boost-badge { color: gold; font-weight: bold; margin-bottom: 0.5em; }
+    .post-caption { margin: 0.5em 0; }
+    .post-meta { font-size: 0.9em; color: gray; }
   </style>
 </head>
 <body>
 
-  <h2>DRFMedia Feed with Boost Search & Filters</h2>
-
-  <div id="filters">
-    <input type="text" id="searchInput" placeholder="Search by caption or user..." oninput="applyFilters()" />
-    <select id="boostFilter" onchange="applyFilters()">
-      <option value="all">All Posts</option>
-      <option value="boosted">Boosted Only</option>
-      <option value="expiring">Boost Expiring Soon</option>
-      <option value="nonboosted">Non-boosted Only</option>
-    </select>
-    <select id="sortBy" onchange="applyFilters()">
-      <option value="newest">Newest</option>
-      <option value="mostBoosted">Most Boosted</option>
-      <option value="mostLiked">Most Liked</option>
-    </select>
+<header>
+  <h1>📢 DRFMedia Boosted Feed</h1>
+  <div>
+    <button onclick="location.reload()">🔄 Refresh</button>
   </div>
+</header>
 
-  <div id="boostCount" style="text-align:center; font-weight:bold; margin-bottom: 12px;">
-    Loading boost stats...
-  </div>
+<section class="filters">
+  <input type="search" id="searchInput" placeholder="Search by caption or user" />
+  <select id="filterBoost">
+    <option value="all">All</option>
+    <option value="boosted">Boosted Only</option>
+    <option value="non-boosted">Non-Boosted</option>
+  </select>
+  <select id="sortBy">
+    <option value="newest">Newest</option>
+    <option value="mostBoosted">Most Boosted</option>
+    <option value="mostLiked">Most Liked</option>
+  </select>
+</section>
 
-  <div id="postContainer"></div>
+<div id="feed"></div>
 
-  <div id="pagination">
-    <button onclick="paginate('prev')">⬅️ Prev</button>
-    <span id="paginationInfo"></span>
-    <button onclick="paginate('next')">Next ➡️</button>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    let allPosts = [];
-    let filteredPosts = [];
-    let currentPage = 1;
-    const postsPerPage = 5;
-
-    const postContainer = document.getElementById("postContainer");
-    const paginationInfo = document.getElementById("paginationInfo");
-    const boostCountElem = document.getElementById("boostCount");
-
-    function renderPosts(posts, page = 1) {
-      postContainer.innerHTML = "";
-      const now = Date.now();
-      const start = (page - 1) * postsPerPage;
-      const end = start + postsPerPage;
-      const paginatedPosts = posts.slice(start, end);
-
-      paginatedPosts.forEach(post => {
-        const boosted = post.boostedUntil && post.boostedUntil > now;
-        const expiringSoon = boosted && (post.boostedUntil - now <= 24 * 60 * 60 * 1000);
-        const badge = boosted
-          ? (expiringSoon
-            ? `<span class="boost-badge">⏰ Boost Ending Soon</span>`
-            : `<span class="boost-badge">🔥 BOOSTED</span>`)
-          : "";
-
-        const userDisplay = post.userName ? `By: ${post.userName}` : "";
-
-        const html = `
-          <div class="post-card">
-            <img src="${post.mediaUrl}" alt="" style="max-width: 100%; border-radius: 8px;"/>
-            <p>${post.caption}</p>
-            <small>${userDisplay}</small><br/>
-            ${badge}
-          </div>
-        `;
-        postContainer.innerHTML += html;
-      });
-
-      paginationInfo.innerText = `Page ${page} of ${Math.ceil(posts.length / postsPerPage)}`;
-    }
-
-    function paginate(direction) {
-      const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-
-      if (direction === 'next' && currentPage < totalPages) currentPage++;
-      if (direction === 'prev' && currentPage > 1) currentPage--;
-
-      renderPosts(filteredPosts, currentPage);
-    }
-
-    function applyFilters() {
-      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-      const boostFilter = document.getElementById('boostFilter').value;
-      const sortBy = document.getElementById('sortBy').value;
-      const now = Date.now();
-
-      filteredPosts = allPosts.filter(post => {
-        const matchesSearch = (post.caption && post.caption.toLowerCase().includes(searchTerm)) ||
-                              (post.userName && post.userName.toLowerCase().includes(searchTerm));
-        if (!matchesSearch) return false;
-
-        const isBoosted = post.boostedUntil && post.boostedUntil > now;
-        const expiringSoon = isBoosted && (post.boostedUntil - now <= 24*60*60*1000);
-
-        if (boostFilter === 'boosted' && !isBoosted) return false;
-        if (boostFilter === 'expiring' && !expiringSoon) return false;
-        if (boostFilter === 'nonboosted' && isBoosted) return false;
-
-        return true;
-      });
-
-      // Sorting
-      if (sortBy === 'newest') {
-        filteredPosts.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-      } else if (sortBy === 'mostBoosted') {
-        filteredPosts.sort((a,b) => (b.boostAmount || 0) - (a.boostAmount || 0));
-      } else if (sortBy === 'mostLiked') {
-        filteredPosts.sort((a,b) => (b.likesCount || 0) - (a.likesCount || 0));
-      }
-
-      currentPage = 1;
-      renderPosts(filteredPosts, currentPage);
-    }
-
-    onValue(ref(db, "posts"), snapshot => {
-      const data = snapshot.val();
-      allPosts = [];
-      for (const id in data) {
-        allPosts.push({ ...data[id], id });
-      }
-
-      const now = Date.now();
-      const activeBoosts = allPosts.filter(p => p.boostedUntil && p.boostedUntil > now);
-      boostCountElem.innerText = `🔥 Total Boosted Posts: ${activeBoosts.length}`;
-
-      filteredPosts = [...allPosts];
-      applyFilters();
-    });
-
-    window.applyFilters = applyFilters;
-    window.paginate = paginate;
-  </script>
 </body>
 </html>
