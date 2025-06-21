@@ -1,217 +1,360 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRFChain Feed</title>
-<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; max-width: 900px; }
-  #connectBtn { margin-bottom: 20px; padding: 10px 20px; font-size: 18px; }
-  .post { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-  .post img, .post video { max-width: 100%; max-height: 300px; margin: 10px 0; border-radius: 8px; }
-  .likes, .comments-count { font-weight: bold; margin-right: 15px; }
-  button { margin-right: 10px; padding: 8px 12px; cursor: pointer; }
-  #newPostForm { margin-bottom: 30px; }
-  textarea { width: 100%; height: 80px; }
-  input[type=text] { width: 100%; padding: 8px; margin-top: 5px; }
-  .comments { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; }
-  .comment { border-bottom: 1px solid #eee; padding: 5px 0; }
-  .flagged { background-color: #ffd6d6; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia News Feed — Admin Boost Posts Only</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; background: #fff; color: #222;
+    }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+    }
+    .navbar-left {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .navbar-left img {
+      height: 40px; width: 40px; object-fit: contain;
+      border-radius: 4px; background: white; padding: 2px;
+    }
+    .navbar-left h1 {
+      margin: 0; font-size: 1.4em; font-weight: 700;
+    }
+    button {
+      cursor: pointer;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      background: #0066cc;
+      color: white;
+      font-weight: 600;
+      font-size: 1em;
+      margin: 5px;
+    }
+    button:hover {
+      background: #004999;
+    }
+    #filterOptions {
+      max-width: 700px; margin: 10px auto; text-align: center;
+    }
+    #searchBar {
+      max-width: 700px; margin: 10px auto 20px auto;
+      padding: 0 15px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #adminUploadForm {
+      max-width: 700px; margin: 20px auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      background: #fafafa;
+      display: none;
+    }
+    #adminUploadForm input,
+    #adminUploadForm textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    #adminUploadForm label {
+      display: flex;
+      align-items: center;
+      margin-top: 12px;
+      font-weight: 600;
+      gap: 6px;
+    }
+    #postContainer {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    .post-item {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #fafafa;
+    }
+    .post-owner {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.1em;
+    }
+    .boost-badge {
+      background: #ffb700;
+      color: #000;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      user-select: none;
+    }
+    .post-time {
+      font-size: 0.85em;
+      color: #555;
+      margin-top: 4px;
+    }
+    .post-caption {
+      margin-top: 10px;
+      font-size: 1em;
+      white-space: pre-wrap;
+    }
+    video, img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+      background: black;
+      display: block;
+    }
+    #loginBtn, #logoutBtn {
+      max-width: 700px;
+      margin: 10px auto;
+      display: block;
+    }
+  </style>
 </head>
 <body>
 
-<h1>DRFChain Social Feed</h1>
-<button id="connectBtn">Connect Wallet</button>
-<div id="account"></div>
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia News Feed</h1>
+  </div>
+  <button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+  <button id="logoutBtn" aria-label="Logout" style="display:none;">Logout</button>
+</header>
 
-<div id="newPostForm" style="display:none;">
-  <h3>Create New Post</h3>
-  <label>IPFS Hash:</label>
-  <input type="text" id="ipfsHashInput" placeholder="Enter IPFS hash (CID)" required />
-  <label>Media Type:</label>
-  <select id="mediaTypeSelect">
-    <option value="image">Image</option>
-    <option value="video">Video</option>
-  </select>
-  <button id="postBtn">Post</button>
-  <div id="postStatus"></div>
+<div id="filterOptions" aria-label="Filter posts">
+  <button data-filter="all" aria-pressed="true">All Posts</button>
+  <button data-filter="boosted" aria-pressed="false">Boosted Posts</button>
+  <button data-filter="popular" aria-pressed="false">Most Liked</button>
 </div>
 
-<hr />
+<div id="searchBar">
+  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
+</div>
 
-<div id="posts"></div>
+<form id="adminUploadForm" aria-label="Admin post upload form">
+  <input type="url" id="postUrl" placeholder="Media URL (image or video)" required aria-required="true" />
+  <input type="text" id="postUserName" placeholder="User Name" required />
+  <input type="email" id="postUserEmail" placeholder="User Email" required />
+  <input type="text" id="postWalletAddress" placeholder="DRFM Wallet Address" required />
+  <textarea id="postCaption" placeholder="Post details..." required minlength="4"></textarea>
+  <label><input type="checkbox" id="postBoosted" /> Boost this post (adds badge)</label>
+  <button type="submit">Post</button>
+</form>
 
-<script>
-  const contractAddress = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8"; // Your deployed contract address
-  const contractABI = [
-    "function totalPosts() view returns (uint256)",
-    "function getPost(uint256) view returns (address,string,string,uint256,bool,uint256)",
-    "function post(string ipfsHash, string mediaType)",
-    "function likePost(uint256)",
-    "function commentOnPost(uint256, string memory)",
-    "function getComments(uint256) view returns (tuple(address,string,uint256)[])",
-    "function owner() view returns (address)"
-  ];
+<div id="postContainer" aria-live="polite" aria-atomic="false"></div>
 
-  let provider, signer, contract, userAddress;
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase, ref, push, set, onValue, update
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  const connectBtn = document.getElementById('connectBtn');
-  const accountDiv = document.getElementById('account');
-  const postsDiv = document.getElementById('posts');
-  const newPostForm = document.getElementById('newPostForm');
-  const ipfsHashInput = document.getElementById('ipfsHashInput');
-  const mediaTypeSelect = document.getElementById('mediaTypeSelect');
-  const postBtn = document.getElementById('postBtn');
-  const postStatus = document.getElementById('postStatus');
-
-  connectBtn.onclick = async () => {
-    if (!window.ethereum) {
-      alert("Please install MetaMask or compatible wallet");
-      return;
-    }
-    try {
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-      contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      accountDiv.textContent = `Connected: ${userAddress}`;
-      connectBtn.style.display = 'none';
-      newPostForm.style.display = 'block';
-
-      loadPosts();
-    } catch (err) {
-      alert("Connection error: " + err.message);
-    }
+  // Your Firebase config (replace with your own)
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
   };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-  postBtn.onclick = async () => {
-    const ipfsHash = ipfsHashInput.value.trim();
-    const mediaType = mediaTypeSelect.value;
+  // Admin emails set
+  const admins = new Set([
+    "digitalrufiyauniversity@gmail.com",
+    "digitalrufiyacoin@gmail.com",
+    "digitalrufiya@gmail.com"
+  ]);
 
-    if (!ipfsHash) {
-      alert("Please enter IPFS hash");
-      return;
+  // DOM elements
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const adminUploadForm = document.getElementById("adminUploadForm");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+  const filterOptions = document.getElementById("filterOptions");
+
+  let currentUser = null;
+  let postsData = {};
+
+  // Escape HTML utility
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, function(m) {
+      return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[m];
+    });
+  }
+
+  // Login/out handlers
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+  logoutBtn.onclick = () => signOut(auth);
+
+  // On auth state change
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    const isAdmin = user && admins.has(user.email);
+
+    loginBtn.style.display = isAdmin ? "none" : "block";
+    logoutBtn.style.display = isAdmin ? "block" : "none";
+    adminUploadForm.style.display = isAdmin ? "block" : "none";
+
+    renderPosts();
+  });
+
+  // Admin post upload form submission
+  adminUploadForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    if (!currentUser || !admins.has(currentUser.email)) {
+      return alert("You are not authorized to post.");
     }
 
+    const postUrl = document.getElementById("postUrl").value.trim();
+    const userName = document.getElementById("postUserName").value.trim();
+    const userEmail = document.getElementById("postUserEmail").value.trim();
+    const walletAddress = document.getElementById("postWalletAddress").value.trim();
+    const caption = document.getElementById("postCaption").value.trim();
+    const isBoosted = document.getElementById("postBoosted").checked;
+
+    if (!postUrl || !userName || !userEmail || !walletAddress || caption.length < 4) {
+      return alert("Please fill all required fields correctly.");
+    }
+
+    adminUploadForm.querySelector("button").disabled = true;
+
     try {
-      postStatus.textContent = "Posting...";
-      const tx = await contract.post(ipfsHash, mediaType);
-      await tx.wait();
-      postStatus.textContent = "Post created successfully!";
-      ipfsHashInput.value = "";
-      loadPosts();
+      const mediaType = /\.(mp4|webm|ogg)$/i.test(postUrl) ? "video" : "image";
+
+      const newRef = push(ref(db, "posts"));
+      await set(newRef, {
+        userName,
+        userEmail,
+        walletAddress,
+        caption,
+        mediaUrl: postUrl,
+        mediaType,
+        isBoosted,
+        timestamp: Date.now(),
+        likesCount: 0,
+        commentsCount: 0
+      });
+
+      adminUploadForm.reset();
     } catch (err) {
-      postStatus.textContent = "Post failed: " + (err.data?.message || err.message);
+      console.error(err);
+      alert("Failed to post: " + err.message);
+    } finally {
+      adminUploadForm.querySelector("button").disabled = false;
     }
-  };
+  });
 
-  async function loadPosts() {
-    postsDiv.innerHTML = "Loading posts...";
-    try {
-      const total = await contract.totalPosts();
-      postsDiv.innerHTML = "";
-      for (let i = total - 1; i >= 0; i--) {
-        const post = await contract.getPost(i);
-        const [poster, ipfsHash, mediaType, timestamp, flagged, likes] = post;
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post';
-        if(flagged) postDiv.classList.add('flagged');
+  // Filter state
+  let currentFilter = "all";
 
-        const mediaUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+  // Filter buttons behavior
+  filterOptions.addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON") {
+      currentFilter = e.target.dataset.filter;
 
-        postDiv.innerHTML = `
-          <div><strong>Poster:</strong> ${poster}</div>
-          <div><strong>Time:</strong> ${new Date(timestamp * 1000).toLocaleString()}</div>
-          <div>
-            ${mediaType === 'video' ? 
-              `<video src="${mediaUrl}" controls></video>` : 
-              `<img src="${mediaUrl}" alt="Post Media" />`}
-          </div>
-          <div><strong>Likes:</strong> ${likes.toString()}</div>
-          <button onclick="likePost(${i})">Like</button>
-          <button onclick="toggleCommentForm(${i})">Comment</button>
-          <div id="commentForm-${i}" style="display:none; margin-top:10px;">
-            <textarea id="commentInput-${i}" placeholder="Write a comment"></textarea><br/>
-            <button onclick="submitComment(${i})">Submit Comment</button>
-            <div id="commentStatus-${i}"></div>
-            <div id="commentsList-${i}"></div>
-          </div>
-          <div id="commentsContainer-${i}" style="margin-top:10px;"></div>
+      // Update aria-pressed states for buttons
+      [...filterOptions.children].forEach(btn => {
+        btn.setAttribute("aria-pressed", btn === e.target ? "true" : "false");
+      });
+
+      renderPosts();
+    }
+  });
+
+  // Search input listener
+  searchInput.addEventListener("input", () => {
+    renderPosts();
+  });
+
+  // Render posts with filtering and search
+  function renderPosts() {
+    onValue(ref(db, "posts"), snap => {
+      postContainer.innerHTML = "";
+      postsData = snap.val();
+      if (!postsData) return;
+
+      let postsArr = Object.entries(postsData);
+
+      // Apply filter
+      if (currentFilter === "boosted") {
+        postsArr = postsArr.filter(([, post]) => post.isBoosted);
+      } else if (currentFilter === "popular") {
+        postsArr = postsArr.sort((a,b) => (b[1].likesCount||0) - (a[1].likesCount||0));
+      } else {
+        postsArr = postsArr.sort((a,b) => b[1].timestamp - a[1].timestamp);
+      }
+
+      // Apply search filter
+      const query = searchInput.value.trim().toLowerCase();
+      if (query) {
+        postsArr = postsArr.filter(([, post]) =>
+          (post.caption && post.caption.toLowerCase().includes(query)) ||
+          (post.userName && post.userName.toLowerCase().includes(query)) ||
+          (post.userEmail && post.userEmail.toLowerCase().includes(query))
+        );
+      }
+
+      // Render each post
+      postsArr.forEach(([postId, post]) => {
+        const boostBadge = post.isBoosted
+          ? `<span class="boost-badge" title="Boosted Post">🚀 Boosted</span>`
+          : "";
+
+        const mediaHtml = post.mediaType === "video"
+          ? `<video src="${post.mediaUrl}" controls preload="auto" playsinline crossorigin="anonymous" style="max-height:480px;"></video>`
+          : `<img src="${post.mediaUrl}" loading="lazy" alt="Post media" />`;
+
+        const card = document.createElement("div");
+        card.className = "post-item";
+        card.innerHTML = `
+          <div class="post-owner">${escapeHTML(post.userName || "Anonymous")} ${boostBadge}</div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          ${mediaHtml}
+          <div class="post-caption">${escapeHTML(post.caption)}</div>
+          <div><strong>Wallet:</strong> ${escapeHTML(post.walletAddress)}</div>
+          <div><strong>Email:</strong> ${escapeHTML(post.userEmail)}</div>
         `;
 
-        postsDiv.appendChild(postDiv);
-      }
-    } catch (err) {
-      postsDiv.innerHTML = "Error loading posts: " + err.message;
-    }
-  }
-
-  async function likePost(postId) {
-    try {
-      const tx = await contract.likePost(postId);
-      await tx.wait();
-      alert("Liked post!");
-      loadPosts();
-    } catch (err) {
-      alert("Like failed: " + (err.data?.message || err.message));
-    }
-  }
-
-  function toggleCommentForm(postId) {
-    const form = document.getElementById(`commentForm-${postId}`);
-    if (form.style.display === 'block') {
-      form.style.display = 'none';
-    } else {
-      form.style.display = 'block';
-      loadComments(postId);
-    }
-  }
-
-  async function submitComment(postId) {
-    const input = document.getElementById(`commentInput-${postId}`);
-    const status = document.getElementById(`commentStatus-${postId}`);
-    const commentText = input.value.trim();
-
-    if (!commentText) {
-      alert("Comment cannot be empty");
-      return;
-    }
-
-    try {
-      status.textContent = "Submitting comment...";
-      const tx = await contract.commentOnPost(postId, commentText);
-      await tx.wait();
-      status.textContent = "Comment submitted!";
-      input.value = "";
-      loadComments(postId);
-      loadPosts();
-    } catch (err) {
-      status.textContent = "Comment failed: " + (err.data?.message || err.message);
-    }
-  }
-
-  async function loadComments(postId) {
-    const commentsList = document.getElementById(`commentsList-${postId}`);
-    try {
-      const comments = await contract.getComments(postId);
-      commentsList.innerHTML = "<strong>Comments:</strong><br/>";
-      if (comments.length === 0) {
-        commentsList.innerHTML += "<em>No comments yet</em>";
-        return;
-      }
-      comments.forEach(c => {
-        const [commenter, message, time] = c;
-        const d = new Date(time * 1000).toLocaleString();
-        commentsList.innerHTML += `<div><strong>${commenter}</strong> (${d}):<br/>${message}</div><hr/>`;
+        postContainer.appendChild(card);
       });
-    } catch (err) {
-      commentsList.innerHTML = "Failed to load comments";
-    }
+    });
   }
+
+  // Initial render
+  renderPosts();
 </script>
 
 </body>
