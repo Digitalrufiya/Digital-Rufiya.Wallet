@@ -1,112 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Boost Your Post — DRFMedia</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 15px;
-      background: #f9f9f9;
-      color: #222;
-    }
-    h1 {
-      color: #007bff;
-      text-align: center;
-    }
-    form {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-    input[type="url"], input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      font-size: 1em;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      margin-bottom: 20px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 1em;
-      width: 100%;
-    }
-    button:disabled {
-      background: #bbb;
-      cursor: not-allowed;
-    }
-    .info {
-      background: #e7f1ff;
-      border-left: 4px solid #007bff;
-      padding: 10px 15px;
-      margin-bottom: 20px;
-      font-size: 0.95em;
-      line-height: 1.4;
-    }
-    .success {
-      color: green;
-      font-weight: 700;
-      text-align: center;
-      margin-top: 20px;
-    }
-  </style>
-</head>
-<body>
-
-  <h1>Boost Your Post</h1>
-
-  <div class="info">
-    <p>Boost your photo or video post for <strong>$30 USD in USDC</strong> and get it highlighted for 30 days!</p>
-    <p>Send <strong>exactly 30 USDC</strong> to this address:</p>
-    <p><code>0x175390CB3C4E589b40CBe5a0f8c5752a4F1d973b</code></p>
-    <p>Then enter the URL link of the post you want to boost below and submit your request.</p>
-    <p>After verification, your post will be highlighted on the timeline for 30 days.</p>
-  </div>
-
-  <form id="boostForm">
-    <label for="postLink">Post URL to Boost</label>
-    <input type="url" id="postLink" placeholder="https://yourdomain.com/?postId=abc123" required />
-
-    <label for="walletAddress">Your USDC Wallet Address (for payment verification)</label>
-    <input type="text" id="walletAddress" placeholder="0x..." required pattern="^0x[a-fA-F0-9]{40}$" />
-
-    <button type="submit">Submit Boost Request</button>
-  </form>
-
-  <div id="message" class="success" role="alert" aria-live="assertive" style="display:none;"></div>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Boosted Feed</title>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      push,
-      set,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import {
-      getAuth,
-      onAuthStateChanged,
-      signInWithPopup,
-      GoogleAuthProvider
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -117,68 +17,111 @@
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
     };
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
-    const boostForm = document.getElementById('boostForm');
-    const postLinkInput = document.getElementById('postLink');
-    const walletInput = document.getElementById('walletAddress');
-    const messageDiv = document.getElementById('message');
+    let allPosts = [];
+    let currentPage = 1;
+    const postsPerPage = 5;
 
-    let currentUser = null;
+    const postContainer = document.getElementById("postContainer");
+    const paginationInfo = document.getElementById("paginationInfo");
 
-    onAuthStateChanged(auth, user => {
-      currentUser = user;
-      if (!user) {
-        // If not logged in, sign in with Google
-        signInWithPopup(auth, provider).catch(console.error);
+    function renderPosts(posts, page = 1) {
+      postContainer.innerHTML = "";
+      const now = Date.now();
+      const start = (page - 1) * postsPerPage;
+      const end = start + postsPerPage;
+      const paginatedPosts = posts.slice(start, end);
+
+      paginatedPosts.forEach(post => {
+        const boosted = post.boostedUntil && post.boostedUntil > now;
+        const expiringSoon = boosted && (post.boostedUntil - now <= 24 * 60 * 60 * 1000);
+        const badge = boosted ? (expiringSoon ? `<span class="boost-badge">⏰ Boost Ending Soon</span>` : `<span class="boost-badge">🔥 BOOSTED</span>`) : "";
+
+        const html = `
+          <div class="post-card">
+            <img src="${post.mediaUrl}" alt="" />
+            <p>${post.caption}</p>
+            ${badge}
+          </div>
+        `;
+        postContainer.innerHTML += html;
+      });
+
+      paginationInfo.innerText = `Page ${page} of ${Math.ceil(posts.length / postsPerPage)}`;
+    }
+
+    function paginate(direction) {
+      const now = Date.now();
+      const boosted = [];
+      const normal = [];
+      allPosts.forEach(p => {
+        if (p.boostedUntil && p.boostedUntil > now) boosted.push(p);
+        else normal.push(p);
+      });
+      const sorted = [...boosted, ...normal];
+      const totalPages = Math.ceil(sorted.length / postsPerPage);
+
+      if (direction === 'next' && currentPage < totalPages) currentPage++;
+      if (direction === 'prev' && currentPage > 1) currentPage--;
+
+      renderPosts(sorted, currentPage);
+    }
+
+    function showBoostedOnly() {
+      const now = Date.now();
+      const boostedOnly = allPosts.filter(p => p.boostedUntil && p.boostedUntil > now);
+      renderPosts(boostedOnly, 1);
+    }
+
+    onValue(ref(db, "posts"), snapshot => {
+      const data = snapshot.val();
+      allPosts = [];
+      for (const id in data) {
+        allPosts.push({ ...data[id], id });
       }
+
+      // Count active boosts
+      const now = Date.now();
+      const activeBoosts = allPosts.filter(p => p.boostedUntil && p.boostedUntil > now);
+      document.getElementById("boostCount").innerText = `🔥 Total Boosted Posts: ${activeBoosts.length}`;
+
+      currentPage = 1;
+      paginate();
     });
 
-    boostForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (!currentUser) {
-        alert("Please sign in with Google before submitting.");
-        return;
-      }
-
-      const postLink = postLinkInput.value.trim();
-      const walletAddr = walletInput.value.trim();
-
-      if (!postLink || !walletAddr) {
-        alert("Please fill all fields.");
-        return;
-      }
-
-      boostForm.querySelector('button').disabled = true;
-      messageDiv.style.display = 'none';
-
-      try {
-        // Save boost request
-        const boostRef = ref(db, 'boostRequests');
-        await push(boostRef, {
-          userId: currentUser.uid,
-          userEmail: currentUser.email,
-          postLink,
-          walletAddress: walletAddr,
-          status: "pending",  // Admin can update this to "approved"
-          requestedAt: serverTimestamp()
-        });
-
-        messageDiv.textContent = "Your boost request has been submitted successfully! Please send 30 USDC to the given address. Once verified, your post will be boosted.";
-        messageDiv.style.display = 'block';
-
-        boostForm.reset();
-      } catch (error) {
-        alert("Error submitting boost request: " + error.message);
-      } finally {
-        boostForm.querySelector('button').disabled = false;
-      }
-    });
+    window.showAllPosts = () => { currentPage = 1; paginate(); }
+    window.showBoostedPosts = showBoostedOnly;
+    window.paginate = paginate;
   </script>
+  <style>
+    body { font-family: Arial; background: #f4f6f9; padding: 20px; }
+    .tabs { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .tabs button { padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 20px; cursor: pointer; font-weight: bold; }
+    .tabs button:hover { background: #0056b3; }
+    .post-card { background: white; padding: 16px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .boost-badge { display: inline-block; background: #ff7b00; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; margin-top: 6px; }
+    #pagination { text-align: center; margin-top: 20px; }
+    #pagination button { padding: 6px 14px; border-radius: 6px; border: 1px solid #ccc; margin: 0 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>DRFMedia Feed</h2>
+  <div class="tabs">
+    <button onclick="showAllPosts()">All Posts</button>
+    <button onclick="showBoostedPosts()">🔥 Boosted</button>
+  </div>
 
+  <div id="boostCount" style="text-align:center; font-weight:bold; margin-bottom: 12px;">Loading boost stats...</div>
+
+  <div id="postContainer"></div>
+
+  <div id="pagination">
+    <button onclick="paginate('prev')">⬅️ Prev</button>
+    <span id="paginationInfo"></span>
+    <button onclick="paginate('next')">Next ➡️</button>
+  </div>
 </body>
 </html>
