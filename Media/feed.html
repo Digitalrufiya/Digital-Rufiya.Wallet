@@ -3,33 +3,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Admin Posts</title>
+  <title>DRFMedia Admin Boosted Posts Feed</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#0066cc" />
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#fff; color:#222; max-width:700px; margin-left:auto; margin-right:auto; }
-    header { background:#007bff; color:#fff; padding:10px; text-align:center; }
-    #uploadForm, #postContainer, #loginBtn, #logoutBtn { margin-top:20px; }
-    #uploadForm input, #uploadForm textarea, #uploadForm button { display:block; width:100%; margin-top:10px; padding:8px; font-size:1em; }
-    .post-item { border:1px solid #ccc; padding:15px; margin-bottom:15px; border-radius:6px; position:relative; }
-    .badge-boosted { position:absolute; top:10px; right:10px; background:#ff4500; color:#fff; padding:4px 8px; font-weight:bold; border-radius:4px; }
+    /* Your existing styles here ... plus: */
+
+    .badge-boosted {
+      display: inline-block;
+      background: #ff9800;
+      color: white;
+      font-weight: bold;
+      font-size: 0.8em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    #filterButtons {
+      max-width: 700px;
+      margin: 10px auto;
+      text-align: center;
+    }
+    #filterButtons button {
+      margin: 0 8px;
+      padding: 6px 12px;
+      font-weight: 600;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      transition: background 0.3s ease;
+    }
+    #filterButtons button.active {
+      background: #004a99;
+    }
   </style>
 </head>
 <body>
 
-<header><h1>DRFMedia Admin Posts</h1></header>
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia Admin Feed</h1>
+  </div>
 
-<button id="loginBtn">Sign in with Google</button>
-<button id="logoutBtn" style="display:none;">Logout</button>
+  <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+    <span></span><span></span><span></span>
+  </button>
 
-<form id="uploadForm" style="display:none;">
-  <input type="text" id="postUserName" placeholder="User Name" required />
-  <input type="email" id="postUserEmail" placeholder="User Email" required />
-  <input type="text" id="postWalletAddress" placeholder="DRFM Wallet Address" required />
-  <input type="url" id="postUrl" placeholder="Post URL (for boost)" required />
-  <textarea id="postCaption" placeholder="Post details/caption..." required minlength="4"></textarea>
-  <button type="submit">Upload Boosted Post</button>
+  <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+    <a href="#">Home</a>
+    <a href="#">Timeline</a>
+    <a href="#">Boosted Posts</a>
+    <a href="#" id="profileLink" style="display:none;">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
+</header>
+
+<div id="searchBar" style="max-width: 700px; margin: 10px auto;">
+  <input type="search" id="searchInput" placeholder="Search posts by caption or user name..." aria-label="Search posts" style="width: 100%; padding: 8px 12px; font-size: 1em; border-radius:4px; border: 1px solid #ccc;" />
+</div>
+
+<div id="filterButtons" style="display:none;">
+  <button id="filterAll" class="active">All Posts</button>
+  <button id="filterBoosted">Boosted Only</button>
+  <button id="filterMostLiked">Most Liked</button>
+</div>
+
+<button id="loginBtn" aria-label="Sign in with Google" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
+<button id="logoutBtn" aria-label="Logout" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
+
+<!-- Admin Post Upload Form -->
+<form id="uploadForm" aria-label="Admin Upload Post Form" style="display:none; max-width: 700px; margin: 20px auto; border: 1px solid #ccc; padding: 15px; border-radius: 8px;">
+  <h2>Upload Boosted Post (Admin Only)</h2>
+  <label>
+    User Name (required):<br />
+    <input type="text" id="adminUserName" required aria-required="true" style="width: 100%; padding: 8px; margin: 6px 0;" />
+  </label><br />
+  <label>
+    User Email (required):<br />
+    <input type="email" id="adminUserEmail" required aria-required="true" style="width: 100%; padding: 8px; margin: 6px 0;" />
+  </label><br />
+  <label>
+    DRF Wallet Address (required):<br />
+    <input type="text" id="adminWalletAddress" required aria-required="true" style="width: 100%; padding: 8px; margin: 6px 0;" />
+  </label><br />
+  <label>
+    Post URL (required):<br />
+    <input type="url" id="adminPostUrl" required aria-required="true" style="width: 100%; padding: 8px; margin: 6px 0;" />
+  </label><br />
+  <label>
+    Caption:<br />
+    <textarea id="adminCaption" placeholder="Enter post caption..." rows="4" style="width: 100%; padding: 8px; margin: 6px 0;"></textarea>
+  </label><br />
+  <button type="submit" style="padding: 10px 20px; font-size: 1em;">Upload Boosted Post</button>
 </form>
 
-<div id="postContainer">Please log in to see posts.</div>
+<div id="postContainer" aria-live="polite" aria-atomic="false" style="max-width: 700px; margin: 20px auto;"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -38,18 +111,20 @@
     ref,
     push,
     set,
-    onValue
+    onValue,
+    query,
+    orderByChild,
+    limitToLast
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import {
     getAuth,
     signInWithPopup,
     signOut,
     GoogleAuthProvider,
-    onAuthStateChanged,
-    setPersistence,
-    browserLocalPersistence
+    onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
+  // Your Firebase config here
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -59,157 +134,251 @@
     messagingSenderId: "608135115201",
     appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
 
-  // Enable persistence
-  setPersistence(auth, browserLocalPersistence).catch(console.error);
-
+  // Admin emails list
   const admins = new Set([
     "digitalrufiyauniversity@gmail.com",
     "digitalrufiyacoin@gmail.com",
     "digitalrufiya@gmail.com"
   ]);
 
+  // DOM Elements
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const uploadForm = document.getElementById("uploadForm");
   const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+  const filterButtons = document.getElementById("filterButtons");
+  const filterAllBtn = document.getElementById("filterAll");
+  const filterBoostedBtn = document.getElementById("filterBoosted");
+  const filterMostLikedBtn = document.getElementById("filterMostLiked");
+
+  // Admin form inputs
+  const adminUserName = document.getElementById("adminUserName");
+  const adminUserEmail = document.getElementById("adminUserEmail");
+  const adminWalletAddress = document.getElementById("adminWalletAddress");
+  const adminPostUrl = document.getElementById("adminPostUrl");
+  const adminCaption = document.getElementById("adminCaption");
 
   let currentUser = null;
-
-  loginBtn.onclick = () => {
-    signInWithPopup(auth, provider)
-      .then(() => console.log("Login successful"))
-      .catch(e => {
-        console.error("Login failed:", e);
-        alert("Login failed: " + e.message);
-      });
-  };
-
-  logoutBtn.onclick = () => {
-    signOut(auth)
-      .then(() => console.log("Logged out"))
-      .catch(e => console.error("Logout failed:", e));
-  };
+  let postsData = {};
 
   onAuthStateChanged(auth, user => {
     currentUser = user;
-    console.log("Auth state changed:", user);
+
     if (user) {
       loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
+      logoutBtn.style.display = "block";
+      filterButtons.style.display = "block";
 
       if (admins.has(user.email)) {
         uploadForm.style.display = "block";
       } else {
         uploadForm.style.display = "none";
       }
-
       loadPosts();
     } else {
-      loginBtn.style.display = "inline-block";
+      loginBtn.style.display = "block";
       logoutBtn.style.display = "none";
       uploadForm.style.display = "none";
-      postContainer.innerHTML = "Please log in to see posts.";
+      filterButtons.style.display = "none";
+      postContainer.innerHTML = "<p>Please log in to view posts.</p>";
     }
   });
 
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+  logoutBtn.onclick = () => signOut(auth);
+
+  // Upload form submit for admins only
   uploadForm.addEventListener("submit", async e => {
     e.preventDefault();
-    if (!currentUser) return alert("Login required.");
-
-    if (!admins.has(currentUser.email)) return alert("Not authorized.");
-
-    const userName = document.getElementById("postUserName").value.trim();
-    const userEmail = document.getElementById("postUserEmail").value.trim();
-    const walletAddress = document.getElementById("postWalletAddress").value.trim();
-    const postUrl = document.getElementById("postUrl").value.trim();
-    const caption = document.getElementById("postCaption").value.trim();
-
-    if (!userName || !userEmail || !walletAddress || !postUrl || caption.length < 4) {
-      return alert("Please fill all fields properly.");
+    if (!currentUser || !admins.has(currentUser.email)) {
+      alert("Only admins can upload posts.");
+      return;
+    }
+    if (
+      !adminUserName.value.trim() ||
+      !adminUserEmail.value.trim() ||
+      !adminWalletAddress.value.trim() ||
+      !adminPostUrl.value.trim()
+    ) {
+      alert("Please fill all required fields.");
+      return;
     }
 
+    uploadForm.querySelector("button").disabled = true;
+
     try {
+      // Save post data to Firebase, mark as boosted (admin post)
       const newPostRef = push(ref(db, "posts"));
       await set(newPostRef, {
-        userName,
-        userEmail,
-        walletAddress,
-        postUrl,
-        caption,
-        boosted: true,
+        userId: currentUser.uid,
+        displayName: adminUserName.value.trim(),
+        email: adminUserEmail.value.trim(),
+        walletAddress: adminWalletAddress.value.trim(),
+        postUrl: adminPostUrl.value.trim(),
+        caption: adminCaption.value.trim() || "",
+        timestamp: Date.now(),
+        boosted: true,       // Mark as boosted post
         likesCount: 0,
-        timestamp: Date.now()
+        commentsCount: 0,
+        mediaUrl: adminPostUrl.value.trim(), // Assuming postUrl points to media (image/video)
+        mediaType: adminPostUrl.value.endsWith(".mp4") ? "video" : "image"
       });
-      alert("Boosted post uploaded!");
-      uploadForm.reset();
-      loadPosts();
+
+      // Clear form
+      adminUserName.value = "";
+      adminUserEmail.value = "";
+      adminWalletAddress.value = "";
+      adminPostUrl.value = "";
+      adminCaption.value = "";
+
+      alert("Boosted post uploaded successfully!");
     } catch (err) {
-      alert("Failed to upload: " + err.message);
+      console.error(err);
+      alert("Failed to upload post: " + err.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
     }
   });
 
+  // Load posts and render
   function loadPosts() {
-    onValue(ref(db, "posts"), snapshot => {
-      const posts = snapshot.val();
-      postContainer.innerHTML = "";
-      if (!posts) {
-        postContainer.innerHTML = "No posts available.";
-        return;
-      }
-
-      const postsArr = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-      postsArr.sort((a, b) => {
-        if (a.boosted && !b.boosted) return -1;
-        if (!a.boosted && b.boosted) return 1;
-        if ((b.likesCount || 0) !== (a.likesCount || 0)) return (b.likesCount || 0) - (a.likesCount || 0);
-        return b.timestamp - a.timestamp;
-      });
-
-      postsArr.forEach(post => {
-        const card = document.createElement("div");
-        card.className = "post-item";
-
-        let badgeHTML = "";
-        if (post.boosted) {
-          badgeHTML = `<div class="badge-boosted">BOOSTED</div>`;
-        }
-
-        card.innerHTML = `
-          ${badgeHTML}
-          <div><strong>${escapeHTML(post.userName || "Anonymous")}</strong></div>
-          <div style="font-size:0.85em; color:#555;">${new Date(post.timestamp).toLocaleString()}</div>
-          <div style="margin-top:10px;">${escapeHTML(post.caption)}</div>
-          <div style="margin-top:5px;">
-            <a href="${post.postUrl}" target="_blank" rel="noopener" style="color:#007bff; word-break: break-word;">${escapeHTML(post.postUrl)}</a>
-          </div>
-          <div style="font-size:0.85em; color:#555; margin-top:5px;">
-            Email: ${escapeHTML(post.userEmail)}<br />
-            Wallet: ${escapeHTML(post.walletAddress)}
-          </div>
-        `;
-
-        postContainer.appendChild(card);
-      });
+    const postsRef = ref(db, "posts");
+    onValue(postsRef, snapshot => {
+      const data = snapshot.val() || {};
+      postsData = data;
+      renderPosts(data);
     }, err => {
       console.error("Failed to load posts:", err);
-      postContainer.innerHTML = "Error loading posts.";
+      postContainer.innerHTML = "<p>Error loading posts.</p>";
     });
   }
 
-  function escapeHTML(text) {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  // Render posts with filtering and search
+  function renderPosts(data) {
+    let filteredPosts = Object.entries(data);
+
+    // Filter by search text
+    const searchText = searchInput.value.trim().toLowerCase();
+    if (searchText) {
+      filteredPosts = filteredPosts.filter(([id, post]) => {
+        return (
+          (post.caption && post.caption.toLowerCase().includes(searchText)) ||
+          (post.displayName && post.displayName.toLowerCase().includes(searchText)) ||
+          (post.email && post.email.toLowerCase().includes(searchText))
+        );
+      });
+    }
+
+    // Filter by active filter button
+    if (filterBoostedBtn.classList.contains("active")) {
+      filteredPosts = filteredPosts.filter(([id, post]) => post.boosted === true);
+    } else if (filterMostLikedBtn.classList.contains("active")) {
+      filteredPosts = filteredPosts.sort((a, b) => (b[1].likesCount || 0) - (a[1].likesCount || 0));
+    } else {
+      // Default sort by timestamp desc
+      filteredPosts = filteredPosts.sort((a, b) => b[1].timestamp - a[1].timestamp);
+    }
+
+    // Clear container
+    postContainer.innerHTML = "";
+
+    if (filteredPosts.length === 0) {
+      postContainer.innerHTML = "<p>No posts found.</p>";
+      return;
+    }
+
+    filteredPosts.forEach(([postId, post]) => {
+      const isBoosted = !!post.boosted;
+      const badgeHtml = isBoosted ? `<span class="badge-boosted" title="Boosted Post">BOOSTED</span>` : "";
+
+      // Media element: video or image
+      let mediaHtml = "";
+      if (post.mediaType === "video") {
+        mediaHtml = `<video src="${post.mediaUrl}" controls preload="auto" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px; border-radius:6px;"></video>`;
+      } else if (post.mediaType === "image") {
+        mediaHtml = `<img src="${post.mediaUrl}" alt="Post media" loading="lazy" style="max-width:100%; border-radius:6px;" />`;
+      } else {
+        // fallback to link if no media type
+        mediaHtml = `<a href="${post.mediaUrl}" target="_blank" rel="noopener noreferrer">${post.mediaUrl}</a>`;
+      }
+
+      // Post card HTML
+      const postHTML = `
+        <div class="post-item" style="border:1px solid #ccc; border-radius:6px; padding:15px; margin-bottom:20px; background:#fafafa;">
+          <div class="post-owner" style="display:flex; align-items:center; gap:10px; font-weight:bold;">
+            <span>${escapeHTML(post.displayName || "Unknown User")}</span> ${badgeHtml}
+          </div>
+          <div class="post-time" style="color:#555; font-size:0.85em; margin:4px 0 10px 0;">${new Date(post.timestamp).toLocaleString()}</div>
+          <div class="post-media">${mediaHtml}</div>
+          <div class="post-caption" style="margin-top:10px; white-space: pre-wrap;">${escapeHTML(post.caption || "")}</div>
+          <div style="margin-top:8px; font-size:0.9em; color:#333;">
+            <div><strong>User Email:</strong> ${escapeHTML(post.email || "N/A")}</div>
+            <div><strong>DRF Wallet:</strong> ${escapeHTML(post.walletAddress || "N/A")}</div>
+          </div>
+        </div>
+      `;
+
+      const div = document.createElement("div");
+      div.innerHTML = postHTML;
+      postContainer.appendChild(div.firstElementChild);
+    });
   }
+
+  // Escape HTML utility to avoid XSS
+  function escapeHTML(text) {
+    if (!text) return "";
+    return text.replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+
+  // Filter buttons click handlers
+  filterAllBtn.onclick = () => {
+    filterAllBtn.classList.add("active");
+    filterBoostedBtn.classList.remove("active");
+    filterMostLikedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+  filterBoostedBtn.onclick = () => {
+    filterBoostedBtn.classList.add("active");
+    filterAllBtn.classList.remove("active");
+    filterMostLikedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+  filterMostLikedBtn.onclick = () => {
+    filterMostLikedBtn.classList.add("active");
+    filterAllBtn.classList.remove("active");
+    filterBoostedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+
+  // Search input event
+  searchInput.addEventListener("input", () => {
+    renderPosts(postsData);
+  });
+</script>
+
+<script>
+  // Menu toggle button (non-module part)
+  const menuToggle = document.getElementById('menuToggle');
+  const primaryNav = document.getElementById('primaryNav');
+  menuToggle.addEventListener('click', () => {
+    const expanded = menuToggle.getAttribute('aria-expanded') === 'true';
+    menuToggle.setAttribute('aria-expanded', !expanded);
+    primaryNav.classList.toggle('open');
+  });
 </script>
 
 </body>
