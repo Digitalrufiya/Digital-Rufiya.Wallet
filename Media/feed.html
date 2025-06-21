@@ -3,46 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Feed — Boosted Awareness</title>
+  <title>DRFMedia — Boosted Feed</title>
   <link rel="stylesheet" href="style.css" />
-  <script type="module" src="feed-app.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f9f9f9; margin: 0; padding: 1em; }
-    header { display: flex; justify-content: space-between; align-items: center; background: #007bff; color: white; padding: 1em; }
-    h1 { margin: 0; font-size: 1.5em; }
-    .filters { margin: 1em 0; display: flex; gap: 0.5em; flex-wrap: wrap; }
-    .filters input, .filters select { padding: 0.5em; }
-    .post { background: white; padding: 1em; margin-bottom: 1em; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-    .boosted { border-left: 5px solid gold; }
-    .boost-badge { color: gold; font-weight: bold; margin-bottom: 0.5em; }
-    .post-caption { margin: 0.5em 0; }
-    .post-meta { font-size: 0.9em; color: gray; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1em;
+      background: #f9f9f9;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1em;
+    }
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1em;
+    }
+    .post-item {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 1em;
+      margin-bottom: 1.5em;
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    .post-caption {
+      margin: 0.5em 0;
+      font-size: 1.1em;
+    }
+    .post-time {
+      font-size: 0.8em;
+      color: gray;
+    }
+    video, img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📢 DRFMedia Boosted Feed</h1>
+  <h2>📢 DRFMedia Boosted Feed</h2>
   <div>
-    <button onclick="location.reload()">🔄 Refresh</button>
+    <button id="loginBtn">Login</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
 
-<section class="filters">
-  <input type="search" id="searchInput" placeholder="Search by caption or user" />
-  <select id="filterBoost">
-    <option value="all">All</option>
-    <option value="boosted">Boosted Only</option>
-    <option value="non-boosted">Non-Boosted</option>
+<div class="filters">
+  <input type="search" id="searchInput" placeholder="Search posts…" />
+  <select id="sortSelect">
+    <option value="latest">🕒 Latest</option>
+    <option value="mostLiked">❤️ Most Liked</option>
+    <option value="mostBoosted">⚡ Most Boosted</option>
   </select>
-  <select id="sortBy">
-    <option value="newest">Newest</option>
-    <option value="mostBoosted">Most Boosted</option>
-    <option value="mostLiked">Most Liked</option>
-  </select>
-</section>
+</div>
 
-<div id="feed"></div>
+<div id="postContainer"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase, ref, onValue
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth, signInWithPopup, signOut,
+    GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+  const sortSelect = document.getElementById("sortSelect");
+
+  let currentUser = null;
+  let allPosts = [];
+
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    loginBtn.style.display = user ? "none" : "inline-block";
+    logoutBtn.style.display = user ? "inline-block" : "none";
+  });
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+  logoutBtn.onclick = () => signOut(auth);
+
+  onValue(ref(db, "posts"), snap => {
+    allPosts = [];
+    const data = snap.val();
+    if (data) {
+      allPosts = Object.entries(data).map(([id, post]) => ({ id, ...post }));
+      renderFilteredPosts();
+    }
+  });
+
+  searchInput.addEventListener("input", renderFilteredPosts);
+  sortSelect.addEventListener("change", renderFilteredPosts);
+
+  function renderFilteredPosts() {
+    const query = searchInput.value.toLowerCase();
+    const sortBy = sortSelect.value;
+    let filtered = allPosts.filter(p =>
+      (p.caption?.toLowerCase().includes(query) ||
+      p.displayName?.toLowerCase().includes(query))
+    );
+
+    // Sorting
+    if (sortBy === "latest") {
+      filtered.sort((a,b) => b.timestamp - a.timestamp);
+    } else if (sortBy === "mostLiked") {
+      filtered.sort((a,b) => (b.likesCount||0) - (a.likesCount||0));
+    } else if (sortBy === "mostBoosted") {
+      filtered.sort((a,b) => (b.boostAmount||0) - (a.boostAmount||0));
+    }
+
+    postContainer.innerHTML = "";
+    if (filtered.length === 0) {
+      postContainer.innerHTML = "<p>No posts found.</p>";
+    } else {
+      filtered.forEach(post => {
+        const div = document.createElement("div");
+        div.className = "post-item";
+        div.innerHTML = `
+          <div class="post-owner">
+            <img src="${post.photoURL||''}" class="avatar"/>
+            <strong>${post.displayName||'Anonymous'}</strong>
+          </div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          ${post.mediaType === "video"
+            ? `<video src="${post.mediaUrl}" controls></video>`
+            : `<img src="${post.mediaUrl}" alt="Post Image" />`}
+          <div class="post-caption">${escapeHTML(post.caption||"")}</div>
+          <div>
+            ❤️ ${post.likesCount || 0}
+            &nbsp;&nbsp;💬 ${post.commentsCount || 0}
+            ${post.boostAmount ? `&nbsp;&nbsp;⚡ Boosted: ${post.boostAmount} DRF` : ""}
+          </div>
+        `;
+        postContainer.appendChild(div);
+      });
+    }
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
+  }
+</script>
 
 </body>
 </html>
