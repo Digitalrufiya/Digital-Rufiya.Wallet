@@ -1,62 +1,136 @@
-<!-- boost.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Boost Your Post — DRFMedia</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFChain Boost Post</title>
+<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  label, input, button { display: block; margin-top: 10px; }
+  input, button { padding: 8px; font-size: 16px; }
+  #status { margin-top: 15px; font-weight: bold; }
+</style>
 </head>
 <body>
-  <h1>🚀 Boost Your Post</h1>
-  <form id="boostForm">
-    <input type="url" id="postUrl" placeholder="Paste your post URL" required />
-    <select id="boostPlan" required>
-      <option value="">Choose Plan</option>
-      <option value="30">$30 - 30 Days Boost</option>
-      <option value="5">$5 - 5 Days Boost</option>
-      <option value="60">$60 - 60 Days Boost</option>
-    </select>
-    <button type="submit">Pay & Boost</button>
-  </form>
-  <div id="walletArea">
-    <p>Send payment in DRF, USDC, or BNB:</p>
-    <p><strong>Wallet Address:</strong><br />0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C</p>
-    <p><small>Use MetaMask or any BSC-compatible wallet</small></p>
-  </div>
-  <p id="status"></p>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    const app = initializeApp({
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-    });
-    const db = getDatabase(app);
 
-    document.getElementById("boostForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const url = document.getElementById("postUrl").value.trim();
-      const days = parseInt(document.getElementById("boostPlan").value);
-      const match = url.match(/postId=([\w-]+)/);
-      if (!match) return alert("Invalid post URL");
-      const postId = match[1];
-      const refPath = ref(db, `posts/${postId}`);
-      const snap = await get(refPath);
-      if (!snap.exists()) return alert("Post not found");
-      const current = Date.now();
-      const boostedUntil = current + (days * 24 * 60 * 60 * 1000);
-      await update(refPath, {
-        boostedUntil,
-        boostPaid: days
-      });
-      document.getElementById("status").textContent = "Boost registered! Send payment to confirm.";
-    };
-  </script>
+<h2>Boost a Post (Promote your Business)</h2>
+
+<button id="connectBtn">Connect Wallet</button>
+<div id="account"></div>
+
+<div id="boostForm" style="display:none;">
+  <label>Your DRFM Balance: <span id="balance">0</span> DRFM</label>
+  
+  <label for="postId">Post ID to Boost:</label>
+  <input type="number" id="postId" min="0" placeholder="Enter Post ID" required />
+  
+  <label for="amount">Boost Amount (DRFM tokens):</label>
+  <input type="number" id="amount" min="1" placeholder="Enter amount to pay" required />
+  
+  <button id="boostBtn">Boost Now</button>
+  
+  <div id="status"></div>
+</div>
+
+<script>
+  const contractAddress = "0xYourContractAddressHere";  // <-- Replace with your contract address
+  const contractABI = [
+    // Minimal ABI for ERC20 balanceOf and transfer
+    "function balanceOf(address) view returns (uint256)",
+    "function transfer(address to, uint amount) returns (bool)",
+    "function owner() view returns (address)"
+  ];
+
+  let provider, signer, contract, userAddress, ownerAddress;
+
+  const connectBtn = document.getElementById('connectBtn');
+  const accountDiv = document.getElementById('account');
+  const boostForm = document.getElementById('boostForm');
+  const balanceSpan = document.getElementById('balance');
+  const postIdInput = document.getElementById('postId');
+  const amountInput = document.getElementById('amount');
+  const boostBtn = document.getElementById('boostBtn');
+  const statusDiv = document.getElementById('status');
+
+  connectBtn.onclick = async () => {
+    if (!window.ethereum) {
+      alert("MetaMask or compatible wallet required");
+      return;
+    }
+
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+      ownerAddress = await contract.owner();
+
+      accountDiv.textContent = `Connected: ${userAddress}`;
+      connectBtn.style.display = 'none';
+      boostForm.style.display = 'block';
+
+      updateBalance();
+    } catch (err) {
+      alert("Connection error: " + err.message);
+    }
+  };
+
+  async function updateBalance() {
+    try {
+      let bal = await contract.balanceOf(userAddress);
+      // Convert from BigNumber with 18 decimals
+      balanceSpan.textContent = ethers.utils.formatUnits(bal, 18);
+    } catch (err) {
+      balanceSpan.textContent = "Error";
+    }
+  }
+
+  boostBtn.onclick = async () => {
+    const postId = parseInt(postIdInput.value);
+    const amountStr = amountInput.value;
+
+    if (isNaN(postId) || postId < 0) {
+      alert("Please enter a valid post ID");
+      return;
+    }
+
+    if (!amountStr || isNaN(amountStr) || Number(amountStr) <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    const amount = ethers.utils.parseUnits(amountStr, 18);
+
+    try {
+      const userBal = await contract.balanceOf(userAddress);
+      if (userBal.lt(amount)) {
+        alert("Insufficient DRFM balance to boost");
+        return;
+      }
+
+      statusDiv.textContent = "Sending tokens to owner wallet to boost...";
+      boostBtn.disabled = true;
+
+      // Send tokens to owner address as boost payment
+      const tx = await contract.transfer(ownerAddress, amount);
+      await tx.wait();
+
+      statusDiv.textContent = `Successfully boosted post #${postId} with ${amountStr} DRFM tokens! Thank you for your support.`;
+      
+      // Optionally reset form
+      postIdInput.value = "";
+      amountInput.value = "";
+      updateBalance();
+    } catch (err) {
+      statusDiv.textContent = "Transaction failed: " + (err.data?.message || err.message || err);
+    } finally {
+      boostBtn.disabled = false;
+    }
+  };
+</script>
+
 </body>
 </html>
