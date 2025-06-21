@@ -34,9 +34,9 @@
 </div>
 
 <script>
-  const contractAddress = "0xYourContractAddressHere";  // <-- Replace with your contract address
+  const contractAddress = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8";  // Your deployed contract address
   const contractABI = [
-    // Minimal ABI for ERC20 balanceOf and transfer
+    // Minimal ABI for ERC20 balanceOf and transfer + owner getter
     "function balanceOf(address) view returns (uint256)",
     "function transfer(address to, uint amount) returns (bool)",
     "function owner() view returns (address)"
@@ -81,7 +81,6 @@
   async function updateBalance() {
     try {
       let bal = await contract.balanceOf(userAddress);
-      // Convert from BigNumber with 18 decimals
       balanceSpan.textContent = ethers.utils.formatUnits(bal, 18);
     } catch (err) {
       balanceSpan.textContent = "Error";
@@ -114,13 +113,11 @@
       statusDiv.textContent = "Sending tokens to owner wallet to boost...";
       boostBtn.disabled = true;
 
-      // Send tokens to owner address as boost payment
       const tx = await contract.transfer(ownerAddress, amount);
       await tx.wait();
 
       statusDiv.textContent = `Successfully boosted post #${postId} with ${amountStr} DRFM tokens! Thank you for your support.`;
       
-      // Optionally reset form
       postIdInput.value = "";
       amountInput.value = "";
       updateBalance();
