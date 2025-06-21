@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia News Feed — Admin Boost Management</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #222;
+    }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .navbar-left img {
+      height: 40px;
+      width: 40px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: white;
+      padding: 2px;
+    }
+    .navbar-left h1 {
+      margin: 0;
+      font-size: 1.4em;
+      font-weight: 700;
+    }
+
+    /* Menu toggle button */
+    #menuToggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 30px;
+      height: 25px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0;
+    }
+    #menuToggle span {
+      display: block;
+      height: 3.5px;
+      background: white;
+      border-radius: 3px;
+      transition: background 0.3s ease;
+    }
+
+    /* Navigation */
+    #primaryNav {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      background: #0069d9;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    #primaryNav.open {
+      display: flex;
+    }
+    #primaryNav a {
+      padding: 12px 20px;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      transition: background 0.2s ease;
+    }
+    #primaryNav a:first-child {
+      border-top: none;
+    }
+    #primaryNav a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Larger screen nav */
+    @media (min-width: 768px) {
+      #menuToggle {
+        display: none;
+      }
+      #primaryNav {
+        display: flex !important;
+        flex-direction: row;
+        width: auto;
+        background: transparent;
+        margin-top: 0;
+        border-radius: 0;
+      }
+      #primaryNav a {
+        border: none;
+        padding: 10px 15px;
+        color: white;
+      }
+      #primaryNav a:hover {
+        background: rgba(255,255,255,0.3);
+      }
+    }
+
+    /* Avatar styles */
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 3px rgba(0,0,0,0.1);
+    }
+
+    /* Post container */
+    #postContainer {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+    .post-item {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #fafafa;
+      position: relative;
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+    .post-time {
+      font-size: 0.85em;
+      color: #555;
+      margin-top: 4px;
+    }
+    .post-caption {
+      margin-top: 10px;
+      font-size: 1em;
+      white-space: pre-wrap;
+    }
+    .post-actions button {
+      margin-right: 12px;
+      cursor: pointer;
+      font-size: 1.1em;
+      background: none;
+      border: none;
+    }
+    .post-actions button[aria-pressed="true"] {
+      color: red;
+    }
+    video, img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+      background: black;
+      display: block;
+    }
+    .badge-boosted {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #e67e22;
+      color: white;
+      font-weight: 700;
+      font-size: 0.85em;
+      padding: 3px 8px;
+      border-radius: 12px;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Search and filter */
+    #searchBar {
+      max-width: 700px;
+      margin: 10px auto 5px auto;
+      padding: 0 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #searchInput {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #filterSelect {
+      width: 180px;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+    }
+
+    /* Login / logout buttons */
+    #loginBtn, #logoutBtn {
+      max-width: 700px;
+      margin: 10px auto;
+      display: block;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia News Feed</h1>
+  </div>
+
+  <button id="menuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="primaryNav">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+    <a href="#">Home</a>
+    <a href="#">Timeline</a>
+    <a href="#">News Feed</a>
+    <a href="#" id="profileLink" style="display:none;">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
+</header>
+
+<div id="searchBar" role="search">
+  <input type="search" id="searchInput" placeholder="Search caption or post URL..." aria-label="Search posts" />
+  <select id="filterSelect" aria-label="Filter posts">
+    <option value="all">All Posts</option>
+    <option value="boosted">Boosted Posts</option>
+    <option value="mostliked">Most Liked Posts</option>
+  </select>
+</div>
+
+<button id="loginBtn" aria-label="Sign in with Google">Sign in with Google</button>
+<button id="logoutBtn" aria-label="Logout" style="display:none;">Logout</button>
+
+<div id="postContainer" aria-live="polite" aria-atomic="false" aria-relevant="additions"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  set,
+  update,
+  onValue,
+  get,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import {
+  getAuth,
+  signInWithPopup,
+  signOut,
+  GoogleAuthProvider,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const admins = new Set([
+  "digitalrufiyauniversity@gmail.com",
+  "digitalrufiyacoin@gmail.com",
+  "digitalrufiya@gmail.com"
+]);
+
+const BOOST_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const postContainer = document.getElementById("postContainer");
+const searchInput = document.getElementById("searchInput");
+const filterSelect = document.getElementById("filterSelect");
+const menuToggle = document.getElementById("menuToggle");
+const primaryNav = document.getElementById("primaryNav");
+const profileLink = document.getElementById("profileLink");
+const loginNavLink = document.getElementById("loginNavLink");
+const logoutNavLink = document.getElementById("logoutNavLink");
+
+let currentUser = null;
+let allPosts = {}; // cache all posts data
+
+menuToggle.addEventListener("click", () => {
+  const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+  menuToggle.setAttribute("aria-expanded", !expanded);
+  primaryNav.classList.toggle("open");
+});
+
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+logoutBtn.onclick = () => signOut(auth);
+
+loginNavLink.onclick = e => {
+  e.preventDefault();
+  signInWithPopup(auth, provider).catch(console.error);
+};
+logoutNavLink.onclick = e => {
+  e.preventDefault();
+  signOut(auth);
+};
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  if (user && admins.has(user.email)) {
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "block";
+    profileLink.style.display = "inline-block";
+    loginNavLink.style.display = "none";
+    logoutNavLink.style.display = "inline-block";
+    profileLink.textContent = user.displayName || user.email;
+    fetchAndRenderPosts();
+  } else {
+    loginBtn.style.display = "block";
+    logoutBtn.style.display = "none";
+    profileLink.style.display = "none";
+    loginNavLink.style.display = "inline-block";
+    logoutNavLink.style.display = "none";
+    postContainer.innerHTML = `<p style="max-width:700px;margin:30px auto;text-align:center;">Please log in with an admin email to manage boosted posts.</p>`;
+  }
+});
+
+searchInput.addEventListener("input", renderFilteredPosts);
+filterSelect.addEventListener("change", renderFilteredPosts);
+
+async function fetchAndRenderPosts() {
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, snapshot => {
+    const data = snapshot.val();
+    allPosts = data || {};
+    renderFilteredPosts();
+  });
+}
+
+function isBoostActive(boostedTimestamp) {
+  if (!boostedTimestamp) return false;
+  return (Date.now() - boostedTimestamp) < BOOST_DURATION_MS;
+}
+
+function renderFilteredPosts() {
+  const query = searchInput.value.trim().toLowerCase();
+  const filter = filterSelect.value;
+
+  const postsArr = Object.entries(allPosts || {}).map(([id, post]) => ({ id, ...post }));
+
+  // Filter out expired boosts (if boost timestamp expired, treat as not boosted)
+  postsArr.forEach(post => {
+    if (!isBoostActive(post.boostedTimestamp)) {
+      post.boosted = false;
+      // Optionally: auto-remove boost info from DB if expired
+      if(post.boostedTimestamp){
+        update(ref(db, `posts/${post.id}`), { boosted: false, boostedTimestamp: null });
+      }
+    }
+  });
+
+  // Filter based on search query (caption or mediaUrl)
+  let filtered = postsArr.filter(post => {
+    const caption = post.caption?.toLowerCase() || "";
+    const url = post.mediaUrl?.toLowerCase() || "";
+    return caption.includes(query) || url.includes(query);
+  });
+
+  // Filter by dropdown
+  if (filter === "boosted") {
+    filtered = filtered.filter(post => post.boosted);
+  } else if (filter === "mostliked") {
+    filtered = filtered.sort((a,b) => (b.likesCount || 0) - (a.likesCount || 0));
+  } else {
+    // Sort by timestamp desc for all posts
+    filtered = filtered.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }
+
+  // Render posts
+  postContainer.innerHTML = "";
+  if (filtered.length === 0) {
+    postContainer.innerHTML = `<p style="max-width:700px;margin:30px auto;text-align:center;">No posts found.</p>`;
+    return;
+  }
+
+  filtered.forEach(post => {
+    const card = document.createElement("div");
+    card.className = "post-item";
+    card.setAttribute("tabindex", "0");
+    card.innerHTML = `
+      <div class="post-owner">
+        <img src="${post.photoURL || ''}" class="avatar" alt="User avatar"/>
+        <strong>${post.displayName || "Anonymous"}</strong>
+      </div>
+      <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+      ${post.mediaType === "video"
+        ? `<video src="${post.mediaUrl}" controls preload="auto" playsinline crossorigin="anonymous" poster="https://ik.imagekit.io/ttbbg9ocv/loader.png" style="max-height:480px;"></video>`
+        : `<img src="${post.mediaUrl}" loading="lazy" alt="Post media"/>`
+      }
+      <div class="post-caption">${escapeHTML(post.caption || "")}</div>
+      <div class="post-actions">
+        <button class="like-btn" data-id="${post.id}" aria-pressed="false" disabled>❤️ <span>${post.likesCount || 0}</span></button>
+        <button class="share-btn" data-id="${post.id}">🔗</button>
+        <button class="boost-btn" data-id="${post.id}" aria-pressed="${post.boosted ? "true" : "false"}">${post.boosted ? "Unboost" : "Boost"}</button>
+      </div>
+      ${post.boosted ? `<div class="badge-boosted" title="Boosted post">BOOSTED</div>` : ""}
+    `;
+    postContainer.appendChild(card);
+
+    card.querySelector(".share-btn").onclick = () => {
+      const url = `${location.href.split('?')[0]}?postId=${post.id}`;
+      navigator.clipboard.writeText(url)
+        .then(() => alert("Copied post URL!"))
+        .catch(() => prompt("Copy this URL:", url));
+    };
+
+    card.querySelector(".boost-btn").onclick = () => {
+      if (!currentUser || !admins.has(currentUser.email)) {
+        alert("Only admins can boost posts.");
+        return;
+      }
+      toggleBoost(post.id, post.boosted);
+    };
+  });
+}
+
+async function toggleBoost(postId, currentlyBoosted) {
+  const postRef = ref(db, `posts/${postId}`);
+  if (currentlyBoosted) {
+    // Remove boost
+    await update(postRef, {
+      boosted: false,
+      boostedTimestamp: null
+    });
+  } else {
+    // Add boost with current timestamp
+    await update(postRef, {
+      boosted: true,
+      boostedTimestamp: Date.now()
+    });
+  }
+}
+
+// Basic HTML escape to avoid injection
+function escapeHTML(str) {
+  if (!str) return "";
+  return str.replace(/[&<>"']/g, function(m) {
+    switch(m) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return m;
+    }
+  });
+}
+
+</script>
+
+</body>
+</html>
