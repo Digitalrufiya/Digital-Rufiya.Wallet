@@ -2,42 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Admin Boosted Posts Feed</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFMedia Admin Boosted Feed</title>
   <meta name="theme-color" content="#0066cc" />
   <style>
-    .badge-boosted {
-      display: inline-block;
-      background: #ff9800;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+    }
+    header {
+      background: #0066cc;
       color: white;
-      font-weight: bold;
-      font-size: 0.8em;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-left: 8px;
-      vertical-align: middle;
-      user-select: none;
-      pointer-events: none;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-    #filterButtons {
-      max-width: 700px;
-      margin: 10px auto;
-      text-align: center;
+    .navbar-left img {
+      height: 40px;
+      margin-right: 10px;
     }
-    #filterButtons button {
-      margin: 0 8px;
-      padding: 6px 12px;
-      font-weight: 600;
-      border-radius: 5px;
-      border: none;
-      cursor: pointer;
-      background: #007bff;
+    .navbar-left {
+      display: flex;
+      align-items: center;
+    }
+    nav a {
       color: white;
-      transition: background 0.3s ease;
-    }
-    #filterButtons button.active {
-      background: #004a99;
+      margin-left: 15px;
+      text-decoration: none;
+      font-weight: 500;
     }
     .boost-btn {
       background: #ff9800;
@@ -48,19 +44,185 @@
       border-radius: 5px;
       cursor: pointer;
       margin-top: 8px;
-      user-select: none;
-      transition: background 0.3s ease;
     }
-    .boost-btn.unboost {
-      background: #888;
+    .boost-btn.unboost { background: #888; }
+    .badge-boosted {
+      display: inline-block;
+      background: #ff9800;
+      color: white;
+      font-weight: bold;
+      font-size: 0.8em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
     }
-    .boost-btn:hover {
-      filter: brightness(0.9);
+    #postContainer {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 10px;
+    }
+    .post-item {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 20px;
+      transition: box-shadow 0.3s ease;
+    }
+    .post-item:hover {
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .post-media img, .post-media video {
+      max-width: 100%;
+      border-radius: 6px;
+    }
+    form {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button[type="submit"] {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <!-- Full upgraded file placed here with all logic fixed -->
-  <!-- To keep code clean and reusable, use this file as your new admin boosting page -->
+  <header>
+    <div class="navbar-left">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo">
+      <h1 style="font-size: 1.2rem; margin: 0;">DRFMedia Boost Admin</h1>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Timeline</a>
+      <a href="#">Boosted</a>
+      <a href="#" id="loginLink">Login</a>
+      <a href="#" id="logoutLink" style="display:none;">Logout</a>
+    </nav>
+  </header>
+
+  <form id="uploadForm" style="display:none;">
+    <h2>Upload Boosted Post</h2>
+    <input type="text" id="userName" placeholder="User Name" required>
+    <input type="email" id="userEmail" placeholder="User Email" required>
+    <input type="text" id="walletAddress" placeholder="DRF Wallet Address" required>
+    <input type="url" id="postUrl" placeholder="Post Image/Video URL" required>
+    <textarea id="caption" placeholder="Caption"></textarea>
+    <button type="submit">Upload Boosted Post</button>
+  </form>
+
+  <div id="postContainer"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const admins = new Set([
+      "digitalrufiyauniversity@gmail.com",
+      "digitalrufiyacoin@gmail.com",
+      "digitalrufiya@gmail.com"
+    ]);
+
+    const loginLink = document.getElementById("loginLink");
+    const logoutLink = document.getElementById("logoutLink");
+    const uploadForm = document.getElementById("uploadForm");
+    const postContainer = document.getElementById("postContainer");
+    let currentUser = null;
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if (user) {
+        loginLink.style.display = "none";
+        logoutLink.style.display = "inline";
+        if (admins.has(user.email)) {
+          uploadForm.style.display = "block";
+        }
+        loadPosts();
+      } else {
+        loginLink.style.display = "inline";
+        logoutLink.style.display = "none";
+        uploadForm.style.display = "none";
+        postContainer.innerHTML = "<p style='padding:20px;'>Please login to view posts.</p>";
+      }
+    });
+
+    loginLink.onclick = () => signInWithPopup(auth, provider);
+    logoutLink.onclick = () => signOut(auth);
+
+    uploadForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const data = {
+        displayName: userName.value,
+        email: userEmail.value,
+        walletAddress: walletAddress.value,
+        postUrl: postUrl.value,
+        caption: caption.value,
+        mediaType: postUrl.value.endsWith(".mp4") ? "video" : "image",
+        timestamp: Date.now(),
+        boosted: true
+      };
+      const newPost = push(ref(db, "posts"));
+      await set(newPost, data);
+      uploadForm.reset();
+      alert("Post uploaded and boosted!");
+    };
+
+    function loadPosts() {
+      const postsRef = ref(db, "posts");
+      onValue(postsRef, snap => {
+        postContainer.innerHTML = "";
+        const data = snap.val();
+        if (!data) return;
+        Object.entries(data).reverse().forEach(([id, post]) => {
+          const div = document.createElement("div");
+          div.className = "post-item";
+          const badge = post.boosted ? '<span class="badge-boosted">BOOSTED</span>' : "";
+          const media = post.mediaType === "video" ?
+            `<video src="${post.postUrl}" controls style="max-height:400px"></video>` :
+            `<img src="${post.postUrl}" />`;
+          div.innerHTML = `
+            <div><strong>${post.displayName}</strong> ${badge}</div>
+            <div style="font-size:0.85em;color:#555;">${new Date(post.timestamp).toLocaleString()}</div>
+            <div class="post-media" style="margin-top:10px;">${media}</div>
+            <div style="margin-top:10px;">${post.caption || ""}</div>
+            <div style="margin-top:10px;font-size:0.9em;"><strong>Email:</strong> ${post.email} <br><strong>Wallet:</strong> ${post.walletAddress}</div>
+          `;
+          postContainer.appendChild(div);
+        });
+      });
+    }
+  </script>
 </body>
 </html>
