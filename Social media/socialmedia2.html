@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFM Social DApp</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+  <script type="module" src="app.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+    .post-card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+    .post-media { max-width: 100%; border-radius: 6px; }
+    .actions button { margin-right: 10px; }
+    #uploadForm { margin-bottom: 30px; background: white; padding: 15px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<h1>📱 DRFM Social DApp</h1>
+
+<!-- Wallet Connection -->
+<div>
+  <button id="connectWallet">Connect Wallet</button>
+  <span id="walletAddress"></span>
+</div>
+
+<!-- Upload Post Form -->
+<form id="uploadForm">
+  <h3>Create a Post</h3>
+  <input type="file" id="mediaFile" required />
+  <textarea id="caption" placeholder="Enter caption..." rows="3" required></textarea><br />
+  <button type="submit">Upload & Reward</button>
+</form>
+
+<!-- Posts Feed -->
+<div id="postFeed"></div>
+
+<!-- Boost Info -->
+<div id="boostInfo" style="margin-top:40px; padding:10px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px;">
+  <strong>Boosting:</strong> Admins can boost any post. DRFM is sent to <code>charity</code> if Muslim, or <code>jizya</code> wallet if not.
+</div>
+
+<script>
+  window.addEventListener('DOMContentLoaded', async () => {
+    const connectBtn = document.getElementById("connectWallet");
+    const walletAddressSpan = document.getElementById("walletAddress");
+    let web3, account;
+
+    // Contract
+    const DRFM_ABI = YOUR_FULL_ABI_HERE; // Replace dynamically in app.js
+    const DRFM_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    let drfm;
+
+    // Connect wallet
+    connectBtn.onclick = async () => {
+      if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0];
+        walletAddressSpan.textContent = `Connected: ${account}`;
+        drfm = new web3.eth.Contract(DRFM_ABI, DRFM_ADDRESS);
+        loadPosts();
+      } else {
+        alert("MetaMask not found");
+      }
+    };
+
+    // Upload logic (handled in app.js)
+
+    // Load posts (placeholder until handled by app.js)
+    function loadPosts() {
+      // You may call a contract method to fetch posts here
+    }
+  });
+</script>
+
+</body>
+</html>
