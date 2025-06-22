@@ -1,4 +1,3 @@
-// app.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import {
   getDatabase,
@@ -18,7 +17,7 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-// — Your Firebase config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -28,13 +27,14 @@ const firebaseConfig = {
   messagingSenderId: "608135115201",
   appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// — Pinata JWT (keep this secret in production)
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+// Pinata JWT (keep secret in production)
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // your token here
 
 // Admin emails
 const admins = new Set([
@@ -88,7 +88,9 @@ uploadForm.addEventListener("submit", async e => {
     });
     if (!resp.ok) throw new Error(resp.statusText);
     const { IpfsHash } = await resp.json();
-    const mediaUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
+
+    // Use Cloudflare IPFS gateway instead of Pinata gateway
+    const mediaUrl = `https://cloudflare-ipfs.com/ipfs/${IpfsHash}`;
 
     // Save post metadata to Firebase Realtime Database
     const newRef = push(ref(db, "posts"));
@@ -119,7 +121,6 @@ function renderPosts() {
   onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
     const data = snap.val();
-    console.log("Loaded posts:", data);
     if (!data) return;
 
     Object.entries(data)
@@ -128,18 +129,21 @@ function renderPosts() {
         const liked = currentUser && post.likes && post.likes[currentUser.uid];
         const isAdmin = currentUser && admins.has(currentUser.email);
 
-        console.log("Rendering post mediaUrl:", post.mediaUrl, "type:", post.mediaType);
-
         const card = document.createElement("div");
         card.className = "post-item";
-
         card.innerHTML = `
           <div class="post-owner">
             <img src="${post.photoURL||''}" class="avatar" alt="User avatar"/>
             <strong>${post.displayName||"Anonymous"}</strong>
           </div>
           <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          <div class="media-wrapper"></div>
+          ${
+            post.mediaType === "video"
+              ? `<video src="${post.mediaUrl}" controls preload="metadata" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px;">
+                   Your browser does not support the video tag.
+                 </video>`
+              : `<img src="${post.mediaUrl}" loading="lazy" alt="Post image"/>`
+          }
           <div class="post-caption">${escapeHTML(post.caption)}</div>
           <div class="post-actions">
             <button class="like-btn" data-id="${postId}" aria-pressed="${liked ? 1 : 0}">
@@ -167,45 +171,6 @@ function renderPosts() {
             }
           </div>
         `;
-
-        // Insert media element dynamically
-        const mediaWrapper = card.querySelector(".media-wrapper");
-
-        if(post.mediaType === "video"){
-          const video = document.createElement("video");
-          video.controls = true;
-          video.preload = "metadata";
-          video.playsInline = true;
-          video.muted = true; // helps autoplay on mobile sometimes
-          video.style.maxWidth = "100%";
-          video.style.maxHeight = "480px";
-          video.crossOrigin = "anonymous";
-
-          const source = document.createElement("source");
-          source.src = post.mediaUrl;
-
-          // Try to guess type from URL extension
-          if(post.mediaUrl.endsWith(".mp4")){
-            source.type = "video/mp4";
-          } else if(post.mediaUrl.endsWith(".webm")){
-            source.type = "video/webm";
-          } else {
-            source.type = "video/mp4"; // default fallback
-          }
-
-          video.appendChild(source);
-          mediaWrapper.appendChild(video);
-        } else {
-          // image
-          const img = document.createElement("img");
-          img.src = post.mediaUrl;
-          img.loading = "lazy";
-          img.alt = "Post image";
-          img.style.maxWidth = "100%";
-          img.style.borderRadius = "6px";
-          mediaWrapper.appendChild(img);
-        }
-
         postContainer.appendChild(card);
 
         // Events
@@ -319,4 +284,3 @@ function escapeHTML(s) {
 
 // Start rendering posts
 renderPosts();
-               
