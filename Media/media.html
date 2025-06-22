@@ -1,94 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Social Login</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    #authBtn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Media Platform</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0fcf9;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+  }
+  #container {
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  #walletAddress {
+    font-weight: bold;
+    margin-bottom: 15px;
+    word-break: break-all;
+  }
+  #username {
+    font-size: 1.2em;
+    margin-bottom: 5px;
+  }
+  #logoutBtn {
+    background: #0baf9a;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+  }
+  #logoutBtn:hover {
+    background: #087a73;
+  }
+  textarea {
+    width: 100%;
+    height: 80px;
+    margin-top: 15px;
+    resize: none;
+    padding: 10px;
+    font-size: 1em;
+  }
+  #postBtn {
+    background: #0baf9a;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  #postBtn:hover {
+    background: #087a73;
+  }
+  #posts {
+    margin-top: 30px;
+    text-align: left;
+  }
+  .post {
+    background: #e6f5f1;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    word-break: break-word;
+  }
+</style>
 </head>
 <body>
+  <div id="container">
+    <div id="username"></div>
+    <div>Your DRFM Token Address:</div>
+    <div id="walletAddress"></div>
+    
+    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
+    <br />
+    <button id="postBtn">Post</button>
+    <button id="logoutBtn">Logout</button>
 
-<h1>Welcome to DRFMedia</h1>
-<p id="status">Checking login status...</p>
-<button id="authBtn" disabled>Loading...</button>
+    <div id="posts">
+      <h3>Posts</h3>
+      <!-- Posts will appear here -->
+    </div>
+  </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-  import {
-    getAuth,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signOut,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+  <script>
+    // Load user info
+    const username = localStorage.getItem('drf_username');
+    const walletAddress = localStorage.getItem('drf_active_wallet');
 
-  // Your Firebase config - replace with yours
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  const authBtn = document.getElementById("authBtn");
-  const status = document.getElementById("status");
-
-  // Check wallet login from localStorage
-  function walletLoggedIn() {
-    return !!localStorage.getItem("drf_active_wallet");
-  }
-
-  function updateUI(user) {
-    if (user && walletLoggedIn()) {
-      authBtn.textContent = "Logout";
-      status.textContent = `Logged in as ${user.displayName} (${localStorage.getItem("drf_active_wallet").slice(0,6)}...${localStorage.getItem("drf_active_wallet").slice(-4)})`;
-    } else if (!walletLoggedIn()) {
-      authBtn.textContent = "Please login wallet first";
-      status.textContent = "You must login to your DRF Wallet first!";
-      authBtn.disabled = true;
-    } else {
-      authBtn.textContent = "Login with Google";
-      status.textContent = "Not logged in to Google";
-      authBtn.disabled = false;
-    }
-  }
-
-  onAuthStateChanged(auth, (user) => {
-    updateUI(user);
-  });
-
-  authBtn.addEventListener("click", async () => {
-    if (!walletLoggedIn()) {
-      alert("Please login to your DRF Wallet first.");
-      return;
+    if (!username || !walletAddress) {
+      alert('No active session found. Redirecting to login.');
+      window.location.href = 'media_login.html'; // Or your login page filename
     }
 
-    if (auth.currentUser) {
-      // Logout Google
-      await signOut(auth);
-      alert("Logged out from Google");
-    } else {
-      try {
-        await signInWithPopup(auth, provider);
-        alert("Google login successful!");
-      } catch (error) {
-        alert("Google login failed: " + error.message);
+    document.getElementById('username').innerText = `Welcome, ${username}!`;
+    document.getElementById('walletAddress').innerText = walletAddress;
+
+    // Load posts from localStorage (simplified)
+    let posts = JSON.parse(localStorage.getItem('drf_media_posts') || '[]');
+
+    function renderPosts() {
+      const postsDiv = document.getElementById('posts');
+      postsDiv.innerHTML = '<h3>Posts</h3>';
+      if(posts.length === 0) {
+        postsDiv.innerHTML += '<p>No posts yet.</p>';
+        return;
       }
+      posts.slice().reverse().forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.textContent = `${post.username} (${post.address}): ${post.content}`;
+        postsDiv.appendChild(div);
+      });
     }
-  });
 
-  // Initialize UI
-  updateUI(auth.currentUser);
-</script>
+    renderPosts();
 
+    document.getElementById('postBtn').addEventListener('click', () => {
+      const content = document.getElementById('postContent').value.trim();
+      if (!content) return alert('Please write something before posting.');
+
+      posts.push({
+        username,
+        address: walletAddress,
+        content,
+        timestamp: Date.now()
+      });
+
+      localStorage.setItem('drf_media_posts', JSON.stringify(posts));
+      document.getElementById('postContent').value = '';
+      renderPosts();
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('drf_username');
+      localStorage.removeItem('drf_active_wallet');
+      localStorage.removeItem('drf_user_data');
+      localStorage.removeItem('drf_encrypted_wallet');
+      window.location.href = 'media_login.html'; // Your login page here
+    });
+  </script>
 </body>
 </html>
