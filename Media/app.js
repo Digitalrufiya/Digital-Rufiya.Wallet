@@ -1,3 +1,5 @@
+// app.js - Professional fixed version for DRFMedia timeline video issue
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import {
   getDatabase,
@@ -27,14 +29,13 @@ const firebaseConfig = {
   messagingSenderId: "608135115201",
   appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Pinata JWT (keep secret in production)
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // your token here
+// Pinata JWT - keep secret in production
+const pinataJWT = "Bearer YOUR_PINATA_JWT_TOKEN_HERE";
 
 // Admin emails
 const admins = new Set([
@@ -54,7 +55,7 @@ const postContainer = document.getElementById("postContainer");
 
 let currentUser = null;
 
-// Auth state listener
+// Auth state changes
 onAuthStateChanged(auth, user => {
   currentUser = user;
   uploadForm.style.display = user ? "block" : "none";
@@ -63,16 +64,29 @@ onAuthStateChanged(auth, user => {
   renderPosts();
 });
 
-// Login/logout buttons
+// Login/logout handlers
 loginBtn.onclick  = () => signInWithPopup(auth, provider).catch(console.error);
-logoutBtn.onclick = () => signOut(auth);
+logoutBtn.onclick = () => signOut(auth).catch(console.error);
 
-// Upload form submit handler
+// Upload form submission handler
 uploadForm.addEventListener("submit", async e => {
   e.preventDefault();
-  if (!currentUser || !mediaFile.files.length || captionInput.value.trim().length < 4) {
-    return alert("Missing login, file or caption");
+
+  if (!currentUser) {
+    alert("Please login first.");
+    return;
   }
+
+  if (!mediaFile.files.length) {
+    alert("Please select a media file.");
+    return;
+  }
+
+  if (captionInput.value.trim().length < 4) {
+    alert("Caption must be at least 4 characters.");
+    return;
+  }
+
   uploadForm.querySelector("button").disabled = true;
 
   const file = mediaFile.files[0];
@@ -80,43 +94,59 @@ uploadForm.addEventListener("submit", async e => {
   fd.append("file", file);
 
   try {
-    // Upload to Pinata IPFS
+    // Upload file to Pinata IPFS
     const resp = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
       headers: { Authorization: pinataJWT },
       body: fd
     });
-    if (!resp.ok) throw new Error(resp.statusText);
+
+    if (!resp.ok) {
+      throw new Error(`Pinata upload failed: ${resp.status} ${resp.statusText}`);
+    }
+
     const { IpfsHash } = await resp.json();
 
-    // Use Cloudflare IPFS gateway instead of Pinata gateway
+    if (!IpfsHash) {
+      throw new Error("No IPFS hash returned from Pinata.");
+    }
+
     const mediaUrl = `https://cloudflare-ipfs.com/ipfs/${IpfsHash}`;
 
-    // Save post metadata to Firebase Realtime Database
-    const newRef = push(ref(db, "posts"));
-    await set(newRef, {
-      userId:      currentUser.uid,
+    // Save post data to Firebase
+    const newPostRef = push(ref(db, "posts"));
+    await set(newPostRef, {
+      userId: currentUser.uid,
       displayName: currentUser.displayName,
-      photoURL:    currentUser.photoURL,
-      caption:     captionInput.value.trim(),
+      photoURL: currentUser.photoURL,
+      caption: captionInput.value.trim(),
       mediaUrl,
-      mediaType:   file.type.startsWith("video") ? "video" : "image",
-      timestamp:   Date.now(),
-      likesCount:    0,
+      mediaType: file.type.startsWith("video") ? "video" : "image",
+      timestamp: Date.now(),
+      likesCount: 0,
       commentsCount: 0
     });
 
+    // Clear form fields after successful upload
     captionInput.value = "";
-    mediaFile.value    = "";
-  } catch (err) {
-    console.error(err);
-    alert("Upload failed: " + err.message);
+    mediaFile.value = "";
+
+  } catch (error) {
+    console.error(error);
+    alert("Upload error: " + error.message);
   } finally {
     uploadForm.querySelector("button").disabled = false;
   }
 });
 
-// Render posts function
+// Escape HTML special chars
+function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+}
+
+// Render posts function with fixed video tag
 function renderPosts() {
   onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
@@ -124,29 +154,33 @@ function renderPosts() {
     if (!data) return;
 
     Object.entries(data)
-      .sort((a,b) => b[1].timestamp - a[1].timestamp)
+      .sort((a, b) => b[1].timestamp - a[1].timestamp)
       .forEach(([postId, post]) => {
         const liked = currentUser && post.likes && post.likes[currentUser.uid];
         const isAdmin = currentUser && admins.has(currentUser.email);
 
         const card = document.createElement("div");
         card.className = "post-item";
+
         card.innerHTML = `
           <div class="post-owner">
-            <img src="${post.photoURL||''}" class="avatar" alt="User avatar"/>
-            <strong>${post.displayName||"Anonymous"}</strong>
+            <img src="${post.photoURL || ''}" class="avatar" alt="User avatar" />
+            <strong>${escapeHTML(post.displayName || "Anonymous")}</strong>
           </div>
           <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
           ${
             post.mediaType === "video"
-              ? `<video src="${post.mediaUrl}" controls preload="metadata" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px;">
-                   Your browser does not support the video tag.
-                 </video>`
-              : `<img src="${post.mediaUrl}" loading="lazy" alt="Post image"/>`
+              ? `
+                <video controls preload="metadata" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px; background:black; border-radius:6px;">
+                  <source src="${post.mediaUrl}" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              `
+              : `<img src="${post.mediaUrl}" loading="lazy" alt="Post image" style="border-radius:6px;" />`
           }
           <div class="post-caption">${escapeHTML(post.caption)}</div>
           <div class="post-actions">
-            <button class="like-btn" data-id="${postId}" aria-pressed="${liked ? 1 : 0}">
+            <button class="like-btn" data-id="${postId}" aria-pressed="${liked ? "true" : "false"}">
               ❤️ <span>${post.likesCount || 0}</span>
             </button>
             <button class="comment-toggle" data-id="${postId}">
@@ -164,123 +198,146 @@ function renderPosts() {
             ${
               currentUser
                 ? `<form class="cmt-form" data-id="${postId}">
-                     <input required minlength="1" placeholder="Add a comment…" aria-label="Add comment"/>
+                     <input required minlength="1" placeholder="Add a comment…" aria-label="Add comment" />
                      <button type="submit">Send</button>
                    </form>`
                 : `<em>Login to comment</em>`
             }
           </div>
         `;
+
         postContainer.appendChild(card);
 
-        // Events
+        // Like button
         card.querySelector(".like-btn").onclick = () => toggleLike(postId, !!liked);
+
+        // Comment toggle button
         card.querySelector(".comment-toggle").onclick = () => {
-          const cs = document.getElementById(`cmts-${postId}`);
-          const show = cs.style.display === "block";
-          cs.style.display = show ? "none" : "block";
-          if (!show) loadComments(postId);
+          const commentsSection = document.getElementById(`cmts-${postId}`);
+          const isVisible = commentsSection.style.display === "block";
+          commentsSection.style.display = isVisible ? "none" : "block";
+          if (!isVisible) loadComments(postId);
         };
+
+        // Share button
         card.querySelector(".share-btn").onclick = () => {
-          const url = `${location.href.split("?")[0]}?postId=${postId}`;
+          const url = `${location.origin}${location.pathname}?postId=${postId}`;
           navigator.clipboard.writeText(url)
-            .then(() => alert("Copied!"))
-            .catch(() => prompt("URL:", url));
+            .then(() => alert("Post URL copied to clipboard!"))
+            .catch(() => prompt("Copy this URL:", url));
         };
+
+        // Admin delete button
         if (isAdmin) {
           card.querySelector(".delete-btn").onclick = () => deletePost(postId);
         }
-        const cf = card.querySelector(".cmt-form");
-        if (cf) cf.onsubmit = e => {
-          e.preventDefault();
-          const txt = cf[0].value.trim();
-          if (txt) postComment(postId, txt);
-          cf.reset();
-        };
+
+        // Comment form submit
+        const cmtForm = card.querySelector(".cmt-form");
+        if (cmtForm) {
+          cmtForm.onsubmit = e => {
+            e.preventDefault();
+            const input = cmtForm.querySelector("input");
+            if (input.value.trim()) {
+              postComment(postId, input.value.trim());
+              cmtForm.reset();
+            }
+          };
+        }
       });
   });
 }
 
-// Like toggle
+// Toggle like/unlike a post
 async function toggleLike(postId, liked) {
-  if (!currentUser) return alert("Login to like");
+  if (!currentUser) return alert("Please login to like posts.");
   const likeRef = ref(db, `posts/${postId}/likes/${currentUser.uid}`);
   const postRef = ref(db, `posts/${postId}`);
-  const snap = await get(postRef);
-  let cnt = snap.val().likesCount || 0;
 
   try {
+    const snap = await get(postRef);
+    let likesCount = snap.val().likesCount || 0;
+
     if (liked) {
       await remove(likeRef);
-      cnt = Math.max(0, cnt - 1);
+      likesCount = Math.max(0, likesCount - 1);
     } else {
       await set(likeRef, true);
-      cnt++;
+      likesCount++;
     }
-    await update(postRef, { likesCount: cnt });
-  } catch (e) {
-    alert("Like error: " + e.message);
+
+    await update(postRef, { likesCount });
+  } catch (error) {
+    alert("Error updating likes: " + error.message);
   }
 }
 
-// Load comments
+// Load comments for a post
 function loadComments(postId) {
   const list = document.querySelector(`#cmts-${postId} .list`);
-  list.innerHTML = "Loading…";
+  list.innerHTML = "Loading comments…";
+
   onValue(ref(db, `comments/${postId}`), snap => {
     list.innerHTML = "";
-    const cm = snap.val();
-    if (!cm) return (list.innerHTML = "<em>No comments</em>");
-    Object.values(cm)
+    const comments = snap.val();
+    if (!comments) {
+      list.innerHTML = "<em>No comments yet.</em>";
+      return;
+    }
+
+    Object.values(comments)
       .sort((a, b) => a.timestamp - b.timestamp)
-      .forEach(c => {
-        const d = document.createElement("div");
-        d.className = "comment-item";
-        d.innerHTML = `<strong>${escapeHTML(c.displayName)}</strong>: ${escapeHTML(
-          c.text
-        )}<div class="comment-time">${new Date(c.timestamp).toLocaleString()}</div>`;
-        list.appendChild(d);
+      .forEach(comment => {
+        const div = document.createElement("div");
+        div.className = "comment-item";
+        div.innerHTML = `
+          <strong>${escapeHTML(comment.displayName)}</strong>: ${escapeHTML(comment.text)}
+          <div class="comment-time">${new Date(comment.timestamp).toLocaleString()}</div>
+        `;
+        list.appendChild(div);
       });
   });
 }
 
-// Post comment
+// Post a comment
 async function postComment(postId, text) {
   if (!currentUser) return;
-  const cref = push(ref(db, `comments/${postId}`));
-  await set(cref, {
-    userId: currentUser.uid,
-    displayName: currentUser.displayName,
-    text,
-    timestamp: Date.now()
-  });
-  // Update comment count
-  const pr = ref(db, `posts/${postId}`);
-  const snap = await get(pr);
-  const cc = (snap.val().commentsCount || 0) + 1;
-  await update(pr, { commentsCount: cc });
+  try {
+    const newCommentRef = push(ref(db, `comments/${postId}`));
+    await set(newCommentRef, {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      text,
+      timestamp: Date.now()
+    });
+
+    // Update comment count on post
+    const postRef = ref(db, `posts/${postId}`);
+    const snap = await get(postRef);
+    const currentCount = snap.val().commentsCount || 0;
+    await update(postRef, { commentsCount: currentCount + 1 });
+  } catch (error) {
+    alert("Error posting comment: " + error.message);
+  }
 }
 
-// Delete post
+// Delete a post (admin only)
 async function deletePost(postId) {
-  if (!currentUser || !admins.has(currentUser.email)) return alert("No permission");
-  if (!confirm("Delete this post?")) return;
-  await remove(ref(db, `posts/${postId}`));
-  await remove(ref(db, `comments/${postId}`));
+  if (!currentUser || !admins.has(currentUser.email)) {
+    alert("You do not have permission to delete posts.");
+    return;
+  }
+
+  if (!confirm("Are you sure you want to delete this post?")) return;
+
+  try {
+    await remove(ref(db, `posts/${postId}`));
+    await remove(ref(db, `comments/${postId}`));
+    alert("Post deleted.");
+  } catch (error) {
+    alert("Error deleting post: " + error.message);
+  }
 }
 
-// Escape HTML helper
-function escapeHTML(s) {
-  return s.replace(/[&<>"']/g, c =>
-    ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[c])
-  );
-}
-
-// Start rendering posts
+// Initialize rendering posts
 renderPosts();
