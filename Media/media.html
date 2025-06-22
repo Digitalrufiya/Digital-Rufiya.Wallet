@@ -1,152 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Media Platform</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f0fcf9;
-    margin: 0;
-    padding: 20px;
-    text-align: center;
-  }
-  #container {
-    max-width: 600px;
-    margin: auto;
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  #walletAddress {
-    font-weight: bold;
-    margin-bottom: 15px;
-    word-break: break-all;
-  }
-  #username {
-    font-size: 1.2em;
-    margin-bottom: 5px;
-  }
-  #logoutBtn {
-    background: #0baf9a;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 15px;
-  }
-  #logoutBtn:hover {
-    background: #087a73;
-  }
-  textarea {
-    width: 100%;
-    height: 80px;
-    margin-top: 15px;
-    resize: none;
-    padding: 10px;
-    font-size: 1em;
-  }
-  #postBtn {
-    background: #0baf9a;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-  #postBtn:hover {
-    background: #087a73;
-  }
-  #posts {
-    margin-top: 30px;
-    text-align: left;
-  }
-  .post {
-    background: #e6f5f1;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    word-break: break-word;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0066cc" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    #menuToggle { background: transparent; border: none; cursor: pointer; width: 30px; height: 25px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
+    #menuToggle span { display: block; height: 3.5px; background: white; border-radius: 3px; }
+    #primaryNav { width: 100%; display: none; flex-direction: column; background: #0069d9; margin-top: 10px; border-radius: 4px; }
+    #primaryNav.open { display: flex; }
+    #primaryNav a { padding: 12px 20px; color: white; text-decoration: none; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.2); }
+    #primaryNav a:first-child { border-top: none; }
+    #primaryNav a:hover { background: rgba(255,255,255,0.2); }
+    @media (min-width: 768px) {
+      #menuToggle { display: none; }
+      #primaryNav { display: flex !important; flex-direction: row; width: auto; background: transparent; margin-top: 0; border-radius: 0; }
+      #primaryNav a { border: none; padding: 10px 15px; color: white; }
+      #primaryNav a:hover { background: rgba(255,255,255,0.3); }
+    }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; box-shadow: 0 0 3px rgba(0,0,0,0.1); }
+    #postContainer { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
+    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .post-time { font-size: 0.85em; color: #555; margin-top: 4px; }
+    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    #searchBar { max-width: 700px; margin: 10px auto 20px auto; padding: 0 15px; }
+    #searchInput { width: 100%; padding: 8px 12px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
+  </style>
 </head>
 <body>
-  <div id="container">
-    <div id="username"></div>
-    <div>Your DRFM Token Address:</div>
-    <div id="walletAddress"></div>
-    
-    <textarea id="postContent" placeholder="What's on your mind?"></textarea>
-    <br />
-    <button id="postBtn">Post</button>
-    <button id="logoutBtn">Logout</button>
+<!-- Your existing HTML structure remains the same -->
+<!-- At the end of your <script type="module"> block, append this: -->
+<script>
+  function likePost(id) {
+    const wallet = localStorage.getItem("drf_active_wallet") || "anon";
+    alert(`Liked post ${id} by ${wallet}`);
+    // TODO: Update likes in Firebase under post/${id}/likes
+  }
 
-    <div id="posts">
-      <h3>Posts</h3>
-      <!-- Posts will appear here -->
-    </div>
-  </div>
+  function sharePost(id) {
+    const link = window.location.href + "#post-" + id;
+    navigator.clipboard.writeText(link);
+    alert("Post link copied to clipboard.");
+  }
 
-  <script>
-    // Load user info
-    const username = localStorage.getItem('drf_username');
-    const walletAddress = localStorage.getItem('drf_active_wallet');
-
-    if (!username || !walletAddress) {
-      alert('No active session found. Redirecting to login.');
-      window.location.href = 'media_login.html'; // Or your login page filename
-    }
-
-    document.getElementById('username').innerText = `Welcome, ${username}!`;
-    document.getElementById('walletAddress').innerText = walletAddress;
-
-    // Load posts from localStorage (simplified)
-    let posts = JSON.parse(localStorage.getItem('drf_media_posts') || '[]');
-
-    function renderPosts() {
-      const postsDiv = document.getElementById('posts');
-      postsDiv.innerHTML = '<h3>Posts</h3>';
-      if(posts.length === 0) {
-        postsDiv.innerHTML += '<p>No posts yet.</p>';
-        return;
-      }
-      posts.slice().reverse().forEach(post => {
-        const div = document.createElement('div');
-        div.className = 'post';
-        div.textContent = `${post.username} (${post.address}): ${post.content}`;
-        postsDiv.appendChild(div);
-      });
-    }
-
-    renderPosts();
-
-    document.getElementById('postBtn').addEventListener('click', () => {
-      const content = document.getElementById('postContent').value.trim();
-      if (!content) return alert('Please write something before posting.');
-
-      posts.push({
-        username,
-        address: walletAddress,
-        content,
-        timestamp: Date.now()
-      });
-
-      localStorage.setItem('drf_media_posts', JSON.stringify(posts));
-      document.getElementById('postContent').value = '';
-      renderPosts();
-    });
-
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('drf_username');
-      localStorage.removeItem('drf_active_wallet');
-      localStorage.removeItem('drf_user_data');
-      localStorage.removeItem('drf_encrypted_wallet');
-      window.location.href = 'media_login.html'; // Your login page here
-    });
-  </script>
+  function repost(id) {
+    alert("Reposted to your timeline (simulated)");
+    // TODO: Clone post and push under current user
+  }
+</script>
 </body>
 </html>
