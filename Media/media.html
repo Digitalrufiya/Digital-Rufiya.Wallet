@@ -1,497 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRFMedia Social with DRFM Rewards</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0; background: #fff; color: #222;
-  }
-  header {
-    background: #007bff;
-    color: white;
-    padding: 10px 20px;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  h1 { margin: 0; font-weight: 700; }
-  #postContainer {
-    max-width: 700px;
-    margin: 20px auto;
-    padding: 0 15px;
-  }
-  .post-item {
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 15px;
-    margin-bottom: 20px;
-    background: #fafafa;
-  }
-  .post-owner {
-    font-weight: 700;
-  }
-  .post-caption {
-    margin-top: 10px;
-    white-space: pre-wrap;
-  }
-  .post-actions button {
-    margin-right: 12px;
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-size: 1.1em;
-  }
-  .post-actions button[aria-pressed="true"] {
-    color: red;
-  }
-  video, img {
-    max-width: 100%;
-    border-radius: 6px;
-    margin-top: 10px;
-    background: black;
-    display: block;
-  }
-  #uploadForm {
-    max-width: 700px;
-    margin: 10px auto 40px auto;
-    padding: 10px;
-    background: #f0f0f0;
-    border-radius: 6px;
-  }
-  #uploadForm textarea {
-    width: 100%;
-    padding: 8px;
-    font-size: 1em;
-  }
-  #notifications {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    max-width: 300px;
-    z-index: 2000;
-  }
-  .notif {
-    background: #28a745;
-    color: white;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    box-shadow: 0 3px 6px rgb(0 0 0 / 0.2);
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Social Login</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #authBtn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  </style>
 </head>
 <body>
 
-<header>
-  <h1>DRFMedia Social</h1>
-  <div>
-    <span id="userDisplay">Not logged in</span>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </div>
-</header>
-
-<form id="uploadForm" aria-label="Upload new post" style="display:none;">
-  <input type="file" id="mediaFile" accept="image/*,video/*" required />
-  <textarea id="caption" placeholder="Write your caption here..." minlength="4" required></textarea>
-  <button type="submit">Post (Earn 10 DRFM)</button>
-</form>
-
-<div id="postContainer" aria-live="polite" aria-atomic="false">
-  <p id="loadingMsg">Loading posts...</p>
-</div>
-
-<div id="notifications"></div>
+<h1>Welcome to DRFMedia</h1>
+<p id="status">Checking login status...</p>
+<button id="authBtn" disabled>Loading...</button>
 
 <script type="module">
-// --- Firebase v11.9.1 modular imports ---
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import { getDatabase, ref, push, query, orderByChild, limitToLast, onValue, update, runTransaction, get } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import {
+    getAuth,
+    signInWithPopup,
+    GoogleAuthProvider,
+    signOut,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-// Firebase config (replace with your own)
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-  measurementId: "G-W6VHMP77YR"
-};
+  // Your Firebase config - replace with yours
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40"
+  };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-// Standalone wallet user auth from localStorage (simple example)
-let currentUser = null;
+  const authBtn = document.getElementById("authBtn");
+  const status = document.getElementById("status");
 
-function loadUser() {
-  // User stored in localStorage under "drf_active_wallet" and "drf_username"
-  const walletAddr = localStorage.getItem("drf_active_wallet");
-  const username = localStorage.getItem("drf_username");
-  if (walletAddr && username) {
-    currentUser = { address: walletAddr, username };
-    document.getElementById("userDisplay").textContent = `Logged in as ${username} (${walletAddr.substring(0,6)}...${walletAddr.slice(-4)})`;
-    document.getElementById("uploadForm").style.display = "block";
-    document.getElementById("logoutBtn").style.display = "inline-block";
-  } else {
-    currentUser = null;
-    document.getElementById("userDisplay").textContent = "Not logged in";
-    document.getElementById("uploadForm").style.display = "none";
-    document.getElementById("logoutBtn").style.display = "none";
+  // Check wallet login from localStorage
+  function walletLoggedIn() {
+    return !!localStorage.getItem("drf_active_wallet");
   }
-}
 
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("drf_active_wallet");
-  localStorage.removeItem("drf_username");
-  loadUser();
-  alert("Logged out");
-});
-
-loadUser();
-
-// Utility to show notifications
-function showNotification(msg) {
-  const notif = document.createElement("div");
-  notif.className = "notif";
-  notif.textContent = msg;
-  document.getElementById("notifications").appendChild(notif);
-  setTimeout(() => notif.remove(), 4000);
-}
-
-// Upload form handler (upload media file to IPFS via Pinata, store post in Firebase)
-const uploadForm = document.getElementById("uploadForm");
-uploadForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!currentUser) return alert("Please login first.");
-
-  const fileInput = document.getElementById("mediaFile");
-  const captionInput = document.getElementById("caption");
-  if (!fileInput.files.length) return alert("Please select a media file.");
-  if (captionInput.value.trim().length < 4) return alert("Caption too short.");
-
-  uploadForm.querySelector("button").disabled = true;
-  uploadForm.querySelector("button").textContent = "Posting...";
-
-  try {
-    const file = fileInput.files[0];
-    const caption = captionInput.value.trim();
-
-    // Upload file to Pinata IPFS
-    const ipfsHash = await uploadToIPFS(file);
-    const mediaUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    // Post data object
-    const postData = {
-      userId: currentUser.address,
-      username: currentUser.username,
-      caption,
-      mediaUrl,
-      mediaType,
-      timestamp: Date.now(),
-      likesCount: 0,
-      commentsCount: 0
-    };
-
-    // Push to Firebase RTDB posts
-    await push(ref(db, "posts"), postData);
-
-    // Reward the user with 10 DRFM tokens (simulate call)
-    await sendReward(currentUser.address, 10);
-
-    showNotification("Post uploaded and 10 DRFM rewarded!");
-
-    // Reset form
-    fileInput.value = "";
-    captionInput.value = "";
-  } catch (err) {
-    alert("Upload failed: " + err.message);
-  } finally {
-    uploadForm.querySelector("button").disabled = false;
-    uploadForm.querySelector("button").textContent = "Post (Earn 10 DRFM)";
-  }
-});
-
-// Upload file to Pinata via API (you must add your PINATA_JWT below)
-const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // Replace with your actual JWT
-
-async function uploadToIPFS(file) {
-  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-  const data = new FormData();
-  data.append("file", file);
-  const res = await fetch(url, {
-    method: "POST",
-    body: data,
-    headers: { Authorization: PINATA_JWT }
-  });
-  if (!res.ok) throw new Error("IPFS upload failed");
-  const json = await res.json();
-  return json.IpfsHash;
-}
-
-// --- Posts loading with infinite scroll ---
-const postContainer = document.getElementById("postContainer");
-let lastPostKey = null;
-let isLoading = false;
-const POSTS_PER_BATCH = 5;
-
-// Function to fetch and render posts
-async function loadPosts(initial = false) {
-  if (isLoading) return;
-  isLoading = true;
-  if (initial) postContainer.innerHTML = '<p id="loadingMsg">Loading posts...</p>';
-  else postContainer.querySelector("#loadingMsg")?.remove();
-
-  const postsQuery = query(ref(db, "posts"), orderByChild("timestamp"), limitToLast(POSTS_PER_BATCH));
-  onValue(postsQuery, (snapshot) => {
-    const posts = [];
-    snapshot.forEach(child => {
-      posts.push({ key: child.key, ...child.val() });
-    });
-    posts.sort((a,b) => b.timestamp - a.timestamp); // newest first
-    renderPosts(posts);
-  }, { onlyOnce: true });
-
-  isLoading = false;
-}
-
-// Render posts helper
-function renderPosts(posts) {
-  if (!posts.length) {
-    postContainer.innerHTML = "<p>No posts yet.</p>";
-    return;
-  }
-  postContainer.innerHTML = ""; // Clear all (replace with smarter incremental in prod)
-
-  posts.forEach(post => {
-    const div = document.createElement("div");
-    div.className = "post-item";
-    div.dataset.key = post.key;
-    div.innerHTML = `
-      <div class="post-owner">${post.username} (${post.userId.substring(0,6)}...${post.userId.slice(-4)})</div>
-      <div class="post-caption">${escapeHtml(post.caption)}</div>
-      ${post.mediaType === "video"
-        ? `<video controls src="${post.mediaUrl}" preload="metadata"></video>`
-        : `<img src="${post.mediaUrl}" alt="Post image" loading="lazy"/>`}
-      <div class="post-actions">
-        <button aria-label="Like post" class="like-btn" data-key="${post.key}">👍 <span class="like-count">${post.likesCount||0}</span></button>
-        <button aria-label="Comment on post" class="comment-btn" data-key="${post.key}">💬 <span class="comment-count">${post.commentsCount||0}</span></button>
-        <button aria-label="Share post" class="share-btn" data-key="${post.key}">🔗</button>
-      </div>
-      <div class="comments-section" id="comments-${post.key}" style="margin-top:10px; display:none;">
-        <input type="text" placeholder="Write a comment..." class="comment-input" data-key="${post.key}" />
-        <button class="send-comment-btn" data-key="${post.key}">Send</button>
-        <div class="comments-list" id="comments-list-${post.key}"></div>
-      </div>
-    `;
-    postContainer.appendChild(div);
-  });
-  attachPostEvents();
-}
-
-// Helper to escape HTML from captions to avoid XSS
-function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, (match) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[match]);
-}
-
-// Attach events for like/comment/share buttons after posts render
-function attachPostEvents() {
-  document.querySelectorAll(".like-btn").forEach(btn => {
-    btn.onclick = () => handleLike(btn.dataset.key, btn);
-  });
-  document.querySelectorAll(".comment-btn").forEach(btn => {
-    btn.onclick = () => toggleCommentsSection(btn.dataset.key);
-  });
-  document.querySelectorAll(".send-comment-btn").forEach(btn => {
-    btn.onclick = () => handleSendComment(btn.dataset.key);
-  });
-  document.querySelectorAll(".share-btn").forEach(btn => {
-    btn.onclick = () => handleShare(btn.dataset.key);
-  });
-}
-
-async function handleLike(postKey, btn) {
-  if (!currentUser) return alert("Login to like posts");
-  const likesRef = ref(db, `likes/${postKey}/${currentUser.address}`);
-  const likesCountRef = ref(db, `posts/${postKey}/likesCount`);
-
-  const snapshot = await get(likesRef);
-  const hasLiked = snapshot.exists() && snapshot.val() === true;
-
-  if (hasLiked) {
-    // Unlike: remove like and burn 4.5 DRFM tokens
-    await update(likesRef, null);
-    await burnTokens(currentUser.address, 4.5);
-    await updateCount(likesCountRef, -1);
-    btn.setAttribute("aria-pressed", "false");
-  } else {
-    // Like: set like and reward 10 DRFM tokens
-    await update(likesRef, true);
-    await sendReward(currentUser.address, 10);
-    await updateCount(likesCountRef, 1);
-    btn.setAttribute("aria-pressed", "true");
-  }
-}
-
-function toggleCommentsSection(postKey) {
-  const section = document.getElementById(`comments-${postKey}`);
-  if (!section) return;
-  if (section.style.display === "none") {
-    loadComments(postKey);
-    section.style.display = "block";
-  } else {
-    section.style.display = "none";
-  }
-}
-
-async function loadComments(postKey) {
-  const commentsRef = ref(db, `comments/${postKey}`);
-  onValue(commentsRef, (snapshot) => {
-    const container = document.getElementById(`comments-list-${postKey}`);
-    container.innerHTML = "";
-    snapshot.forEach(child => {
-      const c = child.val();
-      const p = document.createElement("p");
-      p.textContent = `${c.userId.substring(0,6)}...${c.userId.slice(-4)}: ${c.text}`;
-      container.appendChild(p);
-    });
-  }, { onlyOnce: true });
-}
-
-async function handleSendComment(postKey) {
-  if (!currentUser) return alert("Login to comment");
-  const input = document.querySelector(`.comment-input[data-key="${postKey}"]`);
-  if (!input || input.value.trim() === "") return alert("Comment cannot be empty");
-  const text = input.value.trim();
-
-  // Post comment
-  const commentRef = ref(db, `comments/${postKey}`);
-  await push(commentRef, {
-    userId: currentUser.address,
-    text,
-    timestamp: Date.now()
-  });
-
-  // Burn 4.5 DRFM tokens on comment
-  await burnTokens(currentUser.address, 4.5);
-
-  // Update comment count
-  const commentCountRef = ref(db, `posts/${postKey}/commentsCount`);
-  await updateCount(commentCountRef, 1);
-
-  input.value = "";
-  showNotification("Comment sent and 4.5 DRFM burned.");
-}
-
-async function handleShare(postKey) {
-  if (!currentUser) return alert("Login to share");
-  // Simulate share logic: In a real DApp you'd open a share dialog or copy link
-  alert("Post link copied! You earned 10 DRFM.");
-  await sendReward(currentUser.address, 10);
-}
-
-// Utility to update a numeric count atomically in Firebase RTDB
-async function updateCount(refPath, delta) {
-  await runTransaction(refPath, (current) => (current || 0) + delta);
-}
-
-// Simulate sending DRFM token reward (replace with your token contract logic)
-async function sendReward(address, amount) {
-  console.log(`Rewarding ${amount} DRFM tokens to ${address}`);
-  // TODO: Integrate actual DRFM token transfer contract call here
-}
-
-// Simulate burning DRFM tokens on like/comment (replace with your token contract logic)
-async function burnTokens(address, amount) {
-  console.log(`Burning ${amount} DRFM tokens from ${address}`);
-  // TODO: Integrate actual DRFM token burn contract call here
-}
-
-// Infinite scroll loading: load posts when near bottom
-window.addEventListener("scroll", () => {
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 300) {
-    loadMorePosts();
-  }
-});
-
-let loadedPosts = new Set();
-async function loadMorePosts() {
-  if (isLoading) return;
-  isLoading = true;
-
-  // We will fetch the last POSTS_PER_BATCH posts that we have not loaded yet
-  const postsRef = ref(db, "posts");
-  const snapshot = await get(postsRef);
-
-  const allPosts = [];
-  snapshot.forEach(child => {
-    allPosts.push({ key: child.key, ...child.val() });
-  });
-
-  allPosts.sort((a,b) => b.timestamp - a.timestamp); // newest first
-
-  // Filter out already loaded posts
-  const newPosts = allPosts.filter(p => !loadedPosts.has(p.key)).slice(0, POSTS_PER_BATCH);
-
-  if (newPosts.length === 0) {
-    // no more posts to load
-    if (!document.getElementById("noMore")) {
-      const msg = document.createElement("p");
-      msg.id = "noMore";
-      msg.textContent = "No more posts.";
-      postContainer.appendChild(msg);
+  function updateUI(user) {
+    if (user && walletLoggedIn()) {
+      authBtn.textContent = "Logout";
+      status.textContent = `Logged in as ${user.displayName} (${localStorage.getItem("drf_active_wallet").slice(0,6)}...${localStorage.getItem("drf_active_wallet").slice(-4)})`;
+    } else if (!walletLoggedIn()) {
+      authBtn.textContent = "Please login wallet first";
+      status.textContent = "You must login to your DRF Wallet first!";
+      authBtn.disabled = true;
+    } else {
+      authBtn.textContent = "Login with Google";
+      status.textContent = "Not logged in to Google";
+      authBtn.disabled = false;
     }
-    isLoading = false;
-    return;
   }
 
-  newPosts.forEach(p => loadedPosts.add(p.key));
-
-  // Append new posts to container (instead of replacing all)
-  newPosts.forEach(post => {
-    const div = document.createElement("div");
-    div.className = "post-item";
-    div.dataset.key = post.key;
-    div.innerHTML = `
-      <div class="post-owner">${post.username} (${post.userId.substring(0,6)}...${post.userId.slice(-4)})</div>
-      <div class="post-caption">${escapeHtml(post.caption)}</div>
-      ${post.mediaType === "video"
-        ? `<video controls src="${post.mediaUrl}" preload="metadata"></video>`
-        : `<img src="${post.mediaUrl}" alt="Post image" loading="lazy"/>`}
-      <div class="post-actions">
-        <button aria-label="Like post" class="like-btn" data-key="${post.key}">👍 <span class="like-count">${post.likesCount||0}</span></button>
-        <button aria-label="Comment on post" class="comment-btn" data-key="${post.key}">💬 <span class="comment-count">${post.commentsCount||0}</span></button>
-        <button aria-label="Share post" class="share-btn" data-key="${post.key}">🔗</button>
-      </div>
-      <div class="comments-section" id="comments-${post.key}" style="margin-top:10px; display:none;">
-        <input type="text" placeholder="Write a comment..." class="comment-input" data-key="${post.key}" />
-        <button class="send-comment-btn" data-key="${post.key}">Send</button>
-        <div class="comments-list" id="comments-list-${post.key}"></div>
-      </div>
-    `;
-    postContainer.appendChild(div);
+  onAuthStateChanged(auth, (user) => {
+    updateUI(user);
   });
-  attachPostEvents();
-  isLoading = false;
-}
 
-// Load initial batch
-loadMorePosts();
+  authBtn.addEventListener("click", async () => {
+    if (!walletLoggedIn()) {
+      alert("Please login to your DRF Wallet first.");
+      return;
+    }
 
+    if (auth.currentUser) {
+      // Logout Google
+      await signOut(auth);
+      alert("Logged out from Google");
+    } else {
+      try {
+        await signInWithPopup(auth, provider);
+        alert("Google login successful!");
+      } catch (error) {
+        alert("Google login failed: " + error.message);
+      }
+    }
+  });
+
+  // Initialize UI
+  updateUI(auth.currentUser);
 </script>
+
 </body>
 </html>
