@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Boosted Posts Feed</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#0066cc" />
+
+  <!-- Google SEO & Branding -->
+  <meta name="description" content="Explore the DRFMedia Boosted Posts Feed — Powered by DRFChain and Blockchain-enabled social media with AI-driven moderation." />
+  <meta name="keywords" content="DRFChain, DRFMedia, Boosted Posts, Blockchain Social Media, AI moderation, Digital Rufiya" />
+  <meta name="author" content="DRFChain — Built by Hassan Fayaz" />
+  <meta name="robots" content="index, follow" />
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="DRFMedia Boosted Posts Feed" />
+  <meta property="og:description" content="View and interact with boosted posts on DRFMedia — powered by blockchain and AI." />
+  <meta property="og:image" content="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" />
+  <meta property="og:url" content="https://www.drfchain.org/drfmedia_feed.html" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DRFMedia Boosted Posts Feed" />
+  <meta name="twitter:description" content="Blockchain-powered social media platform for DRFChain community." />
+  <meta name="twitter:image" content="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" />
+
+  <style>
+    /* Your existing styles here plus some polish */
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9faff;
+      margin: 0; padding: 0 10px 40px 10px;
+      color: #222;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0066cc;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 3px 10px rgba(0, 102, 204, 0.4);
+      flex-wrap: wrap;
+    }
+    header .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 250px;
+    }
+    header img {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      box-shadow: 0 0 8px #fff;
+    }
+    header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+      user-select: none;
+    }
+
+    #menuToggle {
+      display: none; /* hidden for desktop, you can enable for mobile later */
+      flex-direction: column;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 10px;
+    }
+    #menuToggle span {
+      width: 25px;
+      height: 3px;
+      background: white;
+      border-radius: 3px;
+      display: block;
+    }
+
+    nav#primaryNav {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    nav#primaryNav a {
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+    }
+    nav#primaryNav a:hover,
+    nav#primaryNav a:focus {
+      background: #004a99;
+      outline: none;
+    }
+
+    #filterButtons {
+      max-width: 700px;
+      margin: 20px auto 10px;
+      text-align: center;
+      display: none; /* shown only when logged in */
+    }
+    #filterButtons button {
+      margin: 0 8px;
+      padding: 8px 16px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      font-size: 1rem;
+      transition: background 0.3s ease;
+    }
+    #filterButtons button.active {
+      background: #004a99;
+    }
+
+    #searchBar {
+      max-width: 700px;
+      margin: 20px auto 10px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px 15px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      transition: border-color 0.3s ease;
+    }
+    #searchInput:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+
+    #uploadForm {
+      display: none;
+      max-width: 700px;
+      margin: 25px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border: 1px solid #ddd;
+    }
+    #uploadForm h2 {
+      margin-top: 0;
+      color: #007bff;
+      font-weight: 700;
+    }
+    #uploadForm label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+    #uploadForm input[type="text"],
+    #uploadForm input[type="email"],
+    #uploadForm input[type="url"],
+    #uploadForm textarea {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    #uploadForm button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 22px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    #uploadForm button:disabled {
+      background: #a0c8ff;
+      cursor: not-allowed;
+    }
+    #uploadForm button:hover:not(:disabled) {
+      background: #005bb5;
+    }
+
+    #postContainer {
+      max-width: 700px;
+      margin: 30px auto 60px;
+    }
+    .post-item {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: #007bff;
+      user-select: none;
+    }
+    .badge-boosted {
+      display: inline-block;
+      background: #ff9800;
+      color: white;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-left: 10px;
+      user-select: none;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .post-time {
+      color: #555;
+      font-size: 0.85rem;
+      margin: 6px 0 12px 0;
+      user-select: none;
+    }
+    .post-media {
+      max-height: 480px;
+      max-width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .post-media img,
+    .post-media video {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+    }
+    .post-caption {
+      white-space: pre-wrap;
+      font-size: 1rem;
+      color: #222;
+      margin-bottom: 12px;
+    }
+    .post-details {
+      font-size: 0.9rem;
+      color: #444;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .boost-btn {
+      background: #ff9800;
+      border: none;
+      color: white;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.3s ease;
+      font-size: 1rem;
+    }
+    .boost-btn.unboost {
+      background: #888;
+    }
+    .boost-btn:hover {
+      filter: brightness(0.9);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      nav#primaryNav {
+        justify-content: flex-start;
+      }
+      #filterButtons {
+        max-width: 100%;
+      }
+      #uploadForm, #postContainer {
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" alt="DRFMedia Logo" />
+    <h1>DRFMedia Boosted Posts</h1>
+  </div>
+
+  <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
+    <a href="#">Home</a>
+    <a href="#">Timeline</a>
+    <a href="#">Boosted Posts</a>
+    <a href="#" id="profileLink" style="display:none;">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
+</header>
+
+<div id="searchBar" aria-label="Search Posts" style="max-width: 700px; margin: 20px auto 10px;">
+  <input
+    type="search"
+    id="searchInput"
+    placeholder="Search posts by caption, user name or email..."
+    aria-label="Search posts"
+  />
+</div>
+
+<div id="filterButtons" aria-label="Post Filters">
+  <button id="filterAll" class="active" type="button">All Posts</button>
+  <button id="filterBoosted" type="button">Boosted Only</button>
+  <button id="filterMostLiked" type="button">Most Liked</button>
+</div>
+
+<button id="loginBtn" aria-label="Sign in with Google" style="display: block; max-width: 700px; margin: 10px auto;">
+  Sign in with Google
+</button>
+<button id="logoutBtn" aria-label="Logout" style="display:none; max-width: 700px; margin: 10px auto;">
+  Logout
+</button>
+
+<!-- Admin Post Upload Form -->
+<form
+  id="uploadForm"
+  aria-label="Admin Upload Post Form"
+  style="max-width: 700px; margin: 25px auto;"
+>
+  <h2>Upload Boosted Post (Admin Only)</h2>
+  <label for="adminUserName">User Name (required):</label>
+  <input
+    type="text"
+    id="adminUserName"
+    required
+    aria-required="true"
+    autocomplete="username"
+  />
+
+  <label for="adminUserEmail">User Email (required):</label>
+  <input
+    type="email"
+    id="adminUserEmail"
+    required
+    aria-required="true"
+    autocomplete="email"
+  />
+
+  <label for="adminWalletAddress">DRF Wallet Address (required):</label>
+  <input type="text" id="adminWalletAddress" required aria-required="true" />
+
+  <label for="adminPostUrl">Post URL (required):</label>
+  <input
+    type="url"
+    id="adminPostUrl"
+    required
+    aria-required="true"
+    placeholder="https://example.com/post/video.mp4"
+  />
+
+  <label for="adminCaption">Caption:</label>
+  <textarea id="adminCaption" placeholder="Enter post caption..." rows="4"></textarea>
+
+  <button type="submit">Upload Boosted Post</button>
+</form>
+
+<div id="postContainer" aria-live="polite" aria-atomic="false" style="max-width: 700px; margin: 30px auto;">
+  <p style="text-align:center; color:#666;">Please log in to view posts.</p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    push,
+    set,
+    onValue,
+    update,
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth,
+    signInWithPopup,
+    signOut,
+    GoogleAuthProvider,
+    onAuthStateChanged,
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // Admin emails list
+  const admins = new Set([
+    "digitalrufiyauniversity@gmail.com",
+    "digitalrufiyacoin@gmail.com",
+    "digitalrufiya@gmail.com",
+  ]);
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+  const filterButtons = document.getElementById("filterButtons");
+  const filterAllBtn = document.getElementById("filterAll");
+  const filterBoostedBtn = document.getElementById("filterBoosted");
+  const filterMostLikedBtn = document.getElementById("filterMostLiked");
+
+  // Admin form inputs
+  const adminUserName = document.getElementById("adminUserName");
+  const adminUserEmail = document.getElementById("adminUserEmail");
+  const adminWalletAddress = document.getElementById("adminWalletAddress");
+  const adminPostUrl = document.getElementById("adminPostUrl");
+  const adminCaption = document.getElementById("adminCaption");
+
+  let currentUser = null;
+  let postsData = {};
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "block";
+      filterButtons.style.display = "block";
+      postContainer.innerHTML = ""; // clear previous messages
+
+      if (admins.has(user.email)) {
+        uploadForm.style.display = "block";
+      } else {
+        uploadForm.style.display = "none";
+      }
+      loadPosts();
+    } else {
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      uploadForm.style.display = "none";
+      filterButtons.style.display = "none";
+      postContainer.innerHTML =
+        '<p style="text-align:center; color:#666;">Please log in to view posts.</p>';
+    }
+  });
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+  logoutBtn.onclick = () => signOut(auth);
+
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUser || !admins.has(currentUser.email)) {
+      alert("Only admins can upload posts.");
+      return;
+    }
+    if (
+      !adminUserName.value.trim() ||
+      !adminUserEmail.value.trim() ||
+      !adminWalletAddress.value.trim() ||
+      !adminPostUrl.value.trim()
+    ) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    uploadForm.querySelector("button").disabled = true;
+
+    try {
+      const newPostRef = push(ref(db, "posts"));
+      await set(newPostRef, {
+        userId: currentUser.uid,
+        displayName: adminUserName.value.trim(),
+        email: adminUserEmail.value.trim(),
+        walletAddress: adminWalletAddress.value.trim(),
+        postUrl: adminPostUrl.value.trim(),
+        caption: adminCaption.value.trim() || "",
+        timestamp: Date.now(),
+        boosted: true,
+        boostedTimestamp: Date.now(),
+        likesCount: 0,
+        commentsCount: 0,
+        mediaUrl: adminPostUrl.value.trim(),
+        mediaType: adminPostUrl.value.trim().endsWith(".mp4")
+          ? "video"
+          : "image",
+      });
+
+      // Reset form
+      adminUserName.value = "";
+      adminUserEmail.value = "";
+      adminWalletAddress.value = "";
+      adminPostUrl.value = "";
+      adminCaption.value = "";
+
+      alert("Boosted post uploaded successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload post: " + err.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+    }
+  });
+
+  function loadPosts() {
+    const postsRef = ref(db, "posts");
+    onValue(
+      postsRef,
+      (snapshot) => {
+        const data = snapshot.val() || {};
+        postsData = data;
+        renderPosts(data);
+      },
+      (err) => {
+        console.error("Failed to load posts:", err);
+        postContainer.innerHTML =
+          '<p style="text-align:center; color:#d00;">Error loading posts.</p>';
+      }
+    );
+  }
+
+  function renderPosts(data) {
+    let filteredPosts = Object.entries(data);
+
+    // Search filter
+    const searchText = searchInput.value.trim().toLowerCase();
+    if (searchText) {
+      filteredPosts = filteredPosts.filter(([id, post]) => {
+        return (
+          (post.caption && post.caption.toLowerCase().includes(searchText)) ||
+          (post.displayName &&
+            post.displayName.toLowerCase().includes(searchText)) ||
+          (post.email && post.email.toLowerCase().includes(searchText))
+        );
+      });
+    }
+
+    // Filter buttons
+    if (filterBoostedBtn.classList.contains("active")) {
+      filteredPosts = filteredPosts.filter(([id, post]) => post.boosted === true);
+    } else if (filterMostLikedBtn.classList.contains("active")) {
+      filteredPosts = filteredPosts.sort(
+        (a, b) => (b[1].likesCount || 0) - (a[1].likesCount || 0)
+      );
+    } else {
+      filteredPosts = filteredPosts.sort((a, b) => b[1].timestamp - a[1].timestamp);
+    }
+
+    postContainer.innerHTML = "";
+
+    if (filteredPosts.length === 0) {
+      postContainer.innerHTML =
+        '<p style="text-align:center; color:#666;">No posts found.</p>';
+      return;
+    }
+
+    filteredPosts.forEach(([postId, post]) => {
+      const isBoosted = !!post.boosted;
+      const badgeHtml = isBoosted
+        ? `<span class="badge-boosted" title="Boosted Post">BOOSTED</span>`
+        : "";
+
+      let mediaHtml = "";
+      if (post.mediaType === "video") {
+        mediaHtml = `<video src="${post.mediaUrl}" controls preload="auto" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px; border-radius:8px;"></video>`;
+      } else if (post.mediaType === "image") {
+        mediaHtml = `<img src="${post.mediaUrl}" alt="Post media" loading="lazy" style="max-width:100%; border-radius:8px;" />`;
+      } else {
+        mediaHtml = `<a href="${post.mediaUrl}" target="_blank" rel="noopener noreferrer">${post.mediaUrl}</a>`;
+      }
+
+      const boostBtnText = isBoosted ? "Unboost" : "Boost";
+      const boostBtnClass = isBoosted ? "boost-btn unboost" : "boost-btn";
+
+      const postHTML = `
+        <div class="post-item" role="article" aria-label="Post by ${escapeHTML(
+          post.displayName || "Unknown User"
+        )}">
+          <div class="post-owner">
+            <span>${escapeHTML(post.displayName || "Unknown User")}</span> ${badgeHtml}
+          </div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          <div class="post-media">${mediaHtml}</div>
+          <div class="post-caption">${escapeHTML(post.caption || "")}</div>
+          <div class="post-details">
+            <div><strong>User Email:</strong> ${escapeHTML(post.email || "N/A")}</div>
+            <div><strong>DRF Wallet:</strong> ${escapeHTML(post.walletAddress || "N/A")}</div>
+          </div>
+          <button class="${boostBtnClass}" data-id="${postId}" aria-pressed="${isBoosted}" aria-label="${boostBtnText} post">${boostBtnText}</button>
+        </div>
+      `;
+
+      const div = document.createElement("div");
+      div.innerHTML = postHTML;
+      const postElem = div.firstElementChild;
+
+      postContainer.appendChild(postElem);
+
+      // Show boost button only for admins
+      const boostBtn = postElem.querySelector(".boost-btn");
+      if (!currentUser || !admins.has(currentUser.email)) {
+        boostBtn.style.display = "none";
+      } else {
+        boostBtn.style.display = "inline-block";
+        boostBtn.addEventListener("click", async () => {
+          const currentlyBoosted = boostBtn.getAttribute("aria-pressed") === "true";
+          const postRef = ref(db, `posts/${postId}`);
+          try {
+            if (currentlyBoosted) {
+              await update(postRef, {
+                boosted: false,
+                boostedTimestamp: null,
+              });
+            } else {
+              await update(postRef, {
+                boosted: true,
+                boostedTimestamp: Date.now(),
+              });
+            }
+          } catch (err) {
+            console.error("Error updating boost status:", err);
+            alert("Failed to update boost status.");
+          }
+        });
+      }
+    });
+  }
+
+  function escapeHTML(text) {
+    if (!text) return "";
+    return text.replace(/[&<>"']/g, (m) => {
+      return (
+        {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[m] || m
+      );
+    });
+  }
+
+  filterAllBtn.onclick = () => {
+    filterAllBtn.classList.add("active");
+    filterBoostedBtn.classList.remove("active");
+    filterMostLikedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+  filterBoostedBtn.onclick = () => {
+    filterBoostedBtn.classList.add("active");
+    filterAllBtn.classList.remove("active");
+    filterMostLikedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+  filterMostLikedBtn.onclick = () => {
+    filterMostLikedBtn.classList.add("active");
+    filterAllBtn.classList.remove("active");
+    filterBoostedBtn.classList.remove("active");
+    renderPosts(postsData);
+  };
+
+  searchInput.addEventListener("input", () => {
+    renderPosts(postsData);
+  });
+</script>
+
+<script>
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  if (menuToggle) {
+    menuToggle.addEventListener("click", () => {
+      const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+      menuToggle.setAttribute("aria-expanded", !expanded);
+      primaryNav.classList.toggle("open");
+    });
+  }
+</script>
+
+</body>
+</html>
