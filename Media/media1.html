@@ -2,155 +2,154 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia - Share Islamic Content</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFMedia - Video Upload</title>
   <style>
     body {
       background: #111;
       color: #eee;
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #0a84ff;
-      padding: 12px 20px;
-      color: #fff;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    header button {
-      background: #fff;
-      color: #0a84ff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    main {
-      max-width: 720px;
-      margin: auto;
+      font-family: sans-serif;
       padding: 20px;
+      max-width: 600px;
+      margin: auto;
     }
-    form {
-      background: #222;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
+    h1 {
+      text-align: center;
+      color: #0af;
     }
-    input[type="file"],
-    input[type="text"] {
-      display: block;
+    input, textarea, button {
       width: 100%;
+      margin: 10px 0;
       padding: 10px;
-      margin-top: 10px;
-      border-radius: 8px;
+      border-radius: 5px;
       border: none;
-      background: #333;
-      color: #fff;
+      font-size: 1rem;
     }
-    button[type="submit"] {
-      background: #0a84ff;
+    button {
+      background: #0af;
       color: white;
-      border: none;
-      padding: 12px;
-      margin-top: 12px;
-      width: 100%;
-      border-radius: 8px;
       cursor: pointer;
     }
-    .post-item {
-      background: #1c1c1c;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 20px;
-      box-shadow: 0 0 6px #0a84ff44;
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      margin-right: 10px;
-    }
-    .post-time {
-      font-size: 0.85em;
-      color: #aaa;
-      margin-bottom: 10px;
-    }
-    video, img {
+    video {
       width: 100%;
-      border-radius: 10px;
-      margin-top: 10px;
+      max-height: 400px;
       background: black;
+      border-radius: 10px;
+      margin-top: 20px;
     }
-    .post-actions {
-      display: flex;
-      gap: 12px;
+    #status {
       margin-top: 10px;
-    }
-    .post-actions button {
-      background: none;
-      color: #0a84ff;
-      border: none;
-      cursor: pointer;
-    }
-    .comments {
-      margin-top: 10px;
-      background: #292929;
-      border-radius: 8px;
-      padding: 10px;
-    }
-    .comments input {
-      width: 80%;
-      padding: 6px;
-      border: none;
-      border-radius: 6px;
-      margin-right: 6px;
-    }
-    .comments button {
-      padding: 6px 10px;
-      background: #0a84ff;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-    }
-    .comment-item {
-      margin-bottom: 6px;
-      font-size: 0.95em;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
+  <h1>DRFMedia Video Upload</h1>
 
-  <header>
-    <h1>📽 DRFMedia</h1>
-    <div>
-      <button id="loginBtn">Login</button>
-      <button id="logoutBtn" style="display:none;">Logout</button>
-    </div>
-  </header>
+  <div id="authSection">
+    <button id="loginBtn">Login with Google</button>
+  </div>
 
-  <main>
-    <form id="uploadForm" style="display:none">
-      <label>Upload Photo/Video</label>
-      <input type="file" id="mediaFile" accept="image/*,video/*" required />
-      <input type="text" id="caption" placeholder="Write a caption..." required minlength="4" />
-      <button type="submit">Post</button>
+  <div id="appSection" style="display:none">
+    <form id="uploadForm">
+      <input type="text" id="caption" placeholder="Caption (min 4 chars)" required minlength="4" />
+      <input type="file" id="mediaFile" accept="video/*" required />
+      <button type="submit">Upload</button>
     </form>
+    <div id="status"></div>
+    <div id="videoPreview"></div>
+  </div>
 
-    <div id="postContainer">Loading posts...</div>
-  </main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      push,
+      set
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  <script type="module" src="app.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    };
+
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const authSection = document.getElementById("authSection");
+    const appSection = document.getElementById("appSection");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFile = document.getElementById("mediaFile");
+    const captionInput = document.getElementById("caption");
+    const statusDiv = document.getElementById("status");
+    const videoPreview = document.getElementById("videoPreview");
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        authSection.style.display = "none";
+        appSection.style.display = "block";
+      }
+    });
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
+
+    uploadForm.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!currentUser || !mediaFile.files.length || captionInput.value.trim().length < 4) return alert("All fields required");
+      const file = mediaFile.files[0];
+      const fd = new FormData();
+      fd.append("file", file);
+
+      statusDiv.textContent = "Uploading to IPFS...";
+
+      try {
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: { Authorization: pinataJWT },
+          body: fd
+        });
+        const { IpfsHash } = await res.json();
+        const mediaUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
+
+        const newRef = push(ref(db, "posts"));
+        await set(newRef, {
+          userId: currentUser.uid,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          caption: captionInput.value.trim(),
+          mediaUrl,
+          mediaType: "video",
+          timestamp: Date.now()
+        });
+
+        statusDiv.textContent = "✅ Video uploaded!";
+        videoPreview.innerHTML = `<video controls src="${mediaUrl}" preload="auto"></video>`;
+        uploadForm.reset();
+      } catch (err) {
+        console.error(err);
+        statusDiv.textContent = "❌ Upload failed: " + err.message;
+      }
+    }
+  </script>
 </body>
 </html>
