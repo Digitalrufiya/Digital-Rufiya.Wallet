@@ -1,261 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRFMedia DApp - Decentralized Justice</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 0; padding: 10px; background:#f0f2f5; }
-  header { text-align: center; margin-bottom: 20px; }
-  #walletAddress { font-weight: bold; margin: 10px 0; }
-  #connectBtn, #postBtn { padding: 10px 20px; font-size: 1rem; cursor: pointer; border:none; border-radius:6px; }
-  #connectBtn { background:#0077ff; color:#fff; }
-  #postBtn { background:#28a745; color:#fff; margin-top: 10px; }
-  #postBtn:disabled { background:#999; cursor:not-allowed; }
-  textarea { width: 100%; height: 80px; border-radius:6px; padding:8px; font-size:1rem; resize:none; }
-  input[type=file] { margin-top: 10px; }
-  #posts { margin-top: 30px; max-width: 600px; margin-left:auto; margin-right:auto; }
-  .post { background: white; padding: 15px; margin-bottom: 15px; border-radius: 10px; box-shadow: 0 1px 5px rgb(0 0 0 / 0.1); }
-  .post-header { display:flex; justify-content: space-between; font-size: 0.9rem; color: #555; margin-bottom: 10px; }
-  .post-content { margin-bottom: 10px; }
-  .post-content img, .post-content video { max-width: 100%; border-radius: 8px; }
-  .post-actions button { margin-right: 10px; background:#0077ff; border:none; color:#fff; padding: 5px 12px; border-radius:5px; cursor:pointer; }
-  #qrcode { text-align:center; margin: 20px 0; }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Media Wallet Connect Fix</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    #connectBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+    }
+    #walletAddress {
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <h1>DRFMedia Decentralized Justice</h1>
-  <button id="connectBtn">Connect Wallet</button>
-  <div id="walletAddress"></div>
-</header>
-
-<section id="postSection" style="max-width:600px; margin:auto; display:none;">
-  <textarea id="postCaption" placeholder="Write your post caption here..."></textarea>
-  <input type="file" id="mediaFile" accept="image/*,video/*" />
-  <button id="postBtn" disabled>Post & Earn DRFM</button>
-  <div id="status" style="margin-top: 10px; color: green;"></div>
-</section>
-
-<section id="qrcode" style="display:none;">
-  <p>Scan QR code with your WalletConnect compatible mobile wallet to connect:</p>
-  <canvas id="qr"></canvas>
-</section>
-
-<section id="posts">
-  <!-- Posts will appear here -->
-</section>
+<button id="connectBtn">Connect Wallet</button>
+<div id="walletAddress"></div>
 
 <script>
-(async () => {
-  // Your contract details here:
-  const DRFM_CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-  const DRFM_CONTRACT_ABI = [
-    {"inputs":[{"internalType":"string","name":"ipfsHash","type":"string"},{"internalType":"uint8","name":"mediaType","type":"uint8"}],"name":"post","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"postId","type":"uint256"}],"name":"likePost","outputs":[],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"totalPosts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
-    {"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"getPost","outputs":[{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"ipfsHash","type":"string"},{"internalType":"uint8","name":"mediaType","type":"uint8"},{"internalType":"uint256","name":"likes","type":"uint256"},{"internalType":"bool","name":"flagged","type":"bool"}],"stateMutability":"view","type":"function"}
-  ];
+  const connectBtn = document.getElementById('connectBtn');
+  const walletAddressDiv = document.getElementById('walletAddress');
 
-  // Pinata JWT for upload (replace with your own if needed)
-  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-  // Elements
-  const connectBtn = document.getElementById("connectBtn");
-  const walletAddressDiv = document.getElementById("walletAddress");
-  const postSection = document.getElementById("postSection");
-  const postCaption = document.getElementById("postCaption");
-  const mediaFile = document.getElementById("mediaFile");
-  const postBtn = document.getElementById("postBtn");
-  const statusDiv = document.getElementById("status");
-  const postsDiv = document.getElementById("posts");
-  const qrcodeSection = document.getElementById("qrcode");
-  const qrCanvas = document.getElementById("qr");
-
-  let provider;
-  let signer;
-  let contract;
-  let userAddress;
-
-  // WalletConnect provider
-  let walletConnectProvider;
-
-  // Connect wallet function
   async function connectWallet() {
-    if (window.ethereum) {
-      // Modern browser with injected provider (e.g. MetaMask)
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-      contract = new ethers.Contract(DRFM_CONTRACT_ADDRESS, DRFM_CONTRACT_ABI, signer);
-      walletAddressDiv.textContent = "Wallet: " + userAddress;
-      connectBtn.style.display = "none";
-      postSection.style.display = "block";
-      await loadPosts();
-    } else {
-      // WalletConnect fallback
-      walletConnectProvider = new WalletConnectProvider.default({
-        rpc: {
-          56: "https://bsc-dataseed.binance.org/" // BSC mainnet RPC
-        },
-        qrcode: false,
-      });
-      await walletConnectProvider.enable();
-
-      // Show QR code
-      const uri = walletConnectProvider.connector.uri;
-      qrcodeSection.style.display = "block";
-      connectBtn.style.display = "none";
-      QRCode.toCanvas(qrCanvas, uri, function (error) {
-        if (error) console.error(error);
-      });
-
-      provider = new ethers.providers.Web3Provider(walletConnectProvider);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-      contract = new ethers.Contract(DRFM_CONTRACT_ADDRESS, DRFM_CONTRACT_ABI, signer);
-      walletAddressDiv.textContent = "Wallet: " + userAddress;
-      postSection.style.display = "block";
-      qrcodeSection.style.display = "none";
-      await loadPosts();
-
-      // Disconnect listener
-      walletConnectProvider.on("disconnect", () => {
-        location.reload();
-      });
+    if (typeof window.ethereum === 'undefined') {
+      alert('No Ethereum wallet detected. Please install MetaMask or a compatible wallet.');
+      return;
     }
-  }
 
-  connectBtn.addEventListener("click", connectWallet);
-
-  // Enable post button only if caption or media file selected
-  function updatePostBtnState() {
-    postBtn.disabled = postCaption.value.trim() === "" && mediaFile.files.length === 0;
-  }
-  postCaption.addEventListener("input", updatePostBtnState);
-  mediaFile.addEventListener("change", updatePostBtnState);
-
-  // Upload file to Pinata
-  async function uploadToPinata(file) {
-    statusDiv.textContent = "Uploading to IPFS via Pinata...";
-    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: PINATA_JWT
-      },
-      body: formData
-    });
-    if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
-    const data = await res.json();
-    statusDiv.textContent = "Upload successful: " + data.IpfsHash;
-    return data.IpfsHash;
-  }
-
-  // Post on-chain function
-  async function post() {
     try {
-      postBtn.disabled = true;
-      statusDiv.textContent = "Posting to blockchain... Please approve the transaction in your wallet.";
-      let ipfsHash = "";
-      let mediaType = 0; // 0=none, 1=image, 2=video
-
-      if (mediaFile.files.length > 0) {
-        const file = mediaFile.files[0];
-        ipfsHash = await uploadToPinata(file);
-        const ext = file.type.split("/")[0];
-        mediaType = ext === "video" ? 2 : 1;
-      } else {
-        // If no media, just post empty IPFS hash (or a placeholder)
-        ipfsHash = "";
-        mediaType = 0;
-      }
-
-      // Call smart contract post function
-      const tx = await contract.post(ipfsHash, mediaType);
-      statusDiv.textContent = "Waiting for blockchain confirmation...";
-      await tx.wait();
-
-      statusDiv.textContent = "Post successful! You earned DRFM tokens.";
-      postCaption.value = "";
-      mediaFile.value = "";
-      postBtn.disabled = true;
-
-      await loadPosts();
-    } catch (err) {
-      console.error(err);
-      statusDiv.textContent = "Post failed: " + err.message;
-      postBtn.disabled = false;
+      // Request wallet accounts
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const account = accounts[0];
+      walletAddressDiv.textContent = `Connected: ${account}`;
+      connectBtn.textContent = 'Wallet Connected';
+      connectBtn.disabled = true;
+    } catch (error) {
+      console.error('User rejected wallet connection', error);
+      alert('Wallet connection was rejected.');
     }
   }
 
-  postBtn.addEventListener("click", post);
+  connectBtn.addEventListener('click', connectWallet);
 
-  // Load posts from blockchain (last 10)
-  async function loadPosts() {
-    postsDiv.innerHTML = "<p>Loading posts...</p>";
-    try {
-      const total = await contract.totalPosts();
-      let output = "";
-      const start = total > 10 ? total - 10 : 0;
-      for (let i = total - 1; i >= start; i--) {
-        const post = await contract.getPost(i);
-        const author = post.author;
-        const ipfsHash = post.ipfsHash;
-        const mediaType = post.mediaType.toNumber ? post.mediaType.toNumber() : post.mediaType;
-        const likes = post.likes.toNumber ? post.likes.toNumber() : post.likes;
-        if(post.flagged) continue; // skip flagged
-
-        let mediaHtml = "";
-        if (ipfsHash) {
-          const ipfsUrl = "https://gateway.pinata.cloud/ipfs/" + ipfsHash;
-          if (mediaType === 1) mediaHtml = `<img src="${ipfsUrl}" alt="Post image" />`;
-          else if (mediaType === 2) mediaHtml = `<video controls src="${ipfsUrl}"></video>`;
-        }
-
-        output += `
-          <div class="post" data-postid="${i}">
-            <div class="post-header">
-              <div><strong>${author}</strong></div>
-              <div>Likes: <span class="likesCount">${likes}</span></div>
-            </div>
-            <div class="post-content">${mediaHtml}</div>
-            <div class="post-caption">${postCaption.value ? postCaption.value : ""}</div>
-            <div class="post-actions">
-              <button onclick="likePost(${i})">👍 Like</button>
-            </div>
-          </div>
-        `;
-      }
-      postsDiv.innerHTML = output || "<p>No posts found.</p>";
-    } catch (err) {
-      postsDiv.innerHTML = "<p>Error loading posts: " + err.message + "</p>";
+  // Auto detect if wallet is already connected on page load
+  window.ethereum?.request({ method: 'eth_accounts' }).then(accounts => {
+    if (accounts.length > 0) {
+      walletAddressDiv.textContent = `Connected: ${accounts[0]}`;
+      connectBtn.textContent = 'Wallet Connected';
+      connectBtn.disabled = true;
     }
-  }
-
-  // Like post function
-  window.likePost = async function(postId) {
-    try {
-      const tx = await contract.likePost(postId);
-      statusDiv.textContent = "Sending like transaction, please approve wallet prompt...";
-      await tx.wait();
-      statusDiv.textContent = "Post liked!";
-      await loadPosts();
-    } catch (err) {
-      console.error(err);
-      statusDiv.textContent = "Failed to like post: " + err.message;
-    }
-  };
-
-})();
+  }).catch(() => {});
 </script>
 
 </body>
