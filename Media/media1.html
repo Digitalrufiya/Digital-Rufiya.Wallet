@@ -2,66 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Media Wallet Connect Fix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFMedia Post | Decentralized</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    #connectBtn {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      border-radius: 6px;
-    }
-    #walletAddress {
-      margin-top: 20px;
-      font-family: monospace;
-      font-size: 14px;
-      color: #333;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
 </head>
 <body>
+  <div>
+    <h2>DRFMedia DApp</h2>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <p id="walletAddress">Not connected</p>
 
-<button id="connectBtn">Connect Wallet</button>
-<div id="walletAddress"></div>
+    <input type="file" id="mediaInput" accept="image/*,video/*">
+    <input type="text" id="caption" placeholder="Write your caption" />
+    <button onclick="uploadAndPost()">Post</button>
+  </div>
 
-<script>
-  const connectBtn = document.getElementById('connectBtn');
-  const walletAddressDiv = document.getElementById('walletAddress');
+  <script>
+    const DRFM_CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const PINATA_JWT = "Bearer <YOUR_PINATA_JWT_HERE>"; // Replace this token
 
-  async function connectWallet() {
-    if (typeof window.ethereum === 'undefined') {
-      alert('No Ethereum wallet detected. Please install MetaMask or a compatible wallet.');
-      return;
+    let provider, signer, drfContract;
+
+    const contractABI = [...]; // Use the ABI you already provided
+
+    async function connectWallet() {
+      const wcProvider = new WalletConnectProvider.default({
+        rpc: { 56: "https://bsc-dataseed.binance.org" },
+        chainId: 56
+      });
+      await wcProvider.enable();
+      provider = new ethers.providers.Web3Provider(wcProvider);
+      signer = provider.getSigner();
+      drfContract = new ethers.Contract(DRFM_CONTRACT_ADDRESS, contractABI, signer);
+
+      const address = await signer.getAddress();
+      document.getElementById("walletAddress").textContent = `Connected: ${address}`;
     }
 
-    try {
-      // Request wallet accounts
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const account = accounts[0];
-      walletAddressDiv.textContent = `Connected: ${account}`;
-      connectBtn.textContent = 'Wallet Connected';
-      connectBtn.disabled = true;
-    } catch (error) {
-      console.error('User rejected wallet connection', error);
-      alert('Wallet connection was rejected.');
+    async function uploadToPinata(file) {
+      const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: PINATA_JWT
+        },
+        body: formData
+      });
+      const data = await res.json();
+      return data.IpfsHash;
     }
-  }
 
-  connectBtn.addEventListener('click', connectWallet);
+    async function uploadAndPost() {
+      const file = document.getElementById("mediaInput").files[0];
+      const caption = document.getElementById("caption").value;
+      if (!file || !caption) return alert("File and caption required");
 
-  // Auto detect if wallet is already connected on page load
-  window.ethereum?.request({ method: 'eth_accounts' }).then(accounts => {
-    if (accounts.length > 0) {
-      walletAddressDiv.textContent = `Connected: ${accounts[0]}`;
-      connectBtn.textContent = 'Wallet Connected';
-      connectBtn.disabled = true;
+      try {
+        const ipfsHash = await uploadToPinata(file);
+        const mediaType = file.type.startsWith("video") ? 1 : 0;
+        const tx = await drfContract.post(ipfsHash, mediaType);
+        await tx.wait();
+        alert("Posted successfully!");
+      } catch (e) {
+        console.error(e);
+        alert("Error posting. See console.");
+      }
     }
-  }).catch(() => {});
-</script>
-
+  </script>
 </body>
 </html>
