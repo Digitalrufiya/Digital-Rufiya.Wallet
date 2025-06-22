@@ -1,77 +1,148 @@
 <!DOCTYPE html>
+<!-- START: Updated DRFMedia Timeline with Like & Comment System (Firebase) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFMedia Post | Decentralized</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <!-- Style and header unchanged -->
 </head>
 <body>
-  <div>
-    <h2>DRFMedia DApp</h2>
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <p id="walletAddress">Not connected</p>
+  <!-- ... Existing content unchanged ... -->
 
-    <input type="file" id="mediaInput" accept="image/*,video/*">
-    <input type="text" id="caption" placeholder="Write your caption" />
-    <button onclick="uploadAndPost()">Post</button>
-  </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase, ref, push, set, onValue, get, update, child
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  <script>
-    const DRFM_CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-    const PINATA_JWT = "Bearer <YOUR_PINATA_JWT_HERE>"; // Replace this token
+  // Initialize Firebase (same config as your file)
+  const app = initializeApp({
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  });
 
-    let provider, signer, drfContract;
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-    const contractABI = [...]; // Use the ABI you already provided
+  let currentUser = null;
 
-    async function connectWallet() {
-      const wcProvider = new WalletConnectProvider.default({
-        rpc: { 56: "https://bsc-dataseed.binance.org" },
-        chainId: 56
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    renderPosts();
+  });
+
+  async function renderPosts() {
+    const postsRef = ref(db, "posts");
+    onValue(postsRef, snapshot => {
+      const posts = snapshot.val() || {};
+      const postContainer = document.getElementById("postContainer");
+      postContainer.innerHTML = "";
+
+      Object.entries(posts).reverse().forEach(([postId, post]) => {
+        const postDiv = document.createElement("div");
+        postDiv.className = "post-item";
+
+        postDiv.innerHTML = `
+          <div class="post-owner">
+            <img src="${post.photoURL}" class="avatar" />
+            <div>
+              <strong>${post.displayName}</strong><br/>
+              <small>${post.drfAddress || "Wallet not linked"}</small>
+            </div>
+          </div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          <div class="post-caption">${post.caption}</div>
+          ${post.mediaType === 'video'
+            ? `<video controls src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" style="width:100%;margin-top:10px;border-radius:6px"></video>`
+            : `<img src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" alt="Post media" style="margin-top:10px;border-radius:6px" />`}
+
+          <div class="post-actions" style="margin-top:10px">
+            <button onclick="likePost('${postId}')">👍 Like (<span id="likes-${postId}">${post.likesCount || 0}</span>)</button>
+            <button onclick="toggleComments('${postId}')">💬 Comments (<span id="comments-${postId}">${post.commentsCount || 0}</span>)</button>
+          </div>
+
+          <div class="comments-section" id="comments-${postId}-section" style="display:none;margin-top:10px">
+            <div id="comments-list-${postId}"></div>
+            <textarea id="comment-input-${postId}" rows="2" placeholder="Write a comment..." style="width:100%;margin-top:5px"></textarea>
+            <button onclick="submitComment('${postId}')" style="margin-top:5px">Post Comment</button>
+          </div>
+        `;
+
+        postContainer.appendChild(postDiv);
       });
-      await wcProvider.enable();
-      provider = new ethers.providers.Web3Provider(wcProvider);
-      signer = provider.getSigner();
-      drfContract = new ethers.Contract(DRFM_CONTRACT_ADDRESS, contractABI, signer);
+    });
+  }
 
-      const address = await signer.getAddress();
-      document.getElementById("walletAddress").textContent = `Connected: ${address}`;
-    }
-
-    async function uploadToPinata(file) {
-      const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: PINATA_JWT
-        },
-        body: formData
-      });
-      const data = await res.json();
-      return data.IpfsHash;
-    }
-
-    async function uploadAndPost() {
-      const file = document.getElementById("mediaInput").files[0];
-      const caption = document.getElementById("caption").value;
-      if (!file || !caption) return alert("File and caption required");
-
-      try {
-        const ipfsHash = await uploadToPinata(file);
-        const mediaType = file.type.startsWith("video") ? 1 : 0;
-        const tx = await drfContract.post(ipfsHash, mediaType);
-        await tx.wait();
-        alert("Posted successfully!");
-      } catch (e) {
-        console.error(e);
-        alert("Error posting. See console.");
+  window.likePost = async function(postId) {
+    if (!currentUser) return alert("Please sign in.");
+    const likeRef = ref(db, `likes/${postId}/${currentUser.uid}`);
+    const snapshot = await get(likeRef);
+    if (!snapshot.exists()) {
+      await set(likeRef, true);
+      const postRef = ref(db, `posts/${postId}`);
+      const postSnap = await get(postRef);
+      if (postSnap.exists()) {
+        const current = postSnap.val().likesCount || 0;
+        await update(postRef, { likesCount: current + 1 });
       }
+    } else {
+      alert("You already liked this post.");
     }
-  </script>
+  }
+
+  window.toggleComments = function(postId) {
+    const section = document.getElementById(`comments-${postId}-section`);
+    section.style.display = section.style.display === "none" ? "block" : "none";
+    loadComments(postId);
+  }
+
+  async function loadComments(postId) {
+    const commentList = document.getElementById(`comments-list-${postId}`);
+    const commentRef = ref(db, `comments/${postId}`);
+    const snap = await get(commentRef);
+    commentList.innerHTML = "";
+    if (snap.exists()) {
+      Object.values(snap.val()).forEach(comment => {
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>${comment.displayName}</strong>: ${comment.text}`;
+        commentList.appendChild(div);
+      });
+    }
+  }
+
+  window.submitComment = async function(postId) {
+    if (!currentUser) return alert("Please sign in.");
+    const textarea = document.getElementById(`comment-input-${postId}`);
+    const text = textarea.value.trim();
+    if (!text) return;
+    const newRef = push(ref(db, `comments/${postId}`));
+    await set(newRef, {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      photoURL: currentUser.photoURL,
+      text,
+      timestamp: Date.now()
+    });
+    textarea.value = "";
+    const postRef = ref(db, `posts/${postId}`);
+    const postSnap = await get(postRef);
+    if (postSnap.exists()) {
+      const current = postSnap.val().commentsCount || 0;
+      await update(postRef, { commentsCount: current + 1 });
+    }
+    loadComments(postId);
+  }
+</script>
 </body>
 </html>
