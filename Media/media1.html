@@ -46,6 +46,7 @@
       font-weight: 700;
     }
 
+    /* Menu toggle button */
     #menuToggle {
       background: transparent;
       border: none;
@@ -65,6 +66,7 @@
       transition: background 0.3s ease;
     }
 
+    /* Navigation */
     #primaryNav {
       width: 100%;
       display: none;
@@ -91,6 +93,7 @@
       background: rgba(255,255,255,0.2);
     }
 
+    /* Larger screen nav */
     @media (min-width: 768px) {
       #menuToggle {
         display: none;
@@ -113,6 +116,7 @@
       }
     }
 
+    /* Avatar styles */
     .avatar {
       width: 32px;
       height: 32px;
@@ -122,6 +126,7 @@
       box-shadow: 0 0 3px rgba(0,0,0,0.1);
     }
 
+    /* Post container */
     #postContainer {
       max-width: 700px;
       margin: 20px auto;
@@ -150,37 +155,15 @@
       font-size: 1em;
       white-space: pre-wrap;
     }
-    .post-actions button {
-      margin-right: 12px;
-      cursor: pointer;
-      font-size: 1.1em;
-      background: none;
-      border: none;
-    }
-    .post-actions button[aria-pressed="true"] {
-      color: red;
-    }
-
-    /* *** Important Video Fixes *** */
-    video {
+    video, img {
       max-width: 100%;
-      max-height: 480px;  /* Limit height */
       border-radius: 6px;
       margin-top: 10px;
       background: black;
       display: block;
-      object-fit: contain !important; /* Crucial: shows full video without cropping */
-      width: 100% !important; /* Make video fill container width */
-      height: auto !important; /* Auto height to keep aspect ratio */
     }
 
-    img {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-top: 10px;
-      display: block;
-    }
-
+    /* Search bar */
     #searchBar {
       max-width: 700px;
       margin: 10px auto 20px auto;
@@ -213,7 +196,7 @@
   <nav id="primaryNav" role="navigation" aria-label="Primary Navigation">
     <a href="#">Home</a>
     <a href="#">Timeline</a>
-    <a href="#">Upload</a>
+    <a href="#" id="uploadNavLink" style="display:none;">Upload</a>
     <a href="#" id="profileLink" style="display:none;">Profile</a>
     <a href="#" id="loginNavLink">Login</a>
     <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
@@ -262,6 +245,53 @@
         post.style.display = 'none';
       }
     });
+  });
+
+  // Sync login/logout buttons and nav links with app.js state
+  import { getAuth, onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const loginNavLink = document.getElementById('loginNavLink');
+  const logoutNavLink = document.getElementById('logoutNavLink');
+  const uploadForm = document.getElementById('uploadForm');
+  const uploadNavLink = document.getElementById('uploadNavLink');
+  const profileLink = document.getElementById('profileLink');
+
+  const auth = getAuth();
+  const provider = new GoogleAuthProvider();
+
+  function updateUI(user) {
+    const loggedIn = !!user;
+    uploadForm.style.display = loggedIn ? 'block' : 'none';
+    loginBtn.style.display = loggedIn ? 'none' : 'block';
+    logoutBtn.style.display = loggedIn ? 'block' : 'none';
+    loginNavLink.style.display = loggedIn ? 'none' : 'inline-block';
+    logoutNavLink.style.display = loggedIn ? 'inline-block' : 'none';
+    uploadNavLink.style.display = loggedIn ? 'inline-block' : 'none';
+    profileLink.style.display = loggedIn ? 'inline-block' : 'none';
+  }
+
+  onAuthStateChanged(auth, user => {
+    updateUI(user);
+  });
+
+  loginBtn.addEventListener('click', () => {
+    signInWithPopup(auth, provider).catch(console.error);
+  });
+
+  logoutBtn.addEventListener('click', () => {
+    signOut(auth).catch(console.error);
+  });
+
+  loginNavLink.addEventListener('click', e => {
+    e.preventDefault();
+    signInWithPopup(auth, provider).catch(console.error);
+  });
+
+  logoutNavLink.addEventListener('click', e => {
+    e.preventDefault();
+    signOut(auth).catch(console.error);
   });
 </script>
 
