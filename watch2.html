@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFTube - Watch Videos</title>
+  <link rel="icon" href="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
+
+  <!-- ✅ SEO Branding -->
+  <meta name="description" content="Watch decentralized videos on DRFTube powered by DRFChain. Stream and comment via IPFS and Firebase." />
+  <meta name="keywords" content="DRFTube, DRFChain, IPFS Video, Decentralized YouTube, Islamic Content, Web3 Streaming" />
+  <meta name="author" content="DRFChain Team" />
+
+  <!-- ✅ OpenGraph -->
+  <meta property="og:title" content="DRFTube - Watch Videos" />
+  <meta property="og:description" content="Explore videos stored on IPFS and comment, like, and share securely on DRFTube." />
+  <meta property="og:image" content="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
+  <meta property="og:url" content="https://www.drfchain.org/watch.html" />
+  <meta property="og:type" content="website" />
+
+  <!-- ✅ Twitter Preview -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DRFTube - Watch Web3 Videos" />
+  <meta name="twitter:description" content="DRFTube lets you watch videos securely on Web3 with Firebase + IPFS." />
+  <meta name="twitter:image" content="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226" />
+
+  <!-- ✅ JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "DRFTube",
+    "url": "https://www.drfchain.org/watch.html",
+    "description": "Decentralized video streaming powered by Digital Rufiya Coin (DRF) using IPFS and Firebase.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "DRFChain",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226"
+      }
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f7f7f7;
+    }
+    h1 {
+      text-align: center;
+    }
+    #user-info {
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .video-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    video {
+      width: 100%;
+      max-height: 300px;
+      display: block;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background: black;
+    }
+    .actions {
+      margin-bottom: 10px;
+    }
+    .actions button {
+      margin-right: 10px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .comment-box {
+      width: 100%;
+      height: 60px;
+      padding: 8px;
+      font-size: 14px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+    .comment-btn {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .comment-list {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #eee;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .comment-item {
+      margin-bottom: 8px;
+    }
+    #loginBtn, #logoutBtn {
+      padding: 10px 20px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    #sortSelect {
+      margin-bottom: 20px;
+      font-size: 14px;
+      padding: 5px 10px;
+    }
+    .delete-btn {
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>DRFTube - Watch Videos</h1>
+
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <span id="user-info"></span>
+  </div>
+
+  <label for="sortSelect">Sort videos by:</label>
+  <select id="sortSelect">
+    <option value="latest">Latest</option>
+    <option value="mostLiked">Most Liked</option>
+  </select>
+
+  <div id="videosContainer">Loading videos...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, increment,
+      addDoc, deleteDoc
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut
+    } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { Timestamp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+      authDomain: "drftube-634c6.firebaseapp.com",
+      projectId: "drftube-634c6",
+      storageBucket: "drftube-634c6.appspot.com",
+      messagingSenderId: "819828633864",
+      appId: "1:819828633864:web:513002b461259b000cbcbd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("user-info");
+    const videosContainer = document.getElementById("videosContainer");
+    const sortSelect = document.getElementById("sortSelect");
+
+    let currentUser = null;
+
+    loginBtn.onclick = async () => {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    };
+    logoutBtn.onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      loginBtn.style.display = user ? "none" : "inline-block";
+      logoutBtn.style.display = user ? "inline-block" : "none";
+      userInfo.textContent = user?.email || "";
+      loadVideos();
+    });
+
+    sortSelect.onchange = loadVideos;
+
+    async function loadVideos() {
+      videosContainer.innerHTML = "Loading...";
+      let q = collection(db, "videos");
+      q = sortSelect.value === "mostLiked" ? query(q, orderBy("likes", "desc")) : query(q, orderBy("uploadedAt", "desc"));
+      const snap = await getDocs(q);
+      videosContainer.innerHTML = "";
+
+      for (const docSnap of snap.docs) {
+        const video = docSnap.data();
+        const id = docSnap.id;
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${video.ipfsHash}`;
+
+        const div = document.createElement("div");
+        div.className = "video-item";
+
+        const deleteButton = currentUser?.email === "digitalrufiyacoin@gmail.com"
+          ? `<button class="delete-btn" data-id="${id}" style="background:red;color:white;">🗑️ Delete</button>`
+          : "";
+
+        div.innerHTML = `
+          <h3>${video.title}</h3>
+          <video controls src="${ipfsUrl}"></video>
+          <div class="actions">
+            <button class="like-btn" data-id="${id}">👍 Like (<span>${video.likes || 0}</span>)</button>
+            ${deleteButton}
+          </div>
+          <div class="comments-section">
+            ${currentUser ? `
+              <textarea class="comment-box" id="comment-${id}" placeholder="Write a comment..."></textarea>
+              <button class="comment-btn" data-id="${id}">Post Comment</button>
+            ` : '<p><i>Login to post comments</i></p>'}
+            <div class="comment-list" id="comments-${id}">Loading comments...</div>
+          </div>
+        `;
+
+        videosContainer.appendChild(div);
+        loadComments(id); // load comments separately (parallel)
+      }
+    }
+
+    async function loadComments(videoId) {
+      const commentsRef = collection(db, "videos", videoId, "comments");
+      const q = query(commentsRef, orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const container = document.getElementById("comments-" + videoId);
+      container.innerHTML = "";
+      snap.forEach(doc => {
+        const c = doc.data();
+        const item = document.createElement("div");
+        item.className = "comment-item";
+        item.innerHTML = `<strong>${c.author}</strong>: ${c.text}`;
+        container.appendChild(item);
+      });
+    }
+
+    videosContainer.addEventListener("click", async (e) => {
+      const likeBtn = e.target.closest(".like-btn");
+      const commentBtn = e.target.closest(".comment-btn");
+      const deleteBtn = e.target.closest(".delete-btn");
+
+      if (likeBtn) {
+        const id = likeBtn.dataset.id;
+        const ref = doc(db, "videos", id);
+        await updateDoc(ref, { likes: increment(1) });
+        const span = likeBtn.querySelector("span");
+        span.textContent = parseInt(span.textContent) + 1;
+      }
+
+      if (commentBtn && currentUser) {
+        const id = commentBtn.dataset.id;
+        const textBox = document.getElementById("comment-" + id);
+        const text = textBox.value.trim();
+        if (!text) return;
+        const commentsRef = collection(db, "videos", id, "comments");
+        await addDoc(commentsRef, {
+          text,
+          author: currentUser.email,
+          createdAt: Timestamp.now()
+        });
+        textBox.value = "";
+        loadComments(id);
+      }
+
+      if (deleteBtn && currentUser?.email === "digitalrufiyacoin@gmail.com") {
+        const id = deleteBtn.dataset.id;
+        if (confirm("Are you sure you want to delete this video?")) {
+          await deleteDoc(doc(db, "videos", id));
+          loadVideos();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
