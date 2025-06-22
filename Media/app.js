@@ -119,6 +119,7 @@ function renderPosts() {
   onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
     const data = snap.val();
+    console.log("Loaded posts:", data);
     if (!data) return;
 
     Object.entries(data)
@@ -127,21 +128,18 @@ function renderPosts() {
         const liked = currentUser && post.likes && post.likes[currentUser.uid];
         const isAdmin = currentUser && admins.has(currentUser.email);
 
+        console.log("Rendering post mediaUrl:", post.mediaUrl, "type:", post.mediaType);
+
         const card = document.createElement("div");
         card.className = "post-item";
+
         card.innerHTML = `
           <div class="post-owner">
             <img src="${post.photoURL||''}" class="avatar" alt="User avatar"/>
             <strong>${post.displayName||"Anonymous"}</strong>
           </div>
           <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          ${
-            post.mediaType === "video"
-              ? `<video src="${post.mediaUrl}" controls preload="metadata" playsinline crossorigin="anonymous" style="max-width:100%; max-height:480px;">
-                   Your browser does not support the video tag.
-                 </video>`
-              : `<img src="${post.mediaUrl}" loading="lazy" alt="Post image"/>`
-          }
+          <div class="media-wrapper"></div>
           <div class="post-caption">${escapeHTML(post.caption)}</div>
           <div class="post-actions">
             <button class="like-btn" data-id="${postId}" aria-pressed="${liked ? 1 : 0}">
@@ -169,6 +167,45 @@ function renderPosts() {
             }
           </div>
         `;
+
+        // Insert media element dynamically
+        const mediaWrapper = card.querySelector(".media-wrapper");
+
+        if(post.mediaType === "video"){
+          const video = document.createElement("video");
+          video.controls = true;
+          video.preload = "metadata";
+          video.playsInline = true;
+          video.muted = true; // helps autoplay on mobile sometimes
+          video.style.maxWidth = "100%";
+          video.style.maxHeight = "480px";
+          video.crossOrigin = "anonymous";
+
+          const source = document.createElement("source");
+          source.src = post.mediaUrl;
+
+          // Try to guess type from URL extension
+          if(post.mediaUrl.endsWith(".mp4")){
+            source.type = "video/mp4";
+          } else if(post.mediaUrl.endsWith(".webm")){
+            source.type = "video/webm";
+          } else {
+            source.type = "video/mp4"; // default fallback
+          }
+
+          video.appendChild(source);
+          mediaWrapper.appendChild(video);
+        } else {
+          // image
+          const img = document.createElement("img");
+          img.src = post.mediaUrl;
+          img.loading = "lazy";
+          img.alt = "Post image";
+          img.style.maxWidth = "100%";
+          img.style.borderRadius = "6px";
+          mediaWrapper.appendChild(img);
+        }
+
         postContainer.appendChild(card);
 
         // Events
@@ -282,4 +319,4 @@ function escapeHTML(s) {
 
 // Start rendering posts
 renderPosts();
- 
+               
