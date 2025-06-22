@@ -14,7 +14,7 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-// --- Your Firebase Config ---
+// === Firebase Config ===
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -25,13 +25,16 @@ const firebaseConfig = {
   appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
 };
 
+// === Pinata JWT ===
 const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
+// === Init Firebase ===
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// === UI Elements ===
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const uploadForm = document.getElementById("uploadForm");
@@ -41,12 +44,12 @@ const postContainer = document.getElementById("postContainer");
 
 let currentUser = null;
 
-// Escape HTML helper
+// === Escape HTML ===
 function escapeHTML(str) {
   return str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
-// Listen for auth state changes
+// === Auth Handling ===
 onAuthStateChanged(auth, user => {
   currentUser = user;
 
@@ -66,27 +69,15 @@ onAuthStateChanged(auth, user => {
 loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
 logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
 
-// Upload form submit handler
+// === Upload Handler ===
 uploadForm.addEventListener("submit", async e => {
   e.preventDefault();
 
-  if (!currentUser) {
-    alert("Please login first.");
-    return;
-  }
-
-  if (!mediaFile.files.length) {
-    alert("Please select a file.");
-    return;
-  }
-
-  if (captionInput.value.trim().length < 4) {
-    alert("Caption must be at least 4 characters.");
-    return;
-  }
+  if (!currentUser) return alert("Please login first.");
+  if (!mediaFile.files.length) return alert("Please select a file.");
+  if (captionInput.value.trim().length < 4) return alert("Caption too short.");
 
   uploadForm.querySelector("button").disabled = true;
-
   const file = mediaFile.files[0];
   const fd = new FormData();
   fd.append("file", file);
@@ -98,10 +89,10 @@ uploadForm.addEventListener("submit", async e => {
       body: fd
     });
 
-    if (!res.ok) throw new Error("Pinata Upload Failed: " + res.status);
+    if (!res.ok) throw new Error("Pinata Upload Failed");
 
     const { IpfsHash } = await res.json();
-    const mediaUrl = `https://cloudflare-ipfs.com/ipfs/${IpfsHash}`;
+    const mediaIpfsHash = IpfsHash;
 
     const newPostRef = push(ref(db, "posts"));
     await set(newPostRef, {
@@ -109,7 +100,7 @@ uploadForm.addEventListener("submit", async e => {
       displayName: currentUser.displayName || "Anonymous",
       photoURL: currentUser.photoURL || "",
       caption: captionInput.value.trim(),
-      mediaUrl,
+      ipfsHash: mediaIpfsHash,
       mediaType: file.type.startsWith("video") ? "video" : "image",
       mediaMimeType: file.type,
       timestamp: Date.now(),
@@ -126,6 +117,7 @@ uploadForm.addEventListener("submit", async e => {
   }
 });
 
+// === Render Posts ===
 function renderPosts() {
   onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
@@ -135,6 +127,12 @@ function renderPosts() {
       return;
     }
 
+    const gateways = [
+      "https://gateway.pinata.cloud/ipfs/",
+      "https://cloudflare-ipfs.com/ipfs/",
+      "https://ipfs.io/ipfs/"
+    ];
+
     Object.entries(data)
       .sort((a, b) => b[1].timestamp - a[1].timestamp)
       .forEach(([postId, post]) => {
@@ -143,15 +141,23 @@ function renderPosts() {
 
         const safeName = escapeHTML(post.displayName || "Anonymous");
         const safeCaption = escapeHTML(post.caption);
+        const ipfsHash = post.ipfsHash;
+        const primaryUrl = `${gateways[0]}${ipfsHash}`;
+        const fallbackUrl = `${gateways[1]}${ipfsHash}`;
 
         let mediaHTML = "";
+
         if (post.mediaType === "video") {
-          mediaHTML = `<video controls preload="metadata" width="100%">
-            <source src="${post.mediaUrl}" type="${post.mediaMimeType || 'video/mp4'}" />
-            Your browser does not support the video tag.
-          </video>`;
+          mediaHTML = `
+            <video controls preload="metadata" width="100%">
+              <source src="${primaryUrl}" type="${post.mediaMimeType || 'video/mp4'}" />
+              Your browser does not support the video tag.
+            </video>`;
         } else {
-          mediaHTML = `<img src="${post.mediaUrl}" alt="User uploaded image" />`;
+          mediaHTML = `
+            <img src="${primaryUrl}" 
+                 onerror="this.onerror=null; this.src='${fallbackUrl}'" 
+                 alt="Uploaded image" />`;
         }
 
         card.innerHTML = `
