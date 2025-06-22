@@ -3,150 +3,72 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRFMedia DApp</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f5f7fa;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-    }
-    .post-card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
-    .post-caption {
-      margin: 10px 0;
-    }
-    .post-actions button {
-      margin-right: 10px;
-      padding: 6px 12px;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-  </style>
+  <title>DRFMedia</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
+  <h1>📷 DRFMedia Post Uploader</h1>
+  <p>Wallet: <span id="walletAddress">Detecting...</span></p>
 
-<h2>DRFMedia DApp</h2>
-<input type="file" id="mediaInput" accept="image/*,video/*" /><br/><br/>
-<textarea id="captionInput" placeholder="Enter caption..." style="width:100%; padding:10px;"></textarea><br/><br/>
-<button onclick="uploadPost()">Upload Post</button>
-<div id="postContainer"></div>
+  <input type="file" id="mediaFile" accept="image/*,video/*" />
+  <input type="text" id="caption" placeholder="Write a caption" />
+  <button id="uploadBtn">Upload & Post</button>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script>
-const CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-const contractABI = [/* ABI you provided here */];
-const PINATA_JWT = "Bearer eyJhbGciOiJIUz...<TRIMMED>..."; // use your JWT token
+  <script>
+    const walletDisplay = document.getElementById("walletAddress");
+    const wallet = localStorage.getItem("drf_active_wallet");
 
-let provider, signer, contract;
+    if (!wallet || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+      walletDisplay.textContent = "❌ DRF Wallet not detected";
+    } else {
+      walletDisplay.textContent = wallet;
+    }
 
-(async function connectWallet() {
-  if (window.drfWallet) {
-    provider = new ethers.providers.Web3Provider(window.drfWallet);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
-    console.log("Wallet connected:", await signer.getAddress());
-  } else {
-    alert("DRF Wallet not detected");
-  }
-})();
+    const PINATA_JWT = "Bearer <your-pinata-jwt>"; // replace with your actual JWT
+    const contractAddress = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+    const contractABI = [/* ABI goes here (you already provided it) */];
 
-async function uploadToPinata(file) {
-  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-  const formData = new FormData();
-  formData.append("file", file);
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: PINATA_JWT },
-    body: formData
-  });
-  const data = await response.json();
-  return data.IpfsHash;
-}
+    async function uploadToPinata(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: PINATA_JWT },
+        body: formData
+      });
+      const json = await res.json();
+      return json.IpfsHash;
+    }
 
-async function uploadPost() {
-  const file = document.getElementById('mediaInput').files[0];
-  const caption = document.getElementById('captionInput').value;
-  if (!file || !caption) return alert("Media and caption required");
+    async function postToContract(ipfsHash, mediaType) {
+      const provider = new ethers.providers.Web3Provider(window.ethereum || window.drfwallet);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(contractAddress, contractABI, signer);
+      const tx = await contract.post(ipfsHash, mediaType);
+      await tx.wait();
+      alert("✅ Post successful & rewarded!");
+    }
 
-  try {
-    const ipfsHash = await uploadToPinata(file);
-    const mediaType = file.type.startsWith('video') ? 1 : 0;
-    const tx = await contract.post(ipfsHash, mediaType);
-    await tx.wait();
-    alert("Post uploaded and rewarded!");
-    renderPosts();
-  } catch (err) {
-    console.error("Upload failed:", err);
-    alert("Failed to upload post");
-  }
-}
-
-async function renderPosts() {
-  if (!contract) return;
-  const count = await contract.totalPosts();
-  const container = document.getElementById("postContainer");
-  container.innerHTML = "";
-  for (let i = count - 1; i >= 0 && i > count - 10; i--) {
-    const post = await contract.getPost(i);
-    const url = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
-    const card = document.createElement("div");
-    card.className = "post-card";
-    card.innerHTML = `
-      <div class="post-owner">
-        <img src="https://www.gravatar.com/avatar/${post.author.slice(2,10)}?d=identicon" class="avatar" />
-        <div><strong>${post.author}</strong></div>
-      </div>
-      <div class="post-caption">${post.ipfsHash}</div>
-      ${post.mediaType == 1 ?
-        `<video controls width="100%"><source src="${url}" /></video>` :
-        `<img src="${url}" width="100%" />`
+    document.getElementById("uploadBtn").onclick = async () => {
+      if (!wallet || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+        alert("Please connect your DRF Wallet.");
+        return;
       }
-      <div class="post-actions">
-        <button onclick="likePost(${i})">Like (${post.likes})</button>
-        <button onclick="commentPost(${i})">Comment</button>
-      </div>
-    `;
-    container.appendChild(card);
-  }
-}
 
-async function likePost(id) {
-  const tx = await contract.likePost(id);
-  await tx.wait();
-  renderPosts();
-}
+      const file = document.getElementById("mediaFile").files[0];
+      if (!file) return alert("Please select a file.");
 
-async function commentPost(id) {
-  const msg = prompt("Enter comment");
-  if (!msg) return;
-  const tx = await contract.commentOnPost(id, msg);
-  await tx.wait();
-  alert("Comment posted");
-}
-
-setTimeout(renderPosts, 1500);
-</script>
+      const caption = document.getElementById("caption").value;
+      try {
+        const ipfsHash = await uploadToPinata(file);
+        const mediaType = file.type.startsWith("video") ? 1 : 0;
+        await postToContract(ipfsHash, mediaType);
+      } catch (e) {
+        console.error(e);
+        alert("Upload or post failed.");
+      }
+    };
+  </script>
 </body>
 </html>
