@@ -2,219 +2,151 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Social - Post & Like</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRFMedia DApp</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 15px; background: #f0f2f5; }
-    h1 { color: #0066cc; }
-    input, textarea, select, button {
-      font-size: 1rem; padding: 8px; margin: 5px 0 15px 0; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+      color: #333;
     }
-    button {
-      background: #0066cc; color: white; border: none; cursor: pointer;
-      max-width: 150px;
-    }
-    button:disabled { background: #999; cursor: not-allowed; }
     .post-card {
-      background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-      margin-bottom: 20px; padding: 15px;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .post-header { display: flex; justify-content: space-between; font-weight: bold; color: #333; }
-    .post-actions button { margin-right: 10px; }
-    .post-ipfs { font-family: monospace; font-size: 0.9rem; color: #666; }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    .post-caption {
+      margin: 10px 0;
+    }
+    .post-actions button {
+      margin-right: 10px;
+      padding: 6px 12px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-<h1>DRFMedia Social</h1>
+<h2>DRFMedia DApp</h2>
+<input type="file" id="mediaInput" accept="image/*,video/*" /><br/><br/>
+<textarea id="captionInput" placeholder="Enter caption..." style="width:100%; padding:10px;"></textarea><br/><br/>
+<button onclick="uploadPost()">Upload Post</button>
+<div id="postContainer"></div>
 
-<section id="connectWalletSection">
-  <button id="connectWalletBtn">Connect Wallet</button>
-  <p id="walletAddress"></p>
-</section>
-
-<section id="postSection" style="display:none;">
-  <h2>Create Post</h2>
-  <label>IPFS Hash (Qm...):</label>
-  <input type="text" id="ipfsHashInput" placeholder="Qm..." />
-  <label>Media Type:</label>
-  <select id="mediaTypeSelect">
-    <option value="0">Video</option>
-    <option value="1">Image</option>
-  </select>
-  <button id="postBtn" disabled>Post & Earn DRFM</button>
-</section>
-
-<hr/>
-
-<section>
-  <h2>Recent Posts</h2>
-  <div id="postsContainer">Loading posts...</div>
-</section>
-
-<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script>
-  const contractAddress = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-  const contractABI = [
-    // Add minimal ABI pieces for post, getPost, totalPosts, likePost, getComments, commentOnPost
-    {
-      "inputs": [
-        { "internalType": "string", "name": "ipfsHash", "type": "string" },
-        { "internalType": "uint8", "name": "mediaType", "type": "uint8" }
-      ],
-      "name": "post",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }],
-      "name": "getPost",
-      "outputs": [
-        { "internalType": "address", "name": "author", "type": "address" },
-        { "internalType": "string", "name": "ipfsHash", "type": "string" },
-        { "internalType": "uint8", "name": "mediaType", "type": "uint8" },
-        { "internalType": "uint256", "name": "likes", "type": "uint256" },
-        { "internalType": "bool", "name": "flagged", "type": "bool" }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "totalPosts",
-      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
-      "name": "likePost",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ];
+const CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+const contractABI = [/* ABI you provided here */];
+const PINATA_JWT = "Bearer eyJhbGciOiJIUz...<TRIMMED>..."; // use your JWT token
 
-  let provider;
-  let signer;
-  let contract;
-  let walletAddress = null;
+let provider, signer, contract;
 
-  const connectWalletBtn = document.getElementById("connectWalletBtn");
-  const walletAddressP = document.getElementById("walletAddress");
-  const postSection = document.getElementById("postSection");
-  const postBtn = document.getElementById("postBtn");
-  const ipfsHashInput = document.getElementById("ipfsHashInput");
-  const mediaTypeSelect = document.getElementById("mediaTypeSelect");
-  const postsContainer = document.getElementById("postsContainer");
-
-  connectWalletBtn.onclick = async () => {
-    try {
-      // Detect provider - supports metamask or standalone wallets injecting ethereum provider
-      if (window.ethereum) {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        walletAddress = await signer.getAddress();
-      } else if (window.myStandaloneWallet) {
-        // If you have a standalone wallet object
-        provider = new ethers.providers.Web3Provider(window.myStandaloneWallet.provider);
-        signer = window.myStandaloneWallet.getSigner();
-        walletAddress = await signer.getAddress();
-      } else {
-        alert("No wallet detected! Please install MetaMask or use your standalone wallet.");
-        return;
-      }
-
-      contract = new ethers.Contract(contractAddress, contractABI, signer);
-      walletAddressP.textContent = "Connected Wallet: " + walletAddress;
-      connectWalletBtn.style.display = "none";
-      postSection.style.display = "block";
-      loadPosts();
-
-      // Enable post button only when IPFS hash input is valid
-      ipfsHashInput.addEventListener("input", () => {
-        postBtn.disabled = !ipfsHashInput.value.trim().startsWith("Qm");
-      });
-    } catch (err) {
-      alert("Failed to connect wallet: " + err.message);
-    }
-  };
-
-  postBtn.onclick = async () => {
-    const ipfsHash = ipfsHashInput.value.trim();
-    const mediaType = parseInt(mediaTypeSelect.value);
-
-    if (!ipfsHash || !ipfsHash.startsWith("Qm")) {
-      alert("Enter valid IPFS hash starting with Qm...");
-      return;
-    }
-
-    postBtn.disabled = true;
-    postBtn.textContent = "Posting...";
-
-    try {
-      const tx = await contract.post(ipfsHash, mediaType);
-      await tx.wait();
-      alert("Post created and DRFM tokens rewarded!");
-      ipfsHashInput.value = "";
-      postBtn.disabled = true;
-      postBtn.textContent = "Post & Earn DRFM";
-      loadPosts();
-    } catch (err) {
-      alert("Failed to post: " + err.message);
-      postBtn.disabled = false;
-      postBtn.textContent = "Post & Earn DRFM";
-    }
-  };
-
-  async function loadPosts() {
-    postsContainer.innerHTML = "Loading posts...";
-
-    try {
-      const total = await contract.totalPosts();
-      if (total.toNumber() === 0) {
-        postsContainer.innerHTML = "<p>No posts yet.</p>";
-        return;
-      }
-
-      let html = "";
-      for (let i = total.toNumber() - 1; i >= 0; i--) {
-        const post = await contract.getPost(i);
-
-        html += `
-          <div class="post-card">
-            <div class="post-header">
-              <span>Author: ${post.author}</span>
-              <span>Likes: ${post.likes.toString()}</span>
-            </div>
-            <div class="post-ipfs">IPFS: ${post.ipfsHash}</div>
-            <div>
-              Media Type: ${post.mediaType == 0 ? "Video" : "Image"}
-            </div>
-            <div class="post-actions" style="margin-top:10px;">
-              <button onclick="likePost(${i})">👍 Like</button>
-            </div>
-          </div>
-        `;
-      }
-      postsContainer.innerHTML = html;
-    } catch (err) {
-      postsContainer.innerHTML = "Failed to load posts: " + err.message;
-    }
+(async function connectWallet() {
+  if (window.drfWallet) {
+    provider = new ethers.providers.Web3Provider(window.drfWallet);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
+    console.log("Wallet connected:", await signer.getAddress());
+  } else {
+    alert("DRF Wallet not detected");
   }
+})();
 
-  window.likePost = async function(postId) {
-    try {
-      const tx = await contract.likePost(postId);
-      await tx.wait();
-      alert("You liked the post and earned DRFM tokens!");
-      loadPosts();
-    } catch (err) {
-      alert("Failed to like post: " + err.message);
-    }
+async function uploadToPinata(file) {
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: PINATA_JWT },
+    body: formData
+  });
+  const data = await response.json();
+  return data.IpfsHash;
+}
+
+async function uploadPost() {
+  const file = document.getElementById('mediaInput').files[0];
+  const caption = document.getElementById('captionInput').value;
+  if (!file || !caption) return alert("Media and caption required");
+
+  try {
+    const ipfsHash = await uploadToPinata(file);
+    const mediaType = file.type.startsWith('video') ? 1 : 0;
+    const tx = await contract.post(ipfsHash, mediaType);
+    await tx.wait();
+    alert("Post uploaded and rewarded!");
+    renderPosts();
+  } catch (err) {
+    console.error("Upload failed:", err);
+    alert("Failed to upload post");
   }
+}
+
+async function renderPosts() {
+  if (!contract) return;
+  const count = await contract.totalPosts();
+  const container = document.getElementById("postContainer");
+  container.innerHTML = "";
+  for (let i = count - 1; i >= 0 && i > count - 10; i--) {
+    const post = await contract.getPost(i);
+    const url = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+    const card = document.createElement("div");
+    card.className = "post-card";
+    card.innerHTML = `
+      <div class="post-owner">
+        <img src="https://www.gravatar.com/avatar/${post.author.slice(2,10)}?d=identicon" class="avatar" />
+        <div><strong>${post.author}</strong></div>
+      </div>
+      <div class="post-caption">${post.ipfsHash}</div>
+      ${post.mediaType == 1 ?
+        `<video controls width="100%"><source src="${url}" /></video>` :
+        `<img src="${url}" width="100%" />`
+      }
+      <div class="post-actions">
+        <button onclick="likePost(${i})">Like (${post.likes})</button>
+        <button onclick="commentPost(${i})">Comment</button>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+async function likePost(id) {
+  const tx = await contract.likePost(id);
+  await tx.wait();
+  renderPosts();
+}
+
+async function commentPost(id) {
+  const msg = prompt("Enter comment");
+  if (!msg) return;
+  const tx = await contract.commentOnPost(id, msg);
+  await tx.wait();
+  alert("Comment posted");
+}
+
+setTimeout(renderPosts, 1500);
 </script>
 </body>
 </html>
