@@ -3,213 +3,218 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0066cc" />
+  <title>DRFMedia Social - Post & Like</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
-    header {
-      background: #007bff; color: white; padding: 10px 20px;
-      position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 15px; background: #f0f2f5; }
+    h1 { color: #0066cc; }
+    input, textarea, select, button {
+      font-size: 1rem; padding: 8px; margin: 5px 0 15px 0; width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 5px;
     }
-    .navbar-left { display: flex; align-items: center; gap: 10px; }
-    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
-    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
-    #menuToggle { background: transparent; border: none; cursor: pointer; width: 30px; height: 25px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
-    #menuToggle span { display: block; height: 3.5px; background: white; border-radius: 3px; }
-    #primaryNav { width: 100%; display: none; flex-direction: column; background: #0069d9; margin-top: 10px; border-radius: 4px; }
-    #primaryNav.open { display: flex; }
-    #primaryNav a { padding: 12px 20px; color: white; text-decoration: none; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.2); }
-    #primaryNav a:first-child { border-top: none; }
-    #primaryNav a:hover { background: rgba(255,255,255,0.2); }
-    @media (min-width: 768px) {
-      #menuToggle { display: none; }
-      #primaryNav { display: flex !important; flex-direction: row; width: auto; background: transparent; margin-top: 0; border-radius: 0; }
-      #primaryNav a { border: none; padding: 10px 15px; color: white; }
-      #primaryNav a:hover { background: rgba(255,255,255,0.3); }
+    button {
+      background: #0066cc; color: white; border: none; cursor: pointer;
+      max-width: 150px;
     }
-    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; box-shadow: 0 0 3px rgba(0,0,0,0.1); }
-    #postContainer { max-width: 700px; margin: 20px auto; padding: 0 15px; }
-    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
-    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-    .post-time { font-size: 0.85em; color: #555; margin-top: 4px; }
-    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
-    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
-    #searchBar { max-width: 700px; margin: 10px auto 20px auto; padding: 0 15px; }
-    #searchInput { width: 100%; padding: 8px 12px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .post-card {
+      background: white; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      margin-bottom: 20px; padding: 15px;
+    }
+    .post-header { display: flex; justify-content: space-between; font-weight: bold; color: #333; }
+    .post-actions button { margin-right: 10px; }
+    .post-ipfs { font-family: monospace; font-size: 0.9rem; color: #666; }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="navbar-left">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-    <h1>DRFMedia</h1>
-  </div>
-  <button id="menuToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <nav id="primaryNav">
-    <a href="#">Home</a><a href="#">Timeline</a><a href="#">Upload</a>
-    <a href="#" id="profileLink" style="display:none;">Profile</a>
-    <a href="#" id="loginNavLink">Login</a>
-    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
-  </nav>
-</header>
+<h1>DRFMedia Social</h1>
 
-<div id="searchBar">
-  <input type="search" id="searchInput" placeholder="Search posts..." />
-</div>
+<section id="connectWalletSection">
+  <button id="connectWalletBtn">Connect Wallet</button>
+  <p id="walletAddress"></p>
+</section>
 
-<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
-<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
+<section id="postSection" style="display:none;">
+  <h2>Create Post</h2>
+  <label>IPFS Hash (Qm...):</label>
+  <input type="text" id="ipfsHashInput" placeholder="Qm..." />
+  <label>Media Type:</label>
+  <select id="mediaTypeSelect">
+    <option value="0">Video</option>
+    <option value="1">Image</option>
+  </select>
+  <button id="postBtn" disabled>Post & Earn DRFM</button>
+</section>
 
-<form id="uploadForm" style="display:none; max-width:700px; margin:20px auto;">
-  <input type="file" id="mediaFile" accept="image/*,video/*" required />
-  <textarea id="caption" placeholder="Write your caption..." required minlength="4" style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
-  <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">Post</button>
-</form>
+<hr/>
 
-<div id="postContainer" aria-live="polite"></div>
+<section>
+  <h2>Recent Posts</h2>
+  <div id="postsContainer">Loading posts...</div>
+</section>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, set, onValue
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js"></script>
+<script>
+  const contractAddress = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
+  const contractABI = [
+    // Add minimal ABI pieces for post, getPost, totalPosts, likePost, getComments, commentOnPost
+    {
+      "inputs": [
+        { "internalType": "string", "name": "ipfsHash", "type": "string" },
+        { "internalType": "uint8", "name": "mediaType", "type": "uint8" }
+      ],
+      "name": "post",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }],
+      "name": "getPost",
+      "outputs": [
+        { "internalType": "address", "name": "author", "type": "address" },
+        { "internalType": "string", "name": "ipfsHash", "type": "string" },
+        { "internalType": "uint8", "name": "mediaType", "type": "uint8" },
+        { "internalType": "uint256", "name": "likes", "type": "uint256" },
+        { "internalType": "bool", "name": "flagged", "type": "bool" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalPosts",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "postId", "type": "uint256" }],
+      "name": "likePost",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ];
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  let provider;
+  let signer;
+  let contract;
+  let walletAddress = null;
+
+  const connectWalletBtn = document.getElementById("connectWalletBtn");
+  const walletAddressP = document.getElementById("walletAddress");
+  const postSection = document.getElementById("postSection");
+  const postBtn = document.getElementById("postBtn");
+  const ipfsHashInput = document.getElementById("ipfsHashInput");
+  const mediaTypeSelect = document.getElementById("mediaTypeSelect");
+  const postsContainer = document.getElementById("postsContainer");
+
+  connectWalletBtn.onclick = async () => {
+    try {
+      // Detect provider - supports metamask or standalone wallets injecting ethereum provider
+      if (window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        walletAddress = await signer.getAddress();
+      } else if (window.myStandaloneWallet) {
+        // If you have a standalone wallet object
+        provider = new ethers.providers.Web3Provider(window.myStandaloneWallet.provider);
+        signer = window.myStandaloneWallet.getSigner();
+        walletAddress = await signer.getAddress();
+      } else {
+        alert("No wallet detected! Please install MetaMask or use your standalone wallet.");
+        return;
+      }
+
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+      walletAddressP.textContent = "Connected Wallet: " + walletAddress;
+      connectWalletBtn.style.display = "none";
+      postSection.style.display = "block";
+      loadPosts();
+
+      // Enable post button only when IPFS hash input is valid
+      ipfsHashInput.addEventListener("input", () => {
+        postBtn.disabled = !ipfsHashInput.value.trim().startsWith("Qm");
+      });
+    } catch (err) {
+      alert("Failed to connect wallet: " + err.message);
+    }
   };
 
-  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+  postBtn.onclick = async () => {
+    const ipfsHash = ipfsHashInput.value.trim();
+    const mediaType = parseInt(mediaTypeSelect.value);
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+    if (!ipfsHash || !ipfsHash.startsWith("Qm")) {
+      alert("Enter valid IPFS hash starting with Qm...");
+      return;
+    }
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const uploadForm = document.getElementById("uploadForm");
-  const mediaFile = document.getElementById("mediaFile");
-  const captionInput = document.getElementById("caption");
-  const postContainer = document.getElementById("postContainer");
-
-  let currentUser = null;
-
-  const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    uploadForm.style.display = user ? "block" : "none";
-    loginBtn.style.display = user ? "none" : "block";
-    logoutBtn.style.display = user ? "block" : "none";
-    renderPosts();
-  });
-
-  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
-  logoutBtn.onclick = () => signOut(auth).catch(console.error);
-
-  uploadForm.addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!currentUser) return alert("Please login.");
-    if (!mediaFile.files.length) return alert("Select a file.");
-    if (captionInput.value.trim().length < 4) return alert("Caption too short.");
-
-    uploadForm.querySelector("button").disabled = true;
-
-    const file = mediaFile.files[0];
-    const fd = new FormData();
-    fd.append("file", file);
+    postBtn.disabled = true;
+    postBtn.textContent = "Posting...";
 
     try {
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: { Authorization: pinataJWT },
-        body: fd
-      });
-
-      const { IpfsHash } = await res.json();
-      const newPostRef = push(ref(db, "posts"));
-      await set(newPostRef, {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
-        caption: captionInput.value.trim(),
-        ipfsHash: IpfsHash,
-        mediaType: file.type.startsWith("video") ? "video" : "image",
-        mediaMimeType: file.type,
-        timestamp: Date.now(),
-        likesCount: 0,
-        commentsCount: 0
-      });
-
-      captionInput.value = "";
-      mediaFile.value = "";
+      const tx = await contract.post(ipfsHash, mediaType);
+      await tx.wait();
+      alert("Post created and DRFM tokens rewarded!");
+      ipfsHashInput.value = "";
+      postBtn.disabled = true;
+      postBtn.textContent = "Post & Earn DRFM";
+      loadPosts();
     } catch (err) {
-      alert("Upload failed: " + err.message);
-    } finally {
-      uploadForm.querySelector("button").disabled = false;
+      alert("Failed to post: " + err.message);
+      postBtn.disabled = false;
+      postBtn.textContent = "Post & Earn DRFM";
     }
-  });
+  };
 
-  function renderPosts() {
-    const gateways = [
-      "https://gateway.pinata.cloud/ipfs/",
-      "https://cloudflare-ipfs.com/ipfs/"
-    ];
+  async function loadPosts() {
+    postsContainer.innerHTML = "Loading posts...";
 
-    onValue(ref(db, "posts"), snap => {
-      postContainer.innerHTML = "";
-      const data = snap.val();
-      if (!data) return;
+    try {
+      const total = await contract.totalPosts();
+      if (total.toNumber() === 0) {
+        postsContainer.innerHTML = "<p>No posts yet.</p>";
+        return;
+      }
 
-      Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([id, post]) => {
-        const card = document.createElement("div");
-        card.className = "post-item";
+      let html = "";
+      for (let i = total.toNumber() - 1; i >= 0; i--) {
+        const post = await contract.getPost(i);
 
-        const url1 = gateways[0] + post.ipfsHash;
-        const url2 = gateways[1] + post.ipfsHash;
-
-        card.innerHTML = `
-          <div class="post-owner">
-            <img src="${post.photoURL}" class="avatar" />
-            <strong>${escapeHTML(post.displayName || "Anonymous")}</strong>
+        html += `
+          <div class="post-card">
+            <div class="post-header">
+              <span>Author: ${post.author}</span>
+              <span>Likes: ${post.likes.toString()}</span>
+            </div>
+            <div class="post-ipfs">IPFS: ${post.ipfsHash}</div>
+            <div>
+              Media Type: ${post.mediaType == 0 ? "Video" : "Image"}
+            </div>
+            <div class="post-actions" style="margin-top:10px;">
+              <button onclick="likePost(${i})">👍 Like</button>
+            </div>
           </div>
-          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          ${post.mediaType === "video"
-            ? `<video controls preload="metadata"><source src="${url1}" type="${post.mediaMimeType}" /></video>`
-            : `<img src="${url1}" onerror="this.onerror=null;this.src='${url2}'" alt="Image" />`}
-          <div class="post-caption">${escapeHTML(post.caption)}</div>
         `;
-        postContainer.appendChild(card);
-      });
-    });
+      }
+      postsContainer.innerHTML = html;
+    } catch (err) {
+      postsContainer.innerHTML = "Failed to load posts: " + err.message;
+    }
   }
 
-  // Mobile menu toggle
-  document.getElementById("menuToggle").onclick = () =>
-    document.getElementById("primaryNav").classList.toggle("open");
-
-  document.getElementById("searchInput").addEventListener("input", e => {
-    const query = e.target.value.toLowerCase();
-    document.querySelectorAll(".post-item").forEach(post => {
-      const caption = post.querySelector(".post-caption").textContent.toLowerCase();
-      post.style.display = caption.includes(query) ? "" : "none";
-    });
-  });
+  window.likePost = async function(postId) {
+    try {
+      const tx = await contract.likePost(postId);
+      await tx.wait();
+      alert("You liked the post and earned DRFM tokens!");
+      loadPosts();
+    } catch (err) {
+      alert("Failed to like post: " + err.message);
+    }
+  }
 </script>
-
 </body>
 </html>
