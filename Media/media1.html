@@ -1,148 +1,104 @@
 <!DOCTYPE html>
-<!-- START: Updated DRFMedia Timeline with Like & Comment System (Firebase) -->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Style and header unchanged -->
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    #menuToggle { background: transparent; border: none; cursor: pointer; width: 30px; height: 25px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
+    #menuToggle span { display: block; height: 3.5px; background: white; border-radius: 3px; }
+    #primaryNav { width: 100%; display: none; flex-direction: column; background: #0069d9; margin-top: 10px; border-radius: 4px; }
+    #primaryNav.open { display: flex; }
+    #primaryNav a { padding: 12px 20px; color: white; text-decoration: none; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.2); }
+    #primaryNav a:first-child { border-top: none; }
+    #primaryNav a:hover { background: rgba(255,255,255,0.2); }
+    @media (min-width: 768px) {
+      #menuToggle { display: none; }
+      #primaryNav { display: flex !important; flex-direction: row; width: auto; background: transparent; margin-top: 0; border-radius: 0; }
+      #primaryNav a { border: none; padding: 10px 15px; color: white; }
+      #primaryNav a:hover { background: rgba(255,255,255,0.3); }
+    }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; box-shadow: 0 0 3px rgba(0,0,0,0.1); }
+    #postContainer { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
+    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .post-owner div { line-height: 1.1; }
+    .post-time { font-size: 0.85em; color: #555; margin-top: 4px; }
+    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    .comment-box { margin-top: 10px; display: none; }
+    .comment-box textarea { width: 100%; padding: 6px; font-size: 0.9em; }
+    .comment-box button { margin-top: 5px; }
+    .comment-section { font-size: 0.9em; color: #333; margin-top: 10px; display: none; border-top: 1px solid #ccc; padding-top: 10px; }
+    .comment-section div { margin-bottom: 5px; }
+  </style>
 </head>
 <body>
-  <!-- ... Existing content unchanged ... -->
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, set, onValue, get, update, child
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<!-- Body structure and Firebase already assumed to be present -->
 
-  // Initialize Firebase (same config as your file)
-  const app = initializeApp({
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-  });
-
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  let currentUser = null;
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    renderPosts();
-  });
-
-  async function renderPosts() {
-    const postsRef = ref(db, "posts");
-    onValue(postsRef, snapshot => {
-      const posts = snapshot.val() || {};
-      const postContainer = document.getElementById("postContainer");
-      postContainer.innerHTML = "";
-
-      Object.entries(posts).reverse().forEach(([postId, post]) => {
-        const postDiv = document.createElement("div");
-        postDiv.className = "post-item";
-
-        postDiv.innerHTML = `
-          <div class="post-owner">
-            <img src="${post.photoURL}" class="avatar" />
-            <div>
-              <strong>${post.displayName}</strong><br/>
-              <small>${post.drfAddress || "Wallet not linked"}</small>
-            </div>
-          </div>
-          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          <div class="post-caption">${post.caption}</div>
-          ${post.mediaType === 'video'
-            ? `<video controls src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" style="width:100%;margin-top:10px;border-radius:6px"></video>`
-            : `<img src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" alt="Post media" style="margin-top:10px;border-radius:6px" />`}
-
-          <div class="post-actions" style="margin-top:10px">
-            <button onclick="likePost('${postId}')">👍 Like (<span id="likes-${postId}">${post.likesCount || 0}</span>)</button>
-            <button onclick="toggleComments('${postId}')">💬 Comments (<span id="comments-${postId}">${post.commentsCount || 0}</span>)</button>
-          </div>
-
-          <div class="comments-section" id="comments-${postId}-section" style="display:none;margin-top:10px">
-            <div id="comments-list-${postId}"></div>
-            <textarea id="comment-input-${postId}" rows="2" placeholder="Write a comment..." style="width:100%;margin-top:5px"></textarea>
-            <button onclick="submitComment('${postId}')" style="margin-top:5px">Post Comment</button>
-          </div>
-        `;
-
-        postContainer.appendChild(postDiv);
-      });
-    });
-  }
-
-  window.likePost = async function(postId) {
-    if (!currentUser) return alert("Please sign in.");
-    const likeRef = ref(db, `likes/${postId}/${currentUser.uid}`);
+<script>
+  // Like Post
+  async function likePost(id) {
+    if (!currentUser) return alert("Login required to like posts.");
+    const likeRef = ref(db, `likes/${id}/${currentUser.uid}`);
+    const postRef = ref(db, `posts/${id}`);
     const snapshot = await get(likeRef);
-    if (!snapshot.exists()) {
-      await set(likeRef, true);
-      const postRef = ref(db, `posts/${postId}`);
-      const postSnap = await get(postRef);
-      if (postSnap.exists()) {
-        const current = postSnap.val().likesCount || 0;
-        await update(postRef, { likesCount: current + 1 });
-      }
+    if (snapshot.exists()) {
+      alert("Already liked.");
     } else {
-      alert("You already liked this post.");
+      await set(likeRef, true);
+      const countSnapshot = await get(postRef);
+      const newCount = (countSnapshot.val().likesCount || 0) + 1;
+      await update(postRef, { likesCount: newCount });
+      alert("Liked!");
     }
   }
 
-  window.toggleComments = function(postId) {
-    const section = document.getElementById(`comments-${postId}-section`);
-    section.style.display = section.style.display === "none" ? "block" : "none";
-    loadComments(postId);
+  // Toggle comment box
+  function toggleComments(postId) {
+    const section = document.getElementById(`comments-${postId}`);
+    const input = document.getElementById(`comment-box-${postId}`);
+    section.style.display = section.style.display === 'block' ? 'none' : 'block';
+    input.style.display = input.style.display === 'block' ? 'none' : 'block';
   }
 
-  async function loadComments(postId) {
-    const commentList = document.getElementById(`comments-list-${postId}`);
-    const commentRef = ref(db, `comments/${postId}`);
-    const snap = await get(commentRef);
-    commentList.innerHTML = "";
-    if (snap.exists()) {
-      Object.values(snap.val()).forEach(comment => {
-        const div = document.createElement("div");
-        div.innerHTML = `<strong>${comment.displayName}</strong>: ${comment.text}`;
-        commentList.appendChild(div);
-      });
-    }
-  }
-
-  window.submitComment = async function(postId) {
-    if (!currentUser) return alert("Please sign in.");
+  // Post a comment
+  async function submitComment(postId) {
+    if (!currentUser) return alert("Login to comment.");
     const textarea = document.getElementById(`comment-input-${postId}`);
     const text = textarea.value.trim();
-    if (!text) return;
-    const newRef = push(ref(db, `comments/${postId}`));
-    await set(newRef, {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName,
-      photoURL: currentUser.photoURL,
+    if (!text) return alert("Write something.");
+    const commentRef = push(ref(db, `comments/${postId}`));
+    await set(commentRef, {
       text,
-      timestamp: Date.now()
+      user: currentUser.displayName,
+      uid: currentUser.uid,
+      time: Date.now()
     });
     textarea.value = "";
-    const postRef = ref(db, `posts/${postId}`);
-    const postSnap = await get(postRef);
-    if (postSnap.exists()) {
-      const current = postSnap.val().commentsCount || 0;
-      await update(postRef, { commentsCount: current + 1 });
-    }
-    loadComments(postId);
+    alert("Comment posted.");
+    renderPosts();
+  }
+
+  // Share Post
+  function sharePost(id) {
+    const url = window.location.origin + '/?post=' + id;
+    navigator.clipboard.writeText(url);
+    alert("Post URL copied.");
   }
 </script>
+
 </body>
 </html>
