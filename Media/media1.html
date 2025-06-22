@@ -1,75 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DRF Media Post</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DRFMedia Post with Rewards</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background: #f9f9f9; }
+  h2 { text-align: center; color: #0066cc; }
+  #walletInfo { margin-bottom: 20px; }
+  #status { margin-top: 10px; font-weight: bold; }
+  input[type="file"] { margin-bottom: 15px; }
+  button { background: #0066cc; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  .warning { color: #d9534f; font-weight: bold; }
+</style>
 </head>
 <body>
-  <h2>Post to DRFMedia</h2>
-  <input type="file" id="mediaFile" accept="image/*,video/*" />
-  <textarea id="caption" placeholder="Enter caption..."></textarea>
-  <button onclick="handlePost()">Post</button>
 
-  <script>
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+<h2>DRFMedia Post with Reward</h2>
 
-    const CONTRACT_ADDRESS = "0x9CF972437e17927C1114F44D2D38aA77c4845d01";
-    const ABI = [
-      {
-        "inputs": [
-          { "internalType": "string", "name": "ipfsHash", "type": "string" },
-          { "internalType": "uint8", "name": "mediaType", "type": "uint8" }
-        ],
-        "name": "post",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      }
-    ];
+<div id="walletInfo">
+  Wallet: <span id="walletAddress">Not connected</span><br />
+  BNB Balance: <span id="bnbBalance">-</span>
+</div>
 
-    async function uploadToPinata(file) {
-      const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: PINATA_JWT
-        },
-        body: formData
-      });
-      const data = await res.json();
-      console.log("Pinata IPFS Hash:", data.IpfsHash);
-      return data.IpfsHash;
+<label for="mediaInput">Choose Image or Video to Post:</label><br/>
+<input type="file" id="mediaInput" accept="image/*,video/*" /><br/>
+
+<button id="postBtn" disabled>Post & Earn DRFM Tokens</button>
+
+<div id="status"></div>
+
+<script>
+(async () => {
+  const contractAddress = "0x9CF972437e17927C1114F44D2D38aA77c4845d01"; // Your DRFM contract address
+  const contractABI = [ /* ABI truncated for brevity, paste full ABI here */ 
+  {
+    "inputs": [
+      { "internalType": "string", "name": "ipfsHash", "type": "string" },
+      { "internalType": "uint8", "name": "mediaType", "type": "uint8" }
+    ],
+    "name": "post",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  //... include all needed ABI items (like post, getPost, likePost etc)
+  ];
+
+  const PINATA_JWT = "Bearer YOUR_PINATA_JWT_TOKEN_HERE";
+
+  const walletAddressEl = document.getElementById("walletAddress");
+  const bnbBalanceEl = document.getElementById("bnbBalance");
+  const mediaInput = document.getElementById("mediaInput");
+  const postBtn = document.getElementById("postBtn");
+  const statusEl = document.getElementById("status");
+
+  let provider, signer, contract, userAddress;
+
+  // Initialize ethers provider and signer
+  async function initWallet() {
+    if (!window.ethereum) {
+      statusEl.innerHTML = `<span class="warning">No Ethereum wallet detected. Please install MetaMask or use a compatible wallet.</span>`;
+      return false;
     }
 
-    async function handlePost() {
-      try {
-        const fileInput = document.getElementById("mediaFile");
-        const caption = document.getElementById("caption").value;
-        if (!fileInput.files.length) return alert("Select a media file");
-
-        const file = fileInput.files[0];
-        const ipfsHash = await uploadToPinata(file);
-
-        const provider = new ethers.providers.Web3Provider(window.drfwallet || window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-        const isVideo = file.type.startsWith("video") ? 1 : 0;
-        const tx = await contract.post(ipfsHash, isVideo);
-        await tx.wait();
-
-        alert("Posted successfully to DRFChain!");
-      } catch (e) {
-        console.error("Post failed:", e);
-        alert("Failed to post. Check console for details.");
-      }
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      walletAddressEl.textContent = userAddress;
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+      return true;
+    } catch (err) {
+      statusEl.textContent = "Wallet connection rejected or failed.";
+      return false;
     }
-  </script>
+  }
+
+  // Update BNB balance and enable/disable post button based on balance
+  async function updateBalance() {
+    if (!provider || !userAddress) return;
+    try {
+      const balance = await provider.getBalance(userAddress);
+      const bnb = ethers.utils.formatEther(balance);
+      bnbBalanceEl.textContent = Number(bnb).toFixed(4) + " BNB";
+      if (Number(bnb) < 0.005) { // minimum gas threshold (adjust as needed)
+        statusEl.innerHTML = `<span class="warning">Low BNB balance! You need some BNB to pay gas fees.</span>`;
+        postBtn.disabled = true;
+      } else {
+        statusEl.textContent = "";
+        if(mediaInput.files.length) postBtn.disabled = false;
+      }
+    } catch (e) {
+      console.error(e);
+      bnbBalanceEl.textContent = "Error fetching balance";
+      postBtn.disabled = true;
+    }
+  }
+
+  // Upload media file to Pinata IPFS
+  async function uploadToPinata(file) {
+    statusEl.textContent = "Uploading media to IPFS (Pinata)...";
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: PINATA_JWT },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error("Pinata upload failed: " + response.statusText);
+    }
+
+    const data = await response.json();
+    return data.IpfsHash;
+  }
+
+  // Detect media type for contract (0=image, 1=video, else 2=other)
+  function detectMediaType(file) {
+    if (file.type.startsWith("image/")) return 0;
+    if (file.type.startsWith("video/")) return 1;
+    return 2;
+  }
+
+  // Post function: upload media, call contract method
+  async function postMedia() {
+    postBtn.disabled = true;
+    statusEl.textContent = "Preparing your post...";
+
+    const file = mediaInput.files[0];
+    if (!file) {
+      statusEl.textContent = "Please select a media file first.";
+      postBtn.disabled = false;
+      return;
+    }
+
+    try {
+      // Upload to IPFS via Pinata
+      const ipfsHash = await uploadToPinata(file);
+      statusEl.textContent = `Uploaded to IPFS: ${ipfsHash}. Sending blockchain transaction...`;
+
+      const mediaType = detectMediaType(file);
+
+      // Send transaction to contract
+      const tx = await contract.post(ipfsHash, mediaType);
+      statusEl.textContent = "Transaction sent. Waiting for confirmation...";
+      await tx.wait();
+
+      statusEl.textContent = "Post successful! You have earned DRFM tokens.";
+      mediaInput.value = "";
+      postBtn.disabled = true;
+
+      // Update balance again (optional)
+      updateBalance();
+    } catch (err) {
+      console.error(err);
+      statusEl.innerHTML = `<span class="warning">Error posting: ${err.message || err}</span>`;
+      postBtn.disabled = false;
+    }
+  }
+
+  // Event listeners
+  mediaInput.addEventListener("change", () => {
+    if(mediaInput.files.length) updateBalance();
+    else postBtn.disabled = true;
+  });
+
+  postBtn.addEventListener("click", postMedia);
+
+  // Init app
+  const walletOk = await initWallet();
+  if (walletOk) {
+    await updateBalance();
+
+    // Listen for account changes (wallet switched)
+    window.ethereum.on("accountsChanged", async (accounts) => {
+      if (accounts.length === 0) {
+        walletAddressEl.textContent = "Not connected";
+        postBtn.disabled = true;
+        bnbBalanceEl.textContent = "-";
+        statusEl.textContent = "Please connect your wallet.";
+      } else {
+        userAddress = accounts[0];
+        walletAddressEl.textContent = userAddress;
+        await updateBalance();
+      }
+    });
+
+    // Listen for chain changes (optional)
+    window.ethereum.on("chainChanged", () => window.location.reload());
+  }
+})();
+</script>
+
 </body>
 </html>
