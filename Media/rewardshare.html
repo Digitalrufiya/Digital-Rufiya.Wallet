@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Share Reward — DRFM</title>
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
-    emailjs.init("IW7JNsT5ZYPtNWW4z"); // Your EmailJS public key
+    emailjs.init("IW7JNsT5ZYPtNWW4z"); // Your public key
   </script>
   <style>
     body {
@@ -46,7 +46,7 @@
       font-weight: 600;
       color: #333;
     }
-    input, textarea {
+    input {
       margin-top: 5px;
       width: 100%;
       padding: 10px;
@@ -55,10 +55,7 @@
       font-size: 14px;
       box-sizing: border-box;
     }
-    textarea {
-      resize: vertical;
-    }
-    button.submit-btn {
+    input[type="submit"] {
       background: #1a73e8;
       color: white;
       font-weight: 700;
@@ -68,12 +65,11 @@
       font-size: 16px;
       margin-top: 25px;
       cursor: pointer;
-      width: 100%;
     }
-    button.submit-btn:hover {
+    input[type="submit"]:hover {
       background: #1259b0;
     }
-    #msg {
+    #status {
       text-align: center;
       margin-top: 15px;
       font-weight: bold;
@@ -92,26 +88,26 @@
   <img class="logo" src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFM Logo" />
 
   <h1>Claim Your DRFM Token Reward</h1>
-  <p class="subtitle">Submit your social share proof</p>
+  <p class="subtitle">Submit your shared post details</p>
 
-  <form id="shareForm">
-    <label for="wallet">DRFM Wallet Address *</label>
-    <input type="text" id="wallet" name="wallet" placeholder="0x..." required />
+  <form id="form">
+    <label for="wallet">Wallet Address *</label>
+    <input type="text" name="wallet" id="wallet" required>
 
     <label for="email">Your Email *</label>
-    <input type="email" id="email" name="email" placeholder="you@email.com" required />
+    <input type="email" name="email" id="email" required>
 
     <label for="originalUrl">Original Post URL *</label>
-    <input type="url" id="originalUrl" name="originalUrl" placeholder="https://example.com" required />
+    <input type="url" name="originalUrl" id="originalUrl" required>
 
     <label for="proofUrl">Shared Proof URL *</label>
-    <input type="url" id="proofUrl" name="proofUrl" placeholder="https://facebook.com/..." required />
+    <input type="url" name="proofUrl" id="proofUrl" required>
 
-    <label for="notes">Optional Notes</label>
-    <textarea id="notes" name="notes" rows="3" placeholder="Any extra message or comment..."></textarea>
+    <label for="notes">Notes</label>
+    <input type="text" name="notes" id="notes" placeholder="(Optional)">
 
-    <button type="submit" class="submit-btn">Submit & Claim Reward</button>
-    <p id="msg"></p>
+    <input type="submit" value="Send Submission">
+    <p id="status"></p>
   </form>
 
   <footer>
@@ -119,42 +115,22 @@
   </footer>
 
   <script>
-    const form = document.getElementById("shareForm");
-    const msg = document.getElementById("msg");
+    const form = document.getElementById("form");
+    const status = document.getElementById("status");
 
     form.addEventListener("submit", function(e) {
       e.preventDefault();
 
-      const wallet = document.getElementById("wallet").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const originalUrl = document.getElementById("originalUrl").value.trim();
-      const proofUrl = document.getElementById("proofUrl").value.trim();
-      const notes = document.getElementById("notes").value.trim() || "(none)";
-
-      if (!wallet || !email || !originalUrl || !proofUrl) {
-        msg.style.color = "red";
-        msg.textContent = "❌ Please fill in all required fields.";
-        return;
-      }
-
-      const templateParams = {
-        wallet,
-        email,
-        originalUrl,
-        proofUrl,
-        notes
-      };
-
-      emailjs.send("service_aftgp6o", "template_mgfk0ir", templateParams)
+      emailjs.sendForm("service_aftgp6o", "template_mgfk0ir", this)
         .then(() => {
+          status.style.color = "green";
+          status.textContent = "✅ Submission sent successfully!";
           form.reset();
-          msg.style.color = "green";
-          msg.textContent = "✅ Submission sent successfully!";
         })
         .catch((error) => {
+          status.style.color = "red";
+          status.textContent = "❌ Failed to send. Check console.";
           console.error("EmailJS error:", error);
-          msg.style.color = "red";
-          msg.textContent = "❌ Failed to send. Please try again.";
         });
     });
   </script>
