@@ -1,0 +1,141 @@
+<!-- rewardshare.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Share Reward — DRFM</title>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
+  <style>
+    /* same styling as above */
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f9f9f9;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    img.logo {
+      display: block;
+      margin: 0 auto 20px;
+      max-width: 180px;
+    }
+    h1 {
+      text-align: center;
+      color: #1a73e8;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    p.subtitle {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 30px;
+      color: #333;
+      font-size: 18px;
+    }
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    label, input, textarea, button {
+      display: block;
+      width: 100%;
+      margin-top: 15px;
+    }
+    input, textarea {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    button {
+      background: #1a73e8;
+      color: white;
+      font-weight: 700;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      margin-top: 25px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #155ab6;
+    }
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 14px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <img class="logo" src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFM Logo" />
+
+  <h1>Post Anything and Get Rewards DRFMedia Tokens</h1>
+  <p class="subtitle">DRFM Media — Share Proof Submission</p>
+
+  <form id="shareForm">
+    <label for="wallet">Your DRFM Wallet Address *</label>
+    <input type="text" id="wallet" name="wallet" placeholder="0x..." required />
+
+    <label for="originalUrl">Original Post URL *</label>
+    <input type="url" id="originalUrl" name="originalUrl" placeholder="https://..." required />
+
+    <label for="proofUrl">Shared Proof URL *</label>
+    <input type="url" id="proofUrl" name="proofUrl" placeholder="https://facebook.com/..." required />
+
+    <label for="notes">Optional Notes</label>
+    <textarea id="notes" name="notes" rows="3" placeholder="Extra info or message..."></textarea>
+
+    <button type="submit">Submit Share Reward</button>
+    <div id="msg" style="color: green; margin-top: 10px; text-align: center;"></div>
+  </form>
+
+  <footer>
+    Powered by Digital Rufiya Chain DRFTube and Digital Rufya ecosystem
+  </footer>
+
+  <script>
+    emailjs.init("service_aftgp6o");
+
+    const form = document.getElementById("shareForm");
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const wallet = document.getElementById("wallet").value.trim();
+      const original = document.getElementById("originalUrl").value.trim();
+      const proof = document.getElementById("proofUrl").value.trim();
+      const notes = document.getElementById("notes").value.trim();
+      const time = new Date().toLocaleString();
+
+      const templateParams = {
+        name: wallet,
+        time: time,
+        message: `
+📢 Share Reward Submission:
+
+📌 Original Post: ${original}
+📤 Shared Proof: ${proof}
+🪙 Wallet: ${wallet}
+🗒 Notes: ${notes || '(none)'}
+🕒 Time: ${time}
+        `
+      };
+
+      emailjs.send("service_aftgp6o", "template_jpeafio", templateParams)
+        .then(() => {
+          form.reset();
+          document.getElementById("msg").textContent = "✅ Submission successful!";
+        }, err => {
+          document.getElementById("msg").textContent = "❌ Failed to send.";
+          console.error(err);
+        });
+    });
+  </script>
+</body>
+</html>
