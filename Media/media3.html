@@ -1,7 +1,96 @@
 <!DOCTYPE html>
-<!-- Full HTML content is assumed to be already discussed and confirmed with admin-only boost logic -->
-<!-- For actual download, the previously generated complete code should be inserted here -->
-<html>
-<head><title>DRFMedia Timeline</title></head>
-<body><h1>DRFMedia - Admin Boost Version</h1><p>Replace this content with full HTML from prior message.</p></body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Admin Boost Version</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    .boosted { background-color: gold !important; color: #000 !important; }
+    .post-actions button {
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      transition: background-color 0.3s;
+    }
+    .post-actions button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="navbar-left">
+      <img src="logo.png" alt="DRFMedia Logo" />
+      <h1>DRFMedia</h1>
+    </div>
+  </header>
+
+  <div id="postContainer"></div>
+
+  <script>
+    const adminEmails = [
+      "digitalrufiya@gmail.com",
+      "digitalrufiyacoin@gmail.com",
+      "digitalrufiyauniversity@gmail.com"
+    ];
+
+    const currentUser = { email: "digitalrufiya@gmail.com", uid: "admin-uid" }; // mock login
+
+    const mockPosts = [
+      { id: "1", displayName: "User One", caption: "Test post", boostsCount: 0, boostedBy: {} }
+    ];
+
+    function renderPosts() {
+      const container = document.getElementById("postContainer");
+      container.innerHTML = "";
+
+      for (const post of mockPosts) {
+        const isBoosted = post.boostedBy[currentUser.uid];
+        const postDiv = document.createElement("div");
+        postDiv.innerHTML = `
+          <div class="post-item">
+            <strong>${post.displayName}</strong>
+            <p>${post.caption}</p>
+            <div class="post-actions">
+              <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">
+                🚀 Boost (${post.boostsCount})
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(postDiv);
+      }
+    }
+
+    function boostPost(postId) {
+      const post = mockPosts.find(p => p.id === postId);
+      if (!adminEmails.includes(currentUser.email)) {
+        alert("Only admin can boost");
+        return;
+      }
+      if (!post.boostedBy[currentUser.uid]) {
+        post.boostedBy[currentUser.uid] = true;
+        post.boostsCount++;
+      }
+      renderPosts();
+    }
+
+    renderPosts();
+  </script>
+</body>
 </html>
