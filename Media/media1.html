@@ -52,6 +52,11 @@
     .post-actions button:hover {
       background: #0056b3;
     }
+    .comment-box { margin-top: 10px; }
+    .comment-box textarea { width: 100%; border-radius: 4px; padding: 6px; }
+    .comment-box button { margin-top: 5px; }
+    .comments-list { margin-top: 10px; background: #eee; padding: 10px; border-radius: 4px; }
+    .boosted { background-color: gold !important; color: #000 !important; }
   </style>
 </head>
 <body>
@@ -117,11 +122,18 @@
   const mediaFile = document.getElementById("mediaFile");
   const captionInput = document.getElementById("caption");
   const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
 
   let currentUser = null;
 
+  // Escape HTML helper
   const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  // Admin user UIDs (example, replace with your actual admins' Firebase UIDs)
+  // OR you can keep admins in your DB under "admins/{uid}" path for dynamic check
+  // Here we check from DB dynamically instead.
+
+  // Handle login/logout UI
   onAuthStateChanged(auth, async user => {
     currentUser = user;
     uploadForm.style.display = user ? "block" : "none";
@@ -133,6 +145,7 @@
   loginBtn.onclick = () => signInWithPopup(auth, provider).catch(console.error);
   logoutBtn.onclick = () => signOut(auth).catch(console.error);
 
+  // Upload new post
   uploadForm.addEventListener("submit", async e => {
     e.preventDefault();
     if (!currentUser) return alert("Please login.");
@@ -171,7 +184,8 @@
         mediaMimeType: file.type,
         timestamp: Date.now(),
         likesCount: 0,
-        commentsCount: 0
+        commentsCount: 0,
+        boostStatus: null // initially no boost
       });
 
       captionInput.value = "";
@@ -186,14 +200,22 @@
     }
   });
 
+  // Render posts with search filter and boost button
   async function renderPosts() {
     const postsRef = ref(db, "posts");
     onValue(postsRef, snapshot => {
       const posts = snapshot.val() || {};
       postContainer.innerHTML = "";
+
+      const searchTerm = searchInput.value.trim().toLowerCase();
+
       // Sort posts by timestamp desc
       const sorted = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+
       for (const [id, post] of sorted) {
+        // Filter by caption search
+        if (searchTerm && !post.caption.toLowerCase().includes(searchTerm)) continue;
+
         const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
         const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
 
@@ -218,36 +240,87 @@
             <button onclick="likePost('${id}')">👍 Like</button>
             <button onclick="sharePost('${id}')">🔗 Share</button>
             <button onclick="repost('${id}')">🔁 Repost</button>
+            <button id="boostBtn-${id}" onclick="toggleBoost('${id}')" style="background-color: grey;">🚀 Boost</button>
           </div>
         `;
 
         postContainer.appendChild(card);
+
+        // Listen for boost status changes and update button color
+        const boostStatusRef = ref(db, 'posts/' + id + '/boostStatus');
+        onValue(boostStatusRef, (snap) => {
+          updateBoostButton(id, snap.val());
+        });
       }
     });
   }
 
-  function likePost(id) {
-    const wallet = currentUser ? currentUser.uid : "anon";
-    alert(`Liked post ${id} by wallet ${wallet}`);
-    // TODO: implement likes count update in DB
+  // Update Boost button color based on status
+  function updateBoostButton(postId, boostStatus) {
+    const boostBtn = document.getElementById(`boostBtn-${postId}`);
+    if (!boostBtn) return;
+
+    if (boostStatus === 'on') {
+      boostBtn.style.backgroundColor = 'yellow';
+      boostBtn.style.color = '#000';
+    } else if (boostStatus === 'off') {
+      boostBtn.style.backgroundColor = 'red';
+      boostBtn.style.color = '#fff';
+    } else {
+      boostBtn.style.backgroundColor = 'grey';
+      boostBtn.style.color = '#fff';
+    }
   }
 
-  function sharePost(id) {
-    const link = window.location.href.split("#")[0] + "#post-" + id;
-    navigator.clipboard.writeText(link);
-    alert("Post link copied to clipboard.");
+  // Toggle boost (admin only)
+  async function toggleBoost(postId) {
+    if (!currentUser) {
+      alert("Please login.");
+      return;
+    }
+
+    // Check admin status from database under 'admins/{uid}'
+    const adminRef = ref(db, 'admins/' + currentUser.uid);
+    const adminSnap = await get(adminRef);
+    if (!adminSnap.exists()) {
+      alert("Only admin can boost posts.");
+      return;
+    }
+
+    const postBoostRef = ref(db, 'posts/' + postId + '/boostStatus');
+    const currentStatusSnap = await get(postBoostRef);
+    const currentStatus = currentStatusSnap.exists() ? currentStatusSnap.val() : null;
+
+    const newStatus = (currentStatus === 'on') ? 'off' : 'on';
+    await set(postBoostRef, newStatus);
+
+    alert(`Post boost status changed to: ${newStatus.toUpperCase()}`);
   }
 
-  function repost(id) {
-    alert("Repost functionality coming soon!");
-    // TODO: implement repost cloning under current user
+  // Like, Share, Repost dummy functions (implement as needed)
+  function likePost(postId) {
+    alert("You liked post: " + postId);
+  }
+  function sharePost(postId) {
+    alert("You shared post: " + postId);
+  }
+  function repost(postId) {
+    alert("You reposted post: " + postId);
   }
 
-  // Responsive menu toggle
-  document.getElementById("menuToggle").addEventListener("click", () => {
-    document.getElementById("primaryNav").classList.toggle("open");
+  // Search functionality
+  searchInput.addEventListener("input", renderPosts);
+
+  // Menu toggle for mobile
+  const menuToggle = document.getElementById('menuToggle');
+  const primaryNav = document.getElementById('primaryNav');
+  menuToggle.addEventListener('click', () => {
+    primaryNav.classList.toggle('open');
   });
-</script>
 
+  // Initial load
+  renderPosts();
+
+</script>
 </body>
 </html>
