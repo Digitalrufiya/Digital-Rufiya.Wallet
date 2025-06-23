@@ -3,94 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Admin Boost Version</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>DRFMedia Timeline — Boost Logic</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
-    header {
-      background: #007bff; color: white; padding: 10px 20px;
-      position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-    }
-    .navbar-left { display: flex; align-items: center; gap: 10px; }
-    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
-    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
-    .boosted { background-color: gold !important; color: #000 !important; }
-    .post-actions button {
-      cursor: pointer;
+    body { font-family: Arial; margin: 0; padding: 0; background: #f8f8f8; }
+    .container { max-width: 700px; margin: 20px auto; padding: 0 15px; }
+    .post { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+    .post h3 { margin: 0 0 10px; }
+    .post img, .post video { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+    .boosted { background-color: gold !important; color: black; }
+    button.boost-btn {
+      padding: 6px 12px;
       border: none;
+      border-radius: 5px;
       background: #007bff;
       color: white;
-      padding: 6px 12px;
-      border-radius: 5px;
-      font-size: 0.9em;
-      transition: background-color 0.3s;
+      cursor: pointer;
     }
-    .post-actions button:hover {
+    button.boost-btn:hover {
       background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="navbar-left">
-      <img src="logo.png" alt="DRFMedia Logo" />
-      <h1>DRFMedia</h1>
-    </div>
-  </header>
 
-  <div id="postContainer"></div>
+<div class="container">
+  <h2>DRFMedia — Dummy Timeline (Admin Boost Logic)</h2>
 
-  <script>
-    const adminEmails = [
-      "digitalrufiya@gmail.com",
-      "digitalrufiyacoin@gmail.com",
-      "digitalrufiyauniversity@gmail.com"
-    ];
+  <div id="posts"></div>
+</div>
 
-    const currentUser = { email: "digitalrufiya@gmail.com", uid: "admin-uid" }; // mock login
+<script>
+  // Admin emails
+  const adminEmails = [
+    "digitalrufiya@gmail.com",
+    "digitalrufiyacoin@gmail.com",
+    "digitalrufiyauniversity@gmail.com"
+  ];
 
-    const mockPosts = [
-      { id: "1", displayName: "User One", caption: "Test post", boostsCount: 0, boostedBy: {} }
-    ];
+  // Simulate current logged in user
+  const currentUser = {
+    email: "digitalrufiyauniversity@gmail.com", // change this to simulate different users
+    displayName: "DRF Admin"
+  };
 
-    function renderPosts() {
-      const container = document.getElementById("postContainer");
-      container.innerHTML = "";
+  // Dummy posts
+  const posts = [
+    {
+      id: "post1",
+      user: "User A",
+      caption: "First post from DRFMedia!",
+      media: "https://via.placeholder.com/400x250.png?text=Post+1",
+      boostedByAdmin: false
+    },
+    {
+      id: "post2",
+      user: "User B",
+      caption: "Another peaceful message.",
+      media: "https://via.placeholder.com/400x250.png?text=Post+2",
+      boostedByAdmin: false
+    }
+  ];
 
-      for (const post of mockPosts) {
-        const isBoosted = post.boostedBy[currentUser.uid];
-        const postDiv = document.createElement("div");
-        postDiv.innerHTML = `
-          <div class="post-item">
-            <strong>${post.displayName}</strong>
-            <p>${post.caption}</p>
-            <div class="post-actions">
-              <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">
-                🚀 Boost (${post.boostsCount})
-              </button>
-            </div>
-          </div>
-        `;
-        container.appendChild(postDiv);
-      }
+  function renderPosts() {
+    const postsDiv = document.getElementById("posts");
+    postsDiv.innerHTML = "";
+
+    posts.forEach(post => {
+      const isBoosted = post.boostedByAdmin;
+
+      const postEl = document.createElement("div");
+      postEl.className = "post";
+
+      postEl.innerHTML = `
+        <h3>${post.user}</h3>
+        <p>${post.caption}</p>
+        <img src="${post.media}" alt="media" />
+        <div style="margin-top:10px;">
+          <button class="boost-btn ${isBoosted ? 'boosted' : ''}" onclick="handleBoost('${post.id}')">
+            🚀 Boost ${isBoosted ? '(Boosted)' : ''}
+          </button>
+        </div>
+      `;
+
+      postsDiv.appendChild(postEl);
+    });
+  }
+
+  function handleBoost(postId) {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isAdmin = adminEmails.includes(currentUser.email);
+
+    if (!isAdmin) {
+      alert("❗ Only admin can boost posts.");
+      return;
     }
 
-    function boostPost(postId) {
-      const post = mockPosts.find(p => p.id === postId);
-      if (!adminEmails.includes(currentUser.email)) {
-        alert("Only admin can boost");
-        return;
-      }
-      if (!post.boostedBy[currentUser.uid]) {
-        post.boostedBy[currentUser.uid] = true;
-        post.boostsCount++;
-      }
-      renderPosts();
-    }
-
+    // Toggle boost
+    post.boostedByAdmin = !post.boostedByAdmin;
     renderPosts();
-  </script>
+  }
+
+  renderPosts();
+</script>
+
 </body>
 </html>
