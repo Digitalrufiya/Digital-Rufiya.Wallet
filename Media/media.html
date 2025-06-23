@@ -37,18 +37,37 @@
     .post-time { font-size: 0.85em; color: #555; margin-top: 4px; }
     .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
     video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    #searchBar { max-width: 700px; margin: 10px auto 20px auto; padding: 0 15px; }
+    #searchInput { width: 100%; padding: 8px 12px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
     .post-actions button {
-      cursor: pointer; border: none; background: #007bff; color: white;
-      padding: 6px 12px; border-radius: 5px; font-size: 0.9em; transition: background 0.3s;
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      transition: background-color 0.3s;
     }
-    .post-actions button:hover { background: #0056b3; }
+    .post-actions button:hover {
+      background: #0056b3;
+    }
     .comments-section {
-      margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #ccc;
     }
     .comments-section textarea {
-      width: 100%; padding: 8px; margin-bottom: 5px; resize: vertical;
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 5px;
+      resize: vertical;
     }
-    .comment { padding: 5px 0; font-size: 0.9em; border-bottom: 1px dashed #ccc; }
+    .comment {
+      padding: 5px 0;
+      font-size: 0.9em;
+      border-bottom: 1px dashed #ccc;
+    }
   </style>
 </head>
 <body>
@@ -67,110 +86,22 @@
   </nav>
 </header>
 
+<div id="searchBar">
+  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" oninput="searchPosts()" />
+</div>
+
+<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
+<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
+
+<form id="uploadForm" style="display:none; max-width:700px; margin:20px auto;">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <textarea id="caption" placeholder="Write your caption..." required minlength="4" style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
+  <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">Post</button>
+</form>
+
 <div id="postContainer" aria-live="polite"></div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, set, onValue
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<script type="module" src="app.js"></script>
 
-  const app = initializeApp({
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-  });
-
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  const postContainer = document.getElementById("postContainer");
-
-  let currentUser = null;
-  const escapeHTML = str => str.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    document.getElementById("loginNavLink").style.display = user ? "none" : "block";
-    document.getElementById("logoutNavLink").style.display = user ? "block" : "none";
-    renderPosts();
-  });
-
-  document.getElementById("loginNavLink").onclick = () => signInWithPopup(auth, provider);
-  document.getElementById("logoutNavLink").onclick = () => signOut(auth);
-
-  function renderPosts() {
-    const postsRef = ref(db, "posts");
-    onValue(postsRef, snapshot => {
-      const posts = snapshot.val() || {};
-      postContainer.innerHTML = "";
-      const sorted = Object.entries(posts).sort((a,b) => b[1].timestamp - a[1].timestamp);
-      for (const [id, post] of sorted) {
-        const card = document.createElement("div");
-        card.className = "post-item";
-        card.innerHTML = `
-          <div class="post-owner">
-            <img src="${post.photoURL}" class="avatar" />
-            <div>
-              <strong>${escapeHTML(post.displayName || "Anonymous")}</strong><br/>
-              <small>${escapeHTML(post.drfAddress || "Wallet not linked")}</small>
-            </div>
-          </div>
-          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          ${post.mediaType === "video"
-            ? `<video controls><source src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" type="${post.mediaMimeType}" /></video>`
-            : `<img src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" alt="Post image" />`}
-          <div class="post-caption">${escapeHTML(post.caption)}</div>
-          <div class="post-actions">
-            <button onclick="toggleComments('${id}')">💬 Comments</button>
-          </div>
-          <div id="comments-${id}" class="comments-section" style="display:none;">
-            <div id="commentList-${id}"></div>
-            <textarea id="commentInput-${id}" placeholder="Write a comment..."></textarea>
-            <button onclick="submitComment('${id}')">Post</button>
-          </div>
-        `;
-        postContainer.appendChild(card);
-        loadComments(id);
-      }
-    });
-  }
-
-  window.toggleComments = postId => {
-    const section = document.getElementById(`comments-${postId}`);
-    section.style.display = section.style.display === "none" ? "block" : "none";
-  };
-
-  window.submitComment = async postId => {
-    if (!currentUser) return alert("Please login.");
-    const input = document.getElementById(`commentInput-${postId}`);
-    const text = input.value.trim();
-    if (!text) return;
-    const newRef = push(ref(db, `comments/${postId}`));
-    await set(newRef, { userId: currentUser.uid, text, timestamp: Date.now() });
-    input.value = "";
-  };
-
-  function loadComments(postId) {
-    const commentRef = ref(db, `comments/${postId}`);
-    onValue(commentRef, snapshot => {
-      const comments = snapshot.val() || {};
-      const list = document.getElementById(`commentList-${postId}`);
-      list.innerHTML = Object.values(comments).map(c => `<div class="comment">${escapeHTML(c.text)}</div>`).join("");
-    });
-  }
-
-  document.getElementById("menuToggle").onclick = () => {
-    document.getElementById("primaryNav").classList.toggle("open");
-  };
-</script>
 </body>
 </html>
