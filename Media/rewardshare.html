@@ -6,12 +6,12 @@
   <title>Share Reward — DRFM</title>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
   <script>
-    emailjs.init("IW7JNsT5ZYPtNWW4z"); // ✅ Your public key
+    emailjs.init("IW7JNsT5ZYPtNWW4z"); // Your EmailJS public key
   </script>
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #f9f9f9;
+      background: #f5f7fa;
       padding: 20px;
       max-width: 600px;
       margin: auto;
@@ -19,37 +19,44 @@
     img.logo {
       display: block;
       margin: 0 auto 20px;
-      max-width: 180px;
+      max-width: 160px;
     }
     h1 {
       text-align: center;
       color: #1a73e8;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       font-weight: 700;
     }
     p.subtitle {
       text-align: center;
-      font-weight: 600;
+      font-weight: 500;
       margin-bottom: 30px;
-      color: #333;
-      font-size: 18px;
+      color: #444;
+      font-size: 16px;
     }
     form {
       background: white;
       padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
-    label, input, textarea {
-      display: block;
-      width: 100%;
+    label {
       margin-top: 15px;
+      display: block;
+      font-weight: 600;
+      color: #333;
     }
     input, textarea {
+      margin-top: 5px;
+      width: 100%;
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
     }
     button.submit-btn {
       background: #1a73e8;
@@ -58,23 +65,25 @@
       padding: 12px;
       border: none;
       border-radius: 10px;
-      font-size: 18px;
+      font-size: 16px;
       margin-top: 25px;
       cursor: pointer;
+      width: 100%;
     }
     button.submit-btn:hover {
-      background: #155ab6;
+      background: #1259b0;
     }
     #msg {
       text-align: center;
       margin-top: 15px;
       font-weight: bold;
+      font-size: 14px;
     }
     footer {
       text-align: center;
       margin-top: 30px;
-      font-size: 14px;
-      color: #777;
+      font-size: 13px;
+      color: #888;
     }
   </style>
 </head>
@@ -82,8 +91,8 @@
 
   <img class="logo" src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFM Logo" />
 
-  <h1>Post & Share — Get DRFM Tokens</h1>
-  <p class="subtitle">Submit your proof of sharing to claim rewards</p>
+  <h1>Claim Your DRFM Token Reward</h1>
+  <p class="subtitle">Submit your social share proof</p>
 
   <form id="shareForm">
     <label for="wallet">DRFM Wallet Address *</label>
@@ -93,24 +102,26 @@
     <input type="email" id="email" name="email" placeholder="you@email.com" required />
 
     <label for="originalUrl">Original Post URL *</label>
-    <input type="url" id="originalUrl" name="originalUrl" placeholder="https://..." required />
+    <input type="url" id="originalUrl" name="originalUrl" placeholder="https://example.com" required />
 
     <label for="proofUrl">Shared Proof URL *</label>
     <input type="url" id="proofUrl" name="proofUrl" placeholder="https://facebook.com/..." required />
 
     <label for="notes">Optional Notes</label>
-    <textarea id="notes" name="notes" rows="3" placeholder="Extra info or message..."></textarea>
+    <textarea id="notes" name="notes" rows="3" placeholder="Any extra message or comment..."></textarea>
 
-    <button type="submit" class="submit-btn">Submit Share Reward</button>
+    <button type="submit" class="submit-btn">Submit & Claim Reward</button>
     <p id="msg"></p>
   </form>
 
   <footer>
-    Powered by Digital Rufiya Chain — DRFTube & Ecosystem
+    Powered by Digital Rufiya Chain • DRFTube Ecosystem
   </footer>
 
   <script>
     const form = document.getElementById("shareForm");
+    const msg = document.getElementById("msg");
+
     form.addEventListener("submit", function(e) {
       e.preventDefault();
 
@@ -119,11 +130,10 @@
       const originalUrl = document.getElementById("originalUrl").value.trim();
       const proofUrl = document.getElementById("proofUrl").value.trim();
       const notes = document.getElementById("notes").value.trim() || "(none)";
-      const time = new Date().toLocaleString();
 
       if (!wallet || !email || !originalUrl || !proofUrl) {
-        document.getElementById("msg").textContent = "❌ Please fill in all required fields.";
-        document.getElementById("msg").style.color = "red";
+        msg.style.color = "red";
+        msg.textContent = "❌ Please fill in all required fields.";
         return;
       }
 
@@ -132,20 +142,19 @@
         email,
         originalUrl,
         proofUrl,
-        notes,
-        time
+        notes
       };
 
       emailjs.send("service_aftgp6o", "template_mgfk0ir", templateParams)
         .then(() => {
           form.reset();
-          document.getElementById("msg").style.color = "green";
-          document.getElementById("msg").textContent = "✅ Your reward submission was sent successfully!";
+          msg.style.color = "green";
+          msg.textContent = "✅ Submission sent successfully!";
         })
         .catch((error) => {
-          document.getElementById("msg").style.color = "red";
-          document.getElementById("msg").textContent = "❌ Failed to send. Check internet or EmailJS setup.";
           console.error("EmailJS error:", error);
+          msg.style.color = "red";
+          msg.textContent = "❌ Failed to send. Please try again.";
         });
     });
   </script>
