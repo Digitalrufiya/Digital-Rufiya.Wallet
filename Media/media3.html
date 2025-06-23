@@ -128,6 +128,18 @@
   let currentUser = null;
   let allPosts = [];
 
+  // Admin emails list
+  const adminEmails = [
+    "digitalrufiya@gmail.com",
+    "digitalrufiyacoin@gmail.com",
+    "digitalrufiyauniversity@gmail.com"
+  ];
+
+  // Check if current user is admin
+  function isAdmin(user) {
+    return user && adminEmails.includes(user.email);
+  }
+
   // Escape to prevent XSS
   const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -273,110 +285,80 @@
     alert("Repost functionality coming soon!");
   };
 
-// Define admin emails
-const adminEmails = [
-  "digitalrufiya@gmail.com",
-  "digitalrufiyacoin@gmail.com",
-  "digitalrufiyauniversity@gmail.com"
-];
+  // Boost a post — only admins allowed
+  window.boostPost = async function(postId) {
+    if (!currentUser) return alert("Login required to boost posts.");
+    if (!isAdmin(currentUser)) return alert("Only admins can boost posts.");
 
-// Helper to check if current user is admin
-function isAdmin(user) {
-  return user && adminEmails.includes(user.email);
-}
-
-// Boost a post — only admins allowed
-window.boostPost = async function(postId) {
-  if (!currentUser) return alert("Login required to boost posts.");
-  if (!isAdmin(currentUser)) return alert("Only admins can boost posts.");
-
-  const postRef = ref(db, "posts/" + postId);
-  const snapshot = await get(postRef);
-  if (!snapshot.exists()) return alert("Post not found.");
-  const post = snapshot.val();
-
-  const boostedBy = post.boostedBy || {};
-  const userId = currentUser.uid;
-  const isAlreadyBoosted = boostedBy[userId];
-
-  if (isAlreadyBoosted) {
-    // Remove boost
-    delete boostedBy[userId];
-  } else {
-    // Add boost
-    boostedBy[userId] = true;
-  }
-
-  const boostsCount = Object.keys(boostedBy).length;
-
-  await set(ref(db, `posts/${postId}/boostedBy`), boostedBy);
-  await set(ref(db, `posts/${postId}/boostsCount`), boostsCount);
-};
-
-// In renderPosts function (inside post rendering), change boost button class toggle:
-const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
-
-<button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
-
-
-  // Add comment
-  window.addComment = async function(postId) {
-    if (!currentUser) return alert("Login required to comment.");
-    const textarea = document.getElementById("commentInput-" + postId);
-    const text = textarea.value.trim();
-    if (!text) return alert("Comment cannot be empty.");
-
-    const commentData = {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName,
-      photoURL: currentUser.photoURL,
-      text,
-      timestamp: Date.now()
-    };
-
-    const commentsRef = ref(db, `comments/${postId}`);
-    const newCommentRef = push(commentsRef);
-    await set(newCommentRef, commentData);
-
-    // Increment comment count on post
     const postRef = ref(db, "posts/" + postId);
-    const postSnap = await get(postRef);
-    if (postSnap.exists()) {
-      const post = postSnap.val();
-      const newCount = (post.commentsCount || 0) + 1;
-      await set(ref(db, `posts/${postId}/commentsCount`), newCount);
+    const snapshot = await get(postRef);
+    if (!snapshot.exists()) return alert("Post not found.");
+    const post = snapshot.val();
+
+    const boostedBy = post.boostedBy || {};
+    const userId = currentUser.uid;
+    const isAlreadyBoosted = boostedBy[userId];
+
+    if (isAlreadyBoosted) {
+      // Remove boost
+      delete boostedBy[userId];
+    } else {
+      // Add boost
+      boostedBy[userId] = true;
     }
 
-    textarea.value = "";
+    const boostsCount = Object.keys(boostedBy).length;
+
+    await set(ref(db, `posts/${postId}/boostedBy`), boostedBy);
+    await set(ref(db, `posts/${postId}/boostsCount`), boostsCount);
   };
 
-  // Render comments for a post
+  // Comments handling
   async function renderComments(postId) {
-    const commentsList = document.getElementById("commentsList-" + postId);
-    if (!commentsList) return;
-    commentsList.innerHTML = "Loading comments...";
-
+    const commentsListEl = document.getElementById("commentsList-" + postId);
+    commentsListEl.innerHTML = "";
     const commentsRef = ref(db, `comments/${postId}`);
     const snapshot = await get(commentsRef);
-    if (!snapshot.exists()) {
-      commentsList.innerHTML = "<i>No comments yet</i>";
-      return;
-    }
-    const comments = snapshot.val();
-    const entries = Object.values(comments).sort((a,b) => a.timestamp - b.timestamp);
+    if (!snapshot.exists()) return;
 
-    commentsList.innerHTML = "";
-    for (const c of entries) {
-      commentsList.innerHTML += `
-        <div><strong>${escapeHTML(c.displayName || "Anonymous")}:</strong> ${escapeHTML(c.text)}</div>
-      `;
-    }
+    const comments = snapshot.val();
+    Object.entries(comments).forEach(([commentId, comment]) => {
+      const c = document.createElement("div");
+      c.textContent = `${comment.displayName || "Anonymous"}: ${comment.text}`;
+      commentsListEl.appendChild(c);
+    });
   }
 
-  // Responsive menu toggle
-  document.getElementById("menuToggle").addEventListener("click", () => {
-    document.getElementById("primaryNav").classList.toggle("open");
-  });
+  window.addComment = async function(postId) {
+    if (!currentUser) return alert("Login required to comment.");
+    const input = document.getElementById("commentInput-" + postId);
+    const text = input.value.trim();
+    if (!text) return alert("Enter comment.");
+
+    const newCommentRef = push(ref(db, `comments/${postId}`));
+    await set(newCommentRef, {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      text,
+      timestamp: Date.now()
+    });
+
+    input.value = "";
+
+    // Update comments count on post
+    const postRef = ref(db, "posts/" + postId);
+    const postSnap = await get(postRef);
+    const post = postSnap.val();
+    const newCount = (post.commentsCount || 0) + 1;
+    await set(ref(db, `posts/${postId}/commentsCount`), newCount);
+
+    renderComments(postId);
+  };
+
+  // Menu toggle for mobile
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  menuToggle.addEventListener("click", () => primaryNav.classList.toggle("open"));
 </script>
 
 </body>
