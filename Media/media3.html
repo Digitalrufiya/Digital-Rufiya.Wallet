@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
     header {
@@ -51,15 +52,12 @@
     .post-actions button:hover {
       background: #0056b3;
     }
-    .boosted {
-      background-color: gold !important;
-      color: #000 !important;
-    }
     .comment-box { margin-top: 10px; }
     .comment-box textarea { width: 100%; border-radius: 4px; padding: 6px; }
     .comment-box button { margin-top: 5px; }
     .comments-list { margin-top: 10px; background: #eee; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; }
     .comments-list div { margin-bottom: 6px; }
+    .boosted { background-color: gold !important; color: #000 !important; }
   </style>
 </head>
 <body>
@@ -96,7 +94,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, push, set, onValue, get
+    getDatabase, ref, push, set, onValue, get, remove
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import {
     getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
@@ -112,11 +110,7 @@
     appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
 
-  const adminEmails = [
-    "digitalrufiya@gmail.com",
-    "digitalrufiyacoin@gmail.com",
-    "digitalrufiyauniversity@gmail.com"
-  ];
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
@@ -137,20 +131,12 @@
   // Escape to prevent XSS
   const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  // Check if user is admin by email
-  function isAdmin(user) {
-    return user && adminEmails.includes(user.email);
-  }
-
   // AUTH state handler
   onAuthStateChanged(auth, user => {
     currentUser = user;
-    const admin = isAdmin(user);
-
     uploadForm.style.display = user ? "block" : "none";
     loginBtn.style.display = user ? "none" : "block";
     logoutBtn.style.display = user ? "block" : "none";
-
     renderPosts();
   });
 
@@ -170,10 +156,9 @@
     fd.append("file", file);
 
     try {
-      // Upload to Pinata (replace your JWT here)
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
-        headers: { Authorization: "YOUR_PINATA_JWT_HERE" },
+        headers: { Authorization: pinataJWT },
         body: fd
       });
       if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
@@ -209,132 +194,189 @@
   const postsRef = ref(db, "posts");
   onValue(postsRef, snapshot => {
     const posts = snapshot.val() || {};
-    allPosts = Object.entries(posts)
-      .map(([id, post]) => ({ id, ...post }))
-      .sort((a, b) => b.timestamp - a.timestamp);
+    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
+    allPosts.sort((a, b) => b.timestamp - a.timestamp);
     renderPosts();
   });
 
-  // Render posts with filtering and boosted highlight
+  // Render posts with filtering
   function renderPosts() {
-    if (!allPosts.length) {
-      postContainer.innerHTML = "<p>No posts yet.</p>";
-      return;
-    }
+    const filter = searchInput.value.trim().toLowerCase();
+    postContainer.innerHTML = "";
+    for (const post of allPosts) {
+      if (!post.caption.toLowerCase().includes(filter)) continue;
 
-    const admin = isAdmin(currentUser);
-    const filter = searchInput.value.toLowerCase();
+      const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+      const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
+      const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
 
-    const filteredPosts = allPosts.filter(post => {
-      const captionMatch = post.caption && post.caption.toLowerCase().includes(filter);
-      const userMatch = post.displayName && post.displayName.toLowerCase().includes(filter);
-      return captionMatch || userMatch;
-    });
+      const card = document.createElement("div");
+      card.className = "post-item";
 
-    if (!filteredPosts.length) {
-      postContainer.innerHTML = "<p>No matching posts found.</p>";
-      return;
-    }
+      card.innerHTML = `
+        <div class="post-owner" style="gap:10px;">
+          <img src="${post.photoURL}" class="avatar" alt="User profile photo" />
+          <div>
+            <strong>${escapeHTML(post.displayName || "Anonymous")}</strong><br/>
+            <a href="profile.html?uid=${post.userId}" style="font-size:0.85em; color:#007bff;">View Profile</a>
+          </div>
+        </div>
+        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+        ${post.mediaType === "video"
+          ? `<video controls preload="metadata" style="border-radius:6px;"><source src="${url1}" type="${post.mediaMimeType}" /></video>`
+          : `<img src="${url1}" alt="Post image" onerror="this.onerror=null;this.src='${url2}'" />`
+        }
+        <div class="post-caption">${escapeHTML(post.caption)}</div>
+        <div class="post-actions" style="margin-top:10px; display:flex; gap:10px; flex-wrap: wrap;">
+          <button onclick="likePost('${post.id}')">👍 Like (${post.likesCount || 0})</button>
+          <button onclick="sharePost('${post.id}')">🔗 Share</button>
+          <button onclick="repost('${post.id}')">🔁 Repost</button>
+          <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
+        </div>
 
-    postContainer.innerHTML = filteredPosts.map(post => {
-      const timeAgo = timeSince(post.timestamp);
-      const boosted = post.boostsCount && post.boostsCount > 0;
-      return `
-        <article class="post-item ${boosted ? "boosted" : ""}" data-id="${post.id}" role="article" aria-label="Post by ${escapeHTML(post.displayName || "Unknown")}">
-          <header class="post-owner">
-            <img src="${escapeHTML(post.photoURL || "https://cdn-icons-png.flaticon.com/512/1077/1077114.png")}" alt="User avatar" class="avatar" />
-            <div>
-              <div>${escapeHTML(post.displayName || "Unknown")}</div>
-              <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">${timeAgo}</time>
-            </div>
-          </header>
-          <section class="post-caption">${escapeHTML(post.caption)}</section>
-          ${post.mediaType === "video"
-            ? `<video controls playsinline preload="metadata" poster="https://ik.imagekit.io/ttbbg9ocv/video-poster.jpg" aria-label="Video content"><source src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" type="${escapeHTML(post.mediaMimeType)}" /></video>`
-            : `<img src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" alt="Post media" loading="lazy" />`
-          }
-          <footer class="post-actions" style="margin-top:10px; display:flex; gap:10px; flex-wrap: wrap;">
-            <button class="boost-btn" data-postid="${post.id}" aria-pressed="${boosted}">${boosted ? "Boosted" : "Boost"}</button>
-          </footer>
-        </article>
+        <div class="comment-box" id="commentBox-${post.id}">
+          <textarea placeholder="Write a comment..." rows="2" id="commentInput-${post.id}"></textarea>
+          <button onclick="addComment('${post.id}')">Add Comment</button>
+        </div>
+        <div class="comments-list" id="commentsList-${post.id}"></div>
       `;
-    }).join("");
 
-    // Attach boost click listeners
-    document.querySelectorAll(".boost-btn").forEach(btn => {
-      btn.onclick = async e => {
-        if (!currentUser) return alert("Please login to boost posts.");
-        const postId = btn.getAttribute("data-postid");
-        if (!postId) return;
+      postContainer.appendChild(card);
 
-        if (!admin) {
-          alert("Only admins can boost posts.");
-          return;
-        }
-
-        try {
-          const postRef = ref(db, `posts/${postId}`);
-          const snapshot = await get(postRef);
-          if (!snapshot.exists()) {
-            alert("Post not found.");
-            return;
-          }
-          const post = snapshot.val();
-
-          let boostedBy = post.boostedBy || {};
-          let boostsCount = post.boostsCount || 0;
-
-          if (boostedBy[currentUser.uid]) {
-            // Remove boost
-            delete boostedBy[currentUser.uid];
-            boostsCount = Math.max(0, boostsCount - 1);
-          } else {
-            // Add boost
-            boostedBy[currentUser.uid] = true;
-            boostsCount++;
-          }
-
-          await set(postRef, {
-            ...post,
-            boostedBy,
-            boostsCount
-          });
-
-        } catch (err) {
-          alert("Error updating boost: " + err.message);
-        }
-      };
-    });
+      // Render comments for this post
+      renderComments(post.id);
+    }
   }
 
-  // Simple time-ago function
-  function timeSince(timestamp) {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 60) return "just now";
-    const intervals = [
-      { label: "year", seconds: 31536000 },
-      { label: "month", seconds: 2592000 },
-      { label: "day", seconds: 86400 },
-      { label: "hour", seconds: 3600 },
-      { label: "minute", seconds: 60 }
-    ];
-    for (const interval of intervals) {
-      const count = Math.floor(seconds / interval.seconds);
-      if (count > 0) return count + " " + interval.label + (count > 1 ? "s" : "") + " ago";
+  // Search input listener
+  searchInput.addEventListener("input", renderPosts);
+
+  // Like a post
+  window.likePost = async function(postId) {
+    if (!currentUser) return alert("Login required to like posts.");
+    const postRef = ref(db, "posts/" + postId);
+    const snapshot = await get(postRef);
+    if (!snapshot.exists()) return alert("Post not found.");
+    const post = snapshot.val();
+    const newLikes = (post.likesCount || 0) + 1;
+    await set(ref(db, `posts/${postId}/likesCount`), newLikes);
+  };
+
+  // Share post link
+  window.sharePost = function(postId) {
+    const link = window.location.href.split("#")[0] + "#post-" + postId;
+    navigator.clipboard.writeText(link).then(() => alert("Post link copied to clipboard."));
+  };
+
+  // Repost placeholder
+  window.repost = function(postId) {
+    alert("Repost functionality coming soon!");
+  };
+
+// Define admin emails
+const adminEmails = [
+  "digitalrufiya@gmail.com",
+  "digitalrufiyacoin@gmail.com",
+  "digitalrufiyauniversity@gmail.com"
+];
+
+// Helper to check if current user is admin
+function isAdmin(user) {
+  return user && adminEmails.includes(user.email);
+}
+
+// Boost a post — only admins allowed
+window.boostPost = async function(postId) {
+  if (!currentUser) return alert("Login required to boost posts.");
+  if (!isAdmin(currentUser)) return alert("Only admins can boost posts.");
+
+  const postRef = ref(db, "posts/" + postId);
+  const snapshot = await get(postRef);
+  if (!snapshot.exists()) return alert("Post not found.");
+  const post = snapshot.val();
+
+  const boostedBy = post.boostedBy || {};
+  const userId = currentUser.uid;
+  const isAlreadyBoosted = boostedBy[userId];
+
+  if (isAlreadyBoosted) {
+    // Remove boost
+    delete boostedBy[userId];
+  } else {
+    // Add boost
+    boostedBy[userId] = true;
+  }
+
+  const boostsCount = Object.keys(boostedBy).length;
+
+  await set(ref(db, `posts/${postId}/boostedBy`), boostedBy);
+  await set(ref(db, `posts/${postId}/boostsCount`), boostsCount);
+};
+
+// In renderPosts function (inside post rendering), change boost button class toggle:
+const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
+
+<button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
+
+
+  // Add comment
+  window.addComment = async function(postId) {
+    if (!currentUser) return alert("Login required to comment.");
+    const textarea = document.getElementById("commentInput-" + postId);
+    const text = textarea.value.trim();
+    if (!text) return alert("Comment cannot be empty.");
+
+    const commentData = {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      photoURL: currentUser.photoURL,
+      text,
+      timestamp: Date.now()
+    };
+
+    const commentsRef = ref(db, `comments/${postId}`);
+    const newCommentRef = push(commentsRef);
+    await set(newCommentRef, commentData);
+
+    // Increment comment count on post
+    const postRef = ref(db, "posts/" + postId);
+    const postSnap = await get(postRef);
+    if (postSnap.exists()) {
+      const post = postSnap.val();
+      const newCount = (post.commentsCount || 0) + 1;
+      await set(ref(db, `posts/${postId}/commentsCount`), newCount);
     }
-    return "some time ago";
+
+    textarea.value = "";
+  };
+
+  // Render comments for a post
+  async function renderComments(postId) {
+    const commentsList = document.getElementById("commentsList-" + postId);
+    if (!commentsList) return;
+    commentsList.innerHTML = "Loading comments...";
+
+    const commentsRef = ref(db, `comments/${postId}`);
+    const snapshot = await get(commentsRef);
+    if (!snapshot.exists()) {
+      commentsList.innerHTML = "<i>No comments yet</i>";
+      return;
+    }
+    const comments = snapshot.val();
+    const entries = Object.values(comments).sort((a,b) => a.timestamp - b.timestamp);
+
+    commentsList.innerHTML = "";
+    for (const c of entries) {
+      commentsList.innerHTML += `
+        <div><strong>${escapeHTML(c.displayName || "Anonymous")}:</strong> ${escapeHTML(c.text)}</div>
+      `;
+    }
   }
 
   // Responsive menu toggle
-  const menuToggle = document.getElementById("menuToggle");
-  const primaryNav = document.getElementById("primaryNav");
-  menuToggle.addEventListener("click", () => {
-    primaryNav.classList.toggle("open");
+  document.getElementById("menuToggle").addEventListener("click", () => {
+    document.getElementById("primaryNav").classList.toggle("open");
   });
-
-  // Search input event
-  searchInput.addEventListener("input", renderPosts);
-
 </script>
 
 </body>
