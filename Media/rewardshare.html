@@ -2,171 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Share Reward — DRFM</title>
+  <title>EmailJS Test — DRFM</title>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
   <script>
     emailjs.init("IW7JNsT5ZYPtNWW4z"); // Your public API key
   </script>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #f9f9f9;
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
-    }
-    img.logo {
-      display: block;
-      margin: 0 auto 30px;
-      max-width: 180px;
-    }
-    h1 {
-      text-align: center;
-      color: #1a73e8;
-      margin-bottom: 10px;
-      font-weight: 700;
-    }
-    p.subtitle {
-      text-align: center;
-      font-weight: 600;
-      margin-bottom: 30px;
-      color: #333;
-      font-size: 18px;
-    }
-    form {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
-    }
-    label {
-      display: block;
-      margin-top: 20px;
-      font-weight: 600;
-      font-size: 14px;
-      color: #555;
-    }
-    input, textarea {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: system-ui, sans-serif;
-      box-sizing: border-box;
-    }
-    textarea {
-      resize: vertical;
-      min-height: 70px;
-    }
-    button.submit-btn {
-      margin-top: 30px;
-      width: 100%;
-      background: #1a73e8;
-      color: white;
-      font-weight: 700;
-      font-size: 18px;
-      padding: 15px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button.submit-btn:hover {
-      background: #155ab6;
-    }
-    #msg {
-      margin-top: 25px;
-      text-align: center;
-      font-weight: 700;
-      font-size: 16px;
-    }
-    footer {
-      margin-top: 40px;
-      text-align: center;
-      font-size: 13px;
-      color: #777;
-      font-family: system-ui, sans-serif;
-    }
-  </style>
 </head>
-<body>
+<body style="font-family: system-ui, sans-serif; padding: 40px; max-width: 600px; margin: auto;">
 
-  <img
-    class="logo"
-    src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
-    alt="DRFM Logo"
-  />
+  <h1>EmailJS Hardcoded Test</h1>
+  <button id="sendBtn" style="font-size: 18px; padding: 15px 25px; cursor: pointer;">
+    Send Test Email
+  </button>
 
-  <h1>Post Anything and Get DRFMedia Tokens</h1>
-  <p class="subtitle">DRFM Media — Share Proof Submission</p>
-
-  <form id="shareForm" autocomplete="off" spellcheck="false">
-    <label for="wallet">Your DRFM Wallet Address *</label>
-    <input type="text" id="wallet" name="wallet" placeholder="0x..." required />
-
-    <label for="email">Your Email Address *</label>
-    <input type="email" id="email" name="email" placeholder="you@example.com" required />
-
-    <label for="originalUrl">Original Post URL *</label>
-    <input type="url" id="originalUrl" name="originalUrl" placeholder="https://..." required />
-
-    <label for="proofUrl">Shared Proof URL *</label>
-    <input type="url" id="proofUrl" name="proofUrl" placeholder="https://facebook.com/..." required />
-
-    <label for="notes">Optional Notes</label>
-    <textarea id="notes" name="notes" placeholder="Extra info or message..."></textarea>
-
-    <button type="submit" class="submit-btn">Submit Share Reward</button>
-  </form>
-
-  <div id="msg"></div>
-
-  <footer>
-    Powered by Digital Rufiya Chain DRFTube and Digital Rufya ecosystem
-  </footer>
+  <p id="msg" style="margin-top: 20px; font-weight: bold;"></p>
 
   <script>
-    const form = document.getElementById("shareForm");
-    form.addEventListener("submit", function(e) {
-      e.preventDefault();
-
-      const wallet = document.getElementById("wallet").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const originalUrl = document.getElementById("originalUrl").value.trim();
-      const proofUrl = document.getElementById("proofUrl").value.trim();
-      const notes = document.getElementById("notes").value.trim() || '(none)';
-      const time = new Date().toLocaleString();
-
+    document.getElementById('sendBtn').addEventListener('click', function() {
       const templateParams = {
-        wallet: wallet,
-        email: email,
-        originalUrl: originalUrl,
-        proofUrl: proofUrl,
-        notes: notes,
-        time: time
+        wallet: "0x1234567890abcdef",
+        email: "test@example.com",
+        originalUrl: "https://example.com/original-post",
+        proofUrl: "https://example.com/proof-post",
+        notes: "This is a hardcoded test message from EmailJS test file.",
+        time: new Date().toLocaleString()
       };
 
-      emailjs
-        .send("service_aftgp6o", "template_mgfk0ir", templateParams)
+      emailjs.send("service_aftgp6o", "template_mgfk0ir", templateParams)
         .then(() => {
-          form.reset();
-          const msgEl = document.getElementById("msg");
-          msgEl.style.color = "green";
-          msgEl.textContent = "✅ Submission successful!";
+          document.getElementById('msg').style.color = "green";
+          document.getElementById('msg').textContent = "✅ Test email sent successfully!";
         })
-        .catch((err) => {
-          const msgEl = document.getElementById("msg");
-          msgEl.style.color = "red";
-          msgEl.textContent = "❌ Submission failed. Please try again.";
-          console.error("EmailJS error:", err);
+        .catch((error) => {
+          document.getElementById('msg').style.color = "red";
+          document.getElementById('msg').textContent = "❌ Failed to send test email.";
+          console.error("EmailJS error:", error);
         });
     });
   </script>
+
 </body>
 </html>
