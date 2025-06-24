@@ -6,42 +6,22 @@
   <title>Admin Verification Panel — DRF</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-    th { background: #007bff; color: white; }
-    button { padding: 6px 12px; margin: 0 4px; cursor: pointer; }
-    .approved { background-color: #28a745; color: white; }
-    .rejected { background-color: #dc3545; color: white; }
-    .pending { background-color: #ffc107; color: black; }
-    a { color: #007bff; text-decoration: none; }
+    .user-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+    .user-card h3 { margin-top: 0; }
+    img { max-width: 150px; border-radius: 6px; margin-right: 10px; }
+    .photos { display: flex; margin-bottom: 10px; }
+    button { padding: 8px 12px; margin-right: 10px; cursor: pointer; }
+    .approved { background-color: #4CAF50; color: white; }
+    .rejected { background-color: #f44336; color: white; }
+    .pending { background-color: #ff9800; color: white; }
+    #logoutBtn { margin-bottom: 20px; }
   </style>
 </head>
 <body>
-  <h2>Admin - User Verification Requests</h2>
-
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Country</th>
-        <th>Age</th>
-        <th>Wallet</th>
-        <th>Delivery</th>
-        <th>ID Photo</th>
-        <th>Passport Photo</th>
-        <th>Real Photo</th>
-        <th>Status</th>
-        <th>Submitted At</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="requestsBody">
-      <tr><td colspan="14">Loading requests...</td></tr>
-    </tbody>
-  </table>
+  <h2>Admin User Verification Approval Panel</h2>
+  <button id="logoutBtn">Logout</button>
+  <div id="status"></div>
+  <div id="requestsContainer">Loading verification requests...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -59,7 +39,6 @@
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    // Firebase config - REPLACE with your actual config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -70,69 +49,23 @@
       appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const requestsBody = document.getElementById("requestsBody");
+    // Add your admin UIDs here for access control
+    const adminUIDs = [
+      "YOUR_ADMIN_UID_HERE" // replace with your actual Firebase Auth UID
+    ];
 
-    // Admin login required
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        // Optional: You can check if user.uid is admin UID here for extra security
-        loadRequests();
-      } else {
-        requestsBody.innerHTML = `<tr><td colspan="14">Please <button id="loginBtn">Login with Google</button> to view.</td></tr>`;
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
-      }
-    });
+    const logoutBtn = document.getElementById("logoutBtn");
+    const requestsContainer = document.getElementById("requestsContainer");
+    const statusDiv = document.getElementById("status");
 
-    function loadRequests() {
-      onValue(ref(db, "userVerifications"), snapshot => {
-        const data = snapshot.val();
-        if (!data) {
-          requestsBody.innerHTML = `<tr><td colspan="14">No verification requests found.</td></tr>`;
-          return;
-        }
+    logoutBtn.onclick = () => signOut(auth).catch(console.error);
 
-        requestsBody.innerHTML = "";
-
-        for (const [uid, v] of Object.entries(data)) {
-          const idPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.idPhotoHash}`;
-          const passportPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.passportPhotoHash}`;
-          const realPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.realPhotoHash}`;
-          const submittedDate = new Date(v.submittedAt).toLocaleString();
-
-          requestsBody.innerHTML += `
-            <tr>
-              <td>${uid}</td>
-              <td>${escapeHTML(v.name)}</td>
-              <td>${escapeHTML(v.email)}</td>
-              <td>${escapeHTML(v.phone)}</td>
-              <td>${escapeHTML(v.country)}</td>
-              <td>${v.age}</td>
-              <td>${escapeHTML(v.walletAddress)}</td>
-              <td>${escapeHTML(v.deliveryMethod)}</td>
-              <td><a href="${idPhotoLink}" target="_blank">View</a></td>
-              <td><a href="${passportPhotoLink}" target="_blank">View</a></td>
-              <td><a href="${realPhotoLink}" target="_blank">View</a></td>
-              <td class="${v.verificationStatus}">${v.verificationStatus}</td>
-              <td>${submittedDate}</td>
-              <td>
-                <button onclick="updateStatus('${uid}', 'approved')" class="approved">Approve</button>
-                <button onclick="updateStatus('${uid}', 'rejected')" class="rejected">Reject</button>
-              </td>
-            </tr>
-          `;
-        }
-      });
-    }
-
-    // Sanitize output
     function escapeHTML(str) {
-      if (!str) return "";
       return str.replace(/[&<>"]/g, c => ({
         "&": "&amp;",
         "<": "&lt;",
@@ -141,15 +74,94 @@
       })[c]);
     }
 
-    window.updateStatus = async function(uid, status) {
-      if (!confirm(`Are you sure you want to mark this verification as ${status}?`)) return;
-      try {
-        await update(ref(db, `userVerifications/${uid}`), { verificationStatus: status });
-        alert(`Verification ${status}.`);
-      } catch (e) {
-        alert("Failed to update status: " + e.message);
+    function renderRequests(data) {
+      requestsContainer.innerHTML = "";
+      if (!data) {
+        requestsContainer.textContent = "No verification requests found.";
+        return;
       }
-    };
+
+      const entries = Object.entries(data);
+      // Sort newest first
+      entries.sort((a,b) => b[1].submittedAt - a[1].submittedAt);
+
+      for (const [uid, req] of entries) {
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        const statusClass = req.verificationStatus === "approved"
+          ? "approved"
+          : req.verificationStatus === "rejected"
+          ? "rejected"
+          : "pending";
+
+        card.innerHTML = `
+          <h3>${escapeHTML(req.name)} <small style="font-weight:normal; color:#666;">[${escapeHTML(req.verificationStatus || "pending")}]</small></h3>
+          <p><strong>Phone:</strong> ${escapeHTML(req.phone)}</p>
+          <p><strong>Email:</strong> ${escapeHTML(req.email)}</p>
+          <p><strong>Country:</strong> ${escapeHTML(req.country)}</p>
+          <p><strong>Age:</strong> ${escapeHTML(req.age.toString())}</p>
+          <p><strong>Wallet Address:</strong> ${escapeHTML(req.walletAddress)}</p>
+          <p><strong>Delivery Method:</strong> ${escapeHTML(req.deliveryMethod)}</p>
+          <div class="photos">
+            <div>
+              <p><strong>ID Photo:</strong></p>
+              <img src="https://gateway.pinata.cloud/ipfs/${req.idPhotoHash}" alt="ID Photo" />
+            </div>
+            <div>
+              <p><strong>Passport Photo:</strong></p>
+              <img src="https://gateway.pinata.cloud/ipfs/${req.passportPhotoHash}" alt="Passport Photo" />
+            </div>
+            <div>
+              <p><strong>Real Selfie:</strong></p>
+              <img src="https://gateway.pinata.cloud/ipfs/${req.realPhotoHash}" alt="Real Selfie Photo" />
+            </div>
+          </div>
+          <button class="approveBtn" data-uid="${uid}">Approve</button>
+          <button class="rejectBtn" data-uid="${uid}">Reject</button>
+        `;
+
+        requestsContainer.appendChild(card);
+      }
+
+      // Add button listeners
+      document.querySelectorAll(".approveBtn").forEach(btn => {
+        btn.onclick = () => updateStatus(btn.dataset.uid, "approved");
+      });
+      document.querySelectorAll(".rejectBtn").forEach(btn => {
+        btn.onclick = () => updateStatus(btn.dataset.uid, "rejected");
+      });
+    }
+
+    function updateStatus(uid, status) {
+      update(ref(db, `userVerifications/${uid}`), {
+        verificationStatus: status,
+        reviewedAt: Date.now()
+      }).then(() => {
+        statusDiv.textContent = `User ${uid} marked as ${status}.`;
+        setTimeout(() => { statusDiv.textContent = ""; }, 4000);
+      }).catch(err => {
+        alert("Failed to update status: " + err.message);
+      });
+    }
+
+    onAuthStateChanged(auth, user => {
+      if (user && adminUIDs.includes(user.uid)) {
+        statusDiv.textContent = `Welcome Admin: ${user.email}`;
+        // Listen to verification requests
+        onValue(ref(db, "userVerifications"), snap => {
+          renderRequests(snap.val());
+        });
+      } else {
+        // If logged in but not admin, or logged out: force login
+        if(user) {
+          alert("Access denied. You are not an admin.");
+          signOut(auth);
+        } else {
+          signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+        }
+      }
+    });
   </script>
 </body>
 </html>
