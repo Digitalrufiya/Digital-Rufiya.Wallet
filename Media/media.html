@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>DRFMedia Timeline - Search & Boost</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
     header {
       background: #007bff; color: white; padding: 10px 20px;
       position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
     }
     .navbar-left { display: flex; align-items: center; gap: 10px; }
     .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
@@ -37,8 +36,42 @@
     .post-time { font-size: 0.85em; color: #555; margin-top: 4px; }
     .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
     video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
-    #searchBar { max-width: 700px; margin: 10px auto 20px auto; padding: 0 15px; }
-    #searchInput { width: 100%; padding: 8px 12px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
+    #searchBar {
+      max-width: 700px;
+      margin: 10px auto 10px auto;
+      padding: 0 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #searchInput {
+      flex-grow: 1;
+      min-width: 220px;
+      padding: 8px 12px;
+      font-size: 1em;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    #filterButtons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    #filterButtons button {
+      padding: 8px 14px;
+      border-radius: 5px;
+      border: none;
+      background: #007bff;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #filterButtons button.active, #filterButtons button:hover {
+      background: #0056b3;
+    }
     .post-actions button {
       cursor: pointer;
       border: none;
@@ -48,6 +81,8 @@
       border-radius: 5px;
       font-size: 0.9em;
       transition: background-color 0.3s;
+      margin-right: 6px;
+      margin-top: 6px;
     }
     .post-actions button:hover {
       background: #0056b3;
@@ -76,25 +111,21 @@
   </nav>
 </header>
 
-<div id="searchBar">
-  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
+<div id="searchBar" role="search">
+  <input type="search" id="searchInput" placeholder="Search by user name, wallet address, post description or IPFS hash..." aria-label="Search posts and users" />
+  <div id="filterButtons" role="group" aria-label="Filter posts">
+    <button id="btnAll" class="active" aria-pressed="true">All Posts</button>
+    <button id="btnMostLiked" aria-pressed="false">Most Liked</button>
+    <button id="btnMostViewed" aria-pressed="false">Most Viewed</button>
+  </div>
 </div>
-
-<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
-<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
-
-<form id="uploadForm" style="display:none; max-width:700px; margin:20px auto;">
-  <input type="file" id="mediaFile" accept="image/*,video/*" required />
-  <textarea id="caption" placeholder="Write your caption..." required minlength="4" style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
-  <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">Post</button>
-</form>
 
 <div id="postContainer" aria-live="polite"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, push, set, onValue, get, remove
+    getDatabase, ref, push, set, onValue, get, update
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import {
     getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
@@ -110,156 +141,172 @@
     appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
 
-  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const uploadForm = document.getElementById("uploadForm");
-  const mediaFile = document.getElementById("mediaFile");
-  const captionInput = document.getElementById("caption");
-  const postContainer = document.getElementById("postContainer");
   const searchInput = document.getElementById("searchInput");
+  const btnAll = document.getElementById("btnAll");
+  const btnMostLiked = document.getElementById("btnMostLiked");
+  const btnMostViewed = document.getElementById("btnMostViewed");
+  const postContainer = document.getElementById("postContainer");
 
   let currentUser = null;
   let allPosts = [];
+  let currentFilter = "all"; // all, liked, viewed
 
-  // Escape to prevent XSS
-  const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // Escape HTML to prevent XSS
+  const escapeHTML = str => String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-  // AUTH state handler
+  // Auth state listener
   onAuthStateChanged(auth, user => {
     currentUser = user;
-    uploadForm.style.display = user ? "block" : "none";
-    loginBtn.style.display = user ? "none" : "block";
-    logoutBtn.style.display = user ? "block" : "none";
+    updateNavLinks();
     renderPosts();
   });
 
-  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
-  logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
-
-  // Upload handler
-  uploadForm.addEventListener("submit", async e => {
-    e.preventDefault();
-    if (!currentUser) return alert("Please login.");
-    if (!mediaFile.files.length) return alert("Select a file.");
-    if (captionInput.value.trim().length < 4) return alert("Caption too short.");
-
-    uploadForm.querySelector("button").disabled = true;
-    const file = mediaFile.files[0];
-    const fd = new FormData();
-    fd.append("file", file);
-
-    try {
-      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: { Authorization: pinataJWT },
-        body: fd
-      });
-      if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
-      const { IpfsHash } = await res.json();
-
-      const newPostRef = push(ref(db, "posts"));
-      await set(newPostRef, {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
-        caption: captionInput.value.trim(),
-        ipfsHash: IpfsHash,
-        mediaType: file.type.startsWith("video") ? "video" : "image",
-        mediaMimeType: file.type,
-        timestamp: Date.now(),
-        likesCount: 0,
-        commentsCount: 0,
-        boostsCount: 0,
-        boostedBy: {}
-      });
-
-      captionInput.value = "";
-      mediaFile.value = "";
-      alert("Posted successfully!");
-    } catch (err) {
-      alert("Upload failed: " + err.message);
-    } finally {
-      uploadForm.querySelector("button").disabled = false;
+  function updateNavLinks() {
+    const loginNavLink = document.getElementById("loginNavLink");
+    const logoutNavLink = document.getElementById("logoutNavLink");
+    if (currentUser) {
+      loginNavLink.style.display = "none";
+      logoutNavLink.style.display = "inline-block";
+      logoutNavLink.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
+    } else {
+      loginNavLink.style.display = "inline-block";
+      logoutNavLink.style.display = "none";
+      loginNavLink.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
     }
-  });
+  }
 
-  // Load posts and listen for updates
+  // Listen posts realtime
   const postsRef = ref(db, "posts");
   onValue(postsRef, snapshot => {
     const posts = snapshot.val() || {};
     allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-    allPosts.sort((a, b) => b.timestamp - a.timestamp);
     renderPosts();
   });
 
-  // Render posts with filtering
+  // Filter buttons
+  btnAll.onclick = () => setFilter("all");
+  btnMostLiked.onclick = () => setFilter("liked");
+  btnMostViewed.onclick = () => setFilter("viewed");
+
+  function setFilter(filter) {
+    currentFilter = filter;
+    btnAll.classList.toggle("active", filter === "all");
+    btnMostLiked.classList.toggle("active", filter === "liked");
+    btnMostViewed.classList.toggle("active", filter === "viewed");
+    btnAll.setAttribute("aria-pressed", filter === "all");
+    btnMostLiked.setAttribute("aria-pressed", filter === "liked");
+    btnMostViewed.setAttribute("aria-pressed", filter === "viewed");
+    renderPosts();
+  }
+
+  // Render posts with search and filter
   function renderPosts() {
-    const filter = searchInput.value.trim().toLowerCase();
+    const filterText = searchInput.value.trim().toLowerCase();
+    let filteredPosts = allPosts.filter(post => {
+      // Search filter matches user name, wallet address (userId), caption, or IPFS hash (post.ipfsHash)
+      if (!filterText) return true;
+      const matchUser = (post.displayName || "").toLowerCase().includes(filterText);
+      const matchUserId = (post.userId || "").toLowerCase().includes(filterText);
+      const matchCaption = (post.caption || "").toLowerCase().includes(filterText);
+      const matchHash = (post.ipfsHash || "").toLowerCase().includes(filterText);
+      return matchUser || matchUserId || matchCaption || matchHash;
+    });
+
+    // Sorting by filter type
+    if (currentFilter === "liked") {
+      filteredPosts.sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
+    } else if (currentFilter === "viewed") {
+      filteredPosts.sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0));
+    } else {
+      // default: sort by timestamp desc
+      filteredPosts.sort((a, b) => b.timestamp - a.timestamp);
+    }
+
     postContainer.innerHTML = "";
-    for (const post of allPosts) {
-      if (!post.caption.toLowerCase().includes(filter)) continue;
+    filteredPosts.forEach(post => {
+      renderPost(post);
+      incrementViewCount(post.id, post.viewsCount || 0);
+    });
+  }
 
-      const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
-      const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
-      const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
-
-      const card = document.createElement("div");
-      card.className = "post-item";
-
-      card.innerHTML = `
-        <div class="post-owner" style="gap:10px;">
-          <img src="${post.photoURL}" class="avatar" alt="User profile photo" />
-          <div>
-            <strong>${escapeHTML(post.displayName || "Anonymous")}</strong><br/>
-            <a href="profile.html?uid=${post.userId}" style="font-size:0.85em; color:#007bff;">View Profile</a>
-          </div>
-        </div>
-        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-        ${post.mediaType === "video"
-          ? `<video controls preload="metadata" style="border-radius:6px;"><source src="${url1}" type="${post.mediaMimeType}" /></video>`
-          : `<img src="${url1}" alt="Post image" onerror="this.onerror=null;this.src='${url2}'" />`
-        }
-        <div class="post-caption">${escapeHTML(post.caption)}</div>
-        <div class="post-actions" style="margin-top:10px; display:flex; gap:10px; flex-wrap: wrap;">
-          <button onclick="likePost('${post.id}')">👍 Like (${post.likesCount || 0})</button>
-          <button onclick="sharePost('${post.id}')">🔗 Share</button>
-          <button onclick="repost('${post.id}')">🔁 Repost</button>
-          <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
-        </div>
-
-        <div class="comment-box" id="commentBox-${post.id}">
-          <textarea placeholder="Write a comment..." rows="2" id="commentInput-${post.id}"></textarea>
-          <button onclick="addComment('${post.id}')">Add Comment</button>
-        </div>
-        <div class="comments-list" id="commentsList-${post.id}"></div>
-      `;
-
-      postContainer.appendChild(card);
-
-      // Render comments for this post
-      renderComments(post.id);
+  // Increment views count once per page load per post
+  // (for demo, no user-based deduplication)
+  const viewedPosts = new Set();
+  async function incrementViewCount(postId, currentViews) {
+    if (viewedPosts.has(postId)) return;
+    viewedPosts.add(postId);
+    try {
+      await set(ref(db, `posts/${postId}/viewsCount`), currentViews + 1);
+    } catch (e) {
+      console.warn("Failed to increment views count:", e);
     }
   }
 
-  // Search input listener
-  searchInput.addEventListener("input", renderPosts);
+  function renderPost(post) {
+    const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
+    const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+    const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
+
+    const card = document.createElement("div");
+    card.className = "post-item";
+
+    card.innerHTML = `
+      <div class="post-owner" style="gap:10px;">
+        <img src="${escapeHTML(post.photoURL || '')}" class="avatar" alt="User profile photo" />
+        <div>
+          <strong>${escapeHTML(post.displayName || "Anonymous")}</strong><br/>
+          <small style="font-size:0.8em; color:#444;">Wallet: ${escapeHTML(post.userId || '')}</small><br/>
+          <a href="profile.html?uid=${escapeHTML(post.userId || '')}" style="font-size:0.85em; color:#007bff;">View Profile</a>
+        </div>
+      </div>
+      <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+      ${post.mediaType === "video"
+        ? `<video controls preload="metadata" style="border-radius:6px; max-height:320px;"><source src="${url1}" type="${escapeHTML(post.mediaMimeType || '')}" /></video>`
+        : `<img src="${url1}" alt="Post media" onerror="this.onerror=null;this.src='${url2}'" />`
+      }
+      <div class="post-caption">${escapeHTML(post.caption || '')}</div>
+      <div style="font-size:0.8em; color:#666; margin-top:4px;">
+        <strong>Likes:</strong> ${post.likesCount || 0} |
+        <strong>Views:</strong> ${post.viewsCount || 0} |
+        <strong>Comments:</strong> ${post.commentsCount || 0} |
+        <strong>Boosts:</strong> ${post.boostsCount || 0}
+      </div>
+      <div class="post-actions" style="margin-top:10px; display:flex; flex-wrap: wrap;">
+        <button onclick="likePost('${post.id}')">👍 Like (${post.likesCount || 0})</button>
+        <button onclick="sharePost('${post.id}')">🔗 Share</button>
+        <button onclick="repost('${post.id}')">🔁 Repost</button>
+        <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
+      </div>
+      <div class="comment-box" id="commentBox-${post.id}">
+        <textarea placeholder="Write a comment..." rows="2" id="commentInput-${post.id}"></textarea>
+        <button onclick="addComment('${post.id}')">Add Comment</button>
+      </div>
+      <div class="comments-list" id="commentsList-${post.id}"></div>
+    `;
+
+    postContainer.appendChild(card);
+    renderComments(post.id);
+  }
 
   // Like a post
   window.likePost = async function(postId) {
     if (!currentUser) return alert("Login required to like posts.");
-    const postRef = ref(db, "posts/" + postId);
-    const snapshot = await get(postRef);
-    if (!snapshot.exists()) return alert("Post not found.");
-    const post = snapshot.val();
-    const newLikes = (post.likesCount || 0) + 1;
-    await set(ref(db, `posts/${postId}/likesCount`), newLikes);
+    try {
+      const postRef = ref(db, "posts/" + postId);
+      const snapshot = await get(postRef);
+      if (!snapshot.exists()) return alert("Post not found.");
+      const post = snapshot.val();
+      // For simplicity, no user like tracking to prevent multi-likes (can add if needed)
+      const newLikes = (post.likesCount || 0) + 1;
+      await set(ref(db, `posts/${postId}/likesCount`), newLikes);
+    } catch (e) {
+      alert("Failed to like post: " + e.message);
+    }
   };
 
   // Share post link
@@ -268,95 +315,124 @@
     navigator.clipboard.writeText(link).then(() => alert("Post link copied to clipboard."));
   };
 
-  // Repost placeholder
-  window.repost = function(postId) {
-    alert("Repost functionality coming soon!");
+  // Repost: clones post to timeline with new timestamp, same media and caption, from current user
+  window.repost = async function(postId) {
+    if (!currentUser) return alert("Login required to repost posts.");
+    try {
+      const postSnap = await get(ref(db, "posts/" + postId));
+      if (!postSnap.exists()) return alert("Original post not found.");
+      const post = postSnap.val();
+
+      const newPostRef = push(ref(db, "posts"));
+      await set(newPostRef, {
+        userId: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        caption: post.caption,
+        ipfsHash: post.ipfsHash,
+        mediaType: post.mediaType,
+        mediaMimeType: post.mediaMimeType || "",
+        timestamp: Date.now(),
+        likesCount: 0,
+        commentsCount: 0,
+        boostsCount: 0,
+        boostedBy: {},
+        viewsCount: 0
+      });
+      alert("Reposted successfully!");
+    } catch(e) {
+      alert("Repost failed: " + e.message);
+    }
   };
 
-  // Boost a post
+  // Boost post - admin only (for demo, admin = logged user with email ending with @yourdomain.com, replace with your rule)
   window.boostPost = async function(postId) {
     if (!currentUser) return alert("Login required to boost posts.");
-    const postRef = ref(db, "posts/" + postId);
-    const snapshot = await get(postRef);
-    if (!snapshot.exists()) return alert("Post not found.");
-    const post = snapshot.val();
+    if (!currentUser.email?.endsWith("@yourdomain.com")) return alert("Only admins can boost posts.");
 
-    const boostedBy = post.boostedBy || {};
-    const userId = currentUser.uid;
-    const isAlreadyBoosted = boostedBy[userId];
+    try {
+      const postRef = ref(db, "posts/" + postId);
+      const snapshot = await get(postRef);
+      if (!snapshot.exists()) return alert("Post not found.");
+      const post = snapshot.val();
 
-    if (isAlreadyBoosted) {
-      // Remove boost
-      delete boostedBy[userId];
-    } else {
-      // Add boost
-      boostedBy[userId] = true;
+      const boostedBy = post.boostedBy || {};
+      if (boostedBy[currentUser.uid]) {
+        alert("You already boosted this post.");
+        return;
+      }
+      boostedBy[currentUser.uid] = Date.now();
+      const newBoostCount = (post.boostsCount || 0) + 1;
+
+      await update(postRef, {
+        boostedBy,
+        boostsCount: newBoostCount
+      });
+
+      alert("Post boosted successfully!");
+    } catch(e) {
+      alert("Boost failed: " + e.message);
     }
-
-    const boostsCount = Object.keys(boostedBy).length;
-
-    await set(ref(db, `posts/${postId}/boostedBy`), boostedBy);
-    await set(ref(db, `posts/${postId}/boostsCount`), boostsCount);
   };
 
-  // Add comment
+  // Comments
+
   window.addComment = async function(postId) {
     if (!currentUser) return alert("Login required to comment.");
-    const textarea = document.getElementById("commentInput-" + postId);
+    const textarea = document.getElementById(`commentInput-${postId}`);
     const text = textarea.value.trim();
     if (!text) return alert("Comment cannot be empty.");
+    try {
+      const commentsRef = ref(db, `posts/${postId}/comments`);
+      const newCommentRef = push(commentsRef);
+      await set(newCommentRef, {
+        userId: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        comment: text,
+        timestamp: Date.now()
+      });
+      textarea.value = "";
 
-    const commentData = {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName,
-      photoURL: currentUser.photoURL,
-      text,
-      timestamp: Date.now()
-    };
+      // Update comments count
+      const postRef = ref(db, "posts/" + postId);
+      const snapshot = await get(postRef);
+      const post = snapshot.val();
+      const newCommentsCount = (post.commentsCount || 0) + 1;
+      await set(ref(db, `posts/${postId}/commentsCount`), newCommentsCount);
 
-    const commentsRef = ref(db, `comments/${postId}`);
-    const newCommentRef = push(commentsRef);
-    await set(newCommentRef, commentData);
-
-    // Increment comment count on post
-    const postRef = ref(db, "posts/" + postId);
-    const postSnap = await get(postRef);
-    if (postSnap.exists()) {
-      const post = postSnap.val();
-      const newCount = (post.commentsCount || 0) + 1;
-      await set(ref(db, `posts/${postId}/commentsCount`), newCount);
+      renderComments(postId);
+    } catch(e) {
+      alert("Failed to add comment: " + e.message);
     }
-
-    textarea.value = "";
   };
 
-  // Render comments for a post
   async function renderComments(postId) {
-    const commentsList = document.getElementById("commentsList-" + postId);
-    if (!commentsList) return;
-    commentsList.innerHTML = "Loading comments...";
-
-    const commentsRef = ref(db, `comments/${postId}`);
-    const snapshot = await get(commentsRef);
-    if (!snapshot.exists()) {
-      commentsList.innerHTML = "<i>No comments yet</i>";
-      return;
-    }
-    const comments = snapshot.val();
-    const entries = Object.values(comments).sort((a,b) => a.timestamp - b.timestamp);
-
-    commentsList.innerHTML = "";
-    for (const c of entries) {
-      commentsList.innerHTML += `
-        <div><strong>${escapeHTML(c.displayName || "Anonymous")}:</strong> ${escapeHTML(c.text)}</div>
-      `;
+    const commentsList = document.getElementById(`commentsList-${postId}`);
+    const commentsRef = ref(db, `posts/${postId}/comments`);
+    try {
+      const snapshot = await get(commentsRef);
+      const comments = snapshot.exists() ? Object.values(snapshot.val()) : [];
+      commentsList.innerHTML = "";
+      comments
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .forEach(c => {
+          const div = document.createElement("div");
+          div.innerHTML = `<strong>${escapeHTML(c.displayName || "Anon")}:</strong> ${escapeHTML(c.comment)}`;
+          commentsList.appendChild(div);
+        });
+    } catch (e) {
+      commentsList.innerHTML = `<em>Failed to load comments.</em>`;
     }
   }
 
+  // Search input event
+  searchInput.addEventListener("input", () => renderPosts());
+
   // Responsive menu toggle
-  document.getElementById("menuToggle").addEventListener("click", () => {
-    document.getElementById("primaryNav").classList.toggle("open");
-  });
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  menuToggle.addEventListener("click", () => primaryNav.classList.toggle("open"));
 </script>
 
 </body>
