@@ -63,8 +63,7 @@
     import {
       getDatabase,
       ref,
-      set,
-      onValue
+      set
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import {
       getAuth,
@@ -74,7 +73,6 @@
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    // Firebase config — REPLACE with your actual config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -85,10 +83,8 @@
       appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
     };
 
-    // Pinata JWT — REPLACE with your actual token
     const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
@@ -98,14 +94,13 @@
     const logoutBtn = document.getElementById("logoutBtn");
     const verificationForm = document.getElementById("verificationForm");
 
-    // Handle auth state
     onAuthStateChanged(auth, user => {
       if (user) {
         loginBtn.classList.add("hidden");
         logoutBtn.classList.remove("hidden");
         verificationForm.classList.remove("hidden");
 
-        // Pre-fill email field from auth if empty
+        // Autofill email if empty
         const emailInput = document.getElementById("email");
         if (!emailInput.value) emailInput.value = user.email || "";
       } else {
@@ -118,7 +113,6 @@
     loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
     logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
 
-    // Upload helper for Pinata
     async function uploadFileToPinata(file) {
       const fd = new FormData();
       fd.append("file", file);
@@ -144,12 +138,10 @@
       try {
         verificationForm.querySelector("button").disabled = true;
 
-        // Upload photos to Pinata
         const idPhotoHash = await uploadFileToPinata(document.getElementById("idPhoto").files[0]);
         const passportPhotoHash = await uploadFileToPinata(document.getElementById("passportPhoto").files[0]);
         const realPhotoHash = await uploadFileToPinata(document.getElementById("realPhoto").files[0]);
 
-        // Build data object
         const verificationData = {
           name: document.getElementById("name").value.trim(),
           phone: document.getElementById("phone").value.trim(),
@@ -167,7 +159,6 @@
           submittedAt: Date.now()
         };
 
-        // Save in Firebase under userVerifications
         await set(ref(db, `userVerifications/${user.uid}`), verificationData);
 
         alert("Verification data submitted successfully!");
