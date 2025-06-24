@@ -1,172 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Admin Verification Panel</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  #loginBtn, #logoutBtn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-  #logoutBtn { display: none; }
-  .user-card { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 15px; }
-  .user-card h3 { margin: 0 0 8px; }
-  .photos img { max-width: 120px; margin-right: 10px; border-radius: 4px; }
-  button.approve, button.reject { padding: 6px 12px; margin-right: 10px; cursor: pointer; }
-  button.approve { background-color: #28a745; color: white; border: none; }
-  button.reject { background-color: #dc3545; color: white; border: none; }
-</style>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  onValue,
-  update,
-  get,
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-// Your Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const adminContent = document.getElementById("adminContent");
-const message = document.getElementById("message");
-
-// List of Admin UIDs - only these can approve
-const adminUIDs = [
-  "YOUR_ADMIN_UID_HERE"  // <-- Replace with actual Firebase Auth UID(s) of your admin account(s)
-];
-
-// Login button click
-loginBtn.onclick = async () => {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch (e) {
-    alert("Login failed: " + e.message);
-  }
-};
-
-// Logout button click
-logoutBtn.onclick = () => {
-  signOut(auth);
-};
-
-// On Auth State Change
-onAuthStateChanged(auth, user => {
-  if(user && adminUIDs.includes(user.uid)) {
-    // Show admin panel
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    message.textContent = `Welcome Admin, ${user.displayName}`;
-    adminContent.style.display = "block";
-    loadVerificationRequests();
-  } else {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    adminContent.style.display = "none";
-    message.textContent = "Please log in as admin to view verification requests.";
-  }
-});
-
-// Load verification requests from Firebase
-function loadVerificationRequests() {
-  const verifRef = ref(db, "userVerifications");
-  onValue(verifRef, snapshot => {
-    const data = snapshot.val();
-    adminContent.innerHTML = "";
-    if(!data) {
-      adminContent.textContent = "No verification requests found.";
-      return;
-    }
-
-    // Filter to those with status 'pending' or no status yet
-    const pendingUsers = Object.entries(data).filter(([uid, info]) => 
-      !info.verificationStatus || info.verificationStatus === "pending"
-    );
-
-    if(pendingUsers.length === 0) {
-      adminContent.textContent = "No pending verification requests.";
-      return;
-    }
-
-    for(const [uid, info] of pendingUsers) {
-      const card = document.createElement("div");
-      card.className = "user-card";
-
-      // Display user info and photos (assuming info contains ID photo IPFS hashes or URLs)
-      const idPhotosHTML = (info.idPhotos && info.idPhotos.length)
-        ? info.idPhotos.map(hash => `<img src="https://gateway.pinata.cloud/ipfs/${hash}" alt="ID Photo"/>`).join("")
-        : "No ID photos uploaded.";
-
-      card.innerHTML = `
-        <h3>User UID: ${uid}</h3>
-        <p><strong>Name:</strong> ${info.name || "N/A"}</p>
-        <p><strong>Email:</strong> ${info.email || "N/A"}</p>
-        <p><strong>Status:</strong> ${info.verificationStatus || "pending"}</p>
-        <div class="photos">${idPhotosHTML}</div>
-        <br/>
-        <button class="approve">Approve</button>
-        <button class="reject">Reject</button>
-      `;
-
-      // Approve click
-      card.querySelector(".approve").onclick = () => {
-        updateVerificationStatus(uid, "approved");
-      };
-
-      // Reject click
-      card.querySelector(".reject").onclick = () => {
-        updateVerificationStatus(uid, "rejected");
-      };
-
-      adminContent.appendChild(card);
-    }
-  });
-}
-
-// Update verificationStatus in Firebase
-async function updateVerificationStatus(uid, status) {
-  try {
-    const updateData = {
-      verificationStatus: status,
-      reviewedAt: Date.now()
-    };
-    await update(ref(db, `userVerifications/${uid}`), updateData);
-    alert(`User ${uid} has been ${status}.`);
-  } catch(e) {
-    alert("Error updating status: " + e.message);
-  }
-}
-
-</script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Admin Panel Login Test</title>
+  <style>
+    #adminPanel { display: none; padding: 20px; border: 2px solid #333; margin-top: 20px; }
+    #loginBtn { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  </style>
 </head>
 <body>
-  <h1>Admin Verification Panel</h1>
+  <h1>DRF Admin Panel Login</h1>
   <button id="loginBtn">Login with Google</button>
-  <button id="logoutBtn">Logout</button>
-  <p id="message">Please log in as admin to view verification requests.</p>
-  <div id="adminContent" style="display:none;"></div>
+
+  <div id="adminPanel">
+    <h2>Welcome Admin!</h2>
+    <p>This is your protected admin panel content.</p>
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      get
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import {
+      getAuth,
+      signInWithPopup,
+      signOut,
+      GoogleAuthProvider,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const adminPanel = document.getElementById("adminPanel");
+
+    loginBtn.addEventListener("click", async () => {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await checkIfAdmin(result.user.uid);
+      } catch (e) {
+        alert("Login failed: " + e.message);
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      adminPanel.style.display = "none";
+      loginBtn.style.display = "inline-block";
+      alert("Logged out");
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        await checkIfAdmin(user.uid);
+      } else {
+        adminPanel.style.display = "none";
+        loginBtn.style.display = "inline-block";
+      }
+    });
+
+    async function checkIfAdmin(uid) {
+      try {
+        const snapshot = await get(ref(db, `admins/${uid}`));
+        if (snapshot.exists() && snapshot.val() === true) {
+          // Show admin panel, hide login button
+          adminPanel.style.display = "block";
+          loginBtn.style.display = "none";
+          alert("Welcome Admin!");
+        } else {
+          alert("Access Denied: You are not an admin.");
+          await signOut(auth);
+          adminPanel.style.display = "none";
+          loginBtn.style.display = "inline-block";
+        }
+      } catch (error) {
+        console.error("Admin check error:", error);
+        alert("Error checking admin status.");
+      }
+    }
+  </script>
 </body>
 </html>
