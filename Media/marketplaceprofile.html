@@ -2,187 +2,182 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Seller Profile | DRF Marketplace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verified Seller Registration | DRF Marketplace</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
+      background: #f4f4f4;
       margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
+      padding: 20px;
     }
     .container {
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 20px;
+      max-width: 600px;
       background: white;
+      margin: auto;
+      padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
-      margin-bottom: 20px;
+      color: #0066cc;
     }
     label {
-      display: block;
-      margin: 12px 0 4px;
       font-weight: bold;
+      display: block;
+      margin: 12px 0 6px;
     }
-    input, textarea, select {
+    input, select, textarea {
       width: 100%;
       padding: 10px;
-      border-radius: 5px;
+      margin-bottom: 10px;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 1rem;
     }
     button {
-      margin-top: 20px;
-      background: #007BFF;
+      background-color: #0066cc;
       color: white;
       border: none;
-      padding: 12px 25px;
-      font-size: 1rem;
+      padding: 12px;
+      width: 100%;
       border-radius: 6px;
+      font-size: 16px;
       cursor: pointer;
     }
     button:disabled {
-      background: #888;
-      cursor: not-allowed;
+      background: #999;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>Verified Seller Application</h2>
+    <form id="sellerForm">
+      <label>Full Name</label>
+      <input type="text" id="fullName" required />
 
-<div class="container">
-  <h2>Seller Verification Form</h2>
-  <label>Name</label>
-  <input id="name" type="text" required />
+      <label>Phone Number</label>
+      <input type="tel" id="phone" required placeholder="+960XXXXXXX" />
 
-  <label>Phone Number</label>
-  <input id="phone" type="tel" required />
+      <label>Email Address</label>
+      <input type="email" id="email" required />
 
-  <label>Email (from Auth)</label>
-  <input id="email" type="email" readonly />
+      <label>Country</label>
+      <input type="text" id="country" required />
 
-  <label>Age</label>
-  <input id="age" type="number" min="16" required />
+      <label>Government ID Number</label>
+      <input type="text" id="idNumber" required />
 
-  <label>Country</label>
-  <input id="country" type="text" required />
+      <label>Upload ID Photo</label>
+      <input type="file" id="idPhoto" accept="image/*" required />
 
-  <label>Full Address</label>
-  <textarea id="address" required></textarea>
+      <label>Upload Profile Photo</label>
+      <input type="file" id="profilePhoto" accept="image/*" required />
 
-  <label>Wallet Address</label>
-  <input id="wallet" type="text" required maxlength="42" />
+      <label>Wallet Address</label>
+      <input type="text" id="wallet" required placeholder="0x..." />
 
-  <label>Delivery Method</label>
-  <select id="delivery">
-    <option value="courier">Courier</option>
-    <option value="local pickup">Local Pickup</option>
-    <option value="post office">Post Office</option>
-  </select>
+      <label>Delivery Method (eg: Post, Courier)</label>
+      <input type="text" id="delivery" required />
 
-  <label>Government ID Photo</label>
-  <input id="govID" type="file" accept="image/*" required />
+      <label>
+        <input type="checkbox" id="agree" required />
+        I agree to the terms and conditions.
+      </label>
 
-  <label><input type="checkbox" id="agree" /> I agree to follow all DRF Marketplace rules.</label>
+      <button type="submit" id="submitBtn">Submit</button>
+      <div id="result" class=""></div>
+    </form>
+  </div>
 
-  <button id="submitBtn" disabled>Submit Verification</button>
-</div>
+  <script>
+    const form = document.getElementById('sellerForm');
+    const resultBox = document.getElementById('result');
+    const submitBtn = document.getElementById('submitBtn');
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-};
+    async function uploadToPinata(file) {
+      const fd = new FormData();
+      fd.append("file", file);
 
-const PINATA_JWT = "Bearer YOUR_PINATA_JWT";
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: PINATA_JWT },
+        body: fd,
+      });
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+      if (!res.ok) throw new Error("Pinata upload failed");
 
-const nameInput = document.getElementById("name");
-const phoneInput = document.getElementById("phone");
-const emailInput = document.getElementById("email");
-const ageInput = document.getElementById("age");
-const countryInput = document.getElementById("country");
-const addressInput = document.getElementById("address");
-const walletInput = document.getElementById("wallet");
-const deliveryInput = document.getElementById("delivery");
-const govIDInput = document.getElementById("govID");
-const agreeInput = document.getElementById("agree");
-const submitBtn = document.getElementById("submitBtn");
+      const data = await res.json();
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    }
 
-let currentUser = null;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      resultBox.className = "";
+      resultBox.textContent = "Uploading... Please wait.";
 
-agreeInput.addEventListener("change", () => {
-  submitBtn.disabled = !agreeInput.checked;
-});
+      try {
+        const fullName = document.getElementById("fullName").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const country = document.getElementById("country").value.trim();
+        const idNumber = document.getElementById("idNumber").value.trim();
+        const wallet = document.getElementById("wallet").value.trim();
+        const delivery = document.getElementById("delivery").value.trim();
+        const agree = document.getElementById("agree").checked;
 
-onAuthStateChanged(auth, user => {
-  if (!user) return alert("Please log in first.");
-  currentUser = user;
-  emailInput.value = user.email;
-});
+        const idPhotoFile = document.getElementById("idPhoto").files[0];
+        const profilePhotoFile = document.getElementById("profilePhoto").files[0];
 
-submitBtn.addEventListener("click", async () => {
-  if (!currentUser) return;
+        if (!agree) throw new Error("You must agree to the terms.");
 
-  const govIDFile = govIDInput.files[0];
-  if (!govIDFile) return alert("Upload your government ID");
+        const idPhotoURL = await uploadToPinata(idPhotoFile);
+        const profilePhotoURL = await uploadToPinata(profilePhotoFile);
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Submitting...";
+        const submission = {
+          fullName,
+          phone,
+          email,
+          country,
+          idNumber,
+          wallet,
+          delivery,
+          idPhotoURL,
+          profilePhotoURL,
+          submittedAt: new Date().toISOString()
+        };
 
-  try {
-    const idImageUrl = await uploadToPinata(govIDFile);
-    const sellerRef = ref(db, `marketUsers/${currentUser.uid}/sellerProfile`);
-    await update(sellerRef, {
-      name: nameInput.value.trim(),
-      phone: phoneInput.value.trim(),
-      email: currentUser.email,
-      age: ageInput.value.trim(),
-      country: countryInput.value.trim(),
-      address: addressInput.value.trim(),
-      wallet: walletInput.value.trim(),
-      deliveryMethod: deliveryInput.value,
-      governmentIDURL: idImageUrl,
-      agreedToTerms: true,
-      verified: false
+        console.log("✔️ Submission:", submission);
+
+        resultBox.className = "success";
+        resultBox.textContent = "Submitted successfully!";
+
+        form.reset();
+      } catch (err) {
+        resultBox.className = "error";
+        resultBox.textContent = "Error: " + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
     });
-    alert("Submitted for review. We will contact you soon.");
-  } catch (err) {
-    alert("Error: " + err.message);
-  }
-
-  submitBtn.textContent = "Submit Verification";
-  submitBtn.disabled = false;
-});
-
-async function uploadToPinata(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-    method: "POST",
-    headers: { Authorization: PINATA_JWT },
-    body: fd
-  });
-  if (!res.ok) throw new Error("Failed to upload ID to Pinata");
-  const data = await res.json();
-  return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-}
-</script>
-
+  </script>
 </body>
 </html>
