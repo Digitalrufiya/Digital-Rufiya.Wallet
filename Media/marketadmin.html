@@ -1,42 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Verification Panel — DRF</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-    .user-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-    .user-card h3 { margin-top: 0; }
-    img { max-width: 150px; border-radius: 6px; margin-right: 10px; }
-    .photos { display: flex; margin-bottom: 10px; }
-    button { padding: 8px 12px; margin-right: 10px; cursor: pointer; }
-    .approved { background-color: #4CAF50; color: white; }
-    .rejected { background-color: #f44336; color: white; }
-    .pending { background-color: #ff9800; color: white; }
-    #logoutBtn { margin-bottom: 20px; }
-  </style>
-</head>
-<body>
-  <h2>Admin User Verification Approval Panel</h2>
-  <button id="logoutBtn">Logout</button>
-  <div id="status"></div>
-  <div id="requestsContainer">Loading verification requests...</div>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Admin Panel - Seller Verification</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import {
-      getDatabase,
-      ref,
-      onValue,
-      update
+      getDatabase, ref, onValue, update
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import {
       getAuth,
-      signInWithPopup,
-      signOut,
+      signInWithRedirect,
       GoogleAuthProvider,
-      onAuthStateChanged
+      onAuthStateChanged,
+      signOut
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -54,114 +32,78 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // Add your admin UIDs here for access control
-    const adminUIDs = [
-      "YOUR_ADMIN_UID_HERE" // replace with your actual Firebase Auth UID
-    ];
-
+    const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const requestsContainer = document.getElementById("requestsContainer");
-    const statusDiv = document.getElementById("status");
+    const verificationContainer = document.getElementById("verificationContainer");
 
-    logoutBtn.onclick = () => signOut(auth).catch(console.error);
-
-    function escapeHTML(str) {
-      return str.replace(/[&<>"]/g, c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;"
-      })[c]);
-    }
-
-    function renderRequests(data) {
-      requestsContainer.innerHTML = "";
-      if (!data) {
-        requestsContainer.textContent = "No verification requests found.";
-        return;
-      }
-
-      const entries = Object.entries(data);
-      // Sort newest first
-      entries.sort((a,b) => b[1].submittedAt - a[1].submittedAt);
-
-      for (const [uid, req] of entries) {
-        const card = document.createElement("div");
-        card.className = "user-card";
-
-        const statusClass = req.verificationStatus === "approved"
-          ? "approved"
-          : req.verificationStatus === "rejected"
-          ? "rejected"
-          : "pending";
-
-        card.innerHTML = `
-          <h3>${escapeHTML(req.name)} <small style="font-weight:normal; color:#666;">[${escapeHTML(req.verificationStatus || "pending")}]</small></h3>
-          <p><strong>Phone:</strong> ${escapeHTML(req.phone)}</p>
-          <p><strong>Email:</strong> ${escapeHTML(req.email)}</p>
-          <p><strong>Country:</strong> ${escapeHTML(req.country)}</p>
-          <p><strong>Age:</strong> ${escapeHTML(req.age.toString())}</p>
-          <p><strong>Wallet Address:</strong> ${escapeHTML(req.walletAddress)}</p>
-          <p><strong>Delivery Method:</strong> ${escapeHTML(req.deliveryMethod)}</p>
-          <div class="photos">
-            <div>
-              <p><strong>ID Photo:</strong></p>
-              <img src="https://gateway.pinata.cloud/ipfs/${req.idPhotoHash}" alt="ID Photo" />
-            </div>
-            <div>
-              <p><strong>Passport Photo:</strong></p>
-              <img src="https://gateway.pinata.cloud/ipfs/${req.passportPhotoHash}" alt="Passport Photo" />
-            </div>
-            <div>
-              <p><strong>Real Selfie:</strong></p>
-              <img src="https://gateway.pinata.cloud/ipfs/${req.realPhotoHash}" alt="Real Selfie Photo" />
-            </div>
-          </div>
-          <button class="approveBtn" data-uid="${uid}">Approve</button>
-          <button class="rejectBtn" data-uid="${uid}">Reject</button>
-        `;
-
-        requestsContainer.appendChild(card);
-      }
-
-      // Add button listeners
-      document.querySelectorAll(".approveBtn").forEach(btn => {
-        btn.onclick = () => updateStatus(btn.dataset.uid, "approved");
-      });
-      document.querySelectorAll(".rejectBtn").forEach(btn => {
-        btn.onclick = () => updateStatus(btn.dataset.uid, "rejected");
-      });
-    }
-
-    function updateStatus(uid, status) {
-      update(ref(db, `userVerifications/${uid}`), {
-        verificationStatus: status,
-        reviewedAt: Date.now()
-      }).then(() => {
-        statusDiv.textContent = `User ${uid} marked as ${status}.`;
-        setTimeout(() => { statusDiv.textContent = ""; }, 4000);
-      }).catch(err => {
-        alert("Failed to update status: " + err.message);
-      });
-    }
+    loginBtn.addEventListener("click", () => signInWithRedirect(auth, provider));
+    logoutBtn.addEventListener("click", () => signOut(auth));
 
     onAuthStateChanged(auth, user => {
-      if (user && adminUIDs.includes(user.uid)) {
-        statusDiv.textContent = `Welcome Admin: ${user.email}`;
-        // Listen to verification requests
-        onValue(ref(db, "userVerifications"), snap => {
-          renderRequests(snap.val());
-        });
+      if (user) {
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "inline-block";
+        loadPendingVerifications();
       } else {
-        // If logged in but not admin, or logged out: force login
-        if(user) {
-          alert("Access denied. You are not an admin.");
-          signOut(auth);
-        } else {
-          signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
-        }
+        loginBtn.style.display = "inline-block";
+        logoutBtn.style.display = "none";
+        verificationContainer.innerHTML = "<p>Please log in as admin to view verification requests.</p>";
       }
     });
+
+    function loadPendingVerifications() {
+      const refUsers = ref(db, "sellerVerifications");
+      onValue(refUsers, snapshot => {
+        const data = snapshot.val();
+        if (!data) {
+          verificationContainer.innerHTML = "<p>No pending verifications.</p>";
+          return;
+        }
+
+        let html = "";
+        Object.entries(data).forEach(([uid, info]) => {
+          if (info.status === "pending") {
+            html += `
+              <div style="border:1px solid #ccc; padding:10px; margin:10px; border-radius:8px;">
+                <h3>${info.name}</h3>
+                <p><strong>Email:</strong> ${info.email}</p>
+                <p><strong>Phone:</strong> ${info.phone}</p>
+                <p><strong>Country:</strong> ${info.country}</p>
+                <p><strong>Age:</strong> ${info.age}</p>
+                <p><strong>Wallet:</strong> ${info.wallet}</p>
+                <p><strong>Address:</strong> ${info.address}</p>
+                <p><strong>Delivery:</strong> ${info.delivery}</p>
+                <p><strong>ID:</strong> <a href="${info.idPhoto}" target="_blank">View ID Photo</a></p>
+                <p><strong>Real Photo:</strong> <a href="${info.realPhoto}" target="_blank">View Real Photo</a></p>
+                <button onclick="approve('${uid}')">✅ Approve</button>
+                <button onclick="reject('${uid}')">❌ Reject</button>
+              </div>
+            `;
+          }
+        });
+
+        verificationContainer.innerHTML = html || "<p>No pending requests.</p>";
+      });
+    }
+
+    window.approve = async function(uid) {
+      const userRef = ref(db, `sellerVerifications/${uid}`);
+      await update(userRef, { status: "approved" });
+      alert("Seller approved");
+    }
+
+    window.reject = async function(uid) {
+      const userRef = ref(db, `sellerVerifications/${uid}`);
+      await update(userRef, { status: "rejected" });
+      alert("Seller rejected");
+    }
   </script>
+</head>
+<body style="font-family:sans-serif; max-width:700px; margin:auto; padding:20px;">
+  <h2>🛡️ DRF Seller Verification Panel</h2>
+  <button id="loginBtn">🔐 Login with Google</button>
+  <button id="logoutBtn" style="display:none;">🚪 Logout</button>
+  <hr />
+  <div id="verificationContainer">Loading...</div>
 </body>
 </html>
