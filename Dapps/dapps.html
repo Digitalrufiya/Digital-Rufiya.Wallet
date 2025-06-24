@@ -81,16 +81,17 @@
     }
 
     .canvas-item {
-      border: 1px dashed var(--primary);
+      border: 2px solid var(--primary);
       padding: 1rem;
       margin-bottom: 1rem;
-      border-radius: 6px;
+      border-radius: 10px;
       background: #eaf7f1;
+      font-size: 1rem;
+      font-weight: bold;
     }
 
-    button#exportBtn {
-      margin: 2rem auto;
-      display: block;
+    button#exportBtn, button#saveTemplateBtn {
+      margin: 1rem;
       background: var(--primary);
       color: var(--white);
       border: none;
@@ -100,7 +101,7 @@
       font-size: 1.1rem;
     }
 
-    button#exportBtn:hover {
+    button#exportBtn:hover, button#saveTemplateBtn:hover {
       background: #007a45;
     }
 
@@ -152,9 +153,10 @@
 </div>
 
 <button id="exportBtn">📤 Export as Web App</button>
+<button id="saveTemplateBtn">💾 Save as Template</button>
 
 <footer>
-  Made with ❤️ for the Ummah | DRFdApps Console v1.0 | DRFchain Integrated (Future)
+  Made with ❤️ for the Ummah | DRFdApps Console v1.0 | DRFchain Integration (soon) | Mobile-ready version supported
 </footer>
 
 <script>
@@ -210,6 +212,15 @@
     const win = window.open('', '_blank');
     win.document.write('<pre>' + html.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>');
     win.document.close();
+  });
+
+  document.getElementById('saveTemplateBtn').addEventListener('click', () => {
+    const template = [];
+    canvas.querySelectorAll('.canvas-item').forEach(item => {
+      template.push({ type: item.getAttribute('data-type'), html: item.innerHTML });
+    });
+    localStorage.setItem('drf_template_backup', JSON.stringify(template));
+    alert('✅ Template saved locally.');
   });
 </script>
 
