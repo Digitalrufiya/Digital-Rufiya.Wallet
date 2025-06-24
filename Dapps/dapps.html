@@ -171,6 +171,7 @@
   });
 
   function allowDrop(e) { e.preventDefault(); }
+
   function drop(e) {
     e.preventDefault();
     if (!dragData) return;
@@ -184,25 +185,39 @@
     el.classList.add('canvas-item');
     el.setAttribute('data-type', type);
 
-    switch(type) {
-      case 'header': el.innerHTML = '<h1 contenteditable="true">My DRF App Header</h1>'; break;
-      case 'text': el.innerHTML = '<p contenteditable="true">Type your message or story here...</p>'; break;
-      case 'image': el.innerHTML = '<img src="https://via.placeholder.com/300x150" style="max-width:100%; border-radius:8px;">'; break;
-      case 'button': el.innerHTML = '<button>Click Me</button>'; break;
-      case 'wallet-connect': el.innerHTML = '<button>🔗 Connect Wallet</button>'; break;
-      case 'realtime-list': el.innerHTML = '<ul><li>📡 Realtime data will show here</li></ul>'; break;
-      case 'product-card': el.innerHTML = '<div><h3>🛍️ Product Name</h3><p>Description</p><strong>$9.99</strong></div>'; break;
-      case 'nft-card': el.innerHTML = '<div><h4>🎨 NFT Title</h4><img src="https://via.placeholder.com/200"><button>Buy</button></div>'; break;
-      case 'quran-widget': el.innerHTML = '<blockquote>"Indeed, in the remembrance of Allah do hearts find rest." (13:28)</blockquote>'; break;
-      case 'donation-block': el.innerHTML = '<div><strong>💖 Donate to Gaza</strong><button>Donate DRF</button></div>'; break;
-      case 'course-section': el.innerHTML = '<section><h3>🎓 Course: Intro to Tawheed</h3><p>Lesson content here...</p></section>'; break;
-      case 'blog-section': el.innerHTML = '<article><h2>📚 Blog Title</h2><p>Write your post here...</p></article>'; break;
-      case 'ai-search': el.innerHTML = '<input type="search" placeholder="Ask DRF AI..." />'; break;
-      case 'map-locator': el.innerHTML = '<iframe src="https://maps.google.com" width="100%" height="200"></iframe>'; break;
-      default: el.innerHTML = '<p>Unknown component</p>';
+    if (type === 'header') {
+      fetch('header.html')
+        .then(response => {
+          if (!response.ok) throw new Error('Network response was not ok');
+          return response.text();
+        })
+        .then(html => {
+          el.innerHTML = html;
+          canvas.appendChild(el);
+        })
+        .catch(err => {
+          el.innerHTML = '<p style="color:red;">Failed to load header.html</p>';
+          canvas.appendChild(el);
+        });
+    } else {
+      switch(type) {
+        case 'text': el.innerHTML = '<p contenteditable="true">Type your message or story here...</p>'; break;
+        case 'image': el.innerHTML = '<img src="https://via.placeholder.com/300x150" style="max-width:100%; border-radius:8px;">'; break;
+        case 'button': el.innerHTML = '<button>Click Me</button>'; break;
+        case 'wallet-connect': el.innerHTML = '<button>🔗 Connect Wallet</button>'; break;
+        case 'realtime-list': el.innerHTML = '<ul><li>📡 Realtime data will show here</li></ul>'; break;
+        case 'product-card': el.innerHTML = '<div><h3>🛍️ Product Name</h3><p>Description</p><strong>$9.99</strong></div>'; break;
+        case 'nft-card': el.innerHTML = '<div><h4>🎨 NFT Title</h4><img src="https://via.placeholder.com/200"><button>Buy</button></div>'; break;
+        case 'quran-widget': el.innerHTML = '<blockquote>"Indeed, in the remembrance of Allah do hearts find rest." (13:28)</blockquote>'; break;
+        case 'donation-block': el.innerHTML = '<div><strong>💖 Donate to Gaza</strong><button>Donate DRF</button></div>'; break;
+        case 'course-section': el.innerHTML = '<section><h3>🎓 Course: Intro to Tawheed</h3><p>Lesson content here...</p></section>'; break;
+        case 'blog-section': el.innerHTML = '<article><h2>📚 Blog Title</h2><p>Write your post here...</p></article>'; break;
+        case 'ai-search': el.innerHTML = '<input type="search" placeholder="Ask DRF AI..." />'; break;
+        case 'map-locator': el.innerHTML = '<iframe src="https://maps.google.com" width="100%" height="200"></iframe>'; break;
+        default: el.innerHTML = '<p>Unknown component</p>';
+      }
+      canvas.appendChild(el);
     }
-
-    canvas.appendChild(el);
   }
 
   document.getElementById('exportBtn').addEventListener('click', () => {
