@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Admin Panel - Seller Verification</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getDatabase, ref, onValue, update
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import {
-      getAuth,
-      signInWithRedirect,
-      GoogleAuthProvider,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRF Admin Verification Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .card { border: 1px solid #ccc; border-radius: 10px; padding: 16px; margin: 10px 0; background: #f9f9f9; }
+    .btn { padding: 6px 12px; cursor: pointer; margin-right: 8px; }
+    .approved { background: #d4edda; border-color: #c3e6cb; }
+    .rejected { background: #f8d7da; border-color: #f5c6cb; }
+  </style>
+</head>
+<body>
+  <h2>Admin: Identity Verification Panel</h2>
+  <button id="loginBtn">Login with Google</button>
+  <button id="logoutBtn" style="display:none">Logout</button>
+  <div id="verificationList"></div>
 
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -27,83 +32,71 @@
       appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
     const loginBtn = document.getElementById("loginBtn");
     const logoutBtn = document.getElementById("logoutBtn");
-    const verificationContainer = document.getElementById("verificationContainer");
+    const list = document.getElementById("verificationList");
 
-    loginBtn.addEventListener("click", () => signInWithRedirect(auth, provider));
-    logoutBtn.addEventListener("click", () => signOut(auth));
+    loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    logoutBtn.onclick = () => auth.signOut();
 
-    onAuthStateChanged(auth, user => {
+    auth.onAuthStateChanged(async user => {
       if (user) {
         loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        loadPendingVerifications();
+        logoutBtn.style.display = "inline";
+        const adminSnap = await db.ref("admins/" + user.uid).get();
+        if (!adminSnap.exists()) {
+          list.innerHTML = "<p style='color:red;'>Please log in as admin to view verification requests</p>";
+          return;
+        }
+        loadVerifications();
       } else {
-        loginBtn.style.display = "inline-block";
+        list.innerHTML = "<p>Please log in as admin to view requests</p>";
+        loginBtn.style.display = "inline";
         logoutBtn.style.display = "none";
-        verificationContainer.innerHTML = "<p>Please log in as admin to view verification requests.</p>";
       }
     });
 
-    function loadPendingVerifications() {
-      const refUsers = ref(db, "sellerVerifications");
-      onValue(refUsers, snapshot => {
-        const data = snapshot.val();
-        if (!data) {
-          verificationContainer.innerHTML = "<p>No pending verifications.</p>";
-          return;
-        }
+    function loadVerifications() {
+      db.ref("userVerifications").on("value", snap => {
+        const data = snap.val();
+        list.innerHTML = "";
+        if (!data) return list.innerHTML = "<p>No pending verifications.</p>";
 
-        let html = "";
-        Object.entries(data).forEach(([uid, info]) => {
-          if (info.status === "pending") {
-            html += `
-              <div style="border:1px solid #ccc; padding:10px; margin:10px; border-radius:8px;">
-                <h3>${info.name}</h3>
-                <p><strong>Email:</strong> ${info.email}</p>
-                <p><strong>Phone:</strong> ${info.phone}</p>
-                <p><strong>Country:</strong> ${info.country}</p>
-                <p><strong>Age:</strong> ${info.age}</p>
-                <p><strong>Wallet:</strong> ${info.wallet}</p>
-                <p><strong>Address:</strong> ${info.address}</p>
-                <p><strong>Delivery:</strong> ${info.delivery}</p>
-                <p><strong>ID:</strong> <a href="${info.idPhoto}" target="_blank">View ID Photo</a></p>
-                <p><strong>Real Photo:</strong> <a href="${info.realPhoto}" target="_blank">View Real Photo</a></p>
-                <button onclick="approve('${uid}')">✅ Approve</button>
-                <button onclick="reject('${uid}')">❌ Reject</button>
-              </div>
-            `;
-          }
+        Object.entries(data).forEach(([uid, details]) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <h3>${details.fullName || "No Name"}</h3>
+            <p><strong>Country:</strong> ${details.country || "N/A"}</p>
+            <p><strong>Phone:</strong> ${details.phone || "N/A"}</p>
+            <p><strong>Message:</strong> ${details.message || "-"}</p>
+            <div>
+              <img src="https://gateway.pinata.cloud/ipfs/${details.idImage || ""}" alt="ID Image" style="max-width:200px; max-height:150px" /><br/>
+              <img src="https://gateway.pinata.cloud/ipfs/${details.realPhoto || ""}" alt="Selfie" style="max-width:200px; max-height:150px; margin-top:6px" />
+            </div>
+            <p>Status: <strong>${details.verificationStatus || "Pending"}</strong></p>
+            <button class="btn" onclick="updateStatus('${uid}', 'Approved')">✅ Approve</button>
+            <button class="btn" onclick="updateStatus('${uid}', 'Rejected')">❌ Reject</button>
+          `;
+          list.appendChild(card);
         });
-
-        verificationContainer.innerHTML = html || "<p>No pending requests.</p>";
       });
     }
 
-    window.approve = async function(uid) {
-      const userRef = ref(db, `sellerVerifications/${uid}`);
-      await update(userRef, { status: "approved" });
-      alert("Seller approved");
-    }
-
-    window.reject = async function(uid) {
-      const userRef = ref(db, `sellerVerifications/${uid}`);
-      await update(userRef, { status: "rejected" });
-      alert("Seller rejected");
+    async function updateStatus(uid, status) {
+      const currentUser = auth.currentUser;
+      const isAdminSnap = await db.ref("admins/" + currentUser.uid).get();
+      if (!isAdminSnap.exists()) return alert("You are not admin");
+      await db.ref("userVerifications/" + uid).update({
+        verificationStatus: status,
+        reviewedAt: Date.now()
+      });
+      alert(`User marked as ${status}`);
     }
   </script>
-</head>
-<body style="font-family:sans-serif; max-width:700px; margin:auto; padding:20px;">
-  <h2>🛡️ DRF Seller Verification Panel</h2>
-  <button id="loginBtn">🔐 Login with Google</button>
-  <button id="logoutBtn" style="display:none;">🚪 Logout</button>
-  <hr />
-  <div id="verificationContainer">Loading...</div>
 </body>
 </html>
