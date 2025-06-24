@@ -3,53 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Verification Panel — DRF</title>
+  <title>User Identity Verification — DRF</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-    th { background: #007bff; color: white; }
-    button { padding: 6px 12px; margin: 0 4px; cursor: pointer; }
-    .approved { background-color: #28a745; color: white; }
-    .rejected { background-color: #dc3545; color: white; }
-    .pending { background-color: #ffc107; color: black; }
-    a { color: #007bff; text-decoration: none; }
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    input, select, button { width: 100%; margin: 8px 0; padding: 10px; font-size: 1em; }
+    label { font-weight: bold; margin-top: 15px; display: block; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <h2>Admin - User Verification Requests</h2>
+  <h2>User Identity Verification</h2>
+  
+  <div id="authSection">
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" class="hidden">Logout</button>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-        <th>Country</th>
-        <th>Age</th>
-        <th>Wallet</th>
-        <th>Delivery</th>
-        <th>ID Photo</th>
-        <th>Passport Photo</th>
-        <th>Real Photo</th>
-        <th>Status</th>
-        <th>Submitted At</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="requestsBody">
-      <tr><td colspan="14">Loading requests...</td></tr>
-    </tbody>
-  </table>
+  <form id="verificationForm" class="hidden">
+    <label for="name">Full Name</label>
+    <input type="text" id="name" required />
+
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" required />
+
+    <label for="email">Email</label>
+    <input type="email" id="email" required />
+
+    <label for="country">Country</label>
+    <input type="text" id="country" required />
+
+    <label for="age">Age</label>
+    <input type="number" id="age" min="1" max="120" required />
+
+    <label for="walletAddress">Wallet Address</label>
+    <input type="text" id="walletAddress" required />
+
+    <label for="deliveryMethod">Delivery Method</label>
+    <select id="deliveryMethod" required>
+      <option value="">Select</option>
+      <option value="email">Email</option>
+      <option value="phone">Phone</option>
+      <option value="wallet">Wallet Message</option>
+    </select>
+
+    <label for="idPhoto">Upload ID Photo</label>
+    <input type="file" id="idPhoto" accept="image/*" required />
+
+    <label for="passportPhoto">Upload Passport Photo</label>
+    <input type="file" id="passportPhoto" accept="image/*" required />
+
+    <label for="realPhoto">Upload Real Selfie Photo</label>
+    <input type="file" id="realPhoto" accept="image/*" required />
+
+    <button type="submit">Submit Verification</button>
+  </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import {
       getDatabase,
       ref,
-      onValue,
-      update
+      set,
+      onValue
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import {
       getAuth,
@@ -59,7 +74,7 @@
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    // Firebase config - REPLACE with your actual config
+    // Firebase config — REPLACE with your actual config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -70,86 +85,100 @@
       appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
     };
 
+    // Pinata JWT — REPLACE with your actual token
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const requestsBody = document.getElementById("requestsBody");
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const verificationForm = document.getElementById("verificationForm");
 
-    // Admin login required
+    // Handle auth state
     onAuthStateChanged(auth, user => {
       if (user) {
-        // Optional: You can check if user.uid is admin UID here for extra security
-        loadRequests();
+        loginBtn.classList.add("hidden");
+        logoutBtn.classList.remove("hidden");
+        verificationForm.classList.remove("hidden");
+
+        // Pre-fill email field from auth if empty
+        const emailInput = document.getElementById("email");
+        if (!emailInput.value) emailInput.value = user.email || "";
       } else {
-        requestsBody.innerHTML = `<tr><td colspan="14">Please <button id="loginBtn">Login with Google</button> to view.</td></tr>`;
-        document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider);
+        loginBtn.classList.remove("hidden");
+        logoutBtn.classList.add("hidden");
+        verificationForm.classList.add("hidden");
       }
     });
 
-    function loadRequests() {
-      onValue(ref(db, "userVerifications"), snapshot => {
-        const data = snapshot.val();
-        if (!data) {
-          requestsBody.innerHTML = `<tr><td colspan="14">No verification requests found.</td></tr>`;
-          return;
-        }
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+    logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
 
-        requestsBody.innerHTML = "";
+    // Upload helper for Pinata
+    async function uploadFileToPinata(file) {
+      const fd = new FormData();
+      fd.append("file", file);
 
-        for (const [uid, v] of Object.entries(data)) {
-          const idPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.idPhotoHash}`;
-          const passportPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.passportPhotoHash}`;
-          const realPhotoLink = `https://gateway.pinata.cloud/ipfs/${v.realPhotoHash}`;
-          const submittedDate = new Date(v.submittedAt).toLocaleString();
-
-          requestsBody.innerHTML += `
-            <tr>
-              <td>${uid}</td>
-              <td>${escapeHTML(v.name)}</td>
-              <td>${escapeHTML(v.email)}</td>
-              <td>${escapeHTML(v.phone)}</td>
-              <td>${escapeHTML(v.country)}</td>
-              <td>${v.age}</td>
-              <td>${escapeHTML(v.walletAddress)}</td>
-              <td>${escapeHTML(v.deliveryMethod)}</td>
-              <td><a href="${idPhotoLink}" target="_blank">View</a></td>
-              <td><a href="${passportPhotoLink}" target="_blank">View</a></td>
-              <td><a href="${realPhotoLink}" target="_blank">View</a></td>
-              <td class="${v.verificationStatus}">${v.verificationStatus}</td>
-              <td>${submittedDate}</td>
-              <td>
-                <button onclick="updateStatus('${uid}', 'approved')" class="approved">Approve</button>
-                <button onclick="updateStatus('${uid}', 'rejected')" class="rejected">Reject</button>
-              </td>
-            </tr>
-          `;
-        }
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: pinataJWT },
+        body: fd
       });
+
+      if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
+
+      const data = await res.json();
+      return data.IpfsHash;
     }
 
-    // Sanitize output
-    function escapeHTML(str) {
-      if (!str) return "";
-      return str.replace(/[&<>"]/g, c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;"
-      })[c]);
-    }
+    verificationForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    window.updateStatus = async function(uid, status) {
-      if (!confirm(`Are you sure you want to mark this verification as ${status}?`)) return;
+      const user = auth.currentUser;
+      if (!user) return alert("Please login first.");
+
       try {
-        await update(ref(db, `userVerifications/${uid}`), { verificationStatus: status });
-        alert(`Verification ${status}.`);
-      } catch (e) {
-        alert("Failed to update status: " + e.message);
+        verificationForm.querySelector("button").disabled = true;
+
+        // Upload photos to Pinata
+        const idPhotoHash = await uploadFileToPinata(document.getElementById("idPhoto").files[0]);
+        const passportPhotoHash = await uploadFileToPinata(document.getElementById("passportPhoto").files[0]);
+        const realPhotoHash = await uploadFileToPinata(document.getElementById("realPhoto").files[0]);
+
+        // Build data object
+        const verificationData = {
+          name: document.getElementById("name").value.trim(),
+          phone: document.getElementById("phone").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          country: document.getElementById("country").value.trim(),
+          age: parseInt(document.getElementById("age").value.trim(), 10),
+          walletAddress: document.getElementById("walletAddress").value.trim(),
+          deliveryMethod: document.getElementById("deliveryMethod").value.trim(),
+
+          idPhotoHash,
+          passportPhotoHash,
+          realPhotoHash,
+
+          verificationStatus: "pending",
+          submittedAt: Date.now()
+        };
+
+        // Save in Firebase under userVerifications
+        await set(ref(db, `userVerifications/${user.uid}`), verificationData);
+
+        alert("Verification data submitted successfully!");
+        verificationForm.reset();
+
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        verificationForm.querySelector("button").disabled = false;
       }
-    };
+    });
   </script>
 </body>
 </html>
