@@ -33,7 +33,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getDatabase, ref as dbRef, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -46,9 +46,6 @@
     appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
 
-  const adminUID = "0QVWTk6r1VRnc8JiIpUj8vcAG2u2";
-
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
@@ -71,44 +68,62 @@
     signOut(auth).catch(err => alert("Logout failed: " + err.message));
   };
 
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth, async user => {
     currentUser = user;
+
     if (user) {
-      if (user.uid !== adminUID) {
-        adminMsg.textContent = "You are NOT authorized as admin.";
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        postForm.style.display = "none";
-        postList.innerHTML = "";
-        return;
-      }
-      adminMsg.textContent = "";
       loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-block";
-      postForm.style.display = "block";
-      loadAdminPosts();
+
+      try {
+        const snapshot = await get(dbRef(db, `admin/${user.uid}`));
+        if (snapshot.exists() && snapshot.val() === true) {
+          adminMsg.textContent = "";
+          postForm.style.display = "block";
+          loadAdminPosts();
+        } else {
+          adminMsg.textContent = "You are NOT authorized as admin.";
+          postForm.style.display = "none";
+          postList.innerHTML = "";
+        }
+      } catch (e) {
+        adminMsg.textContent = "Error checking admin status.";
+        console.error(e);
+      }
     } else {
-      adminMsg.textContent = "Please log in as admin.";
       loginBtn.style.display = "inline-block";
       logoutBtn.style.display = "none";
       postForm.style.display = "none";
       postList.innerHTML = "";
+      adminMsg.textContent = "Please log in as admin.";
     }
   });
 
   postForm.addEventListener("submit", async e => {
     e.preventDefault();
-    if (!currentUser || currentUser.uid !== adminUID) {
-      alert("Unauthorized!");
+    if (!currentUser) {
+      alert("Please login first.");
       return;
     }
+
+    try {
+      const snapshot = await get(dbRef(db, `admin/${currentUser.uid}`));
+      if (!snapshot.exists() || snapshot.val() !== true) {
+        alert("Unauthorized!");
+        return;
+      }
+    } catch {
+      alert("Error checking admin status.");
+      return;
+    }
+
     const text = adminPostInput.value.trim();
     if (!text) {
       alert("Message cannot be empty.");
       return;
     }
 
-    const postRef = push(ref(db, "posts"));
+    const postRef = push(dbRef(db, "posts"));
     await set(postRef, {
       userId: currentUser.uid,
       displayName: currentUser.displayName || "Admin",
@@ -121,7 +136,7 @@
   });
 
   function loadAdminPosts() {
-    const postsRef = ref(db, "posts");
+    const postsRef = dbRef(db, "posts");
     onValue(postsRef, snapshot => {
       const data = snapshot.val();
       if (!data) {
@@ -134,7 +149,7 @@
         return;
       }
       // Sort newest first
-      entries.sort((a,b) => b[1].timestamp - a[1].timestamp);
+      entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
 
       postList.innerHTML = "";
       for (const [id, post] of entries) {
@@ -151,7 +166,6 @@
     });
   }
 
-  // Escape HTML to prevent XSS
   function escapeHTML(str) {
     return str.replace(/[&<>"]/g, c => ({
       "&": "&amp;",
