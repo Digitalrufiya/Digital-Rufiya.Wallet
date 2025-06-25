@@ -11,6 +11,7 @@
   #postList { margin-top: 20px; }
   .post-item { border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; border-radius: 6px; background: #f9f9f9; }
   .admin-post { background: #fff3cd; border-color: #ffeeba; }
+  #adminMsg { color: red; margin-top: 10px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -20,7 +21,7 @@
 <button id="loginBtn">Login with Google</button>
 <button id="logoutBtn">Logout</button>
 
-<div id="adminMsg" style="color: red; margin-top: 10px;"></div>
+<div id="adminMsg">Please log in as admin.</div>
 
 <form id="postForm">
   <label for="adminPost">Write Admin Announcement:</label><br />
@@ -37,13 +38,13 @@
   import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -72,17 +73,16 @@
     currentUser = user;
 
     if (user) {
-      console.log("Logged in user UID:", user.uid);  // DEBUG: show UID
-
+      console.log("Logged in user UID:", user.uid);  // DEBUG
       loginBtn.style.display = "none";
       logoutBtn.style.display = "inline-block";
 
       try {
         const snapshot = await get(dbRef(db, `admin/${user.uid}`));
-        console.log("Admin snapshot for UID:", snapshot.val()); // DEBUG: show admin status
+        console.log("Admin snapshot for UID:", snapshot.val()); // DEBUG
 
         if (snapshot.exists() && snapshot.val() === true) {
-          adminMsg.textContent = "";
+          adminMsg.textContent = "Welcome Admin: " + (user.displayName || user.email);
           postForm.style.display = "block";
           loadAdminPosts();
         } else {
