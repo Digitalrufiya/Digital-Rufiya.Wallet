@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    #menuToggle { background: transparent; border: none; cursor: pointer; width: 30px; height: 25px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
+    #menuToggle span { display: block; height: 3.5px; background: white; border-radius: 3px; }
+    #primaryNav { width: 100%; display: none; flex-direction: column; background: #0069d9; margin-top: 10px; border-radius: 4px; }
+    #primaryNav.open { display: flex; }
+    #primaryNav a { padding: 12px 20px; color: white; text-decoration: none; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.2); }
+    #primaryNav a:first-child { border-top: none; }
+    #primaryNav a:hover { background: rgba(255,255,255,0.2); }
+    @media (min-width: 768px) {
+      #menuToggle { display: none; }
+      #primaryNav { display: flex !important; flex-direction: row; width: auto; background: transparent; margin-top: 0; border-radius: 0; }
+      #primaryNav a { border: none; padding: 10px 15px; color: white; }
+      #primaryNav a:hover { background: rgba(255,255,255,0.3); }
+    }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; box-shadow: 0 0 3px rgba(0,0,0,0.1); }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
+    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" alt="DRFMedia Logo" />
+    <h1>DRFMedia</h1>
+  </div>
+  <button id="menuToggle"><span></span><span></span><span></span></button>
+  <nav id="primaryNav">
+    <a href="#">Timeline</a>
+    <a href="#">Profile</a>
+    <a href="#">Login</a>
+  </nav>
+</header>
+
+<div id="postContainer"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const postContainer = document.getElementById("postContainer");
+
+  const fallbackGateways = [
+    "https://gateway.pinata.cloud/ipfs/",
+    "https://cloudflare-ipfs.com/ipfs/",
+    "https://ipfs.io/ipfs/"
+  ];
+
+  function loadMedia(ipfsHash, mediaType) {
+    return new Promise(resolve => {
+      const tryLoad = (index) => {
+        if (index >= fallbackGateways.length) return resolve(`<p style='color:red;'>Failed to load media</p>`);
+        const url = fallbackGateways[index] + ipfsHash;
+        const el = mediaType === 'video' ? document.createElement('video') : document.createElement('img');
+        el.src = url;
+        if (mediaType === 'video') {
+          el.controls = true;
+          el.preload = 'metadata';
+        }
+        el.onload = el.onloadeddata = () => resolve(el.outerHTML);
+        el.onerror = () => tryLoad(index + 1);
+      };
+      tryLoad(0);
+    });
+  }
+
+  onValue(ref(db, "posts"), async snapshot => {
+    postContainer.innerHTML = "";
+    const posts = snapshot.val() || {};
+    const sorted = Object.entries(posts).sort((a,b) => b[1].timestamp - a[1].timestamp);
+    for (const [id, post] of sorted) {
+      const mediaHTML = await loadMedia(post.ipfsHash, post.mediaType);
+      const card = document.createElement("div");
+      card.className = "post-item";
+      card.innerHTML = `
+        <h3>${post.displayName || "Anonymous"}</h3>
+        <div class="post-caption">${post.caption}</div>
+        ${mediaHTML}
+      `;
+      postContainer.appendChild(card);
+    }
+  });
+</script>
+
+</body>
+</html>
