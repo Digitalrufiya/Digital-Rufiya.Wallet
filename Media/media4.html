@@ -4,29 +4,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline</title>
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#007bff" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js" type="module"></script>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.ico">
+  <meta name="theme-color" content="#007bff">
 </head>
 <body>
   <header>
     <h1>DRFMedia</h1>
+    <nav>
+      <button id="loginBtn">Login</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </nav>
   </header>
+
   <main>
     <section id="uploadSection" style="display:none;">
-      <input type="file" id="mediaFile" />
-      <textarea id="captionInput" placeholder="Write your caption..."></textarea>
-      <button onclick="uploadPost()">Post</button>
+      <input type="file" id="mediaFile" accept="image/*,video/*">
+      <textarea id="caption" placeholder="Write your caption..."></textarea>
+      <button id="uploadBtn">Post</button>
     </section>
-    <section id="feed"></section>
+
+    <section>
+      <input type="search" id="searchInput" placeholder="Search posts...">
+      <button id="viewTrendingBtn">🔥 Trending</button>
+      <button id="viewMostViewedBtn">👁️ Most Viewed</button>
+    </section>
+
+    <section id="postContainer"></section>
   </main>
+
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, updateDoc, doc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMcQJZjU2-Y64YrZpkMFhml4Ip012ZTOY",
@@ -41,73 +52,110 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadSection = document.getElementById("uploadSection");
     const mediaFile = document.getElementById("mediaFile");
-    const captionInput = document.getElementById("captionInput");
-    const feed = document.getElementById("feed");
+    const caption = document.getElementById("caption");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const postContainer = document.getElementById("postContainer");
+    const searchInput = document.getElementById("searchInput");
+    const viewTrendingBtn = document.getElementById("viewTrendingBtn");
+    const viewMostViewedBtn = document.getElementById("viewMostViewedBtn");
 
     let currentUser = null;
 
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    logoutBtn.onclick = () => signOut(auth);
+
     onAuthStateChanged(auth, user => {
       currentUser = user;
-      document.getElementById("uploadSection").style.display = user ? "block" : "none";
+      loginBtn.style.display = user ? "none" : "block";
+      logoutBtn.style.display = user ? "block" : "none";
+      uploadSection.style.display = user ? "block" : "none";
+      loadPosts();
     });
 
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch(console.error);
+    async function loadPosts(sortBy = "timestamp") {
+      postContainer.innerHTML = "Loading...";
+      const q = query(collection(db, "posts"), orderBy(sortBy, "desc"));
+      const querySnapshot = await getDocs(q);
+      postContainer.innerHTML = "";
+      querySnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const postEl = document.createElement("div");
+        postEl.innerHTML = `
+          <h3>${data.displayName || "User"}</h3>
+          <p>${data.caption}</p>
+          ${data.mediaUrl.endsWith(".mp4") ? `<video src="${data.mediaUrl}" controls></video>` : `<img src="${data.mediaUrl}" />`}
+          <p>Likes: ${data.likes || 0} | Views: ${data.views || 0} | Boosts: ${data.boosts || 0}</p>
+          <button onclick="likePost('${docSnap.id}')">Like</button>
+          <button onclick="boostPost('${docSnap.id}')" style="background:${data.boostedBy?.includes(currentUser?.email) ? 'gold' : '#007bff'};color:black">Boost</button>
+          <button onclick="viewPost('${docSnap.id}')">View</button>
+          ${currentUser?.email === "digitalrufiya@gmail.com" ? `<button onclick="deletePost('${docSnap.id}')">Delete</button>` : ''}
+        `;
+        postContainer.appendChild(postEl);
+      });
+    }
 
-    async function uploadPost() {
-      if (!currentUser) return alert("Login required");
-      const caption = captionInput.value;
-      const media = mediaFile.files[0];
-      if (!media || !caption) return;
-
-      const postRef = await addDoc(collection(db, "posts"), {
-        uid: currentUser.uid,
-        email: currentUser.email,
+    uploadBtn.onclick = async () => {
+      if (!mediaFile.files[0]) return alert("No file selected");
+      const file = mediaFile.files[0];
+      const mediaUrl = URL.createObjectURL(file); // Replace with real IPFS URL if needed
+      await addDoc(collection(db, "posts"), {
         displayName: currentUser.displayName,
-        caption,
-        views: 0,
+        caption: caption.value,
+        mediaUrl,
+        timestamp: Date.now(),
         likes: 0,
-        boosted: false,
-        timestamp: Date.now()
+        views: 0,
+        boosts: 0,
+        boostedBy: []
       });
-    }
+      caption.value = "";
+      mediaFile.value = "";
+      loadPosts();
+    };
 
-    function renderPost(post, id) {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <h3>${post.displayName}</h3>
-        <p>${post.caption}</p>
-        <p>Views: ${post.views} Likes: ${post.likes}</p>
-        <button onclick="like('${id}')">Like</button>
-        ${currentUser?.email === "digitalrufiya@gmail.com" ? `<button onclick="boost('${id}')">Boost</button><button onclick="remove('${id}')">Delete</button>` : ""}
-      `;
-      feed.appendChild(div);
-    }
+    window.likePost = async id => {
+      const postRef = doc(db, "posts", id);
+      await updateDoc(postRef, { likes: increment(1) });
+      loadPosts();
+    };
 
-    async function like(id) {
-      const ref = doc(db, "posts", id);
-      await updateDoc(ref, { likes: increment(1) });
-    }
-
-    async function boost(id) {
-      const ref = doc(db, "posts", id);
-      await updateDoc(ref, { boosted: true });
-    }
-
-    async function remove(id) {
-      const ref = doc(db, "posts", id);
-      await deleteDoc(ref);
-    }
-
-    const q = query(collection(db, "posts"), orderBy("views", "desc"));
-    onSnapshot(q, snapshot => {
-      feed.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        renderPost(docSnap.data(), docSnap.id);
+    window.boostPost = async id => {
+      if (currentUser.email !== "digitalrufiya@gmail.com") return alert("Only admin can boost posts.");
+      const postRef = doc(db, "posts", id);
+      await updateDoc(postRef, {
+        boosts: increment(1),
+        boostedBy: [currentUser.email] // Simple example
       });
-    });
+      loadPosts();
+    };
+
+    window.deletePost = async id => {
+      const postRef = doc(db, "posts", id);
+      await deleteDoc(postRef);
+      loadPosts();
+    };
+
+    window.viewPost = async id => {
+      const postRef = doc(db, "posts", id);
+      await updateDoc(postRef, { views: increment(1) });
+      loadPosts();
+    };
+
+    searchInput.oninput = () => {
+      const val = searchInput.value.toLowerCase();
+      [...postContainer.children].forEach(post => {
+        post.style.display = post.textContent.toLowerCase().includes(val) ? "block" : "none";
+      });
+    };
+
+    viewTrendingBtn.onclick = () => loadPosts("boosts");
+    viewMostViewedBtn.onclick = () => loadPosts("views");
   </script>
 </body>
 </html>
