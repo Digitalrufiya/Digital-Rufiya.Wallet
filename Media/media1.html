@@ -6,6 +6,7 @@
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <link rel="stylesheet" href="style.css" />
   <style>
+    /* Your existing styles... */
     body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
     header {
       background: #007bff; color: white; padding: 10px 20px;
@@ -53,10 +54,12 @@
       background: #0056b3;
     }
     .post-actions button.liked {
-      background: #28a745 !important; color: #fff !important;
+      background: #28a745 !important; /* green */
+      color: #fff !important;
     }
     .post-actions button.boosted {
-      background-color: gold !important; color: #000 !important;
+      background-color: gold !important;
+      color: #000 !important;
     }
     .comment-box { margin-top: 10px; }
     .comment-box textarea { width: 100%; border-radius: 4px; padding: 6px; }
@@ -66,7 +69,350 @@
   </style>
 </head>
 <body>
-  <!-- Your original content including header, form, post container -->
-  <!-- The updated and full script with fallback loading is already included in previous response -->
+
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia</h1>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <nav id="primaryNav">
+    <a href="timeline.html">Timeline</a>
+    <a href="profile.html">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
+</header>
+
+<div id="searchBar">
+  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
+</div>
+
+<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
+<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
+
+<form id="uploadForm" style="display:none; max-width:700px; margin:20px auto;">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <textarea id="caption" placeholder="Write your caption..." required minlength="4" style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
+  <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">Post</button>
+</form>
+
+<div id="postContainer" aria-live="polite"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, query, orderBy, onSnapshot, updateDoc, increment, where
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  import {
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const mediaFile = document.getElementById("mediaFile");
+  const captionInput = document.getElementById("caption");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+
+  let currentUser = null;
+  let allPosts = [];
+
+  const escapeHTML = str => str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    uploadForm.style.display = user ? "block" : "none";
+    loginBtn.style.display = user ? "none" : "block";
+    logoutBtn.style.display = user ? "block" : "none";
+    loadPostsRealtime(); // load posts realtime with Firestore listener
+  });
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+  logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
+
+  // Upload handler — Pinata upload + Firestore post creation
+  uploadForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!currentUser) return alert("Please login.");
+    if (!mediaFile.files.length) return alert("Select a file.");
+    if (captionInput.value.trim().length < 4) return alert("Caption too short.");
+
+    uploadForm.querySelector("button").disabled = true;
+    const file = mediaFile.files[0];
+    const fd = new FormData();
+    fd.append("file", file);
+
+    try {
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: pinataJWT
+          // No Content-Type header here
+        },
+        body: fd
+      });
+      if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
+      const { IpfsHash } = await res.json();
+
+      // Add new post doc to Firestore
+      await addDoc(collection(db, "posts"), {
+        userId: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        caption: captionInput.value.trim(),
+        ipfsHash: IpfsHash,
+        mediaType: file.type.startsWith("video") ? "video" : "image",
+        mediaMimeType: file.type,
+        timestamp: Date.now(),
+        likesCount: 0,
+        commentsCount: 0,
+        boostsCount: 0,
+        boostedBy: {},
+        likesBy: {}
+      });
+
+      captionInput.value = "";
+      mediaFile.value = "";
+      alert("Posted successfully!");
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+    }
+  });
+
+  // Load posts with realtime listener
+  function loadPostsRealtime() {
+    const postsCol = collection(db, "posts");
+    const q = query(postsCol, orderBy("timestamp", "desc"));
+
+    // Listen for realtime updates
+    onSnapshot(q, snapshot => {
+      allPosts = [];
+      snapshot.forEach(docSnap => {
+        allPosts.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      renderPosts();
+    });
+  }
+
+  // Render posts with filtering and buttons
+  function renderPosts() {
+    const filter = searchInput.value.trim().toLowerCase();
+    postContainer.innerHTML = "";
+    for (const post of allPosts) {
+      if (!post.caption.toLowerCase().includes(filter)) continue;
+
+      const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+      const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
+
+      const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
+      const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
+
+      const dateStr = new Date(post.timestamp).toLocaleString();
+
+      const mediaHTML = post.mediaType === "video"
+        ? `<video src="${url1}" controls playsinline preload="metadata" poster="${url2}" loading="lazy"></video>`
+        : `<img src="${url1}" alt="Post media" loading="lazy" />`;
+
+      const likesCount = post.likesCount || 0;
+      const boostsCount = post.boostsCount || 0;
+      const commentsCount = post.commentsCount || 0;
+
+      const likedClass = isLiked ? "liked" : "";
+      const boostedClass = isBoosted ? "boosted" : "";
+
+      const card = document.createElement("article");
+      card.className = "post-item";
+      card.innerHTML = `
+        <header class="post-owner" aria-label="Post owner info">
+          <img src="${post.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" class="avatar" />
+          <div>
+            <div>${escapeHTML(post.displayName || "Anonymous")}</div>
+            <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">${dateStr}</time>
+          </div>
+        </header>
+        <div class="post-caption">${escapeHTML(post.caption)}</div>
+        <div class="post-media">${mediaHTML}</div>
+        <div class="post-actions" role="group" aria-label="Post actions">
+          <button class="${likedClass}" aria-pressed="${isLiked ? 'true' : 'false'}" onclick="likePost('${post.id}')">👍 Like (${likesCount})</button>
+          <button onclick="commentOnPost('${post.id}')">💬 Comment (${commentsCount})</button>
+          <button class="${boostedClass}" onclick="boostPost('${post.id}')">🚀 Boost (${boostsCount})</button>
+          <button onclick="repost('${post.id}')">🔄 Repost</button>
+        </div>
+        <div id="comments-${post.id}" class="comments-list" aria-live="polite" aria-label="Comments"></div>
+        <div id="comment-box-${post.id}" class="comment-box" style="display:none;">
+          <textarea id="comment-input-${post.id}" rows="2" placeholder="Write a comment..."></textarea>
+          <button onclick="submitComment('${post.id}')">Submit</button>
+          <button onclick="cancelComment('${post.id}')">Cancel</button>
+        </div>
+      `;
+      postContainer.appendChild(card);
+
+      loadComments(post.id); // load comments for each post
+    }
+  }
+
+  // Like/unlike post
+  window.likePost = async function(postId) {
+    if (!currentUser) return alert("Login required to like posts.");
+    const userId = currentUser.uid;
+    const postDoc = doc(db, "posts", postId);
+    const postSnap = await getDoc(postDoc);
+    if (!postSnap.exists()) return alert("Post not found.");
+
+    const post = postSnap.data();
+    let likesBy = post.likesBy || {};
+    if (likesBy[userId]) {
+      delete likesBy[userId];
+    } else {
+      likesBy[userId] = true;
+    }
+
+    const newLikesCount = Object.keys(likesBy).length;
+
+    await updateDoc(postDoc, {
+      likesBy: likesBy,
+      likesCount: newLikesCount
+    });
+  };
+
+  // Boost post toggle
+  window.boostPost = async function(postId) {
+    if (!currentUser) return alert("Login required to boost posts.");
+    const userId = currentUser.uid;
+    const postDoc = doc(db, "posts", postId);
+    const postSnap = await getDoc(postDoc);
+    if (!postSnap.exists()) return alert("Post not found.");
+
+    const post = postSnap.data();
+    let boostedBy = post.boostedBy || {};
+    if (boostedBy[userId]) {
+      delete boostedBy[userId];
+    } else {
+      boostedBy[userId] = true;
+    }
+
+    const newBoostsCount = Object.keys(boostedBy).length;
+
+    await updateDoc(postDoc, {
+      boostedBy: boostedBy,
+      boostsCount: newBoostsCount
+    });
+  };
+
+  // Repost
+  window.repost = async function(postId) {
+    if (!currentUser) return alert("Login required to repost.");
+    const postDoc = doc(db, "posts", postId);
+    const postSnap = await getDoc(postDoc);
+    if (!postSnap.exists()) return alert("Original post not found.");
+    const original = postSnap.data();
+
+    const repostCaption = `[Reposted by ${currentUser.displayName || "Anonymous"}]\n\n${original.caption}`;
+
+    await addDoc(collection(db, "posts"), {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      photoURL: currentUser.photoURL,
+      caption: repostCaption,
+      ipfsHash: original.ipfsHash,
+      mediaType: original.mediaType,
+      mediaMimeType: original.mediaMimeType,
+      timestamp: Date.now(),
+      likesCount: 0,
+      commentsCount: 0,
+      boostsCount: 0,
+      boostedBy: {},
+      likesBy: {}
+    });
+
+    alert("Post reposted successfully!");
+  };
+
+  // Comments system UI toggling
+  window.commentOnPost = function(postId) {
+    document.getElementById(`comment-box-${postId}`).style.display = "block";
+  };
+  window.cancelComment = function(postId) {
+    document.getElementById(`comment-box-${postId}`).style.display = "none";
+  };
+
+  // Submit comment, update comments collection & post's commentsCount
+  window.submitComment = async function(postId) {
+    if (!currentUser) return alert("Login required to comment.");
+    const input = document.getElementById(`comment-input-${postId}`);
+    const text = input.value.trim();
+    if (text.length < 1) return alert("Comment cannot be empty.");
+
+    const commentsCol = collection(db, "comments", postId, "postComments");
+    await addDoc(commentsCol, {
+      userId: currentUser.uid,
+      displayName: currentUser.displayName,
+      photoURL: currentUser.photoURL,
+      text,
+      timestamp: Date.now()
+    });
+
+    // Increment commentsCount atomically
+    const postDoc = doc(db, "posts", postId);
+    await updateDoc(postDoc, {
+      commentsCount: increment(1)
+    });
+
+    input.value = "";
+    cancelComment(postId);
+  };
+
+  // Load & render comments for post
+  async function loadComments(postId) {
+    const commentsCol = collection(db, "comments", postId, "postComments");
+    const q = query(commentsCol, orderBy("timestamp", "asc"));
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    if (!commentsDiv) return;
+
+    commentsDiv.innerHTML = "";
+
+    onSnapshot(q, snapshot => {
+      commentsDiv.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const c = docSnap.data();
+        const timeStr = new Date(c.timestamp).toLocaleString();
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>${escapeHTML(c.displayName || "Anon")}:</strong> ${escapeHTML(c.text)} <br /><small>${timeStr}</small>`;
+        commentsDiv.appendChild(div);
+      });
+    });
+  }
+
+  // Search filter triggers re-render on allPosts array
+  searchInput.addEventListener("input", () => renderPosts());
+
+  // Responsive menu toggle
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  menuToggle.addEventListener("click", () => {
+    primaryNav.classList.toggle("open");
+  });
+</script>
+
 </body>
 </html>
