@@ -8,98 +8,225 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    /* Existing CSS remains the same, skip here for brevity */
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    nav {
+      background: #0066cc;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #container {
+      display: flex;
+      flex: 1;
+    }
+
+    #usersList {
+      width: 260px;
+      border-right: 1px solid #ccc;
+      overflow-y: auto;
+      background: #fff;
+    }
+
+    #chatArea {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chatHeader {
+      padding: 15px;
+      background: #f0f0f0;
+      font-weight: bold;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #messagesContainer {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background: #f9f9f9;
+    }
+
+    .message {
+      max-width: 70%;
+      margin: 6px 0;
+      padding: 10px 14px;
+      border-radius: 18px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .sent {
+      background: #007bff;
+      color: white;
+      align-self: flex-end;
+    }
+
+    .received {
+      background: #e2e2e2;
+      align-self: flex-start;
+    }
+
+    #inputArea {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ccc;
+      background: #fafafa;
+    }
+
+    #inputMessage {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+
+    #sendBtn {
+      margin-left: 10px;
+      padding: 10px 18px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    .user-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .user-name {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <!-- Existing HTML remains the same -->
+  <nav>DRFMessenger</nav>
+  <div id="container">
+    <div id="usersList"><h3 style="padding:10px">Users</h3></div>
+    <div id="chatArea">
+      <div id="chatHeader">Select a user</div>
+      <div id="messagesContainer"></div>
+      <div id="inputArea">
+        <input id="inputMessage" placeholder="Type message..." disabled />
+        <button id="sendBtn" disabled>Send</button>
+      </div>
+    </div>
+  </div>
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-};
+  <script>
+    window.onload = function () {
+      const firebaseConfig = {
+        apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+        authDomain: "drfsocial-23a06.firebaseapp.com",
+        databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+        projectId: "drfsocial-23a06",
+        storageBucket: "drfsocial-23a06.appspot.com",
+        messagingSenderId: "608135115201",
+        appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+      };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.database();
 
-let currentUser = null;
-let selectedUser = null;
+      const usersListEl = document.getElementById('usersList');
+      const chatHeaderEl = document.getElementById('chatHeader');
+      const messagesContainerEl = document.getElementById('messagesContainer');
+      const inputMessageEl = document.getElementById('inputMessage');
+      const sendBtnEl = document.getElementById('sendBtn');
 
-auth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    loadUsers();
-  } else {
-    auth.signInAnonymously();
-  }
-});
+      let currentUser = null;
+      let selectedUser = null;
 
-function loadUsers() {
-  const usersRef = db.ref("users");
-  usersRef.once("value", snapshot => {
-    usersListEl.innerHTML = "<h2>Users</h2>";
-    snapshot.forEach(child => {
-      const user = child.val();
-      if (user.uid !== currentUser.uid) {
-        const div = document.createElement('div');
-        div.className = 'user-item';
-        div.innerHTML = `
-          <img src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + user.uid}" class="user-avatar" />
-          <div class="user-name">${user.displayName}</div>
-        `;
-        div.addEventListener('click', () => selectUser(user));
-        usersListEl.appendChild(div);
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          loadUsers();
+        } else {
+          auth.signInAnonymously();
+        }
+      });
+
+      function loadUsers() {
+        db.ref('users').once('value', snapshot => {
+          snapshot.forEach(child => {
+            const user = child.val();
+            if (user.uid === currentUser.uid) return;
+
+            const div = document.createElement('div');
+            div.className = 'user-item';
+            div.innerHTML = `
+              <img class="user-avatar" src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + user.uid}" />
+              <div class="user-name">${user.displayName}</div>
+            `;
+            div.addEventListener('click', () => selectUser(user));
+            usersListEl.appendChild(div);
+          });
+        });
       }
-    });
-  });
-}
 
-function selectUser(user) {
-  selectedUser = user;
-  chatHeaderEl.textContent = `Chat with ${user.displayName}`;
-  inputMessageEl.disabled = false;
-  sendBtnEl.disabled = false;
-  renderMessages();
-}
+      function selectUser(user) {
+        selectedUser = user;
+        chatHeaderEl.textContent = `Chat with ${user.displayName}`;
+        inputMessageEl.disabled = false;
+        sendBtnEl.disabled = false;
+        renderMessages();
+      }
 
-function getChatPath(uid1, uid2) {
-  return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
-}
+      function getChatPath(uid1, uid2) {
+        return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
+      }
 
-function renderMessages() {
-  const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-  db.ref(chatPath).on("value", snapshot => {
-    messagesContainerEl.innerHTML = "";
-    snapshot.forEach(child => {
-      const msg = child.val();
-      const msgEl = document.createElement('div');
-      msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
-      msgEl.textContent = msg.text;
-      messagesContainerEl.appendChild(msgEl);
-    });
-    messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
-  });
-}
+      function renderMessages() {
+        const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
+        db.ref(chatPath).on("value", snapshot => {
+          messagesContainerEl.innerHTML = "";
+          snapshot.forEach(child => {
+            const msg = child.val();
+            const msgEl = document.createElement('div');
+            msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
+            msgEl.textContent = msg.text;
+            messagesContainerEl.appendChild(msgEl);
+          });
+          messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+        });
+      }
 
-sendBtnEl.addEventListener('click', () => {
-  const text = inputMessageEl.value.trim();
-  if (text && selectedUser) {
-    const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-    db.ref(chatPath).push({
-      sender: currentUser.uid,
-      text,
-      timestamp: Date.now()
-    });
-    inputMessageEl.value = "";
-  }
-});
-</script>
+      sendBtnEl.addEventListener('click', () => {
+        const text = inputMessageEl.value.trim();
+        if (text && selectedUser) {
+          const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
+          db.ref(chatPath).push({
+            sender: currentUser.uid,
+            text,
+            timestamp: Date.now()
+          });
+          inputMessageEl.value = "";
+        }
+      });
+    };
+  </script>
 </body>
 </html>
