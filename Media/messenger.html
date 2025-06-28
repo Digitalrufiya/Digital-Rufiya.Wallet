@@ -8,7 +8,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    /* Your existing CSS styles here */
     * { box-sizing: border-box; }
     body {
       font-family: Arial, sans-serif;
@@ -138,16 +137,64 @@
       background-color: #aaa;
       cursor: not-allowed;
     }
-    #loginNotice {
+    @media (max-width: 768px) {
+      #container {
+        flex-direction: column;
+      }
+      #usersList {
+        width: 100%;
+        height: 130px;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+      #usersList h2 {
+        display: none;
+      }
+      .user-item {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-bottom: none;
+        border-right: 1px solid #eee;
+        min-width: 90px;
+      }
+      .user-name {
+        font-size: 0.8rem;
+        text-align: center;
+      }
+      #chatArea {
+        flex: 1;
+        height: calc(100vh - 180px);
+      }
+      #inputArea {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        z-index: 10;
+      }
+    }
+    #loginReminder {
       margin: 50px auto;
-      font-size: 1.2rem;
-      color: #555;
       text-align: center;
+      font-size: 1.2rem;
+    }
+    #loginReminder a {
+      color: #0066cc;
+      font-weight: bold;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
   <nav>DRFMessenger</nav>
+
+  <div id="loginReminder" style="display:none;">
+    <p>You are not logged in. Please <a href="drfwallet.html">login to DRF Wallet</a> first.</p>
+  </div>
 
   <div id="container" style="display:none;">
     <div id="usersList">
@@ -164,11 +211,8 @@
     </div>
   </div>
 
-  <div id="loginNotice" style="display:none;">
-    Please <a href="wallet.html">login to DRF Wallet</a> first to use messenger.
-  </div>
-
 <script>
+  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -182,79 +226,91 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Get wallet address stored by DRF Wallet on login
-  const walletAddress = localStorage.getItem("drf_active_wallet");
+  const usersListEl = document.getElementById('usersList');
+  const chatHeaderEl = document.getElementById('chatHeader');
+  const messagesContainerEl = document.getElementById('messagesContainer');
+  const inputMessageEl = document.getElementById('inputMessage');
+  const sendBtnEl = document.getElementById('sendBtn');
+  const containerEl = document.getElementById('container');
+  const loginReminderEl = document.getElementById('loginReminder');
 
-  // UI elements
-  const container = document.getElementById("container");
-  const loginNotice = document.getElementById("loginNotice");
-  const usersListEl = document.getElementById("usersList");
-  const chatHeaderEl = document.getElementById("chatHeader");
-  const messagesContainerEl = document.getElementById("messagesContainer");
-  const inputMessageEl = document.getElementById("inputMessage");
-  const sendBtnEl = document.getElementById("sendBtn");
-
+  let currentUserWallet = localStorage.getItem('drf_active_wallet');
   let selectedUser = null;
 
-  if (!walletAddress) {
-    // Show login notice and hide messenger UI
-    loginNotice.style.display = "block";
-    container.style.display = "none";
+  if (!currentUserWallet) {
+    // Not logged in - show reminder
+    loginReminderEl.style.display = 'block';
+    containerEl.style.display = 'none';
   } else {
-    // Show messenger UI
-    loginNotice.style.display = "none";
-    container.style.display = "flex";
-
+    // Logged in - show messenger UI
+    loginReminderEl.style.display = 'none';
+    containerEl.style.display = 'flex';
     loadUsers();
   }
 
   function loadUsers() {
-    // Load users from "profiles" node, exclude current wallet
-    db.ref("profiles").once("value").then(snapshot => {
-      usersListEl.innerHTML = "<h2>Users</h2>"; // reset user list
+    const profilesRef = db.ref('profiles');
+    profilesRef.once('value', snapshot => {
+      usersListEl.innerHTML = '<h2>Users</h2>';
+      let foundUsers = 0;
       snapshot.forEach(child => {
         const user = child.val();
-        // Make sure user has walletAddress and is not current user
-        if (user && user.walletAddress && user.walletAddress.toLowerCase() !== walletAddress.toLowerCase()) {
-          const div = document.createElement("div");
-          div.className = "user-item";
+        // Make sure user has wallet address and is not current user
+        if (user && user.photoUrl && user.name && child.key.toLowerCase() !== currentUserWallet.toLowerCase()) {
+          foundUsers++;
+          const div = document.createElement('div');
+          div.className = 'user-item';
           div.innerHTML = `
-            <img src="${user.photoUrl || "https://i.pravatar.cc/40?u=" + user.walletAddress}" class="user-avatar" />
-            <div class="user-name">${user.name || user.displayName || "Unnamed User"}</div>
+            <img src="${user.photoUrl}" class="user-avatar" />
+            <div class="user-name">${user.name}</div>
           `;
-          div.addEventListener("click", () => selectUser(user));
+          div.addEventListener('click', () => selectUser(child.key, user.name, user.photoUrl));
           usersListEl.appendChild(div);
         }
       });
+      if (foundUsers === 0) {
+        usersListEl.innerHTML += '<p style="padding: 15px;">No other users found.</p>';
+      }
     });
   }
 
-  function selectUser(user) {
-    selectedUser = user;
-    chatHeaderEl.textContent = `Chat with ${user.name || user.displayName || "Unnamed User"}`;
+  function selectUser(walletAddress, displayName, photoUrl) {
+    selectedUser = { walletAddress, displayName, photoUrl };
+    chatHeaderEl.textContent = `Chat with ${displayName}`;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    inputMessageEl.value = "";
-    inputMessageEl.focus();
-    renderMessages();
+    inputMessageEl.value = '';
+    messagesContainerEl.innerHTML = '';
+    loadMessages();
+    highlightUser(walletAddress);
   }
 
-  function getChatId(addr1, addr2) {
-    // Chat id is deterministic by lex order
-    return addr1.toLowerCase() < addr2.toLowerCase() ? addr1.toLowerCase() + "_" + addr2.toLowerCase() : addr2.toLowerCase() + "_" + addr1.toLowerCase();
+  function highlightUser(wallet) {
+    const items = usersListEl.querySelectorAll('.user-item');
+    items.forEach(item => item.classList.remove('active'));
+    items.forEach(item => {
+      if (item.querySelector('.user-name').textContent === selectedUser.displayName) {
+        item.classList.add('active');
+      }
+    });
   }
 
-  function renderMessages() {
+  function getChatPath(addr1, addr2) {
+    const a = addr1.toLowerCase();
+    const b = addr2.toLowerCase();
+    return 'messages/' + (a < b ? a + '_' + b : b + '_' + a);
+  }
+
+  function loadMessages() {
     if (!selectedUser) return;
-    const chatId = getChatId(walletAddress, selectedUser.walletAddress);
-    const chatRef = db.ref("messages/" + chatId);
-    chatRef.off(); // remove old listener if any
-    chatRef.on("value", snapshot => {
-      messagesContainerEl.innerHTML = "";
+    const chatPath = getChatPath(currentUserWallet, selectedUser.walletAddress);
+    db.ref(chatPath).off(); // remove previous listener
+    db.ref(chatPath).on('value', snapshot => {
+      messagesContainerEl.innerHTML = '';
       snapshot.forEach(child => {
         const msg = child.val();
-        const msgEl = document.createElement("div");
-        msgEl.className = "message " + (msg.sender.toLowerCase() === walletAddress.toLowerCase() ? "sent" : "received");
+        const msgEl = document.createElement('div');
+        msgEl.className = 'message ' + (msg.sender.toLowerCase() === currentUserWallet.toLowerCase() ? 'sent' : 'received');
         msgEl.textContent = msg.text;
         messagesContainerEl.appendChild(msgEl);
       });
@@ -262,24 +318,28 @@
     });
   }
 
-  sendBtnEl.addEventListener("click", () => {
+  sendBtnEl.addEventListener('click', () => {
+    sendMessage();
+  });
+
+  inputMessageEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  function sendMessage() {
     const text = inputMessageEl.value.trim();
     if (!text || !selectedUser) return;
-    const chatId = getChatId(walletAddress, selectedUser.walletAddress);
-    db.ref("messages/" + chatId).push({
-      sender: walletAddress,
+    const chatPath = getChatPath(currentUserWallet, selectedUser.walletAddress);
+    db.ref(chatPath).push({
+      sender: currentUserWallet,
       text,
       timestamp: Date.now()
     });
-    inputMessageEl.value = "";
-  });
-
-  inputMessageEl.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendBtnEl.click();
-    }
-  });
+    inputMessageEl.value = '';
+  }
 </script>
 </body>
 </html>
