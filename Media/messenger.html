@@ -22,14 +22,14 @@
     #chatArea{flex:1;display:flex;flex-direction:column;background:#fff;}
     #chatHeader{padding:15px;border-bottom:1px solid #ccc;background:#f7f7f7;font-weight:bold;}
     #messagesContainer{flex:1;padding:10px;overflow-y:auto;background:#f0f0f0;}
-    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;}
+    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;font-size:16px;}
     .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
     .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
     .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
     .preview img{max-width:100%;border-radius:4px;}
     .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
     #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
-    #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;}
+    #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;font-size:15px;}
     #sendBtn{margin-left:8px;padding:0 16px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;}
     #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
     #emojiBtn{background:none;border:none;font-size:20px;margin-left:8px;cursor:pointer;}
@@ -40,13 +40,13 @@
 <body>
   <nav>DRFMessenger</nav>
 
-  <!-- Login screen -->
+  <!-- Login -->
   <div id="loginNotice">
     <p>Please sign in with Google to use the chat.</p>
     <button id="loginBtn">Sign in with Google</button>
   </div>
 
-  <!-- Messenger UI -->
+  <!-- Messenger -->
   <div id="container">
     <div id="usersList">
       <h2>Users</h2>
@@ -88,7 +88,8 @@
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('picker');
 
-  let currentUser = null, selectedUser = null, messagesListener = null;
+  let currentUser = null, selectedUser = null;
+  let messagesRef = null;
 
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -141,10 +142,10 @@
   }
 
   function listenMessages() {
-    if (messagesListener) messagesListener.off();
+    if (messagesRef) messagesRef.off();
     const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    const ref = db.ref('messages/'+chatId);
-    messagesListener = ref.on('value', snap => {
+    messagesRef = db.ref('messages/' + chatId);
+    messagesRef.on('value', snap => {
       messagesContainerEl.innerHTML = '';
       snap.forEach(c => {
         const m = c.val();
