@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMessenger (Firebase Real Mode)</title>
+  <title>DRFMessenger - Real Mode</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; }
-
     body {
       font-family: Arial, sans-serif;
       margin: 0; padding: 0;
@@ -19,7 +18,6 @@
       display: flex;
       flex-direction: column;
     }
-
     nav {
       background-color: #0066cc;
       color: white;
@@ -28,13 +26,11 @@
       font-size: 1.2rem;
       text-align: center;
     }
-
     #container {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
-
     #usersList {
       width: 280px;
       border-right: 1px solid #ccc;
@@ -42,7 +38,6 @@
       overflow-y: auto;
       transition: all 0.3s ease;
     }
-
     #usersList h2 {
       margin: 0;
       padding: 15px;
@@ -50,7 +45,6 @@
       color: white;
       font-size: 1rem;
     }
-
     .user-item {
       display: flex;
       align-items: center;
@@ -60,11 +54,9 @@
       cursor: pointer;
       transition: background-color 0.2s;
     }
-
     .user-item:hover, .user-item.active {
       background-color: #e6f2ff;
     }
-
     .user-avatar {
       width: 40px;
       height: 40px;
@@ -72,19 +64,16 @@
       object-fit: cover;
       border: 1px solid #ccc;
     }
-
     .user-name {
       font-weight: 600;
       flex: 1;
     }
-
     #chatArea {
       flex: 1;
       display: flex;
       flex-direction: column;
       background: white;
     }
-
     #chatHeader {
       padding: 15px;
       border-bottom: 1px solid #ccc;
@@ -92,14 +81,12 @@
       font-size: 1.1rem;
       background: #f7f7f7;
     }
-
     #messagesContainer {
       flex: 1;
       padding: 10px;
       overflow-y: auto;
       background: #f0f0f0;
     }
-
     .message {
       max-width: 75%;
       padding: 10px 15px;
@@ -108,28 +95,24 @@
       line-height: 1.4;
       word-wrap: break-word;
     }
-
     .sent {
       background-color: #007bff;
       color: white;
       align-self: flex-end;
       border-bottom-right-radius: 4px;
     }
-
     .received {
       background-color: #e4e6eb;
       color: black;
       align-self: flex-start;
       border-bottom-left-radius: 4px;
     }
-
     #inputArea {
       display: flex;
       padding: 10px;
       border-top: 1px solid #ccc;
       background: #f7f7f7;
     }
-
     #inputMessage {
       flex: 1;
       border: 1px solid #ccc;
@@ -139,7 +122,6 @@
       resize: none;
       height: 42px;
     }
-
     #sendBtn {
       margin-left: 10px;
       background-color: #0066cc;
@@ -151,17 +133,36 @@
       cursor: pointer;
       transition: 0.3s;
     }
-
     #sendBtn:disabled {
       background-color: #aaa;
       cursor: not-allowed;
     }
-
+    #loginContainer {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex: 1;
+      background: #f0f2f5;
+    }
+    #loginContainer button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(66,133,244,0.6);
+      transition: background-color 0.3s;
+    }
+    #loginContainer button:hover {
+      background-color: #3367d6;
+    }
     @media (max-width: 768px) {
       #container {
         flex-direction: column;
       }
-
       #usersList {
         width: 100%;
         height: 130px;
@@ -171,11 +172,9 @@
         overflow-x: auto;
         overflow-y: hidden;
       }
-
       #usersList h2 {
         display: none;
       }
-
       .user-item {
         flex-direction: column;
         align-items: center;
@@ -185,17 +184,14 @@
         border-right: 1px solid #eee;
         min-width: 90px;
       }
-
       .user-name {
         font-size: 0.8rem;
         text-align: center;
       }
-
       #chatArea {
         flex: 1;
         height: calc(100vh - 180px);
       }
-
       #inputArea {
         position: sticky;
         bottom: 0;
@@ -208,7 +204,11 @@
 <body>
   <nav>DRFMessenger</nav>
 
-  <div id="container">
+  <div id="loginContainer" style="display:none;">
+    <button id="googleLoginBtn">Login with Google</button>
+  </div>
+
+  <div id="container" style="display:none;">
     <div id="usersList">
       <h2>Users</h2>
     </div>
@@ -223,123 +223,139 @@
     </div>
   </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-  };
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  let currentUser = null;
-  let selectedUser = null;
+    // Mock of wallet address & secretID from DRF Wallet app (you replace this with real source)
+    // For testing, you can set localStorage keys in console:
+    // localStorage.setItem('walletAddress', '0x198613e1f7d90850829146edcc986374c0e7d424');
+    // localStorage.setItem('secretID', 'your-secret-id');
+    const walletAddress = localStorage.getItem('walletAddress');
+    const secretID = localStorage.getItem('secretID');
 
-  const usersListEl = document.getElementById('usersList');
-  const chatHeaderEl = document.getElementById('chatHeader');
-  const messagesContainerEl = document.getElementById('messagesContainer');
-  const inputMessageEl = document.getElementById('inputMessage');
-  const sendBtnEl = document.getElementById('sendBtn');
+    const loginContainer = document.getElementById('loginContainer');
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    const container = document.getElementById('container');
+    const usersListEl = document.getElementById('usersList');
+    const chatHeaderEl = document.getElementById('chatHeader');
+    const messagesContainerEl = document.getElementById('messagesContainer');
+    const inputMessageEl = document.getElementById('inputMessage');
+    const sendBtnEl = document.getElementById('sendBtn');
 
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      loadUsers();
-    } else {
-      auth.signInAnonymously();
+    let selectedUser = null;
+    let currentUser = null; // Will store Google auth user
+
+    function getChatPath(uid1, uid2) {
+      return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
     }
-  });
 
-  function loadUsers() {
-    const profilesRef = db.ref("profiles");
-    profilesRef.once("value", snapshot => {
-      usersListEl.innerHTML = "<h2>Users</h2>";
-      snapshot.forEach(child => {
-        const uid = child.key;
-        const user = child.val();
-        if (uid !== currentUser.uid) {
-          const div = document.createElement('div');
-          div.className = 'user-item';
-          div.innerHTML = `
-            <img src="${user.photoUrl || 'https://i.pravatar.cc/40?u=' + uid}" class="user-avatar" alt="${user.name || 'User'}"/>
-            <div class="user-name">${user.name || uid}</div>
-          `;
-          div.addEventListener('click', () => selectUser(uid, user));
-          usersListEl.appendChild(div);
+    function highlightUser(wallet) {
+      const items = usersListEl.querySelectorAll('.user-item');
+      items.forEach(item => item.classList.remove('active'));
+      items.forEach(item => {
+        if (item.dataset.wallet === wallet) {
+          item.classList.add('active');
         }
       });
+    }
+
+    function renderMessages() {
+      if (!selectedUser) return;
+      const chatPath = getChatPath(walletAddress, selectedUser.walletAddress);
+      db.ref(chatPath).off(); // Unsubscribe previous listener if any
+      db.ref(chatPath).on('value', snapshot => {
+        messagesContainerEl.innerHTML = '';
+        snapshot.forEach(child => {
+          const msg = child.val();
+          const msgEl = document.createElement('div');
+          msgEl.className = 'message ' + (msg.sender === walletAddress ? 'sent' : 'received');
+          msgEl.textContent = msg.text;
+          messagesContainerEl.appendChild(msgEl);
+        });
+        messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+      });
+    }
+
+    function loadUsers() {
+      usersListEl.innerHTML = '<h2>Users</h2>';
+      db.ref('profiles').once('value', snapshot => {
+        snapshot.forEach(child => {
+          const profile = child.val();
+          // skip current user
+          if (profile.walletAddress === walletAddress) return;
+          const div = document.createElement('div');
+          div.className = 'user-item';
+          div.dataset.wallet = profile.walletAddress;
+          div.innerHTML = `
+            <img src="${profile.photoUrl || 'https://i.pravatar.cc/40?u=' + profile.walletAddress}" alt="${profile.name}" class="user-avatar" />
+            <div class="user-name">${profile.name || profile.walletAddress}</div>
+          `;
+          div.addEventListener('click', () => {
+            selectedUser = profile;
+            chatHeaderEl.textContent = `Chat with ${profile.name || profile.walletAddress}`;
+            inputMessageEl.disabled = false;
+            sendBtnEl.disabled = false;
+            inputMessageEl.value = '';
+            inputMessageEl.focus();
+            renderMessages();
+            highlightUser(profile.walletAddress);
+          });
+          usersListEl.appendChild(div);
+        });
+      });
+    }
+
+    function sendMessage() {
+      const text = inputMessageEl.value.trim();
+      if (!text || !selectedUser) return;
+      const chatPath = getChatPath(walletAddress, selectedUser.walletAddress);
+      db.ref(chatPath).push({
+        sender: walletAddress,
+        text,
+        timestamp: Date.now()
+      });
+      inputMessageEl.value = '';
+    }
+
+    googleLoginBtn.addEventListener('click', () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(error => {
+        alert('Login failed: ' + error.message);
+      });
     });
-  }
 
-  function selectUser(uid, userData) {
-    selectedUser = { uid, ...userData };
-    chatHeaderEl.textContent = `Chat with ${userData.name || uid}`;
-    inputMessageEl.disabled = false;
-    sendBtnEl.disabled = false;
-    inputMessageEl.value = '';
-    renderMessages();
-    highlightUser(uid);
-  }
-
-  function highlightUser(uid) {
-    const items = usersListEl.querySelectorAll('.user-item');
-    items.forEach(item => item.classList.remove('active'));
-    items.forEach(item => {
-      if (item.textContent.includes(selectedUser.name || uid)) {
-        item.classList.add('active');
+    auth.onAuthStateChanged(user => {
+      if (user && walletAddress && secretID) {
+        currentUser = user;
+        loginContainer.style.display = 'none';
+        container.style.display = 'flex';
+        loadUsers();
+      } else {
+        loginContainer.style.display = 'flex';
+        container.style.display = 'none';
       }
     });
-  }
 
-  function getChatPath(uid1, uid2) {
-    return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
-  }
-
-  function renderMessages() {
-    if (!selectedUser) return;
-    const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-    db.ref(chatPath).off(); // remove previous listener
-    db.ref(chatPath).on("value", snapshot => {
-      messagesContainerEl.innerHTML = "";
-      snapshot.forEach(child => {
-        const msg = child.val();
-        const msgEl = document.createElement('div');
-        msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
-        msgEl.textContent = msg.text;
-        messagesContainerEl.appendChild(msgEl);
-      });
-      messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+    sendBtnEl.addEventListener('click', sendMessage);
+    inputMessageEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     });
-  }
-
-  sendBtnEl.addEventListener('click', () => {
-    sendMessage();
-  });
-
-  inputMessageEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  function sendMessage() {
-    const text = inputMessageEl.value.trim();
-    if (!text || !selectedUser) return;
-    const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-    db.ref(chatPath).push({
-      sender: currentUser.uid,
-      text,
-      timestamp: Date.now()
-    });
-    inputMessageEl.value = '';
-  }
-</script>
+  </script>
 </body>
 </html>
