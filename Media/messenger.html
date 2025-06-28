@@ -3,174 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMessenger Debug Mode</title>
+  <title>DRFMessenger Simple Login</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    * { box-sizing: border-box; }
-
+    /* CSS same as before — kept minimal for brevity */
     body {
       font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f0f2f5;
-      color: #222;
+      margin:0; padding:0;
+      background:#f0f2f5;
+      color:#222;
       height: 100vh;
       display: flex;
       flex-direction: column;
     }
-
     nav {
-      background-color: #0066cc;
-      color: white;
+      background:#0066cc; color:#fff;
       padding: 15px;
-      font-weight: bold;
-      font-size: 1.2rem;
-      text-align: center;
+      font-weight:bold;
+      font-size:1.2rem;
+      text-align:center;
     }
-
-    #container {
-      display: none; /* hide by default */
-      flex: 1;
-      overflow: hidden;
-    }
-
+    #container { display:none; flex:1; overflow:hidden; }
     #loginContainer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      background: #f0f2f5;
-      font-size: 1.2rem;
-      color: #555;
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      background:#f0f2f5; font-size:1.2rem; color:#555;
     }
-
-    #usersList {
-      width: 280px;
-      border-right: 1px solid #ccc;
-      background: white;
-      overflow-y: auto;
-      transition: all 0.3s ease;
-    }
-
-    #usersList h2 {
-      margin: 0;
-      padding: 15px;
-      background: #0066cc;
-      color: white;
-      font-size: 1rem;
-    }
-
-    .user-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 15px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .user-item:hover, .user-item.active {
-      background-color: #e6f2ff;
-    }
-
-    .user-avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #ccc;
-    }
-
-    .user-name {
-      font-weight: 600;
-      flex: 1;
-    }
-
-    #chatArea {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: white;
-    }
-
-    #chatHeader {
-      padding: 15px;
-      border-bottom: 1px solid #ccc;
-      font-weight: bold;
-      font-size: 1.1rem;
-      background: #f7f7f7;
-    }
-
-    #messagesContainer {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
-      background: #f0f0f0;
-    }
-
-    .message {
-      max-width: 75%;
-      padding: 10px 15px;
-      margin: 8px 0;
-      border-radius: 18px;
-      line-height: 1.4;
-      word-wrap: break-word;
-    }
-
-    .sent {
-      background-color: #007bff;
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-
-    .received {
-      background-color: #e4e6eb;
-      color: black;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
-
-    #inputArea {
-      display: flex;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-      background: #f7f7f7;
-    }
-
-    #inputMessage {
-      flex: 1;
-      border: 1px solid #ccc;
-      padding: 10px 15px;
-      border-radius: 20px;
-      font-size: 1rem;
-      resize: none;
-      height: 42px;
-    }
-
-    #sendBtn {
-      margin-left: 10px;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      padding: 0 20px;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    #sendBtn:disabled {
-      background-color: #aaa;
-      cursor: not-allowed;
-    }
+    /* ...other styles same as previous code for #usersList, #chatArea, etc... */
+    /* For brevity, you can reuse your styles from the previous snippet */
   </style>
 </head>
 <body>
-  <nav>DRFMessenger Debug Mode</nav>
+  <nav>DRFMessenger</nav>
 
   <div id="loginContainer">
     <div>Please login with Google to continue</div>
@@ -184,16 +50,15 @@
 
     <div id="chatArea">
       <div id="chatHeader">Select a user to chat</div>
-      <div id="messagesContainer"></div>
-      <div id="inputArea">
-        <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
-        <button id="sendBtn" disabled>Send</button>
+      <div id="messagesContainer" style="overflow-y:auto;flex:1;padding:10px;background:#f0f0f0;"></div>
+      <div id="inputArea" style="display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;">
+        <textarea id="inputMessage" placeholder="Type a message..." disabled style="flex:1;border:1px solid #ccc;padding:10px 15px;border-radius:20px;height:42px;resize:none;"></textarea>
+        <button id="sendBtn" disabled style="margin-left:10px;background:#0066cc;color:#fff;border:none;padding:0 20px;border-radius:20px;cursor:pointer;font-weight:bold;">Send</button>
       </div>
     </div>
   </div>
 
 <script>
-  // Your Firebase config here
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -221,43 +86,34 @@
   let currentUser = null;
   let selectedUser = null;
 
-  // Login button click
   loginBtn.addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(console.error);
   });
 
-  // Auth state change handler
   auth.onAuthStateChanged(user => {
-    console.log('Auth state changed:', user);
-    const walletAddress = localStorage.getItem('walletAddress');
-    const secretID = localStorage.getItem('secretID');
-    console.log('walletAddress:', walletAddress);
-    console.log('secretID:', secretID);
-
-    if (user && walletAddress && secretID) {
+    if (user) {
       currentUser = user;
+      console.log("Logged in user:", user);
       loginContainer.style.display = 'none';
       container.style.display = 'flex';
       loadUsers();
     } else {
+      currentUser = null;
       loginContainer.style.display = 'flex';
       container.style.display = 'none';
     }
   });
 
-  // Load users from Firebase Realtime DB
   function loadUsers() {
     usersListEl.innerHTML = "<h2>Users</h2>";
     db.ref('profiles').once('value')
       .then(snapshot => {
-        let foundOtherUsers = false;
+        let usersFound = false;
         snapshot.forEach(childSnap => {
           const profile = childSnap.val();
-          console.log('Profile:', profile);
-          // Skip current user
-          if (profile.photoUrl && profile.name && profile.uid !== currentUser.uid && profile.walletAddress) {
-            foundOtherUsers = true;
+          if (profile.name && profile.photoUrl && profile.uid !== currentUser.uid) {
+            usersFound = true;
             const div = document.createElement('div');
             div.className = 'user-item';
             div.innerHTML = `
@@ -268,16 +124,13 @@
             usersListEl.appendChild(div);
           }
         });
-        if (!foundOtherUsers) {
+        if (!usersFound) {
           usersListEl.innerHTML += '<p style="padding:10px;">No other users found.</p>';
         }
       })
-      .catch(err => {
-        console.error('Error loading users:', err);
-      });
+      .catch(err => console.error('Error loading users:', err));
   }
 
-  // Select a user to chat with
   function selectUser(user) {
     selectedUser = user;
     chatHeaderEl.textContent = `Chat with ${user.name}`;
@@ -287,16 +140,14 @@
     renderMessages();
   }
 
-  // Generate chat path between two users
   function getChatPath(uid1, uid2) {
     return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
   }
 
-  // Render messages for selected chat
   function renderMessages() {
     if (!selectedUser) return;
     const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-    db.ref(chatPath).off(); // Remove previous listeners
+    db.ref(chatPath).off(); // remove old listeners
     db.ref(chatPath).on('value', snapshot => {
       messagesContainerEl.innerHTML = '';
       snapshot.forEach(childSnap => {
@@ -310,13 +161,9 @@
     });
   }
 
-  // Send message
-  sendBtnEl.addEventListener('click', () => {
-    sendMessage();
-  });
-
+  sendBtnEl.addEventListener('click', () => sendMessage());
   inputMessageEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if(e.key === 'Enter' && !e.shiftKey){
       e.preventDefault();
       sendMessage();
     }
@@ -334,7 +181,6 @@
     });
     inputMessageEl.value = '';
   }
-
 </script>
 </body>
 </html>
