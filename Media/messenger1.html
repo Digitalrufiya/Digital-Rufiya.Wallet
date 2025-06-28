@@ -86,19 +86,28 @@
 
   let currentUser = null, selectedUser = null, messagesListener = null;
 
-  // Google sign-in
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert(err.message));
   };
 
-  // Auth state
   auth.onAuthStateChanged(user => {
     if (user) {
-      currentUser = user;
-      loginNotice.style.display = 'none';
-      container.style.display = 'flex';
-      loadUsers();
+      db.ref('profiles').orderByChild('email').equalTo(user.email).once('value')
+        .then(snapshot => {
+          if (!snapshot.exists()) return alert("No linked wallet found for your Google account.");
+          snapshot.forEach(child => {
+            const wallet = child.key;
+            currentUser = {
+              uid: user.uid,
+              email: user.email,
+              wallet,
+              displayName: user.displayName,
+              photoURL: user.photoURL
+            };
+            startMessenger();
+          });
+        });
     } else {
       currentUser = null;
       loginNotice.style.display = 'flex';
@@ -106,7 +115,12 @@
     }
   });
 
-  // Load user profiles
+  function startMessenger() {
+    loginNotice.style.display = 'none';
+    container.style.display = 'flex';
+    loadUsers();
+  }
+
   function loadUsers() {
     db.ref('profiles').once('value')
       .then(snap => {
@@ -114,7 +128,7 @@
         snap.forEach(child => {
           const wallet = child.key;
           const u = child.val();
-          if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
+          if (wallet.toLowerCase() === currentUser.wallet.toLowerCase()) return;
           const div = document.createElement('div');
           div.className = 'user-item';
           div.innerHTML = `
@@ -128,7 +142,6 @@
       .catch(err => console.error('Load users failed:', err));
   }
 
-  // Start chat
   function selectUser(wallet, name) {
     selectedUser = { wallet, name };
     chatHeaderEl.textContent = 'Chat with ' + name;
@@ -139,37 +152,33 @@
     listenMessages();
     highlightSelected();
   }
+
   function highlightSelected() {
     document.querySelectorAll('.user-item').forEach(el => {
       el.classList.toggle('active', el.textContent.includes(selectedUser.name));
     });
   }
 
-  // Chat ID generator
   function getChatId(a,b) {
     a=a.toLowerCase(); b=b.toLowerCase();
     return a<b? a+'_'+b: b+'_'+a;
   }
 
-  // Listen messages with link preview
   function listenMessages() {
     if (messagesListener) messagesListener.off();
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
+    const chatId = getChatId(currentUser.wallet, selectedUser.wallet);
     const ref = db.ref('messages/'+chatId);
     messagesListener = ref.on('value', snap => {
       messagesContainerEl.innerHTML = '';
       snap.forEach(c => {
         const m = c.val();
         const d = document.createElement('div');
-        d.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
-        // Convert URLs to clickable links
+        d.className = 'message ' + (m.sender === currentUser.wallet ? 'sent' : 'received');
         const html = m.text.replace(/(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+)/g, url =>
           `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
         );
         d.innerHTML = html;
         messagesContainerEl.appendChild(d);
-
-        // Image preview for PNG/JPG/GIF
         const imgMatch = m.text.match(/(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+\.(?:png|jpg|jpeg|gif))/i);
         if (imgMatch) {
           const p = document.createElement('div');
@@ -182,12 +191,11 @@
     });
   }
 
-  // Send message
   sendBtnEl.onclick = () => {
     const txt = inputMessageEl.value.trim();
     if (!txt || !selectedUser) return;
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    db.ref('messages/'+chatId).push({ sender: currentUser.uid, text: txt, timestamp: Date.now() });
+    const chatId = getChatId(currentUser.wallet, selectedUser.wallet);
+    db.ref('messages/'+chatId).push({ sender: currentUser.wallet, text: txt, timestamp: Date.now() });
     inputMessageEl.value = '';
   };
   inputMessageEl.onkeydown = e => {
