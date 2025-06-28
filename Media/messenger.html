@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMessenger | DRFMedia</title>
+  <title>DRFMessenger Dummy Mode | DRFMedia</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -159,7 +159,7 @@
   </style>
 </head>
 <body>
-  <nav>DRFMessenger</nav>
+  <nav>DRFMessenger (Dummy Mode)</nav>
 
   <div id="container">
     <div id="usersList" aria-label="Users list">
@@ -177,27 +177,31 @@
     </div>
   </div>
 
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-  import { getDatabase, ref, onValue, push, serverTimestamp, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+<script>
+  // Dummy users data
+  const dummyUsers = [
+    { uid: 'u1', displayName: 'Ali', photoURL: 'https://i.pravatar.cc/40?img=1' },
+    { uid: 'u2', displayName: 'Sara', photoURL: 'https://i.pravatar.cc/40?img=2' },
+    { uid: 'u3', displayName: 'Omar', photoURL: 'https://i.pravatar.cc/40?img=3' },
+    { uid: 'u4', displayName: 'Mariam', photoURL: 'https://i.pravatar.cc/40?img=4' }
+  ];
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  // Dummy current user (you)
+  const currentUser = { uid: 'me', displayName: 'You', photoURL: 'https://i.pravatar.cc/40?img=5' };
+
+  // Dummy chat messages store { chatId: [messages] }
+  // Messages: { sender: uid, text: string, timestamp: number }
+  const dummyMessages = {
+    'me_u1': [
+      { sender: 'me', text: 'Salam Ali!', timestamp: Date.now() - 60000 },
+      { sender: 'u1', text: 'Wa alaikum salam!', timestamp: Date.now() - 55000 },
+    ],
+    'me_u2': [
+      { sender: 'u2', text: 'Hey, how are you?', timestamp: Date.now() - 3600000 },
+      { sender: 'me', text: 'I am fine, thanks!', timestamp: Date.now() - 3550000 },
+    ],
+    // no messages with u3 and u4 yet
   };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-
-  let currentUser = null;
-  let selectedUser = null;
 
   const usersListEl = document.getElementById('usersList');
   const chatHeaderEl = document.getElementById('chatHeader');
@@ -205,109 +209,80 @@
   const inputMessageEl = document.getElementById('inputMessage');
   const sendBtnEl = document.getElementById('sendBtn');
 
-  function escapeHTML(str) {
-    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
+  let selectedUser = null;
 
-  function formatTime(timestamp) {
-    return new Date(timestamp).toLocaleString();
-  }
-
-  // Redirect to media.html if user not logged in
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      location.href = 'media.html';
-      return;
-    }
-    currentUser = user;
-    loadUsers();
-  });
-
-  // Load all users except current user
+  // Show users in left list
   function loadUsers() {
-    const usersRef = ref(db, 'users');
-    onValue(usersRef, snapshot => {
-      const users = snapshot.val() || {};
-      usersListEl.querySelectorAll('.user-item').forEach(e => e.remove());
+    // Clear existing
+    usersListEl.querySelectorAll('.user-item').forEach(e => e.remove());
 
-      Object.entries(users).forEach(([uid, user]) => {
-        if (uid === currentUser.uid) return;
-
-        const userItem = document.createElement('div');
-        userItem.className = 'user-item';
-        userItem.tabIndex = 0;
-        userItem.setAttribute('role', 'button');
-        userItem.setAttribute('aria-pressed', 'false');
-
-        userItem.innerHTML = `
-          <img src="${user.photoURL || 'https://via.placeholder.com/40'}" alt="Avatar of ${escapeHTML(user.displayName || 'User')}" class="user-avatar" />
-          <div class="user-name">${escapeHTML(user.displayName || 'Unnamed')}</div>
-        `;
-
-        userItem.addEventListener('click', () => selectUser(uid, user.displayName || 'Unnamed'));
-        userItem.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            selectUser(uid, user.displayName || 'Unnamed');
-          }
-        });
-
-        usersListEl.appendChild(userItem);
+    dummyUsers.forEach(user => {
+      const userItem = document.createElement('div');
+      userItem.className = 'user-item';
+      userItem.tabIndex = 0;
+      userItem.setAttribute('role', 'button');
+      userItem.setAttribute('aria-pressed', 'false');
+      userItem.innerHTML = `
+        <img src="${user.photoURL}" alt="Avatar of ${user.displayName}" class="user-avatar" />
+        <div class="user-name">${user.displayName}</div>
+      `;
+      userItem.addEventListener('click', () => selectUser(user));
+      userItem.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          selectUser(user);
+        }
       });
+      usersListEl.appendChild(userItem);
     });
   }
 
-  // Select user to chat with
-  function selectUser(uid, name) {
-    selectedUser = { uid, name };
-    chatHeaderEl.textContent = `Chat with ${name}`;
+  // Select user and load chat
+  function selectUser(user) {
+    selectedUser = user;
+    chatHeaderEl.textContent = `Chat with ${user.displayName}`;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    messagesContainerEl.innerHTML = '';
-    loadMessages();
-    highlightSelectedUser(uid);
+    inputMessageEl.value = '';
+    inputMessageEl.focus();
+    renderMessages();
+    highlightSelectedUser(user.uid);
   }
 
-  // Highlight selected user in the list
+  // Highlight selected user in list
   function highlightSelectedUser(uid) {
     usersListEl.querySelectorAll('.user-item').forEach(item => {
-      item.classList.toggle('active', item.querySelector('.user-name').textContent === selectedUser.name);
-      item.setAttribute('aria-pressed', item.classList.contains('active') ? 'true' : 'false');
+      const name = item.querySelector('.user-name').textContent;
+      const isActive = dummyUsers.find(u => u.uid === uid).displayName === name;
+      item.classList.toggle('active', isActive);
+      item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
   }
 
-  // Load messages between currentUser and selectedUser
-  function loadMessages() {
-    if (!currentUser || !selectedUser) return;
-
+  // Render messages from dummyMessages store
+  function renderMessages() {
+    if (!selectedUser) return;
     const chatId = getChatId(currentUser.uid, selectedUser.uid);
-    const messagesRef = ref(db, 'messages/' + chatId);
+    const messages = dummyMessages[chatId] || [];
+    messagesContainerEl.innerHTML = '';
 
-    onValue(messagesRef, snapshot => {
-      const msgs = snapshot.val() || {};
-      messagesContainerEl.innerHTML = '';
-
-      const sortedMsgs = Object.entries(msgs).sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-      sortedMsgs.forEach(([id, msg]) => {
-        const msgEl = document.createElement('div');
-        msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
-        msgEl.textContent = msg.text;
-        msgEl.title = formatTime(msg.timestamp);
-        messagesContainerEl.appendChild(msgEl);
-      });
-
-      // Scroll to bottom
-      messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+    messages.forEach(msg => {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
+      msgEl.textContent = msg.text;
+      msgEl.title = new Date(msg.timestamp).toLocaleString();
+      messagesContainerEl.appendChild(msgEl);
     });
+
+    messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
   }
 
-  // Compose unique chat id for conversation between two users
+  // Compose chatId (smallest_uid + '_' + largest_uid)
   function getChatId(uid1, uid2) {
     return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
   }
 
-  // Send message handler
+  // Send message: adds to dummyMessages and re-renders
   sendBtnEl.addEventListener('click', sendMessage);
   inputMessageEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -316,25 +291,24 @@
     }
   });
 
-  async function sendMessage() {
+  function sendMessage() {
     if (!inputMessageEl.value.trim() || !selectedUser) return;
-    const chatId = getChatId(currentUser.uid, selectedUser.uid);
-    const messagesRef = ref(db, 'messages/' + chatId);
 
-    const newMsg = {
+    const chatId = getChatId(currentUser.uid, selectedUser.uid);
+    if (!dummyMessages[chatId]) dummyMessages[chatId] = [];
+
+    dummyMessages[chatId].push({
       sender: currentUser.uid,
       text: inputMessageEl.value.trim(),
       timestamp: Date.now()
-    };
+    });
 
-    try {
-      await push(messagesRef, newMsg);
-      inputMessageEl.value = '';
-      inputMessageEl.focus();
-    } catch (err) {
-      alert('Error sending message: ' + err.message);
-    }
+    inputMessageEl.value = '';
+    renderMessages();
+    inputMessageEl.focus();
   }
+
+  loadUsers();
 </script>
 </body>
 </html>
