@@ -1,192 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMessenger</title>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DRFMessenger Debug</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    /* Your CSS here, same as before, skip for brevity */
-    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; height: 100vh; display: flex; flex-direction: column; }
-    nav { background: #0066cc; color: white; padding: 15px; text-align: center; font-weight: bold; }
-    #container { display: flex; flex: 1; overflow: hidden; }
-    #usersList { width: 280px; background: white; border-right: 1px solid #ccc; overflow-y: auto; }
-    #usersList h2 { margin: 0; padding: 15px; background: #0066cc; color: white; }
-    .user-item { display: flex; align-items: center; gap: 10px; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; }
-    .user-item:hover, .user-item.active { background: #e6f2ff; }
-    .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; }
-    .user-name { flex: 1; font-weight: 600; }
-    #chatArea { flex: 1; display: flex; flex-direction: column; background: white; }
-    #chatHeader { padding: 15px; font-weight: bold; border-bottom: 1px solid #ccc; background: #f7f7f7; }
-    #messagesContainer { flex: 1; padding: 10px; overflow-y: auto; background: #f0f0f0; display: flex; flex-direction: column; gap: 6px; }
-    .message { max-width: 70%; padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; }
-    .sent { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-    .received { background: #e4e6eb; color: black; align-self: flex-start; border-bottom-left-radius: 4px; }
-    #inputArea { display: flex; padding: 10px; border-top: 1px solid #ccc; background: #f7f7f7; }
-    #inputMessage { flex: 1; border: 1px solid #ccc; padding: 10px 15px; border-radius: 20px; font-size: 1rem; resize: none; height: 42px; }
-    #sendBtn { margin-left: 10px; background: #0066cc; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-    #sendBtn:disabled { background: #aaa; cursor: not-allowed; }
+    body { font-family: sans-serif; margin:0; display:flex; flex-direction:column; height:100vh; }
+    nav { background:#0066cc; color:#fff; padding:10px; text-align:center; }
+    #users { width:200px; overflow-y:auto; background:#fff; border-right:1px solid #ccc; }
+    #users .user { padding:8px; cursor:pointer; border-bottom:1px solid #eee; }
+    #users .user:hover { background:#e6f2ff; }
+    #chat { flex:1; padding:10px; }
+    #debug { background:#ffd; padding:10px; font-size:0.9em; height:100px; overflow:auto; }
   </style>
 </head>
 <body>
-
-  <nav>DRFMessenger</nav>
-
-  <div id="container">
-    <div id="usersList">
-      <h2>Users</h2>
-      <!-- Users will be appended here -->
-    </div>
-
-    <div id="chatArea">
-      <div id="chatHeader">Select a user to chat</div>
-      <div id="messagesContainer"></div>
-      <div id="inputArea">
-        <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
-        <button id="sendBtn" disabled>Send</button>
-      </div>
-    </div>
+  <nav>DRFMessenger Debug</nav>
+  <div style="display:flex; flex:1; overflow:hidden;">
+    <div id="users"><h3>Users</h3></div>
+    <div id="chat"><p>Select a user…</p></div>
   </div>
+  <div id="debug"><strong>Debug log:</strong><br/></div>
 
   <script>
-    // Firebase config - replace with your own config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    // init firebase
+    const cfg = {
+      apiKey: "AIzaSyB…",
       authDomain: "drfsocial-23a06.firebaseapp.com",
       databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+      projectId: "drfsocial-23a06"
     };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    firebase.initializeApp(cfg);
     const db = firebase.database();
 
-    const usersListEl = document.getElementById('usersList');
-    const chatHeaderEl = document.getElementById('chatHeader');
-    const messagesContainerEl = document.getElementById('messagesContainer');
-    const inputMessageEl = document.getElementById('inputMessage');
-    const sendBtnEl = document.getElementById('sendBtn');
+    const usersEl = document.getElementById('users');
+    const chatEl = document.getElementById('chat');
+    const dbg = document.getElementById('debug');
+    function log(...args){ dbg.innerHTML += args.map(a=>JSON.stringify(a)).join(' ')+'<br>'; }
 
-    let currentUser = null;
-    let selectedUser = null;
-    let messagesListener = null;
+    const me = localStorage.getItem('drf_active_wallet');
+    if(!me){
+      usersEl.innerHTML = '<p>Please login to DRF Wallet first.</p>';
+      throw 'no wallet';
+    }
+    log('My wallet:', me);
 
-    // Helper: generate chatId to uniquely identify chat between two users
-    function getChatId(uid1, uid2) {
-      return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
+    function loadUsers(){
+      db.ref('profiles').once('value')
+        .then(snap=>{
+          usersEl.innerHTML = '<h3>Users</h3>';
+          snap.forEach(child=>{
+            const wallet = child.key;
+            const u = child.val();
+            log('Profile key:', wallet, 'val:', u);
+            if(wallet.toLowerCase()===me.toLowerCase()) return;
+            const div = document.createElement('div');
+            div.className = 'user';
+            div.textContent = (u.name||wallet)+'   ('+wallet.slice(0,6)+'…)';
+            div.onclick = ()=>startChat(wallet, u);
+            usersEl.appendChild(div);
+          });
+        })
+        .catch(e=>log('loadUsers error', e));
     }
 
-    // Load users from 'profiles' node
-    function loadUsers() {
-      db.ref('profiles').once('value', snapshot => {
-        usersListEl.innerHTML = '<h2>Users</h2>'; // reset list
+    let currentChatId = null;
+    function getChatId(a,b){
+      a=a.toLowerCase(); b=b.toLowerCase();
+      return a<b? a+'_'+b: b+'_'+a;
+    }
 
-        snapshot.forEach(childSnap => {
-          const user = childSnap.val();
-          const userId = childSnap.key;
+    function startChat(wallet,u){
+      chatEl.innerHTML = '<h4>Chat with '+(u.name||wallet)+'</h4><div id="msgs"></div><input id="inp"/><button id="btn">Send</button>';
+      const msgsEl = document.getElementById('msgs');
+      const inp = document.getElementById('inp');
+      const btn = document.getElementById('btn');
 
-          if (userId === currentUser.uid) return; // skip current user
+      if(currentChatId)
+        db.ref('messages/'+currentChatId).off();
 
-          const div = document.createElement('div');
-          div.className = 'user-item';
-          div.innerHTML = `
-            <img src="${user.photoUrl || 'https://i.pravatar.cc/40?u=' + userId}" class="user-avatar" />
-            <div class="user-name">${user.name || 'Unnamed'}</div>
-          `;
-
-          div.addEventListener('click', () => selectUser(userId, user.name));
-          usersListEl.appendChild(div);
+      currentChatId = getChatId(me,wallet);
+      log('listening on chatId', currentChatId);
+      const ref = db.ref('messages/'+currentChatId);
+      ref.on('value', snap=>{
+        msgsEl.innerHTML = '';
+        snap.forEach(c=>{
+          const m=c.val();
+          const d = document.createElement('div');
+          d.textContent = (m.sender===me? 'Me: ':'Them: ')+m.text;
+          msgsEl.appendChild(d);
         });
       });
+
+      btn.onclick = ()=>{
+        const text = inp.value.trim();
+        if(!text) return;
+        ref.push({ sender:me, text, timestamp:Date.now()});
+        inp.value='';
+      };
     }
 
-    // Select a user to chat with
-    function selectUser(userId, userName) {
-      selectedUser = { uid: userId, name: userName };
-      chatHeaderEl.textContent = `Chat with ${userName}`;
-      inputMessageEl.disabled = false;
-      sendBtnEl.disabled = false;
-      inputMessageEl.value = '';
-      inputMessageEl.focus();
-      listenMessages();
-      highlightSelectedUser();
-    }
-
-    // Highlight selected user in list
-    function highlightSelectedUser() {
-      const items = usersListEl.querySelectorAll('.user-item');
-      items.forEach(item => {
-        item.classList.remove('active');
-        if (item.textContent.includes(selectedUser.name)) {
-          item.classList.add('active');
-        }
-      });
-    }
-
-    // Listen for messages between current user and selected user
-    function listenMessages() {
-      if (messagesListener) {
-        messagesListener.off(); // detach previous listener
-      }
-
-      if (!selectedUser) return;
-
-      const chatId = getChatId(currentUser.uid, selectedUser.uid);
-      const chatRef = db.ref('messages/' + chatId);
-
-      chatRef.off(); // just to be safe
-
-      messagesListener = chatRef.on('value', snapshot => {
-        messagesContainerEl.innerHTML = '';
-        snapshot.forEach(childSnap => {
-          const msg = childSnap.val();
-          const msgDiv = document.createElement('div');
-          msgDiv.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
-          msgDiv.textContent = msg.text;
-          messagesContainerEl.appendChild(msgDiv);
-        });
-        messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
-      });
-    }
-
-    // Send a message
-    sendBtnEl.addEventListener('click', () => {
-      const text = inputMessageEl.value.trim();
-      if (!text || !selectedUser) return;
-
-      const chatId = getChatId(currentUser.uid, selectedUser.uid);
-      const chatRef = db.ref('messages/' + chatId);
-
-      chatRef.push({
-        sender: currentUser.uid,
-        text,
-        timestamp: Date.now()
-      });
-
-      inputMessageEl.value = '';
-    });
-
-    inputMessageEl.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendBtnEl.click();
-      }
-    });
-
-    // Auth state change
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        currentUser = user;
-        loadUsers();
-      } else {
-        auth.signInAnonymously();
-      }
-    });
+    loadUsers();
   </script>
 </body>
 </html>
