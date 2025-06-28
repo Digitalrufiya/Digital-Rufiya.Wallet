@@ -174,7 +174,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-    import { getDatabase, ref, onValue, push, set, query, orderByChild, get, off } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+    import { getDatabase, ref, onValue, push, query, orderByChild, get, off } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
     import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 
     const firebaseConfig = {
@@ -191,7 +191,6 @@
     const db = getDatabase(app);
     const auth = getAuth(app);
 
-    // Elements
     const usersContainer = document.getElementById('usersContainer');
     const chatWindow = document.getElementById('chatWindow');
     const chatHeader = document.getElementById('chatHeader');
@@ -202,20 +201,18 @@
 
     let currentUser = null;
     let activeChatUser = null;
+    let messagesRef = null;
     let messagesListener = null;
 
-    // Generate chat ID from two UIDs to keep order consistent
     function getChatId(uid1, uid2) {
       return uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1;
     }
 
-    // Format timestamp nicely
     function formatTime(ts) {
       const d = new Date(ts);
       return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 
-    // Load all users except current user to chat with
     async function loadUsers() {
       usersContainer.innerHTML = '<p style="padding:15px;">Loading users...</p>';
       const usersRef = ref(db, 'users');
@@ -238,58 +235,54 @@
           <img class="avatar" src="${user.photoURL || 'https://via.placeholder.com/36'}" alt="avatar"/>
           <span>${user.displayName || 'User'}</span>
         `;
-        userDiv.onclick = () => openChat(uid, user.displayName || 'User');
+        // Fix click to open chat here:
+        userDiv.addEventListener('click', () => openChat(uid, user.displayName || 'User'));
         usersContainer.appendChild(userDiv);
       }
+
       if (usersContainer.children.length === 0) {
         usersContainer.innerHTML = '<p style="padding:15px;">No other users found</p>';
       }
     }
 
-    // Open chat with user
     function openChat(uid, name) {
       activeChatUser = { uid, name };
       chatHeader.textContent = 'Chat with ' + name;
       chatWindow.style.display = 'flex';
-      clearMessages();
-      attachMessagesListener();
-      highlightActiveUser();
-    }
 
-    // Highlight selected user in chat list
-    function highlightActiveUser() {
+      // Highlight active chat user
       [...usersContainer.children].forEach(child => {
-        if (child.dataset.uid === activeChatUser.uid) child.classList.add('active');
-        else child.classList.remove('active');
+        if (child.dataset.uid === uid) {
+          child.classList.add('active');
+        } else {
+          child.classList.remove('active');
+        }
       });
-    }
 
-    // Clear messages area
-    function clearMessages() {
+      // Remove old listener
+      if (messagesListener && messagesRef) {
+        off(messagesRef, 'value', messagesListener);
+      }
+
       messagesDiv.innerHTML = '';
-    }
+      messageInput.value = '';
+      sendBtn.disabled = true;
 
-    // Attach Firebase listener to load messages realtime
-    function attachMessagesListener() {
-      if (messagesListener) off(ref(db, messagesListener));
-
-      const chatId = getChatId(currentUser.uid, activeChatUser.uid);
-      const messagesRef = query(ref(db, 'chats/' + chatId + '/messages'), orderByChild('timestamp'));
-
-      messagesListener = messagesRef._queryPath.pieces_.join('/'); // store path string for off()
-      onValue(messagesRef, snapshot => {
-        clearMessages();
+      // Set new listener
+      const chatId = getChatId(currentUser.uid, uid);
+      messagesRef = ref(db, `chats/${chatId}/messages`);
+      messagesListener = onValue(messagesRef, snapshot => {
+        messagesDiv.innerHTML = '';
         if (!snapshot.exists()) return;
         const msgs = snapshot.val();
-        for (const key in msgs) {
-          const msg = msgs[key];
+        const orderedMsgs = Object.values(msgs).sort((a,b) => a.timestamp - b.timestamp);
+        for (const msg of orderedMsgs) {
           appendMessage(msg);
         }
-        scrollToBottom();
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
     }
 
-    // Append single message to chat window
     function appendMessage(msg) {
       const div = document.createElement('div');
       div.classList.add('message');
@@ -304,59 +297,47 @@
       messagesDiv.appendChild(div);
     }
 
-    // Scroll messages to bottom
-    function scrollToBottom() {
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    // Send message
     async function sendMessage() {
       const text = messageInput.value.trim();
-      if (!text) return;
+      if (!text || !activeChatUser) return;
       const chatId = getChatId(currentUser.uid, activeChatUser.uid);
-      const messagesRef = ref(db, 'chats/' + chatId + '/messages');
-
-      const newMsg = {
+      const newMsgRef = push(ref(db, `chats/${chatId}/messages`));
+      await set(newMsgRef, {
         sender: currentUser.uid,
         text,
         timestamp: Date.now()
-      };
-
-      await push(messagesRef, newMsg);
+      });
       messageInput.value = '';
       sendBtn.disabled = true;
-      scrollToBottom();
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    // Enable/disable send button based on input
     messageInput.addEventListener('input', () => {
       sendBtn.disabled = messageInput.value.trim() === '';
     });
 
-    // Logout function
-    logoutBtn.onclick = () => {
-      signOut(auth).then(() => location.href = 'index.html');
-    };
+    sendBtn.addEventListener('click', sendMessage);
 
-    // Init app
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        location.href = 'index.html'; // redirect if not logged in
-        return;
-      }
-      currentUser = user;
-      loadUsers();
-    });
-
-    // Send button click
-    sendBtn.onclick = sendMessage;
-
-    // Send message on Enter key
     messageInput.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !sendBtn.disabled) {
         e.preventDefault();
         sendMessage();
       }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth).then(() => {
+        location.href = 'index.html';
+      });
+    });
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        location.href = 'index.html';
+        return;
+      }
+      currentUser = user;
+      loadUsers();
     });
   </script>
 </body>
