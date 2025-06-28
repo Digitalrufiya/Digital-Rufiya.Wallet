@@ -165,7 +165,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-  import { getDatabase, ref, onValue, update, get } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+  import { getDatabase, ref, update, get } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
   import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 
   const app = initializeApp({
@@ -198,6 +198,25 @@
   let currentUser = null;
   let profileData = {};
 
+  // Enable Save button only when there are changes
+  function checkChanges() {
+    if (!currentUser) {
+      saveProfileBtn.disabled = true;
+      return;
+    }
+    const changed =
+      editName.value.trim() !== (currentUser.displayName || "") ||
+      editBio.value.trim() !== (profileData.bio || "") ||
+      editToken.value.trim() !== (profileData.drfmToken || "") ||
+      editGender.value !== (profileData.gender || "") ||
+      editAge.value !== (profileData.age || "") ||
+      editCountry.value.trim() !== (profileData.country || "") ||
+      editPhone.value.trim() !== (profileData.phone || "") ||
+      editEmail.value.trim() !== (profileData.email || "");
+
+    saveProfileBtn.disabled = !changed;
+  }
+
   onAuthStateChanged(auth, async user => {
     currentUser = user;
     if (!user) return location.href = 'media.html';
@@ -216,26 +235,47 @@
     editCountry.value = profileData.country || "";
     editPhone.value = profileData.phone || "";
     editEmail.value = profileData.email || "";
+
+    // After loading data, check changes to disable Save btn properly
+    checkChanges();
   });
+
+  // Attach input listeners to detect changes
+  [
+    editName, editBio, editToken, editGender, editAge,
+    editCountry, editPhone, editEmail
+  ].forEach(el => el.addEventListener('input', checkChanges));
 
   saveProfileBtn.onclick = async () => {
     if (!currentUser) return;
-    const updates = {
-      bio: editBio.value.trim(),
-      drfmToken: editToken.value.trim(),
-      gender: editGender.value.trim(),
-      age: editAge.value.trim(),
-      country: editCountry.value.trim(),
-      phone: editPhone.value.trim(),
-      email: editEmail.value.trim()
-    };
+    saveProfileBtn.disabled = true;
+    saveProfileBtn.textContent = "Saving...";
+    try {
+      const updates = {
+        bio: editBio.value.trim(),
+        drfmToken: editToken.value.trim(),
+        gender: editGender.value,
+        age: editAge.value,
+        country: editCountry.value.trim(),
+        phone: editPhone.value.trim(),
+        email: editEmail.value.trim()
+      };
 
-    if (editName.value.trim() !== currentUser.displayName) {
-      await updateProfile(currentUser, { displayName: editName.value.trim() });
+      if (editName.value.trim() !== currentUser.displayName) {
+        await updateProfile(currentUser, { displayName: editName.value.trim() });
+      }
+
+      await update(ref(db, 'users/' + currentUser.uid), updates);
+      alert("Profile saved successfully");
+      // Update local profileData and disable save button
+      profileData = { ...profileData, ...updates };
+      checkChanges();
+    } catch (err) {
+      alert("Error saving profile: " + err.message);
+      saveProfileBtn.disabled = false;
+    } finally {
+      saveProfileBtn.textContent = "Save Profile";
     }
-
-    await update(ref(db, 'users/' + currentUser.uid), updates);
-    alert("Profile saved successfully");
   };
 </script>
 </body>
