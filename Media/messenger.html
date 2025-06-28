@@ -8,180 +8,273 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
+    * { box-sizing: border-box; }
+
     body {
-      margin: 0;
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background-color: #f0f2f5;
+      color: #222;
+      height: 100vh;
       display: flex;
       flex-direction: column;
-      height: 100vh;
     }
 
     nav {
-      background: #0066cc;
-      color: #fff;
+      background-color: #0066cc;
+      color: white;
       padding: 15px;
-      text-align: center;
       font-weight: bold;
+      font-size: 1.2rem;
+      text-align: center;
     }
 
     #container {
       display: flex;
       flex: 1;
+      overflow: hidden;
     }
 
     #usersList {
-      width: 260px;
+      width: 280px;
       border-right: 1px solid #ccc;
+      background: white;
       overflow-y: auto;
-      background: #fff;
+    }
+
+    #usersList h2 {
+      margin: 0;
+      padding: 15px;
+      background: #0066cc;
+      color: white;
+      font-size: 1rem;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .user-item:hover, .user-item.active {
+      background-color: #e6f2ff;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ccc;
+    }
+
+    .user-name {
+      font-weight: 600;
+      flex: 1;
     }
 
     #chatArea {
       flex: 1;
       display: flex;
       flex-direction: column;
+      background: white;
     }
 
     #chatHeader {
       padding: 15px;
-      background: #f0f0f0;
-      font-weight: bold;
       border-bottom: 1px solid #ccc;
+      font-weight: bold;
+      font-size: 1.1rem;
+      background: #f7f7f7;
     }
 
     #messagesContainer {
       flex: 1;
       padding: 10px;
       overflow-y: auto;
-      background: #f9f9f9;
+      background: #f0f0f0;
     }
 
     .message {
-      max-width: 70%;
-      margin: 6px 0;
-      padding: 10px 14px;
+      max-width: 75%;
+      padding: 10px 15px;
+      margin: 8px 0;
       border-radius: 18px;
       line-height: 1.4;
-      word-break: break-word;
+      word-wrap: break-word;
     }
 
     .sent {
-      background: #007bff;
+      background-color: #007bff;
       color: white;
       align-self: flex-end;
+      border-bottom-right-radius: 4px;
     }
 
     .received {
-      background: #e2e2e2;
+      background-color: #e4e6eb;
+      color: black;
       align-self: flex-start;
+      border-bottom-left-radius: 4px;
     }
 
     #inputArea {
       display: flex;
       padding: 10px;
       border-top: 1px solid #ccc;
-      background: #fafafa;
+      background: #f7f7f7;
     }
 
     #inputMessage {
       flex: 1;
-      padding: 10px;
-      border-radius: 20px;
       border: 1px solid #ccc;
-      outline: none;
+      padding: 10px 15px;
+      border-radius: 20px;
+      font-size: 1rem;
+      resize: none;
+      height: 42px;
     }
 
     #sendBtn {
       margin-left: 10px;
-      padding: 10px 18px;
-      background: #0066cc;
+      background-color: #0066cc;
       color: white;
       border: none;
+      padding: 0 20px;
       border-radius: 20px;
-      cursor: pointer;
-    }
-
-    .user-item {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-    }
-
-    .user-avatar {
-      width: 35px;
-      height: 35px;
-      border-radius: 50%;
-      margin-right: 10px;
-    }
-
-    .user-name {
       font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #sendBtn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      #container {
+        flex-direction: column;
+      }
+
+      #usersList {
+        width: 100%;
+        height: 130px;
+        border-right: none;
+        border-bottom: 1px solid #ccc;
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      #usersList h2 {
+        display: none;
+      }
+
+      .user-item {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-bottom: none;
+        border-right: 1px solid #eee;
+        min-width: 90px;
+      }
+
+      .user-name {
+        font-size: 0.8rem;
+        text-align: center;
+      }
+
+      #chatArea {
+        flex: 1;
+        height: calc(100vh - 180px);
+      }
+
+      #inputArea {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        z-index: 10;
+      }
     }
   </style>
 </head>
 <body>
-  <nav>DRFMessenger</nav>
+  <nav>DRFMessenger (Real Mode)</nav>
+
   <div id="container">
-    <div id="usersList"><h3 style="padding:10px">Users</h3></div>
+    <div id="usersList">
+      <h2>Users</h2>
+    </div>
+
     <div id="chatArea">
-      <div id="chatHeader">Select a user</div>
+      <div id="chatHeader">Select a user to chat</div>
       <div id="messagesContainer"></div>
       <div id="inputArea">
-        <input id="inputMessage" placeholder="Type message..." disabled />
+        <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
         <button id="sendBtn" disabled>Send</button>
       </div>
     </div>
   </div>
 
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUser = null;
+    let selectedUser = null;
+
     window.onload = function () {
-      const firebaseConfig = {
-        apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-        authDomain: "drfsocial-23a06.firebaseapp.com",
-        databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-        projectId: "drfsocial-23a06",
-        storageBucket: "drfsocial-23a06.appspot.com",
-        messagingSenderId: "608135115201",
-        appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-      };
-
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      const db = firebase.database();
-
       const usersListEl = document.getElementById('usersList');
       const chatHeaderEl = document.getElementById('chatHeader');
       const messagesContainerEl = document.getElementById('messagesContainer');
       const inputMessageEl = document.getElementById('inputMessage');
       const sendBtnEl = document.getElementById('sendBtn');
 
-      let currentUser = null;
-      let selectedUser = null;
-
       auth.onAuthStateChanged(user => {
         if (user) {
           currentUser = user;
-          loadUsers();
+          loadUsersFromProfiles();
         } else {
           auth.signInAnonymously();
         }
       });
 
-      function loadUsers() {
-        db.ref('users').once('value', snapshot => {
+      function loadUsersFromProfiles() {
+        const usersRef = db.ref("profiles");
+        usersRef.once("value", snapshot => {
+          usersListEl.innerHTML = "<h2>Users</h2>";
           snapshot.forEach(child => {
             const user = child.val();
-            if (user.uid === currentUser.uid) return;
+            const uid = child.key;
+
+            if (uid === currentUser.uid) return;
 
             const div = document.createElement('div');
             div.className = 'user-item';
             div.innerHTML = `
-              <img class="user-avatar" src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + user.uid}" />
-              <div class="user-name">${user.displayName}</div>
+              <img src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + uid}" class="user-avatar" />
+              <div class="user-name">${user.displayName || uid.slice(0, 6) + '...'}</div>
             `;
-            div.addEventListener('click', () => selectUser(user));
+            div.addEventListener('click', () => {
+              selectUser({ uid, ...user });
+            });
             usersListEl.appendChild(div);
           });
         });
@@ -189,7 +282,7 @@
 
       function selectUser(user) {
         selectedUser = user;
-        chatHeaderEl.textContent = `Chat with ${user.displayName}`;
+        chatHeaderEl.textContent = `Chat with ${user.displayName || user.uid}`;
         inputMessageEl.disabled = false;
         sendBtnEl.disabled = false;
         renderMessages();
@@ -200,6 +293,7 @@
       }
 
       function renderMessages() {
+        if (!selectedUser) return;
         const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
         db.ref(chatPath).on("value", snapshot => {
           messagesContainerEl.innerHTML = "";
