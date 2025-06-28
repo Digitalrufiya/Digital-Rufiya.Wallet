@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>DRFMessenger (Google Auth)</title>
+  <title>DRFMessenger — Final</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
   <style>
     *{box-sizing:border-box;}
     body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
@@ -24,10 +25,15 @@
     .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;}
     .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
     .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
-    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;}
+    .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
+    .preview img{max-width:100%;border-radius:4px;}
+    .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
+    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
     #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;}
     #sendBtn{margin-left:8px;padding:0 16px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;}
     #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
+    #emojiBtn{background:none;border:none;font-size:20px;margin-left:8px;cursor:pointer;}
+    emoji-picker{position:absolute;bottom:60px;right:20px;display:none;z-index:10;}
     #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
   </style>
 </head>
@@ -50,13 +56,14 @@
       <div id="messagesContainer"></div>
       <div id="inputArea">
         <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
+        <button id="emojiBtn">😊</button>
         <button id="sendBtn" disabled>Send</button>
+        <emoji-picker id="picker"></emoji-picker>
       </div>
     </div>
   </div>
 
 <script>
-  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -70,7 +77,6 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // Elements
   const loginNotice = document.getElementById('loginNotice');
   const loginBtn = document.getElementById('loginBtn');
   const container = document.getElementById('container');
@@ -79,16 +85,16 @@
   const messagesContainerEl = document.getElementById('messagesContainer');
   const inputMessageEl = document.getElementById('inputMessage');
   const sendBtnEl = document.getElementById('sendBtn');
+  const emojiBtn = document.getElementById('emojiBtn');
+  const emojiPicker = document.getElementById('picker');
 
   let currentUser = null, selectedUser = null, messagesListener = null;
 
-  // Google sign-in
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert(err.message));
   };
 
-  // Auth state
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
@@ -102,80 +108,87 @@
     }
   });
 
-  // Load user profiles
   function loadUsers() {
-    db.ref('profiles').once('value')
-      .then(snap => {
-        usersListEl.innerHTML = '<h2>Users</h2>';
-        snap.forEach(child => {
-          const wallet = child.key;
-          const u = child.val();
-          if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
-          const div = document.createElement('div');
-          div.className = 'user-item';
-          div.innerHTML = `
-            <img src="${u.photoUrl||'https://i.pravatar.cc/40'}" class="user-avatar">
-            <div class="user-name">${u.name||wallet}</div>
-          `;
-          div.onclick = () => selectUser(wallet, u.name||wallet);
-          usersListEl.appendChild(div);
-        });
-      })
-      .catch(err => console.error('Load users failed:', err));
+    db.ref('profiles').once('value').then(snap => {
+      usersListEl.innerHTML = '<h2>Users</h2>';
+      snap.forEach(child => {
+        const wallet = child.key;
+        const u = child.val();
+        if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `<img src="${u.photoUrl||'https://i.pravatar.cc/40'}" class="user-avatar">
+                         <div class="user-name">${u.name||wallet}</div>`;
+        div.onclick = () => selectUser(wallet, u.name||wallet);
+        usersListEl.appendChild(div);
+      });
+    });
   }
 
-  // Start chat
   function selectUser(wallet, name) {
     selectedUser = { wallet, name };
     chatHeaderEl.textContent = 'Chat with ' + name;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    inputMessageEl.value = '';
     messagesContainerEl.innerHTML = '';
+    inputMessageEl.value = '';
     listenMessages();
-    highlightSelected();
-  }
-  function highlightSelected() {
-    document.querySelectorAll('.user-item').forEach(el => {
-      el.classList.toggle('active', el.textContent.includes(selectedUser.name));
-    });
   }
 
-  // Chat ID
   function getChatId(a,b) {
     a=a.toLowerCase(); b=b.toLowerCase();
     return a<b? a+'_'+b: b+'_'+a;
   }
 
-  // Listen messages
   function listenMessages() {
     if (messagesListener) messagesListener.off();
     const chatId = getChatId(currentUser.uid, selectedUser.wallet);
     const ref = db.ref('messages/'+chatId);
     messagesListener = ref.on('value', snap => {
       messagesContainerEl.innerHTML = '';
-      snap.forEach(c=> {
-        const m=c.val();
-        const d=document.createElement('div');
-        d.className='message '+(m.sender===currentUser.uid?'sent':'received');
-        d.textContent = m.text;
+      snap.forEach(c => {
+        const m = c.val();
+        const d = document.createElement('div');
+        d.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
+        let html = m.text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank">${url}</a>`);
+        d.innerHTML = html;
         messagesContainerEl.appendChild(d);
+
+        const imgMatch = m.text.match(/(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif))/i);
+        if (imgMatch) {
+          const p = document.createElement('div');
+          p.className = 'preview';
+          p.innerHTML = `<img src="${imgMatch[0]}" alt="preview" />`;
+          messagesContainerEl.appendChild(p);
+        }
       });
       messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
     });
   }
 
-  // Send message
   sendBtnEl.onclick = () => {
-    const txt=inputMessageEl.value.trim();
-    if(!txt||!selectedUser) return;
-    const chatId=getChatId(currentUser.uid, selectedUser.wallet);
-    db.ref('messages/'+chatId).push({ sender: currentUser.uid, text: txt, timestamp: Date.now() });
-    inputMessageEl.value='';
+    const txt = inputMessageEl.value.trim();
+    if (!txt || !selectedUser) return;
+    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
+    db.ref('messages/'+chatId).push({
+      sender: currentUser.uid,
+      text: txt,
+      timestamp: Date.now()
+    }).catch(e => alert("Error sending message: " + e.message));
+    inputMessageEl.value = '';
   };
+
   inputMessageEl.onkeydown = e => {
-    if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendBtnEl.click(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtnEl.click(); }
   };
+
+  emojiBtn.onclick = () => {
+    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+  };
+
+  emojiPicker.addEventListener('emoji-click', event => {
+    inputMessageEl.value += event.detail.unicode;
+  });
 </script>
 </body>
 </html>
