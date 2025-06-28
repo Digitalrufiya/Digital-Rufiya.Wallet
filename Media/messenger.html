@@ -3,13 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMessenger</title>
+  <title>DRFMessenger (Real Mode)</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    * { box-sizing: border-box; }
-
     body {
       font-family: Arial, sans-serif;
       margin: 0; padding: 0;
@@ -42,14 +40,6 @@
       overflow-y: auto;
     }
 
-    #usersList h2 {
-      margin: 0;
-      padding: 15px;
-      background: #0066cc;
-      color: white;
-      font-size: 1rem;
-    }
-
     .user-item {
       display: flex;
       align-items: center;
@@ -57,7 +47,6 @@
       padding: 10px 15px;
       border-bottom: 1px solid #eee;
       cursor: pointer;
-      transition: background-color 0.2s;
     }
 
     .user-item:hover, .user-item.active {
@@ -88,7 +77,6 @@
       padding: 15px;
       border-bottom: 1px solid #ccc;
       font-weight: bold;
-      font-size: 1.1rem;
       background: #f7f7f7;
     }
 
@@ -105,21 +93,18 @@
       margin: 8px 0;
       border-radius: 18px;
       line-height: 1.4;
-      word-wrap: break-word;
     }
 
     .sent {
       background-color: #007bff;
       color: white;
       align-self: flex-end;
-      border-bottom-right-radius: 4px;
     }
 
     .received {
       background-color: #e4e6eb;
       color: black;
       align-self: flex-start;
-      border-bottom-left-radius: 4px;
     }
 
     #inputArea {
@@ -136,7 +121,6 @@
       border-radius: 20px;
       font-size: 1rem;
       resize: none;
-      height: 42px;
     }
 
     #sendBtn {
@@ -148,70 +132,13 @@
       border-radius: 20px;
       font-weight: bold;
       cursor: pointer;
-      transition: 0.3s;
-    }
-
-    #sendBtn:disabled {
-      background-color: #aaa;
-      cursor: not-allowed;
-    }
-
-    @media (max-width: 768px) {
-      #container {
-        flex-direction: column;
-      }
-
-      #usersList {
-        width: 100%;
-        height: 130px;
-        border-right: none;
-        border-bottom: 1px solid #ccc;
-        display: flex;
-        overflow-x: auto;
-        overflow-y: hidden;
-      }
-
-      #usersList h2 {
-        display: none;
-      }
-
-      .user-item {
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 8px;
-        border-bottom: none;
-        border-right: 1px solid #eee;
-        min-width: 90px;
-      }
-
-      .user-name {
-        font-size: 0.8rem;
-        text-align: center;
-      }
-
-      #chatArea {
-        flex: 1;
-        height: calc(100vh - 180px);
-      }
-
-      #inputArea {
-        position: sticky;
-        bottom: 0;
-        background: #fff;
-        z-index: 10;
-      }
     }
   </style>
 </head>
 <body>
-  <nav>DRFMessenger (Real Mode)</nav>
-
+  <nav>DRFMessenger</nav>
   <div id="container">
-    <div id="usersList">
-      <h2>Users</h2>
-    </div>
-
+    <div id="usersList"><h2>Users</h2></div>
     <div id="chatArea">
       <div id="chatHeader">Select a user to chat</div>
       <div id="messagesContainer"></div>
@@ -221,7 +148,6 @@
       </div>
     </div>
   </div>
-
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -240,87 +166,82 @@
     let currentUser = null;
     let selectedUser = null;
 
-    window.onload = function () {
-      const usersListEl = document.getElementById('usersList');
-      const chatHeaderEl = document.getElementById('chatHeader');
-      const messagesContainerEl = document.getElementById('messagesContainer');
-      const inputMessageEl = document.getElementById('inputMessage');
-      const sendBtnEl = document.getElementById('sendBtn');
+    const usersListEl = document.getElementById('usersList');
+    const chatHeaderEl = document.getElementById('chatHeader');
+    const messagesContainerEl = document.getElementById('messagesContainer');
+    const inputMessageEl = document.getElementById('inputMessage');
+    const sendBtnEl = document.getElementById('sendBtn');
 
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          currentUser = user;
-          loadUsersFromProfiles();
-        } else {
-          auth.signInAnonymously();
-        }
-      });
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loadUsers();
+      } else {
+        auth.signInAnonymously();
+      }
+    });
 
-      function loadUsersFromProfiles() {
-        const usersRef = db.ref("profiles");
-        usersRef.once("value", snapshot => {
-          usersListEl.innerHTML = "<h2>Users</h2>";
-          snapshot.forEach(child => {
-            const user = child.val();
-            const uid = child.key;
-
-            if (uid === currentUser.uid) return;
-
-            const div = document.createElement('div');
-            div.className = 'user-item';
-            div.innerHTML = `
-              <img src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + uid}" class="user-avatar" />
-              <div class="user-name">${user.displayName || uid.slice(0, 6) + '...'}</div>
-            `;
-            div.addEventListener('click', () => {
-              selectUser({ uid, ...user });
-            });
-            usersListEl.appendChild(div);
-          });
+    function loadUsers() {
+      const usersRef = db.ref("profiles");
+      usersRef.once("value", snapshot => {
+        usersListEl.innerHTML = "<h2>Users</h2>";
+        snapshot.forEach(child => {
+          const uid = child.key;
+          const user = child.val();
+          if (uid === currentUser.uid) return;
+          const div = document.createElement('div');
+          div.className = 'user-item';
+          div.innerHTML = `
+            <img src="${user.photoURL || 'https://i.pravatar.cc/40?u=' + uid}" class="user-avatar" />
+            <div class="user-name">${user.displayName || uid.slice(0,6) + "..."}</div>
+          `;
+          div.addEventListener('click', () => selectUser({ ...user, uid }));
+          usersListEl.appendChild(div);
         });
-      }
-
-      function selectUser(user) {
-        selectedUser = user;
-        chatHeaderEl.textContent = `Chat with ${user.displayName || user.uid}`;
-        inputMessageEl.disabled = false;
-        sendBtnEl.disabled = false;
-        renderMessages();
-      }
-
-      function getChatPath(uid1, uid2) {
-        return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
-      }
-
-      function renderMessages() {
-        if (!selectedUser) return;
-        const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-        db.ref(chatPath).on("value", snapshot => {
-          messagesContainerEl.innerHTML = "";
-          snapshot.forEach(child => {
-            const msg = child.val();
-            const msgEl = document.createElement('div');
-            msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
-            msgEl.textContent = msg.text;
-            messagesContainerEl.appendChild(msgEl);
-          });
-          messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
-        });
-      }
-
-      sendBtnEl.addEventListener('click', () => {
-        const text = inputMessageEl.value.trim();
-        if (text && selectedUser) {
-          const chatPath = getChatPath(currentUser.uid, selectedUser.uid);
-          db.ref(chatPath).push({
-            sender: currentUser.uid,
-            text,
-            timestamp: Date.now()
-          });
-          inputMessageEl.value = "";
-        }
       });
-    };
+    }
+
+    function selectUser(user) {
+      selectedUser = user;
+      chatHeaderEl.textContent = `Chat with ${user.displayName || user.uid.slice(0,6)}`;
+      inputMessageEl.disabled = false;
+      sendBtnEl.disabled = false;
+      inputMessageEl.value = '';
+      renderMessages();
+    }
+
+    function getChatPath(uid1, uid2) {
+      return `messages/${uid1 < uid2 ? uid1 + '_' + uid2 : uid2 + '_' + uid1}`;
+    }
+
+    function renderMessages() {
+      if (!selectedUser) return;
+      const path = getChatPath(currentUser.uid, selectedUser.uid);
+      db.ref(path).on("value", snapshot => {
+        messagesContainerEl.innerHTML = "";
+        snapshot.forEach(child => {
+          const msg = child.val();
+          const msgEl = document.createElement('div');
+          msgEl.className = 'message ' + (msg.sender === currentUser.uid ? 'sent' : 'received');
+          msgEl.textContent = msg.text;
+          messagesContainerEl.appendChild(msgEl);
+        });
+        messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
+      });
+    }
+
+    sendBtnEl.addEventListener('click', () => {
+      const text = inputMessageEl.value.trim();
+      if (text && selectedUser) {
+        const path = getChatPath(currentUser.uid, selectedUser.uid);
+        db.ref(path).push({
+          sender: currentUser.uid,
+          text,
+          timestamp: Date.now()
+        });
+        inputMessageEl.value = '';
+      }
+    });
   </script>
 </body>
 </html>
