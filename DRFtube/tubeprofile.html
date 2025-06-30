@@ -5,148 +5,142 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DRFTube Profile</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #121212;
-      color: #eee;
-    }
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 15px;
-      background-color: #0a84ff;
-    }
-    nav a {
-      color: #fff;
-      text-decoration: none;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; background: #f4f4f4; padding: 0; margin: 0; }
     .container {
-      max-width: 600px;
-      margin: 30px auto;
-      background: #1e1e1e;
+      max-width: 700px;
+      margin: 40px auto;
+      background: #fff;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #0a84ff88;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    h2 {
-      color: #0affff;
-    }
+    h2 { text-align: center; color: #0a84ff; }
     input, textarea, select {
       width: 100%;
-      margin-bottom: 12px;
       padding: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 1rem;
-      background: #2b2b2b;
-      color: #eee;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
     }
     button {
-      padding: 10px 20px;
       background: #0a84ff;
       color: white;
       border: none;
-      border-radius: 8px;
+      padding: 10px 20px;
+      border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
     }
-    button:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    img { max-width: 150px; border-radius: 50%; display: block; margin: 10px auto; }
   </style>
 </head>
 <body>
-  <nav>
-    <a href="tube.html">🏠 Home</a>
-    <a href="tubeupload.html">⬆️ Upload</a>
-    <a href="profile.html">👤 Profile</a>
-  </nav>
-
   <div class="container">
-    <h2>Your Profile</h2>
-    <input type="text" id="displayName" placeholder="Your display name" />
-    <textarea id="bio" placeholder="Short bio"></textarea>
-    <input type="text" id="wallet" placeholder="DRF Wallet Address" />
-    <button id="saveBtn" disabled>Save Profile</button>
+    <h2>DRFTube Profile</h2>
+    <img id="profilePreview" src="https://via.placeholder.com/150" alt="Profile Preview" />
+    <input type="file" id="profileImage" accept="image/*" />
+    <input type="text" id="displayName" placeholder="Your Name" />
+    <textarea id="bio" placeholder="Bio"></textarea>
+    <input type="text" id="token" placeholder="Token Address" />
+    <input type="email" id="email" placeholder="Email" />
+    <input type="text" id="country" placeholder="Country" />
+    <input type="number" id="age" placeholder="Age" />
+    <select id="gender">
+      <option value="">Select Gender</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+    <button id="saveBtn">Save Profile</button>
   </div>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
-    import { getDatabase, ref, update, get } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js';
-    import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js';
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+  import { getDatabase, ref, update, get } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+  import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
-      authDomain: "drftube-634c6.firebaseapp.com",
-      projectId: "drftube-634c6",
-      storageBucket: "drftube-634c6.appspot.com",
-      messagingSenderId: "819828633864",
-      appId: "1:819828633864:web:513002b461259b000cbcbd",
-      measurementId: "G-ZPTJE4DMNN",
-      databaseURL: "https://drftube-634c6-default-rtdb.firebaseio.com"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+    authDomain: "drftube-634c6.firebaseapp.com",
+    projectId: "drftube-634c6",
+    storageBucket: "drftube-634c6.appspot.com",
+    messagingSenderId: "819828633864",
+    appId: "1:819828633864:web:513002b461259b000cbcbd"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
 
-    const displayNameInput = document.getElementById('displayName');
-    const bioInput = document.getElementById('bio');
-    const walletInput = document.getElementById('wallet');
-    const saveBtn = document.getElementById('saveBtn');
+  const profileImage = document.getElementById('profileImage');
+  const preview = document.getElementById('profilePreview');
+  const saveBtn = document.getElementById('saveBtn');
 
-    let currentUser = null;
-    let initialData = {};
+  let selectedFile = null;
+  let currentUser = null;
 
-    function checkChanges() {
-      const changed =
-        displayNameInput.value.trim() !== (currentUser?.displayName || '') ||
-        bioInput.value.trim() !== (initialData.bio || '') ||
-        walletInput.value.trim() !== (initialData.wallet || '');
-      saveBtn.disabled = !changed;
+  profileImage.addEventListener('change', e => {
+    selectedFile = e.target.files[0];
+    if (selectedFile) preview.src = URL.createObjectURL(selectedFile);
+  });
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return alert("You must be logged in.");
+    currentUser = user;
+    const snap = await get(ref(db, 'users/' + user.uid));
+    if (snap.exists()) {
+      const data = snap.val();
+      document.getElementById('displayName').value = user.displayName || '';
+      document.getElementById('bio').value = data.bio || '';
+      document.getElementById('token').value = data.token || '';
+      document.getElementById('email').value = data.email || '';
+      document.getElementById('country').value = data.country || '';
+      document.getElementById('age').value = data.age || '';
+      document.getElementById('gender').value = data.gender || '';
+      if (data.photoHash) preview.src = `https://ipfs.io/ipfs/${data.photoHash}`;
+    }
+  });
+
+  saveBtn.onclick = async () => {
+    if (!currentUser) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+
+    let photoHash = null;
+    if (selectedFile) {
+      const form = new FormData();
+      form.append("file", selectedFile);
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...REPLACE_THIS..."
+        },
+        body: form
+      });
+      const data = await res.json();
+      photoHash = data.IpfsHash;
     }
 
-    [displayNameInput, bioInput, walletInput].forEach(el => el.addEventListener('input', checkChanges));
-
-    onAuthStateChanged(auth, async user => {
-      if (!user) return location.href = 'tube.html';
-      currentUser = user;
-      displayNameInput.value = user.displayName || '';
-      const snap = await get(ref(db, 'users/' + user.uid));
-      if (snap.exists()) {
-        initialData = snap.val();
-        bioInput.value = initialData.bio || '';
-        walletInput.value = initialData.wallet || '';
-      }
-      checkChanges();
-    });
-
-    saveBtn.onclick = async () => {
-      if (!currentUser) return;
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-
-      const updates = {
-        bio: bioInput.value.trim(),
-        wallet: walletInput.value.trim(),
-      };
-
-      if (displayNameInput.value.trim() !== currentUser.displayName) {
-        await updateProfile(currentUser, { displayName: displayNameInput.value.trim() });
-      }
-
-      await update(ref(db, 'users/' + currentUser.uid), updates);
-      alert('Profile updated.');
-      saveBtn.textContent = 'Save Profile';
-      initialData = { ...initialData, ...updates };
-      checkChanges();
+    const updates = {
+      bio: document.getElementById('bio').value,
+      token: document.getElementById('token').value,
+      email: document.getElementById('email').value,
+      country: document.getElementById('country').value,
+      age: document.getElementById('age').value,
+      gender: document.getElementById('gender').value,
     };
-  </script>
+    if (photoHash) updates.photoHash = photoHash;
+
+    if (document.getElementById('displayName').value !== currentUser.displayName) {
+      await updateProfile(currentUser, {
+        displayName: document.getElementById('displayName').value
+      });
+    }
+
+    await update(ref(db, 'users/' + currentUser.uid), updates);
+    alert("Profile saved");
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Save Profile";
+  }
+</script>
 </body>
-  </html>
-  
+</html>
