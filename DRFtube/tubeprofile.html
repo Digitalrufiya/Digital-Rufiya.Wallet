@@ -61,7 +61,7 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4"; // (truncated here for safety)
+    const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI2YjI3MmJhYy00ZTg5LTQxMzUtOWRlMS1iYzk3OTkzMjBkY2YiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFjb2luQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJjNmZlNzk2ZjY0YjhlNWI3ZDI1NiIsInNjb3BlZEtleVNlY3JldCI6ImNhNmVkZmIyYzJhNjkzNzYwZGY1NWRhNTJlOTkwMWY1Yjk0Y2EzZjE0ZTI0NmQ0ZWJkMjQxNWE3ZjM3YjhkMWUiLCJleHAiOjE3ODE0MjAyNDF9.jTvLgxmAWy9AYsxFHVVaX4e1086fiQ09txSJo_-TyU4";
 
     const profilePhoto = document.getElementById("profilePhoto");
     const coverPhoto = document.getElementById("coverPhoto");
@@ -76,6 +76,8 @@
     const age = document.getElementById("age");
 
     let currentUser = null;
+    let profileHash = "";
+    let coverHash = "";
 
     onAuthStateChanged(auth, async user => {
       if (!user) return alert("Please log in first.");
@@ -110,9 +112,6 @@
     profilePhoto.onclick = () => profileInput.click();
     coverPhoto.onclick = () => coverInput.click();
 
-    let profileHash = "";
-    let coverHash = "";
-
     profileInput.onchange = async e => {
       if (e.target.files.length) {
         const hash = await uploadToIPFS(e.target.files[0]);
@@ -132,6 +131,19 @@
     saveBtn.onclick = async () => {
       if (!currentUser) return;
       saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+
+      let finalProfile = profileHash;
+      let finalCover = coverHash;
+
+      if (!finalProfile && profilePhoto.src.includes("ipfs/")) {
+        finalProfile = profilePhoto.src.split("ipfs/")[1];
+      }
+
+      if (!finalCover && coverPhoto.src.includes("ipfs/")) {
+        finalCover = coverPhoto.src.split("ipfs/")[1];
+      }
+
       const data = {
         name: name.value.trim(),
         bio: bio.value.trim(),
@@ -139,12 +151,19 @@
         country: country.value.trim(),
         gender: gender.value,
         age: age.value,
-        profilePhoto: profileHash || profilePhoto.src.split("ipfs/")[1],
-        coverPhoto: coverHash || coverPhoto.src.split("ipfs/")[1]
+        profilePhoto: finalProfile || "",
+        coverPhoto: finalCover || ""
       };
-      await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
-      alert("Profile updated successfully!");
+
+      try {
+        await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+        alert("✅ Profile saved!");
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+
       saveBtn.disabled = false;
+      saveBtn.textContent = "Save Profile";
     };
   </script>
 </body>
