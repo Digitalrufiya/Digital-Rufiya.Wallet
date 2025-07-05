@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Qur’anic Intelligence System</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --bg-color: #f9f9f9;
+      --text-color: #111;
+      --card-bg: #ffffff;
+      --highlight: #ffeb3b;
+    }
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #f1f1f1;
+      --card-bg: #1e1e1e;
+      --highlight: #ffee58;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0; padding: 20px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .toolbar button {
+      margin: 4px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+    .font-controls button {
+      font-weight: bold;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      border-radius: 20px;
+      border: 2px solid teal;
+    }
+    .suggestions {
+      background: var(--card-bg);
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+      margin-bottom: 1rem;
+    }
+    .verse-card {
+      background: var(--card-bg);
+      margin: 10px 0;
+      padding: 14px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .highlight {
+      background-color: var(--highlight);
+    }
+    .stats, .word-count {
+      margin-top: 1rem;
+      font-style: italic;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Qur’anic Intelligence System</h1>
+  <div class="toolbar">
+    <div class="font-controls">
+      <button onclick="adjustFontSize(1)">A+</button>
+      <button onclick="adjustFontSize(-1)">A−</button>
+    </div>
+    <div>
+      <button onclick="toggleTheme()">Toggle Light/Dark</button>
+    </div>
+  </div>
+
+  <input id="searchInput" placeholder="Search Qur'an..." oninput="search()" />
+  <div class="suggestions" id="suggestions"></div>
+  <div id="results"></div>
+  <div class="word-count" id="wordCount"></div>
+  <div class="stats" id="stats"></div>
+
+<script>
+  const quran = [
+    { surah: 'Al-Fatiha', verse: 1, arabic: "بسم الله", english: "In the name of Allah" },
+    { surah: 'Al-Fatiha', verse: 2, arabic: "الحمد لله", english: "Praise be to Allah" },
+    { surah: 'Al-Baqarah', verse: 1, arabic: "الم", english: "Alif, Lam, Meem." },
+    { surah: 'Al-Baqarah', verse: 2, arabic: "ذلك الكتاب", english: "This is the Book..." },
+    { surah: 'Al-Baqarah', verse: 3, arabic: "الذين يؤمنون", english: "Those who believe..." },
+  ];
+  let fontSize = 1.1;
+  function search() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    const results = document.getElementById('results');
+    const suggestions = document.getElementById('suggestions');
+    const stats = document.getElementById('stats');
+    const wordCountDiv = document.getElementById('wordCount');
+    results.innerHTML = '';
+    suggestions.innerHTML = '';
+    stats.innerHTML = '';
+    wordCountDiv.innerHTML = '';
+    if (!query) return;
+
+    const matches = quran.filter(v =>
+      v.surah.toLowerCase().includes(query) ||
+      v.arabic.includes(query) ||
+      v.english.toLowerCase().includes(query)
+    );
+
+    let wordTotal = 0;
+    matches.forEach(v => {
+      const div = document.createElement('div');
+      div.className = 'verse-card';
+      div.style.fontSize = fontSize + 'rem';
+      div.innerHTML = `<strong>${v.surah} (${v.verse})</strong><br><div dir="rtl">${highlight(v.arabic, query)}</div><div>${highlight(v.english, query)}</div>`;
+      results.appendChild(div);
+      wordTotal += v.english.split(' ').length;
+    });
+    wordCountDiv.textContent = `Total words: ${wordTotal}`;
+
+    // Suggestions (first 3 verses containing the word)
+    const suggestionList = matches.slice(0, 3).map(v => `${v.surah} (${v.verse})`).join(', ');
+    if (suggestionList) {
+      suggestions.textContent = `Suggestions: ${suggestionList}`;
+    }
+
+    // Stats (how many times a word like Allah appears)
+    const term = query.toLowerCase();
+    const totalMentions = quran.reduce((acc, v) => acc + (v.english.toLowerCase().includes(term) ? 1 : 0), 0);
+    if (totalMentions) {
+      stats.textContent = `"${term}" appears in ${totalMentions} verse(s).`;
+    }
+  }
+
+  function highlight(text, term) {
+    const regex = new RegExp(`(${term})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('dark');
+  }
+
+  function adjustFontSize(amount) {
+    fontSize += amount * 0.1;
+    search();
+  }
+</script>
+</body>
+</html>
