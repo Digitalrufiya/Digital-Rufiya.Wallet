@@ -1,30 +1,24 @@
 function searchQuran() {
-  const input = document.getElementById('searchInput').value.trim().toLowerCase();
-  const resultsContainer = document.getElementById('results');
-  resultsContainer.innerHTML = '';
+  const input = document.getElementById('searchInput').value.toLowerCase().trim();
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = '';
 
   if (!input) return;
 
-  const filtered = quran.filter(verse =>
-    verse.arabic.includes(input) || verse.english.toLowerCase().includes(input)
+  const results = quran.filter(ayah =>
+    ayah.arabic.toLowerCase().includes(input) ||
+    ayah.english.toLowerCase().includes(input)
   );
 
-  if (filtered.length === 0) {
-    resultsContainer.innerHTML = '<p>No results found.</p>';
+  if (results.length === 0) {
+    resultsDiv.innerHTML = '<p>No results found.</p>';
     return;
   }
 
-  filtered.forEach(verse => {
-    const card = document.createElement('div');
-    card.className = 'ayah-card';
-    card.innerHTML = `
-      <p><strong>Verse ${verse.verse}</strong></p>
-      <p>${verse.arabic}</p>
-      <p><small>${verse.english}</small></p>
-    `;
-    resultsContainer.appendChild(card);
+  results.forEach(ayah => {
+    const div = document.createElement('div');
+    div.className = 'ayah-card';
+    div.innerHTML = `<p>${ayah.arabic}</p><p><em>${ayah.english}</em></p>`;
+    resultsDiv.appendChild(div);
   });
 }
-
-// Attach event listener if you want JS-only way instead of inline HTML
-document.getElementById('searchInput').addEventListener('keyup', searchQuran);
