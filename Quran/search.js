@@ -25,3 +25,6 @@ function searchQuran() {
     resultsContainer.appendChild(card);
   });
 }
+
+// Attach event listener if you want JS-only way instead of inline HTML
+document.getElementById('searchInput').addEventListener('keyup', searchQuran);
