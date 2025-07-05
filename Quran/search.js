@@ -1,36 +1,27 @@
-let quranData = [];
-
-fetch('quran.json')
-  .then(res => res.json())
-  .then(data => {
-    quranData = data;
-  });
-
 function searchQuran() {
-  const input = document.getElementById("searchInput").value.toLowerCase();
-  const resultsDiv = document.getElementById("results");
-  resultsDiv.innerHTML = '';
+  const input = document.getElementById('searchInput').value.trim().toLowerCase();
+  const resultsContainer = document.getElementById('results');
+  resultsContainer.innerHTML = '';
 
-  if (input.length < 2) return;
+  if (!input) return;
 
-  const results = quranData.filter(verse =>
-    verse.text.toLowerCase().includes(input) ||
-    (verse.translation && verse.translation.toLowerCase().includes(input))
+  const filtered = quran.filter(verse =>
+    verse.arabic.includes(input) || verse.english.toLowerCase().includes(input)
   );
 
-  if (results.length === 0) {
-    resultsDiv.innerHTML = "<p>No results found.</p>";
+  if (filtered.length === 0) {
+    resultsContainer.innerHTML = '<p>No results found.</p>';
     return;
   }
 
-  results.slice(0, 20).forEach(verse => {
-    const card = document.createElement("div");
-    card.className = "ayah-card";
+  filtered.forEach(verse => {
+    const card = document.createElement('div');
+    card.className = 'ayah-card';
     card.innerHTML = `
-      <p><strong>${verse.surah}:${verse.ayah}</strong></p>
-      <p>${verse.text}</p>
-      <p><small>${verse.translation || ''}</small></p>
+      <p><strong>Verse ${verse.verse}</strong></p>
+      <p>${verse.arabic}</p>
+      <p><small>${verse.english}</small></p>
     `;
-    resultsDiv.appendChild(card);
+    resultsContainer.appendChild(card);
   });
 }
