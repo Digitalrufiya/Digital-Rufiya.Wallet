@@ -3,53 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple Qur'an Search</title>
+  <title>Qur'anic Intelligence System</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; color: #111; margin: 20px; }
-    .ayah-card { background: #fff; padding: 12px; margin: 8px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .ayah-card p { margin: 4px 0; }
-    input[type="text"] { width: 100%; max-width: 600px; padding: 10px 16px; font-size: 1.1rem; border-radius: 40px; border: 1px solid #ccc; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      color: #111;
+      margin: 0;
+      padding: 20px;
+    }
+    .ayah-card {
+      background: #fff;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .ayah-card p {
+      margin: 4px 0;
+    }
+    input[type="text"] {
+      width: 100%;
+      max-width: 600px;
+      padding: 10px 16px;
+      font-size: 1.1rem;
+      border-radius: 40px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+    .ayah-card.highlight {
+      background-color: #ffffcc;  /* light yellow highlight */
+      border-left: 4px solid #ffcc00;
+    }
   </style>
 </head>
 <body>
-  <h1>Simple Qur’an Search</h1>
-  <input type="text" id="searchInput" placeholder="Search in Arabic or English..." onkeyup="searchQuran()" />
+  <h1>Qur’anic Intelligence Search</h1>
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="Search the Qur’an (English or Arabic)..."
+    onkeydown="handleKey(event)"
+  />
   <div id="results"></div>
 
-<script>
-  const quran = [
-    { verse: 1, arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", english: "In the name of Allah, the Most Gracious, the Most Merciful." },
-    { verse: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "Praise be to Allah, the Lord of all the worlds." },
-    { verse: 3, arabic: "الرَّحْمَٰنِ الرَّحِيمِ", english: "The Most Gracious, the Most Merciful." },
-    { verse: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Master of the Day of Judgment." },
-    { verse: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "You alone we worship and You alone we ask for help." },
-    { verse: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us on the Straight Path," },
-    { verse: 7, arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ...", english: "The path of those who have received Your grace..." }
-  ];
+  <script>
+    // Your Qur'an data (add more surahs/verses here as needed)
+    const alFatiha = [
+      { verse: 1, arabic: "بسم الله الرحمن الرحيم", english: "In the name of Allah, the Most Gracious, the Most Merciful." },
+      { verse: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "Praise be to Allah, Lord of the worlds." },
+      { verse: 3, arabic: "الرَّحْمَنِ الرَّحِيمِ", english: "The Most Gracious, the Most Merciful." },
+      { verse: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Master of the Day of Judgment." },
+      { verse: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "You alone we worship, and You alone we ask for help." },
+      { verse: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us on the Straight Path," },
+      { verse: 7, arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ...", english: "The path of those who have received Your grace..." }
+    ];
 
-  function searchQuran() {
-    const input = document.getElementById('searchInput').value.toLowerCase().trim();
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '';
-    if (!input) return;
+    // Example for another Surah
+    const alImran = [
+      { verse: 1, arabic: "الم", english: "Alif, Lam, Meem." },
+      { verse: 2, arabic: "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ", english: "Allah - there is no deity except Him, the Ever-Living, the Sustainer of existence." },
+      // Add more verses...
+    ];
 
-    const results = quran.filter(ayah =>
-      ayah.arabic.toLowerCase().includes(input) ||
-      ayah.english.toLowerCase().includes(input)
-    );
+    // Combine all surahs into one array for searching
+    const quran = [...alFatiha, ...alImran];
 
-    if (results.length === 0) {
-      resultsDiv.innerHTML = '<p>No results found.</p>';
-      return;
+    function handleKey(e) {
+      if (e.key === 'Enter') {
+        searchQuran();
+      }
     }
 
-    results.forEach(ayah => {
-      const div = document.createElement('div');
-      div.className = 'ayah-card';
-      div.innerHTML = `<p>${ayah.arabic}</p><p><em>${ayah.english}</em></p>`;
-      resultsDiv.appendChild(div);
-    });
-  }
-</script>
+    function searchQuran() {
+      const input = document.getElementById('searchInput').value.toLowerCase().trim();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      if (!input) return;
+
+      // Filter ayahs that include the input text (arabic or english)
+      const results = quran.filter(ayah =>
+        ayah.arabic.toLowerCase().includes(input) ||
+        ayah.english.toLowerCase().includes(input)
+      );
+
+      if (results.length === 0) {
+        resultsDiv.innerHTML = '<p>No results found.</p>';
+        return;
+      }
+
+      // Show all matches with highlight
+      results.forEach(ayah => {
+        const div = document.createElement('div');
+        div.className = 'ayah-card highlight';
+        div.innerHTML = `
+          <p><strong>Surah Verse ${ayah.verse}</strong></p>
+          <p>${ayah.arabic}</p>
+          <p><em>${ayah.english}</em></p>
+        `;
+        resultsDiv.appendChild(div);
+      });
+    }
+  </script>
 </body>
 </html>
