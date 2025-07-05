@@ -2,178 +2,198 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Qur’anic Intelligence</title>
-  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quran Search - Master Big File</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f9f9f9;
       color: #111;
+      margin: 0;
       padding: 20px;
       max-width: 800px;
-      margin: auto;
+      margin-left: auto;
+      margin-right: auto;
     }
     h1 {
       text-align: center;
-      font-size: 2em;
       margin-bottom: 1rem;
     }
-    input, button {
+    input[type="text"] {
       width: 100%;
-      padding: 12px;
-      font-size: 1rem;
-      border-radius: 8px;
-      margin-bottom: 10px;
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      border-radius: 40px;
       border: 1px solid #ccc;
+      outline: none;
+      box-sizing: border-box;
+      margin-bottom: 12px;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 5px rgba(0,123,255,0.5);
     }
     button {
-      background: #007bff;
+      background-color: #007bff;
       color: white;
+      padding: 10px 20px;
       border: none;
+      border-radius: 40px;
       cursor: pointer;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      transition: background-color 0.3s ease;
     }
     button:hover {
-      background: #0056b3;
+      background-color: #0056b3;
     }
-    .ayah {
+    .ayah-card {
       background: #fff;
-      border-left: 4px solid #007bff;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 6px;
+      padding: 12px 20px;
+      margin: 8px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+      user-select: text;
     }
-    mark { background: yellow; }
-    #suggestions li {
-      padding: 6px;
-      background: #eee;
-      margin-bottom: 2px;
+    .ayah-card p {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+    mark {
+      background-color: #ffeb3b;
+      color: black;
+    }
+    .pagination {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .pagination button {
+      margin: 0 4px;
+      padding: 8px 14px;
+      font-size: 1rem;
       cursor: pointer;
-      list-style: none;
+    }
+    .pagination button:disabled {
+      background-color: #ccc;
+      cursor: default;
+    }
+    .no-results {
+      text-align: center;
+      font-style: italic;
+      margin-top: 20px;
+      color: #666;
     }
   </style>
 </head>
 <body>
-  <h1>Qur’anic Intelligence</h1>
-  <input type="text" id="searchInput" placeholder="Ask the Qur’an...">
-  <button onclick="searchQuran()">Search</button>
-  <button onclick="startListening()">🎤 Speak</button>
-  <ul id="suggestions"></ul>
+  <h1>Quran Search - Master Big File</h1>
+  <input
+    type="text"
+    id="searchInput"
+    placeholder="Search Surah, Verse number, Arabic or English text..."
+  />
+  <button id="clearBtn">Clear Search</button>
+
   <div id="results"></div>
+  <div class="pagination" id="pagination"></div>
+
+  <!-- Load Quran data file here -->
+  <script src="quranData.js"></script>
 
   <script>
-    // Your Quran data - keep this separate ideally in quran_data.js, but inline here for simplicity
-    const quranData = [
-      {
-        surah: "Adh-Dhariyat",
-        verse: 56,
-        arabic: "وَمَا خَلَقْتُ الْجِنَّ وَالْإِنسَ إِلَّا لِيَعْبُدُونِ",
-        english: "And I did not create jinn and mankind except to worship Me.",
-        keywords: ["why did allah create us", "purpose", "worship", "humans created", "life meaning"]
-      },
-      {
-        surah: "Al-Fatiha",
-        verse: 1,
-        arabic: "بسم الله الرحمن الرحيم",
-        english: "In the name of Allah, the Most Gracious, the Most Merciful.",
-        keywords: ["bismillah", "start quran", "introduction"]
-      },
-      {
-        surah: "Al-Baqarah",
-        verse: 2,
-        arabic: "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
-        english: "This is the Book about which there is no doubt, a guidance for those conscious of Allah.",
-        keywords: ["book no doubt", "guidance", "taqwa", "muttaqin", "quran truth"]
-      }
-      // Add more ayahs here...
-    ];
+    const RESULTS_PER_PAGE = 10;
+    let currentPage = 1;
+    let currentResults = [];
 
-    const input = document.getElementById("searchInput");
-    const results = document.getElementById("results");
-    const suggestions = document.getElementById("suggestions");
+    const input = document.getElementById('searchInput');
+    const resultsDiv = document.getElementById('results');
+    const paginationDiv = document.getElementById('pagination');
+    const clearBtn = document.getElementById('clearBtn');
 
-    function searchQuran() {
-      const query = input.value.trim().toLowerCase();
-      results.innerHTML = '';
-      suggestions.innerHTML = '';
-      if (!query) return;
-
-      const matches = quranData.filter(ayah => {
-        const verseStr = ayah.verse.toString();
-        const keywords = ayah.keywords || [];
-
-        return (
-          ayah.surah.toLowerCase().includes(query) ||
-          verseStr === query ||
-          ayah.arabic.toLowerCase().includes(query) ||
-          ayah.english.toLowerCase().includes(query) ||
-          keywords.some(k => k.toLowerCase().includes(query))
-        );
-      });
-
-      if (matches.length === 0) {
-        results.innerHTML = `<p>No match found. Try another question.</p>`;
-        return;
-      }
-
-      matches.forEach(ayah => {
-        results.innerHTML += `
-          <div class="ayah">
-            <strong>${ayah.surah} - Verse ${ayah.verse}</strong>
-            <p>${highlight(ayah.arabic, query)}</p>
-            <p><em>${highlight(ayah.english, query)}</em></p>
-          </div>
-        `;
-      });
-    }
-
-    function highlight(text, query) {
-      if (!query) return text;
-      const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-      return text.replace(regex, '<mark>$1</mark>');
-    }
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      resultsDiv.innerHTML = '';
+      paginationDiv.innerHTML = '';
+      currentResults = [];
+      currentPage = 1;
+    });
 
     function escapeRegExp(string) {
       return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    input.addEventListener("input", () => {
-      const val = input.value.toLowerCase();
-      if (!val) {
-        suggestions.innerHTML = '';
+    function highlightMatch(text, query) {
+      if (!query) return text;
+      const escaped = escapeRegExp(query);
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    function renderPage(page) {
+      resultsDiv.innerHTML = '';
+      paginationDiv.innerHTML = '';
+
+      if (currentResults.length === 0) {
+        resultsDiv.innerHTML = '<p class="no-results">No results found.</p>';
         return;
       }
-      const match = quranData
-        .map(a => a.english)
-        .filter(t => t.toLowerCase().includes(val))
-        .slice(0, 5);
-      suggestions.innerHTML = match.map(m => `<li onclick="selectSuggestion('${m}')">${m}</li>`).join('');
-    });
 
-    function selectSuggestion(text) {
-      input.value = text;
-      suggestions.innerHTML = '';
-      searchQuran();
+      const start = (page - 1) * RESULTS_PER_PAGE;
+      const end = Math.min(start + RESULTS_PER_PAGE, currentResults.length);
+      const pageResults = currentResults.slice(start, end);
+
+      pageResults.forEach(ayah => {
+        const div = document.createElement('div');
+        div.className = 'ayah-card';
+
+        div.innerHTML = `
+          <p><strong>${ayah.surah} - Verse ${ayah.verse}</strong></p>
+          <p>${highlightMatch(ayah.arabic, input.value)}</p>
+          <p><em>${highlightMatch(ayah.english, input.value)}</em></p>
+        `;
+        resultsDiv.appendChild(div);
+      });
+
+      const totalPages = Math.ceil(currentResults.length / RESULTS_PER_PAGE);
+      if (totalPages > 1) {
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.textContent = i;
+          btn.disabled = i === page;
+          btn.addEventListener('click', () => {
+            currentPage = i;
+            renderPage(currentPage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          paginationDiv.appendChild(btn);
+        }
+      }
     }
 
-    function startListening() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("Your browser doesn't support speech recognition.");
+    function searchQuran() {
+      const query = input.value.trim().toLowerCase();
+      if (!query) {
+        resultsDiv.innerHTML = '';
+        paginationDiv.innerHTML = '';
+        currentResults = [];
         return;
       }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.start();
-      recognition.onresult = event => {
-        input.value = event.results[0][0].transcript;
-        searchQuran();
-      };
+      currentResults = quran.filter(ayah => {
+        const verseStr = ayah.verse.toString();
+        return (
+          ayah.surah.toLowerCase().includes(query) ||
+          verseStr.includes(query) ||
+          ayah.arabic.toLowerCase().includes(query) ||
+          ayah.english.toLowerCase().includes(query)
+        );
+      });
+      currentPage = 1;
+      renderPage(currentPage);
     }
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('serviceWorker.js');
-    }
+    input.addEventListener('input', searchQuran);
   </script>
 </body>
 </html>
