@@ -31,6 +31,7 @@
       background: #007bff;
       color: white;
       border: none;
+      cursor: pointer;
     }
     button:hover {
       background: #0056b3;
@@ -48,6 +49,7 @@
       background: #eee;
       margin-bottom: 2px;
       cursor: pointer;
+      list-style: none;
     }
   </style>
 </head>
@@ -59,8 +61,33 @@
   <ul id="suggestions"></ul>
   <div id="results"></div>
 
-  <script src="quran_data.js"></script>
   <script>
+    // Your Quran data - keep this separate ideally in quran_data.js, but inline here for simplicity
+    const quranData = [
+      {
+        surah: "Adh-Dhariyat",
+        verse: 56,
+        arabic: "وَمَا خَلَقْتُ الْجِنَّ وَالْإِنسَ إِلَّا لِيَعْبُدُونِ",
+        english: "And I did not create jinn and mankind except to worship Me.",
+        keywords: ["why did allah create us", "purpose", "worship", "humans created", "life meaning"]
+      },
+      {
+        surah: "Al-Fatiha",
+        verse: 1,
+        arabic: "بسم الله الرحمن الرحيم",
+        english: "In the name of Allah, the Most Gracious, the Most Merciful.",
+        keywords: ["bismillah", "start quran", "introduction"]
+      },
+      {
+        surah: "Al-Baqarah",
+        verse: 2,
+        arabic: "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
+        english: "This is the Book about which there is no doubt, a guidance for those conscious of Allah.",
+        keywords: ["book no doubt", "guidance", "taqwa", "muttaqin", "quran truth"]
+      }
+      // Add more ayahs here...
+    ];
+
     const input = document.getElementById("searchInput");
     const results = document.getElementById("results");
     const suggestions = document.getElementById("suggestions");
@@ -68,15 +95,19 @@
     function searchQuran() {
       const query = input.value.trim().toLowerCase();
       results.innerHTML = '';
+      suggestions.innerHTML = '';
       if (!query) return;
 
       const matches = quranData.filter(ayah => {
+        const verseStr = ayah.verse.toString();
+        const keywords = ayah.keywords || [];
+
         return (
           ayah.surah.toLowerCase().includes(query) ||
-          ayah.verse.toString() === query ||
+          verseStr === query ||
           ayah.arabic.toLowerCase().includes(query) ||
           ayah.english.toLowerCase().includes(query) ||
-          (ayah.keywords && ayah.keywords.some(k => query.includes(k)))
+          keywords.some(k => k.toLowerCase().includes(query))
         );
       });
 
@@ -97,12 +128,21 @@
     }
 
     function highlight(text, query) {
-      const regex = new RegExp(`(${query})`, 'gi');
+      if (!query) return text;
+      const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
       return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     input.addEventListener("input", () => {
       const val = input.value.toLowerCase();
+      if (!val) {
+        suggestions.innerHTML = '';
+        return;
+      }
       const match = quranData
         .map(a => a.english)
         .filter(t => t.toLowerCase().includes(val))
