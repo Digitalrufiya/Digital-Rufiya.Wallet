@@ -3,206 +3,349 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quran Search with External Data</title>
+  <title>Qur’anic Intelligence System</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f9f9f9;
       color: #111;
-      margin: 0;
-      padding: 20px;
-      max-width: 800px;
+      margin: 0; padding: 20px;
+      max-width: 900px;
       margin-left: auto;
       margin-right: auto;
     }
     h1 {
       text-align: center;
       margin-bottom: 1rem;
+      font-weight: 700;
+      color: #004d40;
     }
-    input[type="text"] {
+    .search-container {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    #searchInput {
       width: 100%;
-      padding: 12px 16px;
-      font-size: 1.1rem;
+      padding: 14px 48px 14px 48px;
+      font-size: 1.2rem;
       border-radius: 40px;
-      border: 1px solid #ccc;
+      border: 2px solid #004d40;
       outline: none;
       box-sizing: border-box;
-      margin-bottom: 12px;
       transition: border-color 0.3s ease;
     }
-    input[type="text"]:focus {
-      border-color: #007bff;
-      box-shadow: 0 0 5px rgba(0,123,255,0.5);
+    #searchInput:focus {
+      border-color: #00796b;
+      box-shadow: 0 0 8px rgba(0,121,107,0.5);
     }
-    button {
-      background-color: #007bff;
+    .mic-btn {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      background: #004d40;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: white;
-      padding: 10px 20px;
+      transition: background-color 0.3s ease;
+    }
+    .mic-btn:hover {
+      background-color: #00796b;
+    }
+    .mic-icon {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+    .quran-symbol {
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      opacity: 0.6;
+      user-select: none;
+    }
+    #clearBtn {
+      background-color: #004d40;
+      color: white;
+      padding: 12px 26px;
       border: none;
       border-radius: 40px;
       cursor: pointer;
       font-size: 1rem;
-      margin-bottom: 20px;
       transition: background-color 0.3s ease;
+      margin-bottom: 20px;
+      float: right;
     }
-    button:hover {
-      background-color: #0056b3;
+    #clearBtn:hover {
+      background-color: #00796b;
+    }
+    .hadith-btn {
+      background-color: #00695c;
+      color: white;
+      padding: 12px 26px;
+      border: none;
+      border-radius: 40px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+      margin-bottom: 20px;
+      float: left;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .hadith-btn:hover {
+      background-color: #004d40;
     }
     .ayah-card {
-      background: #fff;
-      padding: 12px 20px;
-      margin: 8px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: background-color 0.3s ease;
+      background: #ffffff;
+      padding: 16px 22px;
+      margin: 10px 0;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
       user-select: text;
+      line-height: 1.6;
     }
     .ayah-card p {
       margin: 6px 0;
-      line-height: 1.5;
+    }
+    .ayah-reference {
+      font-weight: 700;
+      color: #00796b;
+      margin-bottom: 6px;
     }
     mark {
       background-color: #ffeb3b;
       color: black;
+      font-weight: 600;
+      border-radius: 3px;
+      padding: 0 3px;
     }
     .pagination {
       text-align: center;
-      margin: 20px 0;
+      margin: 24px 0;
     }
     .pagination button {
-      margin: 0 4px;
-      padding: 8px 14px;
+      margin: 0 5px;
+      padding: 8px 16px;
       font-size: 1rem;
+      border-radius: 40px;
+      border: 1px solid #004d40;
+      background-color: white;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .pagination button:hover:not(:disabled) {
+      background-color: #004d40;
+      color: white;
     }
     .pagination button:disabled {
       background-color: #ccc;
+      color: #666;
       cursor: default;
     }
     .no-results {
       text-align: center;
       font-style: italic;
-      margin-top: 20px;
-      color: #666;
+      margin-top: 40px;
+      color: #888;
+    }
+    /* Clear floats */
+    .clearfix::after {
+      content: "";
+      clear: both;
+      display: table;
     }
   </style>
 </head>
 <body>
-  <h1>Quran Search with External Data</h1>
-  <input
-    type="text"
-    id="searchInput"
-    placeholder="Search Surah, Verse number, Arabic or English text..."
-  />
-  <button id="clearBtn">Clear Search</button>
+  <h1>Qur’anic Intelligence System</h1>
+
+  <div class="clearfix">
+    <a href="hadith.html" class="hadith-btn" title="Go to authentic Hadith collection">📜 Authentic Hadith</a>
+    <button id="clearBtn" title="Clear search">Clear</button>
+  </div>
+
+  <div class="search-container">
+    <button class="mic-btn" id="micBtn" title="Start voice input" aria-label="Start voice input">
+      <svg class="mic-icon" viewBox="0 0 24 24">
+        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"></path>
+        <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+        <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+        <line x1="8" y1="23" x2="16" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+      </svg>
+    </button>
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Search Qur’an (Surah name, verse number, Arabic, English)..."
+      autocomplete="off"
+      aria-label="Quran search input"
+    />
+    <svg class="quran-symbol" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="30" fill="#00796b" />
+      <path fill="#a5d6a7" d="M20 20h24v24H20z"/>
+      <circle cx="32" cy="32" r="10" fill="#004d40" />
+      <path fill="#a5d6a7" d="M25 28h14v8H25z"/>
+    </svg>
+  </div>
 
   <div id="results"></div>
-  <div class="pagination" id="pagination"></div>
+  <div class="pagination" id="pagination" aria-label="Search results pagination"></div>
 
-  <!-- Load your external quranData.js file here -->
-  <script src="quranData.js"></script>
+<script>
+  // Full Quran data sample for demo, add full data for full usage
+  const quran = [
+    { surah: 'Al-Fatiha', verse: 1, arabic: "بسم الله الرحمن الرحيم", english: "In the name of Allah, the Most Gracious, the Most Merciful." },
+    { surah: 'Al-Fatiha', verse: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "Praise be to Allah, Lord of the worlds." },
+    { surah: 'Al-Fatiha', verse: 3, arabic: "الرَّحْمَنِ الرَّحِيمِ", english: "The Most Gracious, the Most Merciful." },
+    { surah: 'Al-Fatiha', verse: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Master of the Day of Judgment." },
+    { surah: 'Al-Fatiha', verse: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "You alone we worship, and You alone we ask for help." },
+    { surah: 'Al-Fatiha', verse: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us on the Straight Path," },
+    { surah: 'Al-Fatiha', verse: 7, arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ...", english: "The path of those who have received Your grace..." },
 
-  <script>
-    const RESULTS_PER_PAGE = 10;
-    let currentPage = 1;
-    let currentResults = [];
+    { surah: 'Al-Baqarah', verse: 1, arabic: "الم", english: "Alif, Lam, Meem." },
+    { surah: 'Al-Baqarah', verse: 2, arabic: "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ", english: "This is the Book about which there is no doubt, a guidance for those conscious of Allah." },
+    { surah: 'Al-Baqarah', verse: 3, arabic: "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ", english: "Who believe in the unseen, establish prayer, and spend out of what We have provided for them." },
+    // Add full Quran data here for production
+  ];
 
-    const input = document.getElementById('searchInput');
-    const resultsDiv = document.getElementById('results');
-    const paginationDiv = document.getElementById('pagination');
-    const clearBtn = document.getElementById('clearBtn');
+  const RESULTS_PER_PAGE = 8;
+  let currentPage = 1;
+  let currentResults = [];
 
-    clearBtn.addEventListener('click', () => {
-      input.value = '';
-      resultsDiv.innerHTML = '';
-      paginationDiv.innerHTML = '';
-      currentResults = [];
-      currentPage = 1;
+  const input = document.getElementById('searchInput');
+  const resultsDiv = document.getElementById('results');
+  const paginationDiv = document.getElementById('pagination');
+  const clearBtn = document.getElementById('clearBtn');
+  const micBtn = document.getElementById('micBtn');
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    currentResults = [];
+    currentPage = 1;
+    resultsDiv.innerHTML = '';
+    paginationDiv.innerHTML = '';
+  });
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const escaped = escapeRegExp(query);
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  function renderPage(page) {
+    resultsDiv.innerHTML = '';
+    paginationDiv.innerHTML = '';
+
+    if (currentResults.length === 0) {
+      resultsDiv.innerHTML = '<p class="no-results">No results found.</p>';
+      return;
+    }
+
+    const start = (page - 1) * RESULTS_PER_PAGE;
+    const end = Math.min(start + RESULTS_PER_PAGE, currentResults.length);
+    const pageResults = currentResults.slice(start, end);
+
+    pageResults.forEach(ayah => {
+      const div = document.createElement('div');
+      div.className = 'ayah-card';
+
+      div.innerHTML = `
+        <p class="ayah-reference">${ayah.surah} — Verse ${ayah.verse}</p>
+        <p dir="rtl" lang="ar">${highlightMatch(ayah.arabic, input.value)}</p>
+        <p>${highlightMatch(ayah.english, input.value)}</p>
+      `;
+      resultsDiv.appendChild(div);
     });
 
-    function escapeRegExp(string) {
-      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const totalPages = Math.ceil(currentResults.length / RESULTS_PER_PAGE);
+    if (totalPages > 1) {
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.disabled = i === page;
+        btn.addEventListener('click', () => {
+          currentPage = i;
+          renderPage(currentPage);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        paginationDiv.appendChild(btn);
+      }
     }
+  }
 
-    function highlightMatch(text, query) {
-      if (!query) return text;
-      const escaped = escapeRegExp(query);
-      const regex = new RegExp(`(${escaped})`, 'gi');
-      return text.replace(regex, '<mark>$1</mark>');
-    }
-
-    function renderPage(page) {
+  function searchQuran() {
+    const query = input.value.trim().toLowerCase();
+    if (!query) {
+      currentResults = [];
       resultsDiv.innerHTML = '';
       paginationDiv.innerHTML = '';
-
-      if (!window.quran || !Array.isArray(quran)) {
-        resultsDiv.innerHTML = '<p class="no-results">Quran data not loaded.</p>';
-        return;
-      }
-
-      if (currentResults.length === 0) {
-        resultsDiv.innerHTML = '<p class="no-results">No results found.</p>';
-        return;
-      }
-
-      const start = (page - 1) * RESULTS_PER_PAGE;
-      const end = Math.min(start + RESULTS_PER_PAGE, currentResults.length);
-      const pageResults = currentResults.slice(start, end);
-
-      pageResults.forEach(ayah => {
-        const div = document.createElement('div');
-        div.className = 'ayah-card';
-
-        div.innerHTML = `
-          <p><strong>${ayah.surah} - Verse ${ayah.verse}</strong></p>
-          <p>${highlightMatch(ayah.arabic, input.value)}</p>
-          <p><em>${highlightMatch(ayah.english, input.value)}</em></p>
-        `;
-        resultsDiv.appendChild(div);
-      });
-
-      const totalPages = Math.ceil(currentResults.length / RESULTS_PER_PAGE);
-      if (totalPages > 1) {
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.textContent = i;
-          btn.disabled = i === page;
-          btn.addEventListener('click', () => {
-            currentPage = i;
-            renderPage(currentPage);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          });
-          paginationDiv.appendChild(btn);
-        }
-      }
+      return;
     }
+    currentResults = quran.filter(ayah => {
+      const verseStr = ayah.verse.toString();
+      return (
+        ayah.surah.toLowerCase().includes(query) ||
+        verseStr.includes(query) ||
+        ayah.arabic.toLowerCase().includes(query) ||
+        ayah.english.toLowerCase().includes(query)
+      );
+    });
+    currentPage = 1;
+    renderPage(currentPage);
+  }
 
-    function searchQuran() {
-      if (!window.quran || !Array.isArray(quran)) {
-        resultsDiv.innerHTML = '<p class="no-results">Quran data not loaded.</p>';
-        return;
-      }
-      const query = input.value.trim().toLowerCase();
-      if (!query) {
-        resultsDiv.innerHTML = '';
-        paginationDiv.innerHTML = '';
-        currentResults = [];
-        return;
-      }
-      currentResults = quran.filter(ayah => {
-        const verseStr = ayah.verse.toString();
-        return (
-          ayah.surah.toLowerCase().includes(query) ||
-          verseStr.includes(query) ||
-          ayah.arabic.toLowerCase().includes(query) ||
-          ayah.english.toLowerCase().includes(query)
-        );
-      });
-      currentPage = 1;
-      renderPage(currentPage);
-    }
+  input.addEventListener('input', searchQuran);
 
-    input.addEventListener('input', searchQuran);
-  </script>
+  // Voice recognition support
+  let recognition;
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA';  // Arabic Saudi Arabia
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micBtn.addEventListener('click', () => {
+      if (recognition) {
+        recognition.start();
+        micBtn.style.backgroundColor = '#c62828'; // red to show listening
+      }
+    });
+
+    recognition.addEventListener('result', (event) => {
+      const speechResult = event.results[0][0].transcript;
+      input.value = speechResult;
+      searchQuran();
+      micBtn.style.backgroundColor = '#004d40'; // reset color
+    });
+
+    recognition.addEventListener('end', () => {
+      micBtn.style.backgroundColor = '#004d40';
+    });
+
+    recognition.addEventListener('error', (event) => {
+      micBtn.style.backgroundColor = '#004d40';
+      alert('Voice recognition error: ' + event.error);
+    });
+  } else {
+    micBtn.disabled = true;
+    micBtn.title = 'Voice recognition not supported in this browser';
+  }
+</script>
 </body>
 </html>
