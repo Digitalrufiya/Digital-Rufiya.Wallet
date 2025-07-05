@@ -2,125 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Qur'anic Intelligence System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qur’anic Intelligence System - Upgraded</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f9f9f9;
       color: #111;
-      margin: 0;
+      max-width: 850px;
+      margin: 0 auto;
       padding: 20px;
+    }
+    h1 {
+      text-align: center;
     }
     .ayah-card {
       background: #fff;
-      padding: 12px;
-      margin: 8px 0;
+      padding: 16px;
+      margin-bottom: 12px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .ayah-card p {
-      margin: 4px 0;
+      margin: 6px 0;
     }
-    input[type="text"] {
+    .audio-btn {
+      margin-top: 8px;
+    }
+    .tafseer {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      background: #eef;
+      padding: 10px;
+      border-left: 4px solid #99f;
+    }
+    select, input[type="text"] {
+      padding: 10px;
+      margin-bottom: 10px;
       width: 100%;
-      max-width: 600px;
-      padding: 10px 16px;
-      font-size: 1.1rem;
-      border-radius: 40px;
+      font-size: 1rem;
+      border-radius: 8px;
       border: 1px solid #ccc;
-      outline: none;
     }
-    .ayah-card.highlight {
-      background-color: #ffffcc;  /* light yellow highlight */
-      border-left: 4px solid #ffcc00;
+    button {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
-  <h1>Qur’anic Intelligence Search</h1>
-  <input
-    type="text"
-    id="searchInput"
-    placeholder="Search the Qur’an (English or Arabic)..."
-    onkeydown="handleKey(event)"
-  />
+  <h1>📖 Qur’anic Intelligence System</h1>
+
+  <input type="text" id="searchInput" placeholder="Search Quran...">
+  <select id="languageSelect">
+    <option value="english">English</option>
+    <option value="urdu">Urdu</option>
+  </select>
   <div id="results"></div>
 
   <script>
-    // Al-Fatiha verses
-    const alFatiha = [
-      { verse: 1, arabic: "بسم الله الرحمن الرحيم", english: "In the name of Allah, the Most Gracious, the Most Merciful." },
-      { verse: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "Praise be to Allah, Lord of the worlds." },
-      { verse: 3, arabic: "الرَّحْمَنِ الرَّحِيمِ", english: "The Most Gracious, the Most Merciful." },
-      { verse: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Master of the Day of Judgment." },
-      { verse: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "You alone we worship, and You alone we ask for help." },
-      { verse: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us on the Straight Path," },
-      { verse: 7, arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ", english: "The path of those who have received Your grace; not the path of those who have brought down wrath upon themselves, nor of those who have gone astray." }
+    const quran = [
+      {
+        surah: 'Al-Fatiha', verse: 1,
+        arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        english: "In the name of Allah, the Most Gracious, the Most Merciful.",
+        urdu: "شروع اللہ کے نام سے جو نہایت مہربان رحم والا ہے",
+        tafsir: "This verse shows the importance of beginning every action with the name of Allah."
+      },
+      {
+        surah: 'Al-Fatiha', verse: 2,
+        arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+        english: "All praise is due to Allah, the Lord of the worlds.",
+        urdu: "سب تعریف اللہ کے لیے ہے جو سب جہانوں کا پالنے والا ہے",
+        tafsir: "Allah is the Lord of all creation and all praise belongs to Him."
+      },
+      // Add more verses here
     ];
 
-    // Al-Baqarah verses (first 20 verses example)
-    const alBaqarah = [
-      { verse: 1, arabic: "الم", english: "Alif, Lam, Meem." },
-      { verse: 2, arabic: "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ", english: "This is the Book about which there is no doubt, a guidance for those conscious of Allah." },
-      { verse: 3, arabic: "الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ", english: "Who believe in the unseen, establish prayer, and spend out of what We have provided for them." },
-      { verse: 4, arabic: "وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ وَمَا أُنزِلَ مِن قَبْلِكَ وَبِالْآخِرَةِ هُمْ يُوقِنُونَ", english: "And who believe in what has been revealed to you, [O Muhammad], and what was revealed before you, and of the Hereafter they are certain [in faith]." },
-      { verse: 5, arabic: "أُو۟لَـٰٓئِكَ عَلَىٰ هُدًۭى مِّن رَّبِّهِمْ ۖ وَأُو۟لَـٰٓئِكَ هُمُ ٱلْمُفْلِحُونَ", english: "Those are upon [right] guidance from their Lord, and it is those who are the successful." },
-      { verse: 6, arabic: "إِنَّ ٱلَّذِينَ كَفَرُواْ سَوَآءٌ عَلَيْهِمْ ءَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ لَا يُؤْمِنُونَ", english: "Indeed, those who disbelieve – it is all the same for them whether you warn them or do not warn them – they will not believe." },
-      { verse: 7, arabic: "خَتَمَ ٱللَّهُ عَلَىٰ قُلُوبِهِمْ وَعَلَىٰ سَمْعِهِمْ وَعَلَىٰٓ أَبْصَـٰرِهِمْ غِشَـٰوَةٌ وَلَهُمْ عَذَابٌ عَظِيمٌ", english: "Allah has set a seal upon their hearts and upon their hearing, and over their vision is a veil. And for them is a great punishment." },
-      { verse: 8, arabic: "وَمِنَ ٱلنَّاسِ مَن يَقُولُ ءَامَنَّا بِٱللَّهِ وَبِٱلْيَوْمِ ٱلْـَٔاخِرِ وَمَا هُم بِمُؤْمِنِينَ", english: "And of the people are some who say, 'We believe in Allah and the Last Day,' but they are not believers." },
-      { verse: 9, arabic: "يُخَـٰدِعُونَ ٱللَّهَ وَٱلَّذِينَ ءَامَنُواْ وَمَا يَخْدَعُونَ إِلَّآ أَنفُسَهُمْ وَمَا يَشْعُرُونَ", english: "They [think to] deceive Allah and those who believe, but they deceive not except themselves and perceive [it] not." },
-      { verse: 10, arabic: "فِي قُلُوبِهِم مَّرَضٌ فَزَادَهُمُ ٱللَّهُ مَرَضًا وَلَهُمْ عَذَابٌ أَلِيمٌ بِمَا كَانُوا يَكْذِبُونَ", english: "In their hearts is disease, so Allah has increased their disease; and for them is a painful punishment because they [habitually] used to lie." },
-      { verse: 11, arabic: "وَإِذَا قِيلَ لَهُمْ لَا تُفْسِدُوا فِي الْأَرْضِ قَالُوا إِنَّمَا نَحْنُ مُصْلِحُونَ", english: "And when it is said to them, 'Do not cause corruption on the earth,' they say, 'We are but reformers.'" },
-      { verse: 12, arabic: "أَلَا إِنَّهُمْ هُمُ الْمُفْسِدُونَ وَلَٰكِن لَا يَشْعُرُونَ", english: "Unquestionably, it is they who are the corrupters, but they perceive [it] not." },
-      { verse: 13, arabic: "وَإِذَا قِيلَ لَهُمْ آمِنُوا كَمَا آمَنَ النَّاسُ قَالُوا أَنُؤْمِنُ كَمَا آمَنَ السُّفَهَاءُ أَلَا إِنَّهُمْ هُمُ السُّفَهَاءُ وَلَٰكِن لَا يَعْلَمُونَ", english: "And when it is said to them, 'Believe as the people have believed,' they say, 'Should we believe as the foolish have believed?' Unquestionably, it is they who are the foolish, but they know [it] not." },
-      { verse: 14, arabic: "وَإِذَا لَقُوا الَّذِينَ آمَنُوا قَالُوا آمَنَّا وَإِذَا خَلَوْا إِلَىٰ شَيَاطِينِهِمْ قَالُوا إِنَّا مَعَكُمْ إِنَّمَا نَحْنُ مُسْتَهْزِئُونَ", english: "And when they meet those who believe, they say, 'We believe'; but when they are alone with their evil ones, they say, 'Indeed, we are with you; we were only mockers.'" },
-      { verse: 15, arabic: "اللَّهُ يَسْتَهْزِئُ بِهِمْ وَيَمُدُّهُمْ فِي طُغْيَانِهِمْ يَعْمَهُونَ", english: "Allah mocks them and prolongs them in their transgression [while] they wander blindly." },
-      { verse: 16, arabic: "أُولَٰئِكَ الَّذِينَ اشْتَرَوُا الضَّلَالَةَ بِالْهُدَىٰ فَمَا رَبِحَت تِّجَارَتُهُمْ وَمَا كَانُوا مُهْتَدِينَ", english: "Those are the ones who have purchased error [in exchange] for guidance, so their transaction has brought no profit, nor were they guided." },
-      { verse: 17, arabic: "مَثَلُهُمْ كَمَثَلِ الَّذِي اسْتَوْقَدَ نَارًا فَلَمَّا أَضَاءَت مَا حَوْلَهُ ذَهَبَ اللَّهُ بِنُورِهِمْ وَتَرَكَهُمْ فِي ظُلُمَاتٍ لَا يُبْصِرُونَ", english: "Their example is that of one who kindled a fire, but when it illuminated what was around him, Allah took away their light and left them in darkness so they could not see." },
-      { verse: 18, arabic: "صُمٌّ بُكْمٌ عُمْيٌ فَهُمْ لَا يَرْجِعُونَ", english: "Deaf, dumb and blind – so they will not return [to the right path]." },
-      { verse: 19, arabic: "أَوْ كَصَيِّبٍ مِّنَ السَّمَاءِ فِيهِ ظُلُمَاتٌ وَرَعْدٌ وَبَرْقٌ يَجْعَلُونَ أَصَابِعَهُمْ فِي آذَانِهِم مِّنَ الصَّوَاعِقِ حَذَرَ الْمَوْتِ وَاللَّهُ مُحِيطٌ بِالْكَافِرِينَ", english: "Or [their deeds] are like a rainstorm from the sky, within which is darkness, thunder, and lightning. They put their fingers in their ears against the thunderclaps in dread of death. But Allah is encompassing of the disbelievers." },
-      { verse: 20, arabic: "يَكَادُ الْبَرْقُ يَخْطَفُ أَبْصَارَهُمْ كُلَّمَا أَضَاءَ لَهُم مَّشَوْا فِيهِ وَإِذَا أَظْلَمَ عَلَيْهِمْ قَامُوا وَلَوْ شَاءَ اللَّهُ لَذَهَبَ بِسَمْعِهِمْ وَأَبْصَارِهِمْ إِنَّ اللَّهَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ", english: "The lightning almost snatches away their sight. Whenever it flashes for them, they walk therein; and when darkness comes over them, they stand still. And if Allah willed, He could have taken away their hearing and their sight. Indeed, Allah is over all things competent." }
-    ];
+    const searchInput = document.getElementById("searchInput");
+    const languageSelect = document.getElementById("languageSelect");
+    const resultsDiv = document.getElementById("results");
 
-    // Combine all surahs into one array for searching
-    const quran = [...alFatiha, ...alBaqarah];
+    searchInput.addEventListener("input", search);
+    languageSelect.addEventListener("change", search);
 
-    function handleKey(e) {
-      if (e.key === 'Enter') {
-        searchQuran();
-      }
-    }
-
-    function searchQuran() {
-      const input = document.getElementById('searchInput').value.toLowerCase().trim();
-      const resultsDiv = document.getElementById('results');
+    function search() {
+      const query = searchInput.value.toLowerCase();
+      const lang = languageSelect.value;
       resultsDiv.innerHTML = '';
 
-      if (!input) return;
-
-      // Filter ayahs that include the input text (arabic or english)
-      const results = quran.filter(ayah =>
-        ayah.arabic.toLowerCase().includes(input) ||
-        ayah.english.toLowerCase().includes(input)
+      const filtered = quran.filter(a =>
+        a.arabic.includes(query) ||
+        a.english.toLowerCase().includes(query) ||
+        a.urdu.toLowerCase().includes(query) ||
+        a.surah.toLowerCase().includes(query)
       );
 
-      if (results.length === 0) {
-        resultsDiv.innerHTML = '<p>No results found.</p>';
-        return;
-      }
+      filtered.forEach(a => {
+        const card = document.createElement("div");
+        card.className = "ayah-card";
 
-      // Show all matches with highlight
-      results.forEach(ayah => {
-        const div = document.createElement('div');
-        div.className = 'ayah-card highlight';
-        div.innerHTML = `
-          <p><strong>Verse ${ayah.verse}</strong></p>
-          <p>${ayah.arabic}</p>
-          <p><em>${ayah.english}</em></p>
+        card.innerHTML = `
+          <p><strong>${a.surah} - ${a.verse}</strong></p>
+          <p>${a.arabic}</p>
+          <p><em>${a[lang]}</em></p>
+          <audio class="audio-btn" controls src="https://verses.quran.com/${getAudioUrl(a.surah, a.verse)}"></audio>
+          <div class="tafseer"><strong>Tafsir:</strong> ${a.tafsir}</div>
         `;
-        resultsDiv.appendChild(div);
+
+        resultsDiv.appendChild(card);
       });
+    }
+
+    function getAudioUrl(surah, verse) {
+      const surahIndex = {
+        'Al-Fatiha': '001',
+        'Al-Baqarah': '002'
+        // Add more if needed
+      }[surah];
+
+      const v = verse.toString().padStart(3, '0');
+      return `alafasy/mp3/${surahIndex}${v}.mp3`;
     }
   </script>
 </body>
