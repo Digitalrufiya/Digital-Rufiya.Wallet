@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quran Search - Master Big File</title>
+  <title>Quran Search with External Data</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -88,7 +88,7 @@
   </style>
 </head>
 <body>
-  <h1>Quran Search - Master Big File</h1>
+  <h1>Quran Search with External Data</h1>
   <input
     type="text"
     id="searchInput"
@@ -99,7 +99,7 @@
   <div id="results"></div>
   <div class="pagination" id="pagination"></div>
 
-  <!-- Load Quran data file here -->
+  <!-- Load your external quranData.js file here -->
   <script src="quranData.js"></script>
 
   <script>
@@ -134,6 +134,11 @@
     function renderPage(page) {
       resultsDiv.innerHTML = '';
       paginationDiv.innerHTML = '';
+
+      if (!window.quran || !Array.isArray(quran)) {
+        resultsDiv.innerHTML = '<p class="no-results">Quran data not loaded.</p>';
+        return;
+      }
 
       if (currentResults.length === 0) {
         resultsDiv.innerHTML = '<p class="no-results">No results found.</p>';
@@ -173,6 +178,10 @@
     }
 
     function searchQuran() {
+      if (!window.quran || !Array.isArray(quran)) {
+        resultsDiv.innerHTML = '<p class="no-results">Quran data not loaded.</p>';
+        return;
+      }
       const query = input.value.trim().toLowerCase();
       if (!query) {
         resultsDiv.innerHTML = '';
