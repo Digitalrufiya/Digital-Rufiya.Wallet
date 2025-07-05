@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Qur'anic Intelligence Admin Panel</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f1f3f5;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    .section {
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>📘 Qur'anic Intelligence Admin Panel</h1>
+
+  <div class="section">
+    <h2>➕ Add New Quranic Verse</h2>
+    <label>Surah Name:</label>
+    <input type="text" id="surah" placeholder="e.g., Al-Baqarah">
+
+    <label>Verse Number:</label>
+    <input type="number" id="verse" placeholder="e.g., 2">
+
+    <label>Arabic Text:</label>
+    <textarea id="arabic" placeholder="Arabic verse here..."></textarea>
+
+    <label>English Translation:</label>
+    <textarea id="english" placeholder="Translation here..."></textarea>
+
+    <button onclick="addVerse()">Add Verse</button>
+    <p id="status" class="success"></p>
+  </div>
+
+  <div class="section">
+    <h2>📂 Export / Backup</h2>
+    <button onclick="downloadJson()">Download Current Verses JSON</button>
+  </div>
+
+  <script>
+    let quranData = JSON.parse(localStorage.getItem('quranData')) || [];
+
+    function addVerse() {
+      const surah = document.getElementById('surah').value;
+      const verse = parseInt(document.getElementById('verse').value);
+      const arabic = document.getElementById('arabic').value;
+      const english = document.getElementById('english').value;
+
+      if (!surah || !verse || !arabic || !english) {
+        alert('Please fill all fields');
+        return;
+      }
+
+      quranData.push({ surah, verse, arabic, english });
+      localStorage.setItem('quranData', JSON.stringify(quranData));
+
+      document.getElementById('status').innerText = `Verse ${verse} from Surah ${surah} added.`;
+
+      document.getElementById('surah').value = '';
+      document.getElementById('verse').value = '';
+      document.getElementById('arabic').value = '';
+      document.getElementById('english').value = '';
+    }
+
+    function downloadJson() {
+      const dataStr = JSON.stringify(quranData, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quran-data.json';
+      a.click();
+    }
+  </script>
+</body>
+</html>
