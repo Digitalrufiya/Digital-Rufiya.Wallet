@@ -111,16 +111,20 @@
       margin: 10px 0;
       border-radius: 12px;
       box-shadow: 0 3px 8px rgba(0,0,0,0.12);
-      user-select: text;
+      user-select: text; /* enables text selection */
       line-height: 1.6;
+      cursor: text;
     }
     .ayah-card p {
       margin: 6px 0;
+      user-select: text; /* explicit to ensure selection */
     }
     .ayah-reference {
       font-weight: 700;
       color: #00796b;
       margin-bottom: 6px;
+      user-select: text; /* allow selecting reference text */
+      cursor: text;
     }
     mark {
       background-color: #ffeb3b;
@@ -157,6 +161,7 @@
       font-style: italic;
       margin-top: 40px;
       color: #888;
+      user-select: none;
     }
     /* Clear floats */
     .clearfix::after {
@@ -198,11 +203,11 @@
     </svg>
   </div>
 
-  <div id="results"></div>
+  <div id="results" tabindex="0"></div>
   <div class="pagination" id="pagination" aria-label="Search results pagination"></div>
 
 <script>
-  // Full Quran data sample for demo, add full data for full usage
+  // Quran data sample, expand for full usage
   const quran = [
     { surah: 'Al-Fatiha', verse: 1, arabic: "بسم الله الرحمن الرحيم", english: "In the name of Allah, the Most Gracious, the Most Merciful." },
     { surah: 'Al-Fatiha', verse: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "Praise be to Allah, Lord of the worlds." },
@@ -263,6 +268,17 @@
     pageResults.forEach(ayah => {
       const div = document.createElement('div');
       div.className = 'ayah-card';
+      div.title = 'Click to copy this verse and reference';
+
+      // On click, copy full verse with reference
+      div.addEventListener('click', () => {
+        const textToCopy = `${ayah.surah} — Verse ${ayah.verse}\n${ayah.arabic}\n${ayah.english}`;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          alert('Copied to clipboard:\n' + textToCopy);
+        }).catch(() => {
+          alert('Copy failed. Please copy manually.');
+        });
+      });
 
       div.innerHTML = `
         <p class="ayah-reference">${ayah.surah} — Verse ${ayah.verse}</p>
@@ -309,7 +325,13 @@
     renderPage(currentPage);
   }
 
-  input.addEventListener('input', searchQuran);
+  // Trigger search only on Enter key press
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchQuran();
+    }
+  });
 
   // Voice recognition support
   let recognition;
