@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRFMedia with Crypto Gifts</title>
+<script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 20px auto; }
+  .post { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 6px; background: #fafafa; }
+  .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+  .displayName { font-weight: 700; }
+  .caption { margin: 10px 0; }
+  .gift-buttons button {
+    background: #007bff; color: white; border: none; border-radius: 5px;
+    padding: 8px 12px; margin-right: 8px; cursor: pointer; font-size: 0.9em;
+  }
+  .gift-buttons button:hover { background: #0056b3; }
+  #connectWalletBtn {
+    background: #28a745; color: white; border: none; border-radius: 5px;
+    padding: 10px 15px; cursor: pointer; font-size: 1em; margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h2>DRFMedia - Send Crypto Gifts</h2>
+<button id="connectWalletBtn">Connect Wallet</button>
+<div id="walletAddress" style="margin-bottom: 20px; font-weight: 600;"></div>
+
+<div id="postsContainer"></div>
+
+<script>
+  const usdcAddress = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"; // USDC on BSC
+  const usdcAbi = [
+    "function transfer(address to, uint amount) returns (bool)"
+  ];
+
+  let provider, signer, userAddress;
+
+  const connectWalletBtn = document.getElementById('connectWalletBtn');
+  const walletAddressDiv = document.getElementById('walletAddress');
+  const postsContainer = document.getElementById('postsContainer');
+
+  connectWalletBtn.onclick = async () => {
+    if (window.ethereum) {
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        walletAddressDiv.textContent = "Connected wallet: " + userAddress;
+        connectWalletBtn.style.display = "none";
+      } catch (err) {
+        alert("Wallet connection failed: " + err.message);
+      }
+    } else {
+      alert("Please install MetaMask or compatible wallet.");
+    }
+  };
+
+  // Example posts data — replace with your real posts from Firebase or elsewhere
+  // Each post has: id, displayName, photoURL, caption, receiverWallet
+  const examplePosts = [
+    {
+      id: "post1",
+      displayName: "Ghaza One",
+      photoURL: "https://via.placeholder.com/40",
+      caption: "Please help with food and water.",
+      receiverWallet: "0x1111111111111111111111111111111111111111" // Replace with real Ghaza wallet
+    },
+    {
+      id: "post2",
+      displayName: "Ghaza Two",
+      photoURL: "https://via.placeholder.com/40",
+      caption: "Need urgent medicine.",
+      receiverWallet: "0x2222222222222222222222222222222222222222" // Replace with real Ghaza wallet
+    }
+  ];
+
+  // Render posts with gift buttons
+  function renderPosts() {
+    postsContainer.innerHTML = "";
+    examplePosts.forEach(post => {
+      const postDiv = document.createElement("div");
+      postDiv.className = "post";
+
+      postDiv.innerHTML = `
+        <div class="post-header">
+          <img class="avatar" src="${post.photoURL}" alt="${post.displayName}" />
+          <div class="displayName">${post.displayName}</div>
+        </div>
+        <div class="caption">${post.caption}</div>
+        <div class="gift-buttons">
+          <button data-amount="1" data-receiver="${post.receiverWallet}">🌹 Rose $1</button>
+          <button data-amount="5" data-receiver="${post.receiverWallet}">❤️ Heart $5</button>
+          <button data-amount="10" data-receiver="${post.receiverWallet}">🦁 Lion $10</button>
+          <button data-amount="15" data-receiver="${post.receiverWallet}">🛡️ Protection $15</button>
+          <button data-amount="30" data-receiver="${post.receiverWallet}">🤲 Dua $30</button>
+        </div>
+      `;
+
+      postsContainer.appendChild(postDiv);
+    });
+
+    // Add event listeners for gift buttons
+    document.querySelectorAll(".gift-buttons button").forEach(btn => {
+      btn.addEventListener("click", sendGift);
+    });
+  }
+
+  async function sendGift(event) {
+    if (!signer) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
+    const btn = event.currentTarget;
+    const amountUSD = btn.getAttribute("data-amount");
+    const receiver = btn.getAttribute("data-receiver");
+
+    // USDC decimals is 18 on BSC (sometimes 6 on other chains, confirm)
+    const decimals = 18;
+
+    const contract = new ethers.Contract(usdcAddress, usdcAbi, signer);
+
+    const amountWei = ethers.utils.parseUnits(amountUSD, decimals);
+
+    try {
+      const tx = await contract.transfer(receiver, amountWei);
+      alert(`Gift sent! Tx Hash: ${tx.hash}`);
+    } catch (err) {
+      alert("Transaction failed: " + err.message);
+    }
+  }
+
+  renderPosts();
+</script>
+
+</body>
+</html>
