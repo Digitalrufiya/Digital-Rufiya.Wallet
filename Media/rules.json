@@ -11,31 +11,14 @@
       ".read": "auth != null",
       "$postId": {
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || root.child('admin').child(auth.uid).exists())",
-        "userId": {
-          ".validate": "newData.isString() && newData.val() === auth.uid"
-        },
-        "caption": {
-          ".validate": "newData.isString() && newData.val().length <= 500"
-        },
-        "ipfsHash": {
-          ".validate": "newData.isString() && newData.val().length > 20"
-        },
-        "mediaMimeType": {
-          ".validate": "newData.isString() && newData.val().length < 100"
-        },
-        "mediaType": {
-          ".validate": "newData.isString()"
-        },
-        "timestamp": {
-          ".validate": "newData.isNumber()"
-        },
-        "likesCount": {
-          ".validate": "newData.isNumber()"
-        },
-        "commentsCount": {
-          ".validate": "newData.isNumber()"
-        },
-
+        "userId": { ".validate": "newData.isString() && newData.val() === auth.uid" },
+        "caption": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "ipfsHash": { ".validate": "newData.isString() && newData.val().length > 20" },
+        "mediaMimeType": { ".validate": "newData.isString() && newData.val().length < 100" },
+        "mediaType": { ".validate": "newData.isString()" },
+        "timestamp": { ".validate": "newData.isNumber()" },
+        "likesCount": { ".validate": "newData.isNumber()" },
+        "commentsCount": { ".validate": "newData.isNumber()" },
         "boostedBy": {
           ".write": "auth != null && root.child('admin').child(auth.uid).exists()",
           ".validate": "newData.val() === null || newData.hasChildren()"
@@ -53,15 +36,9 @@
         "$commentId": {
           ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || root.child('admin').child(auth.uid).exists())",
           ".validate": "newData.hasChildren(['userId', 'text', 'timestamp'])",
-          "userId": {
-            ".validate": "newData.isString() && newData.val() === auth.uid"
-          },
-          "text": {
-            ".validate": "newData.isString() && newData.val().length <= 300"
-          },
-          "timestamp": {
-            ".validate": "newData.isNumber()"
-          }
+          "userId": { ".validate": "newData.isString() && newData.val() === auth.uid" },
+          "text":    { ".validate": "newData.isString() && newData.val().length <= 300" },
+          "timestamp": { ".validate": "newData.isNumber()" }
         }
       }
     },
@@ -77,7 +54,7 @@
     },
 
     "admin": {
-      ".read": "auth != null", 
+      ".read": "auth != null",
       ".write": "auth != null && root.child('admin').child(auth.uid).exists()",
       "$uid": {
         ".validate": "newData.isBoolean()"
@@ -88,12 +65,30 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
-
         "verificationStatus": {
           ".write": "auth != null && root.child('admin').child(auth.uid).exists()"
         },
         "reviewedAt": {
           ".write": "auth != null && root.child('admin').child(auth.uid).exists()"
+        }
+      }
+    },
+
+    "profiles": {
+      ".read": "auth != null",
+      "$wallet": {
+        ".write": "auth != null"
+      }
+    },
+
+    "messages": {
+      "$uid1": {
+        "$uid2": {
+          ".read": "auth != null && (auth.uid === $uid1 || auth.uid === $uid2)",
+          ".write": "auth != null && (auth.uid === $uid1 || auth.uid === $uid2)",
+          "$msgId": {
+            ".validate": "newData.hasChildren(['sender','text','timestamp']) && newData.child('sender').val() === auth.uid && newData.child('text').isString() && newData.child('timestamp').isNumber()"
+          }
         }
       }
     }
