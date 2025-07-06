@@ -1,350 +1,179 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia - Live Gift System</title>
+  <title>DRFMedia Gift Donations — Spread Kindness</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    /* DRFMedia style adapted for gift page */
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #fafafa;
-      margin: 0; padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      color: #222;
-    }
-    .container {
-      width: 100%;
+      font-family: Arial, sans-serif;
       max-width: 600px;
-      padding: 20px 25px 40px;
-      background: #fff;
-      box-shadow: 0 0 15px rgb(0 0 0 / 0.1);
-      border-radius: 12px;
-      margin: 40px 15px;
+      margin: 20px auto;
+      background: #fafafa;
+      color: #222;
+      padding: 0 15px;
     }
-    h1 {
-      font-weight: 700;
-      font-size: 1.7rem;
-      margin-bottom: 20px;
-      color: #0d6efd;
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 15px;
+      border-radius: 6px;
       text-align: center;
+      font-weight: 700;
+      font-size: 1.4em;
+      margin-bottom: 20px;
     }
     #loginBtn, #logoutBtn {
-      background: #0d6efd;
+      background-color: #007bff;
       color: white;
       border: none;
-      border-radius: 6px;
-      padding: 10px 18px;
-      font-weight: 600;
+      border-radius: 5px;
+      padding: 12px 20px;
+      font-size: 1.1em;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-      margin: 0 auto 20px;
+      margin: 10px auto;
       display: block;
-      width: 180px;
+      width: 100%;
+      max-width: 300px;
     }
-    #loginBtn:hover, #logoutBtn:hover {
-      background: #0b5ed7;
+    #logoutBtn {
+      background-color: #dc3545;
     }
-    .notification {
-      background: #198754;
+    #donationButtons {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin: 25px 0;
+    }
+    .donate-btn {
+      background-color: #28a745;
+      border: none;
+      border-radius: 8px;
       color: white;
-      border-radius: 6px;
-      padding: 12px 18px;
-      margin-bottom: 20px;
+      font-weight: 700;
+      padding: 15px 20px;
+      font-size: 1.2em;
+      cursor: pointer;
+      flex: 1 1 45%;
+      max-width: 45%;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .donate-btn:hover {
+      background-color: #218838;
+    }
+    #statusMessage {
+      margin-top: 20px;
       font-weight: 600;
       text-align: center;
-      display: none;
-      user-select: none;
-    }
-    .post-item {
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 20px 18px;
-      box-shadow: inset 0 0 10px rgb(13 110 253 / 0.1);
-      margin-bottom: 30px;
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .post-owner img.avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #0d6efd;
-    }
-    .post-owner strong {
-      font-size: 1.1rem;
-      color: #0d6efd;
-    }
-    .post-caption {
-      font-size: 1rem;
-      color: #444;
-      margin-bottom: 16px;
-      line-height: 1.3;
-    }
-    .gifts-container {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .gift-btn {
-      flex: 1 1 45%;
-      background: #0d6efd;
-      color: white;
-      font-weight: 700;
-      border-radius: 8px;
-      border: none;
-      padding: 14px 0;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgb(13 110 253 / 0.3);
-      transition: background-color 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      user-select: none;
-    }
-    .gift-btn:hover {
-      background: #0b5ed7;
-      box-shadow: 0 6px 10px rgb(11 94 215 / 0.5);
-    }
-    .gift-btn span.emoji {
-      margin-right: 8px;
-      font-size: 1.3rem;
-    }
-    .admin-section {
-      margin-top: 30px;
-      border-top: 2px solid #ddd;
-      padding-top: 15px;
-    }
-    .admin-section h2 {
-      font-weight: 700;
-      color: #0d6efd;
-      margin-bottom: 12px;
-    }
-    .gift-log {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #e9ecef;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 0.9rem;
-      color: #333;
-    }
-    .gift-log-item {
-      padding: 6px 8px;
-      border-bottom: 1px solid #ccc;
-    }
-    .gift-log-item:last-child {
-      border-bottom: none;
+      min-height: 1.4em;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>DRFMedia Gifts System</h1>
+<header>
+  DRFMedia Gift Donations<br />
+  Support and Spread Kindness
+</header>
 
-    <button id="loginBtn">Login with Google</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
+<button id="loginBtn">Sign in with Google</button>
+<button id="logoutBtn" style="display:none;">Logout</button>
 
-    <div id="notification" class="notification"></div>
+<div id="welcomeMessage" style="text-align:center; font-weight: 600; margin-top: 10px;"></div>
 
-    <div class="post-item" id="post-123">
-      <div class="post-owner">
-        <img src="https://i.pravatar.cc/44?u=post123" alt="User avatar" class="avatar" />
-        <strong>User123</strong>
-      </div>
-      <div class="post-caption">
-        This is a sample post content to gift. Please send your support with gifts!
-      </div>
+<div id="donationButtons" style="display:none;">
+  <button class="donate-btn" data-type="🌹 Rose">🌹 Rose</button>
+  <button class="donate-btn" data-type="🦁 Lion">🦁 Lion</button>
+  <button class="donate-btn" data-type="🙏 Dua">🙏 Dua</button>
+  <button class="donate-btn" data-type="✨ Star">✨ Star</button>
+</div>
 
-      <div class="gifts-container">
-        <button class="gift-btn" data-amount="1" data-gift="Rose" title="Rose - $1">
-          <span class="emoji">🌹</span> Rose - $1
-        </button>
-        <button class="gift-btn" data-amount="5" data-gift="Heart" title="Heart - $5">
-          <span class="emoji">❤️</span> Heart - $5
-        </button>
-        <button class="gift-btn" data-amount="10" data-gift="Lion" title="Lion - $10">
-          <span class="emoji">🦁</span> Lion - $10
-        </button>
-        <button class="gift-btn" data-amount="15" data-gift="Protection" title="Protection - $15">
-          <span class="emoji">🛡️</span> Protection - $15
-        </button>
-        <button class="gift-btn" data-amount="30" data-gift="Dua" title="Dua - $30">
-          <span class="emoji">🙏</span> Dua - $30
-        </button>
-      </div>
-    </div>
+<div id="statusMessage"></div>
 
-    <!-- Admin Section (visible only for admin email) -->
-    <div class="admin-section" id="adminSection" style="display:none;">
-      <h2>Gift Logs</h2>
-      <div class="gift-log" id="giftLog"></div>
-    </div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase, ref, push, set
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  </div>
+  // Firebase config (use your own config here)
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  };
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      push,
-      onValue,
-      query,
-      limitToLast,
-      orderByChild
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import {
-      getAuth,
-      signInWithPopup,
-      signOut,
-      GoogleAuthProvider,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
-    // Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-    };
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const donationButtons = document.getElementById("donationButtons");
+  const statusMessage = document.getElementById("statusMessage");
+  const welcomeMessage = document.getElementById("welcomeMessage");
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+  let currentUser = null;
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const notification = document.getElementById("notification");
-    const giftLogContainer = document.getElementById("giftLog");
-    const adminSection = document.getElementById("adminSection");
+  loginBtn.onclick = () => {
+    signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+  };
 
-    let currentUser = null;
-    const ADMIN_EMAIL = "digitalrufiya@gmail.com";
+  logoutBtn.onclick = () => {
+    signOut(auth).catch(e => alert("Logout failed: " + e.message));
+  };
 
-    function notify(msg, isError = false) {
-      notification.textContent = msg;
-      notification.style.backgroundColor = isError ? "#dc3545" : "#198754"; // red or green
-      notification.style.display = "block";
-      setTimeout(() => {
-        notification.style.display = "none";
-      }, 4000);
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "block";
+      donationButtons.style.display = "flex";
+      welcomeMessage.textContent = `Welcome, ${user.displayName || "User"}! Please choose your gift below.`;
+      statusMessage.textContent = "";
+    } else {
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      donationButtons.style.display = "none";
+      welcomeMessage.textContent = "";
+      statusMessage.textContent = "";
+    }
+  });
+
+  donationButtons.addEventListener("click", async (e) => {
+    if (!e.target.classList.contains("donate-btn")) return;
+    if (!currentUser) {
+      alert("Please login to donate.");
+      return;
     }
 
-    function escapeHTML(str) {
-      return str.replace(/[&<>"']/g, function (m) {
-        return {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;'
-        }[m];
+    const type = e.target.getAttribute("data-type");
+    statusMessage.textContent = "Processing your donation...";
+    try {
+      const donationsRef = ref(db, `donations/${currentUser.uid}`);
+      const newDonationRef = push(donationsRef);
+      await set(newDonationRef, {
+        type,
+        timestamp: Date.now(),
+        displayName: currentUser.displayName || "Anonymous"
       });
+      statusMessage.textContent = `Thank you for your ${type} donation! 🌟`;
+    } catch (err) {
+      statusMessage.textContent = "Error: " + err.message;
     }
-
-    // Auth UI & Logic
-    loginBtn.onclick = () => {
-      signInWithPopup(auth, provider).catch(e => notify("Login failed: " + e.message, true));
-    };
-
-    logoutBtn.onclick = () => {
-      signOut(auth).catch(e => notify("Logout failed: " + e.message, true));
-    };
-
-    onAuthStateChanged(auth, user => {
-      currentUser = user;
-      if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-
-        if (user.email.toLowerCase() === ADMIN_EMAIL) {
-          adminSection.style.display = "block";
-          listenGiftLogs();
-        } else {
-          adminSection.style.display = "none";
-          giftLogContainer.innerHTML = "";
-        }
-
-        notify(`Welcome, ${escapeHTML(user.displayName || "User")}!`);
-      } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        adminSection.style.display = "none";
-        giftLogContainer.innerHTML = "";
-      }
-    });
-
-    // Gift buttons handler
-    document.querySelectorAll(".gift-btn").forEach(btn => {
-      btn.onclick = async () => {
-        if (!currentUser) {
-          notify("Please login to send gifts.", true);
-          return;
-        }
-
-        const amount = Number(btn.getAttribute("data-amount"));
-        const giftName = btn.getAttribute("data-gift");
-        const postId = "post-123"; // static post id, replace with your dynamic post id
-
-        try {
-          // Save gift record to DB
-          const giftRef = push(ref(db, "gifts"));
-          await giftRef.set({
-            userId: currentUser.uid,
-            userName: currentUser.displayName || "Anonymous",
-            userEmail: currentUser.email,
-            postId: postId,
-            giftName: giftName,
-            amount: amount,
-            timestamp: Date.now()
-          });
-          notify(`You sent a ${giftName} ($${amount})! 🎁`);
-        } catch (e) {
-          notify("Failed to send gift: " + e.message, true);
-        }
-      };
-    });
-
-    // Admin: listen to gift logs live (last 50 gifts)
-    function listenGiftLogs() {
-      const giftsQuery = query(ref(db, "gifts"), orderByChild("timestamp"), limitToLast(50));
-      onValue(giftsQuery, snapshot => {
-        const gifts = snapshot.val();
-        if (!gifts) {
-          giftLogContainer.innerHTML = "<p>No gifts sent yet.</p>";
-          return;
-        }
-
-        const logs = Object.values(gifts)
-          .sort((a, b) => b.timestamp - a.timestamp)
-          .map(gift => {
-            const time = new Date(gift.timestamp).toLocaleString();
-            return `<div class="gift-log-item">
-              <strong>${escapeHTML(gift.userName)} (${escapeHTML(gift.userEmail)})</strong>
-              sent <em>${escapeHTML(gift.giftName)}</em> ($${gift.amount}) on post <code>${escapeHTML(gift.postId)}</code><br />
-              <small>${time}</small>
-            </div>`;
-          });
-
-        giftLogContainer.innerHTML = logs.join("");
-      });
-    }
-  </script>
+  });
+</script>
 
 </body>
 </html>
