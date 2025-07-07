@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <style>
     /* Reset and base styles */
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
     }
     body {
@@ -42,6 +42,7 @@
       border-radius: 4px;
       background: white;
       padding: 2px;
+      object-fit: contain;
     }
     .navbar-left h1 {
       margin: 0;
@@ -58,6 +59,7 @@
       flex-direction: column;
       justify-content: space-between;
       padding: 0;
+      color: white;
     }
     #menuToggle span {
       display: block;
@@ -208,6 +210,7 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
+      word-break: break-word;
     }
     .post-owner {
       display: flex;
@@ -228,15 +231,22 @@
       white-space: pre-wrap;
       margin-top: 4px;
     }
+    .post-media {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 350px;
+      overflow: hidden;
+      margin-top: 10px;
+      border-radius: 6px;
+      background: black;
+    }
     .post-media video,
     .post-media img {
       max-width: 100%;
-      border-radius: 6px;
-      background: black;
-      display: block;
-      margin-top: 10px;
       max-height: 350px;
       object-fit: contain;
+      border-radius: 6px;
     }
     .post-actions {
       display: flex;
@@ -294,6 +304,7 @@
     .comment-item {
       border-bottom: 1px solid #eee;
       padding: 4px 0;
+      word-wrap: break-word;
     }
     .comment-form {
       display: flex;
@@ -330,10 +341,10 @@
       />
       <h1>DRFMedia</h1>
     </div>
-    <button id="menuToggle" aria-label="Toggle menu">
+    <button id="menuToggle" aria-label="Toggle menu" aria-expanded="false">
       <span></span><span></span><span></span>
     </button>
-    <nav id="primaryNav">
+    <nav id="primaryNav" aria-label="Primary navigation">
       <a href="timeline.html">Timeline</a>
       <a href="profile.html">Profile</a>
       <a href="#" id="loginNavLink">Login</a>
@@ -360,20 +371,39 @@
   <form
     id="uploadForm"
     enctype="multipart/form-data"
+    aria-label="Upload a new post"
   >
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <input type="file" id="mediaFile" accept="image/*,video/*" required aria-required="true" />
     <textarea
       id="caption"
       placeholder="Write your caption..."
       required
       minlength="4"
+      aria-required="true"
     ></textarea>
     <button type="submit">
       Post
     </button>
   </form>
 
-  <div id="postContainer" aria-live="polite"></div>
+  <div id="postContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Skrill Donation Form (hidden, will be dynamically populated) -->
+  <form
+    id="skrillForm"
+    action="https://pay.skrill.com"
+    method="POST"
+    target="_blank"
+    style="display:none;"
+    aria-hidden="true"
+  >
+    <input type="hidden" name="pay_to_email" value="digitalrufiyacoin@gmail.com" />
+    <input type="hidden" name="amount" id="skrillAmount" value="" />
+    <input type="hidden" name="currency" value="USD" />
+    <input type="hidden" name="detail1_description" value="Donation to DRFMedia" />
+    <input type="hidden" name="detail1_text" id="skrillDetail" value="" />
+    <input type="hidden" name="transaction_id" id="skrillTransactionId" value="" />
+  </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -383,8 +413,6 @@
       push,
       set,
       onValue,
-      get,
-      update,
       runTransaction,
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import {
@@ -419,13 +447,22 @@
     const captionInput = document.getElementById("caption");
     const postContainer = document.getElementById("postContainer");
     const searchInput = document.getElementById("searchInput");
+    const menuToggle = document.getElementById("menuToggle");
+    const primaryNav = document.getElementById("primaryNav");
+
+    const skrillForm = document.getElementById("skrillForm");
+    const skrillAmount = document.getElementById("skrillAmount");
+    const skrillDetail = document.getElementById("skrillDetail");
+    const skrillTransactionId = document.getElementById("skrillTransactionId");
 
     let currentUser = null;
     let allPosts = [];
 
-    // Toggle menu on small screens
-    document.getElementById("menuToggle").addEventListener("click", () => {
-      document.getElementById("primaryNav").classList.toggle("open");
+    // Hamburger menu toggle
+    menuToggle.addEventListener("click", () => {
+      const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+      menuToggle.setAttribute("aria-expanded", String(!expanded));
+      primaryNav.classList.toggle("open");
     });
 
     // Escape to prevent XSS
@@ -494,12 +531,12 @@
           boostsCount: 0,
           boostedBy: {},
           likesBy: {},
-          comments: {}, // For storing comments in Firebase
+          comments: {},
         });
 
         captionInput.value = "";
         mediaFile.value = "";
-        alert("Posted successfully!");
+        alert("Post uploaded successfully.");
       } catch (err) {
         alert("Upload failed: " + err.message);
       } finally {
@@ -507,55 +544,68 @@
       }
     });
 
-    // Load posts and listen for updates
+    // Listen for posts updates
     const postsRef = ref(db, "posts");
     onValue(postsRef, (snapshot) => {
-      const posts = snapshot.val() || {};
-      allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-      allPosts.sort((a, b) => b.timestamp - a.timestamp);
+      const val = snapshot.val();
+      allPosts = val ? Object.entries(val).map(([id, post]) => ({ id, ...post })) : [];
       renderPosts();
     });
 
-    // Render posts with filtering and updated like/boost button states and comments
+    // Render posts filtered by search
     function renderPosts() {
       const filter = searchInput.value.trim().toLowerCase();
       postContainer.innerHTML = "";
-      for (const post of allPosts) {
-        if (!post.caption.toLowerCase().includes(filter)) continue;
 
-        const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+      const filteredPosts = allPosts
+        .filter((post) =>
+          post.caption.toLowerCase().includes(filter) ||
+          (post.displayName && post.displayName.toLowerCase().includes(filter))
+        )
+        .sort((a, b) => b.timestamp - a.timestamp);
 
-        const isBoosted =
-          currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
-        const isLiked =
-          currentUser && post.likesBy && post.likesBy[currentUser.uid];
+      if (filteredPosts.length === 0) {
+        postContainer.innerHTML = `<p style="text-align:center; color:#555;">No posts found.</p>`;
+        return;
+      }
 
+      filteredPosts.forEach((post) => {
         const dateStr = new Date(post.timestamp).toLocaleString();
 
-        const mediaHTML =
-          post.mediaType === "video"
-            ? `<video src="${url1}" controls playsinline preload="metadata" poster="" loading="lazy"></video>`
-            : `<img src="${url1}" alt="Post media" loading="lazy" />`;
-
+        // Likes, boosts counts safely fallback
         const likesCount = post.likesCount || 0;
         const boostsCount = post.boostsCount || 0;
-        const commentsCount = post.commentsCount || 0;
+        const likedClass = post.likesBy && currentUser && post.likesBy[currentUser.uid] ? "liked" : "";
+        const boostedClass =
+          post.boostedBy && currentUser && post.boostedBy[currentUser.uid] ? "boosted" : "";
 
-        const likedClass = isLiked ? "liked" : "";
-        const boostedClass = isBoosted ? "boosted" : "";
+        // Media HTML
+        let mediaHTML = "";
+        if (post.mediaType === "video") {
+          mediaHTML = `<video controls preload="metadata" playsinline aria-label="Video post">
+            <source src="https://ipfs.io/ipfs/${post.ipfsHash}" type="${post.mediaMimeType}" />
+            Your browser does not support the video tag.
+          </video>`;
+        } else if (post.mediaType === "image") {
+          mediaHTML = `<img
+            src="https://ipfs.io/ipfs/${post.ipfsHash}"
+            alt="Post media"
+            loading="lazy"
+          />`;
+        }
 
-        // Render comments list and form HTML
-        const commentsList = post.comments
-          ? Object.entries(post.comments)
-              .sort((a, b) => b[1].timestamp - a[1].timestamp)
+        // Comments
+        const comments = post.comments ? Object.values(post.comments) : [];
+        const commentsList = comments.length
+          ? comments
               .map(
-                ([cid, comment]) =>
+                (comment) =>
                   `<div class="comment-item"><strong>${escapeHTML(
                     comment.displayName || "Anonymous"
                   )}:</strong> ${escapeHTML(comment.text)}</div>`
               )
               .join("")
-          : "<i>No comments yet</i>";
+          : `<i>No comments yet</i>`;
 
         const postEl = document.createElement("article");
         postEl.className = "post-item";
@@ -570,19 +620,13 @@
           <div class="post-caption">${escapeHTML(post.caption)}</div>
           <div class="post-media">${mediaHTML}</div>
           <div class="post-actions">
-            <button class="${likedClass}" aria-label="Like post" data-postid="${
-          post.id
-        }" data-action="like">
+            <button class="${likedClass}" aria-label="Like post" data-postid="${post.id}" data-action="like">
               Like (${likesCount})
             </button>
-            <button class="${boostedClass}" aria-label="Boost post" data-postid="${
-          post.id
-        }" data-action="boost">
+            <button class="${boostedClass}" aria-label="Boost post" data-postid="${post.id}" data-action="boost">
               Boost (${boostsCount})
             </button>
-            <select aria-label="Donate amount" data-postid="${
-              post.id
-            }" onchange="donateToPost('${post.id}', '${post.userId}', this.value)">
+            <select aria-label="Donate amount" data-postid="${post.id}" onchange="donateToPost('${post.id}', '${post.userId}', this.value)">
               <option value="">Donate</option>
               <option value="1">1 USD</option>
               <option value="3">3 USD</option>
@@ -590,23 +634,22 @@
               <option value="10">10 USD</option>
             </select>
           </div>
-          <div class="comments-section">
+          <div class="comments-section" aria-live="polite" aria-atomic="true">
             <div class="comments-list" id="comments-list-${post.id}">
               ${commentsList}
             </div>
             ${
               currentUser
                 ? `<form class="comment-form" data-postid="${post.id}">
-                    <input type="text" name="commentText" placeholder="Write a comment..." required minlength="1" />
+                    <input type="text" name="commentText" placeholder="Write a comment..." required minlength="1" aria-label="Write a comment" />
                     <button type="submit">Comment</button>
                   </form>`
                 : '<small><em>Login to comment.</em></small>'
             }
           </div>
         `;
-
         postContainer.appendChild(postEl);
-      }
+      });
 
       // Attach like/boost button listeners
       postContainer.querySelectorAll("button[data-action]").forEach((btn) => {
@@ -696,6 +739,13 @@
         await runTransaction(postRef, (post) => {
           if (post) {
             post.commentsCount = (post.commentsCount || 0) + 1;
+            if (!post.comments) post.comments = {};
+            post.comments[commentId] = {
+              userId: currentUser.uid,
+              displayName: currentUser.displayName || "Anonymous",
+              text,
+              timestamp: Date.now(),
+            };
           }
           return post;
         });
@@ -704,28 +754,22 @@
       }
     }
 
-    // Donation via Skrill - real feature
+    // Donation via Skrill using form POST
     window.donateToPost = function (postId, postUserId, amount) {
       if (!currentUser) return alert("Please login to donate.");
       if (!amount) return;
 
-      const skrillURL = new URL("https://pay.skrill.com");
+      skrillAmount.value = amount;
+      skrillDetail.value = `Post ID: ${postId}`.substring(0, 50);
+      skrillTransactionId.value = `${postId}-${Date.now()}`;
+      skrillForm.submit();
 
-      skrillURL.searchParams.set("pay_to_email", "digitalrufiyacoin@gmail.com");
-      skrillURL.searchParams.set("amount", amount);
-      skrillURL.searchParams.set("currency", "USD");
-      skrillURL.searchParams.set("detail1_description", "Donation to DRFMedia");
-      skrillURL.searchParams.set("detail1_text", `Post ID: ${postId}`.substring(0, 50));
-      skrillURL.searchParams.set("transaction_id", `${postId}-${Date.now()}`);
-
-      window.open(skrillURL.toString(), "_blank");
-
-      // Reset dropdown after
+      // Reset dropdown after submit
       const selects = document.querySelectorAll("select");
       selects.forEach((sel) => (sel.value = ""));
     };
 
-    // Filter posts on search input
+    // Search input event listener
     searchInput.addEventListener("input", renderPosts);
   </script>
 </body>
