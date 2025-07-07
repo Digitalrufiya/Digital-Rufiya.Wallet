@@ -1,82 +1,60 @@
-<!-- Full HTML file with symbolic donation integrated -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <title>DRFMedia Timeline — Warzone Donation Platform</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
     header {
       background: #007bff; color: white; padding: 10px 20px;
-      position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      display: flex; justify-content: space-between; align-items: center;
     }
     .navbar-left { display: flex; align-items: center; gap: 10px; }
     .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
     .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
-    #menuToggle { background: transparent; border: none; cursor: pointer; width: 30px; height: 25px; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
-    #menuToggle span { display: block; height: 3.5px; background: white; border-radius: 3px; }
-    #primaryNav { width: 100%; display: none; flex-direction: column; background: #0069d9; margin-top: 10px; border-radius: 4px; }
-    #primaryNav.open { display: flex; }
-    #primaryNav a { padding: 12px 20px; color: white; text-decoration: none; font-weight: 600; border-top: 1px solid rgba(255,255,255,0.2); }
-    @media (min-width: 768px) {
-      #menuToggle { display: none; }
-      #primaryNav { display: flex !important; flex-direction: row; width: auto; background: transparent; margin-top: 0; }
-      #primaryNav a { border: none; padding: 10px 15px; color: white; }
-    }
+    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin: 20px auto; max-width: 700px; background: #fafafa; }
+    .post-owner { display: flex; align-items: center; gap: 10px; }
     .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-    #postContainer { max-width: 700px; margin: 20px auto; padding: 0 15px; }
-    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin-bottom: 20px; background: #fafafa; }
-    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
     .post-time { font-size: 0.85em; color: #555; }
-    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
+    .post-caption { margin-top: 10px; white-space: pre-wrap; }
     video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
-    #searchBar { max-width: 700px; margin: 10px auto 20px auto; padding: 0 15px; }
-    #searchInput { width: 100%; padding: 8px 12px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; }
     .post-actions button {
       cursor: pointer; border: none; background: #007bff; color: white;
       padding: 6px 12px; border-radius: 5px; font-size: 0.9em; margin: 5px 3px;
     }
     .post-actions button:hover { background: #0056b3; }
-    .post-actions button.liked { background: #28a745 !important; }
-    .post-actions button.boosted { background-color: gold !important; color: #000 !important; }
+    .post-actions .boosted { background-color: gold !important; color: black !important; }
+    .donation-note { font-size: 0.9em; margin-top: 8px; color: #555; }
+    .crypto-section { text-align: center; margin: 30px 0; }
+    .crypto-section h2 { margin-bottom: 10px; }
+    .crypto-section input { padding: 10px; font-size: 1em; width: 90%; max-width: 400px; }
+    .crypto-section button { margin-top: 10px; padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
   </style>
 </head>
 <body>
 
 <header>
   <div class="navbar-left">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-    <h1>DRFMedia</h1>
+    <img src="https://ik.imagekit.io/ttbbg9ocv/logo.png" alt="DRFMedia Logo" />
+    <h1>DRFMedia — Warzone Relief</h1>
   </div>
-  <button id="menuToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <nav id="primaryNav">
-    <a href="timeline.html">Timeline</a>
-    <a href="profile.html">Profile</a>
-    <a href="#" id="loginNavLink">Login</a>
-    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
-  </nav>
 </header>
-
-<div id="searchBar">
-  <input type="search" id="searchInput" placeholder="Search posts..." />
-</div>
-
-<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
-<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
-
-<!-- Upload form and post container already present here -->
-<!-- ... -->
 
 <div id="postContainer"></div>
 
+<div class="crypto-section">
+  <h2>Support Warzone Donations (Crypto)</h2>
+  <p>Send USDC to: <strong id="walletAddress">0xYourWalletAddressHere</strong></p>
+  <input type="text" value="0xYourWalletAddressHere" readonly onclick="this.select()" />
+  <button onclick="payWithMetaMask()">Donate with MetaMask (USDC)</button>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -91,45 +69,23 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
 
   let currentUser = null;
+  onAuthStateChanged(auth, user => currentUser = user);
 
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    document.getElementById("loginBtn").style.display = user ? "none" : "block";
-    document.getElementById("logoutBtn").style.display = user ? "block" : "none";
-    renderPosts();
-  });
-
-  document.getElementById("loginBtn").onclick = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
-  document.getElementById("logoutBtn").onclick = () => signOut(auth);
-
-  const searchInput = document.getElementById("searchInput");
   const postContainer = document.getElementById("postContainer");
 
-  let allPosts = [];
-
-  const postsRef = ref(db, "posts");
-  onValue(postsRef, snapshot => {
+  onValue(ref(db, "posts"), snapshot => {
     const posts = snapshot.val() || {};
-    allPosts = Object.entries(posts).map(([id, p]) => ({ id, ...p })).sort((a, b) => b.timestamp - a.timestamp);
-    renderPosts();
-  });
-
-  function renderPosts() {
-    const filter = searchInput.value.toLowerCase();
+    const sorted = Object.entries(posts).map(([id, p]) => ({ id, ...p })).sort((a, b) => b.timestamp - a.timestamp);
     postContainer.innerHTML = "";
-    for (const post of allPosts) {
-      if (!post.caption.toLowerCase().includes(filter)) continue;
+    for (const post of sorted) {
+      const isBoosted = post.boostedBy && post.boostedBy["admin"];
       const mediaUrl = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
-      const mediaHTML = post.mediaType === "video"
-        ? `<video src="${mediaUrl}" controls></video>`
-        : `<img src="${mediaUrl}" />`;
-
-      const card = document.createElement("article");
-      card.className = "post-item";
-      card.innerHTML = `
+      const media = post.mediaType === "video" ? `<video src="${mediaUrl}" controls></video>` : `<img src="${mediaUrl}" />`;
+      const article = document.createElement("article");
+      article.className = "post-item";
+      article.innerHTML = `
         <div class="post-owner">
           <img src="${post.photoURL || ''}" class="avatar" />
           <div>
@@ -138,31 +94,63 @@
           </div>
         </div>
         <div class="post-caption">${post.caption}</div>
-        <div>${mediaHTML}</div>
+        ${media}
         <div class="post-actions">
-          <button onclick="donateSymbol('${post.id}', '🌹 Rose')">🌹 Rose</button>
-          <button onclick="donateSymbol('${post.id}', '🦁 Lion')">🦁 Lion</button>
-          <button onclick="donateSymbol('${post.id}', '🙏 Dua')">🙏 Dua</button>
-          <button onclick="donateSymbol('${post.id}', '✨ Star')">✨ Star</button>
+          <button onclick="donate('${post.id}', '🌹 Rose', 1)">🌹 Rose ($1)</button>
+          <button onclick="donate('${post.id}', '🦁 Lion', 10)">🦁 Lion ($10)</button>
+          <button onclick="donate('${post.id}', '🙏 Dua', 20)">🙏 Dua ($20)</button>
+          <button onclick="donate('${post.id}', '✨ Star', 30)">✨ Star ($30)</button>
+          <button class="${isBoosted ? 'boosted' : ''}" onclick="boost('${post.id}')">🚀 Highlight (Admin Only)</button>
         </div>
+        <div class="donation-note">Your donations help families in war zones instantly without delay.</div>
       `;
-      postContainer.appendChild(card);
+      postContainer.appendChild(article);
     }
-  }
+  });
 
-  window.donateSymbol = async function(postId, type) {
-    if (!currentUser) return alert("Login required to donate.");
-    const donationRef = push(ref(db, `postDonations/${postId}`));
+  window.donate = async (postId, type, usd) => {
+    if (!currentUser) return alert("Please login to donate.");
+    const donationRef = ref(db, `postDonations/${postId}/${Date.now()}`);
     await set(donationRef, {
       userId: currentUser.uid,
-      displayName: currentUser.displayName,
+      name: currentUser.displayName,
       symbol: type,
+      usd,
       timestamp: Date.now()
     });
-    alert(`Thank you for your ${type} donation! 🌟`);
+    alert(`Donation successful: ${type} - $${usd}`);
   };
 
-  searchInput.addEventListener("input", renderPosts);
+  window.boost = async (postId) => {
+    if (!currentUser || currentUser.email !== "digitalrufiya@gmail.com") return alert("Only admin can highlight posts.");
+    const postRef = ref(db, `posts/${postId}/boostedBy`);
+    const boostData = { admin: true };
+    await set(postRef, boostData);
+    alert("Post is now highlighted.");
+  };
+
+  window.payWithMetaMask = async () => {
+    if (typeof window.ethereum === 'undefined') return alert("MetaMask not found. Please install it.");
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const account = accounts[0];
+    const usdcAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // USDC on Ethereum mainnet
+    const to = "0xYourWalletAddressHere";
+    const amountInUSDC = 1; // example $1
+    const amount = BigInt(amountInUSDC * 1e6).toString();
+    try {
+      await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: account,
+          to,
+          value: "0x0",
+          data: "",
+        }]
+      });
+    } catch (err) {
+      alert("Payment failed: " + err.message);
+    }
+  }
 </script>
 
 </body>
