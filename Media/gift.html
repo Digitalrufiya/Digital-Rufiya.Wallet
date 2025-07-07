@@ -3,106 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Gift Donations — Spread Kindness</title>
+  <title>DRFMedia Timeline — Warzone Donation Platform</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 20px auto;
-      background: #fafafa;
-      color: #222;
-      padding: 0 15px;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
     header {
-      background-color: #007bff;
-      color: white;
-      padding: 15px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: 700;
-      font-size: 1.4em;
-      margin-bottom: 20px;
+      background: #007bff; color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    #loginBtn, #logoutBtn {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 12px 20px;
-      font-size: 1.1em;
-      cursor: pointer;
-      margin: 10px auto;
-      display: block;
-      width: 100%;
-      max-width: 300px;
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin: 20px auto; max-width: 700px; background: #fafafa; }
+    .post-owner { display: flex; align-items: center; gap: 10px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .post-time { font-size: 0.85em; color: #555; }
+    .post-caption { margin-top: 10px; white-space: pre-wrap; }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    .post-actions button {
+      cursor: pointer; border: none; background: #007bff; color: white;
+      padding: 6px 12px; border-radius: 5px; font-size: 0.9em; margin: 5px 3px;
     }
-    #logoutBtn {
-      background-color: #dc3545;
-    }
-    #donationButtons {
-      display: flex;
-      justify-content: space-around;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin: 25px 0;
-    }
-    .donate-btn {
-      background-color: #28a745;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-weight: 700;
-      padding: 15px 20px;
-      font-size: 1.2em;
-      cursor: pointer;
-      flex: 1 1 45%;
-      max-width: 45%;
-      transition: background-color 0.3s ease;
-      user-select: none;
-    }
-    .donate-btn:hover {
-      background-color: #218838;
-    }
-    #statusMessage {
-      margin-top: 20px;
-      font-weight: 600;
-      text-align: center;
-      min-height: 1.4em;
-    }
+    .post-actions button:hover { background: #0056b3; }
+    .post-actions .boosted { background-color: gold !important; color: black !important; }
+    .donation-note { font-size: 0.9em; margin-top: 8px; color: #555; }
+    .crypto-section { text-align: center; margin: 30px 0; }
+    .crypto-section h2 { margin-bottom: 10px; }
+    .crypto-section input { padding: 10px; font-size: 1em; width: 90%; max-width: 400px; }
   </style>
 </head>
 <body>
 
 <header>
-  DRFMedia Gift Donations<br />
-  Support and Spread Kindness
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/logo.png" alt="DRFMedia Logo" />
+    <h1>DRFMedia — Warzone Relief</h1>
+  </div>
 </header>
 
-<button id="loginBtn">Sign in with Google</button>
-<button id="logoutBtn" style="display:none;">Logout</button>
+<div id="postContainer"></div>
 
-<div id="welcomeMessage" style="text-align:center; font-weight: 600; margin-top: 10px;"></div>
-
-<div id="donationButtons" style="display:none;">
-  <button class="donate-btn" data-type="🌹 Rose">🌹 Rose</button>
-  <button class="donate-btn" data-type="🦁 Lion">🦁 Lion</button>
-  <button class="donate-btn" data-type="🙏 Dua">🙏 Dua</button>
-  <button class="donate-btn" data-type="✨ Star">✨ Star</button>
+<div class="crypto-section">
+  <h2>Support Warzone Donations (Crypto)</h2>
+  <p>Send USDC to: <strong>0xYourWalletAddressHere</strong></p>
+  <input type="text" value="0xYourWalletAddressHere" readonly onclick="this.select()" />
 </div>
-
-<div id="statusMessage"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, set
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  // Firebase config (use your own config here)
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -116,63 +67,65 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const donationButtons = document.getElementById("donationButtons");
-  const statusMessage = document.getElementById("statusMessage");
-  const welcomeMessage = document.getElementById("welcomeMessage");
 
   let currentUser = null;
+  onAuthStateChanged(auth, user => currentUser = user);
 
-  loginBtn.onclick = () => {
-    signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
-  };
+  const postContainer = document.getElementById("postContainer");
 
-  logoutBtn.onclick = () => {
-    signOut(auth).catch(e => alert("Logout failed: " + e.message));
-  };
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    if (user) {
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "block";
-      donationButtons.style.display = "flex";
-      welcomeMessage.textContent = `Welcome, ${user.displayName || "User"}! Please choose your gift below.`;
-      statusMessage.textContent = "";
-    } else {
-      loginBtn.style.display = "block";
-      logoutBtn.style.display = "none";
-      donationButtons.style.display = "none";
-      welcomeMessage.textContent = "";
-      statusMessage.textContent = "";
+  onValue(ref(db, "posts"), snapshot => {
+    const posts = snapshot.val() || {};
+    const sorted = Object.entries(posts).map(([id, p]) => ({ id, ...p })).sort((a, b) => b.timestamp - a.timestamp);
+    postContainer.innerHTML = "";
+    for (const post of sorted) {
+      const isBoosted = post.boostedBy && post.boostedBy["admin"];
+      const mediaUrl = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+      const media = post.mediaType === "video" ? `<video src="${mediaUrl}" controls></video>` : `<img src="${mediaUrl}" />`;
+      const article = document.createElement("article");
+      article.className = "post-item";
+      article.innerHTML = `
+        <div class="post-owner">
+          <img src="${post.photoURL || ''}" class="avatar" />
+          <div>
+            <div>${post.displayName || 'Anonymous'}</div>
+            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          </div>
+        </div>
+        <div class="post-caption">${post.caption}</div>
+        ${media}
+        <div class="post-actions">
+          <button onclick="donate('${post.id}', '🌹 Rose', 1)">🌹 Rose ($1)</button>
+          <button onclick="donate('${post.id}', '🦁 Lion', 10)">🦁 Lion ($10)</button>
+          <button onclick="donate('${post.id}', '🙏 Dua', 20)">🙏 Dua ($20)</button>
+          <button onclick="donate('${post.id}', '✨ Star', 30)">✨ Star ($30)</button>
+          <button class="${isBoosted ? 'boosted' : ''}" onclick="boost('${post.id}')">🚀 Highlight</button>
+        </div>
+        <div class="donation-note">Your donations help families in war zones instantly without delay.</div>
+      `;
+      postContainer.appendChild(article);
     }
   });
 
-  donationButtons.addEventListener("click", async (e) => {
-    if (!e.target.classList.contains("donate-btn")) return;
-    if (!currentUser) {
-      alert("Please login to donate.");
-      return;
-    }
+  window.donate = async (postId, type, usd) => {
+    if (!currentUser) return alert("Please login to donate.");
+    const donationRef = ref(db, `postDonations/${postId}/${Date.now()}`);
+    await set(donationRef, {
+      userId: currentUser.uid,
+      name: currentUser.displayName,
+      symbol: type,
+      usd,
+      timestamp: Date.now()
+    });
+    alert(`Donation successful: ${type} - $${usd}`);
+  };
 
-    const type = e.target.getAttribute("data-type");
-    statusMessage.textContent = "Processing your donation...";
-    try {
-      const donationsRef = ref(db, `donations/${currentUser.uid}`);
-      const newDonationRef = push(donationsRef);
-      await set(newDonationRef, {
-        type,
-        timestamp: Date.now(),
-        displayName: currentUser.displayName || "Anonymous"
-      });
-      statusMessage.textContent = `Thank you for your ${type} donation! 🌟`;
-    } catch (err) {
-      statusMessage.textContent = "Error: " + err.message;
-    }
-  });
+  window.boost = async (postId) => {
+    if (!currentUser || currentUser.email !== "digitalrufiya@gmail.com") return alert("Only admin can highlight.");
+    const postRef = ref(db, `posts/${postId}/boostedBy`);
+    const boostData = { admin: true };
+    await set(postRef, boostData);
+    alert("Post is now highlighted.");
+  };
 </script>
 
 </body>
