@@ -1,11 +1,358 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <style>
-    /* ... existing styles remain unchanged ... */
+    /* Reset & base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #fff;
+      color: #222;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Header */
+    header {
+      background: #007bff;
+      color: white;
+      width: 100%;
+      max-width: 900px;
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .navbar-left img {
+      height: 40px;
+      width: 40px;
+      border-radius: 6px;
+      background: white;
+      padding: 4px;
+    }
+    .navbar-left h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    /* Hamburger */
+    #menuToggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 32px;
+      height: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      padding: 0;
+      transition: transform 0.3s ease;
+    }
+    #menuToggle:focus {
+      outline-offset: 3px;
+      outline: 2px solid #fff;
+    }
+    #menuToggle span {
+      display: block;
+      height: 4px;
+      background: white;
+      border-radius: 3px;
+      transition: all 0.3s ease;
+    }
+    /* Menu open animation */
+    #menuToggle.open span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    #menuToggle.open span:nth-child(2) {
+      opacity: 0;
+    }
+    #menuToggle.open span:nth-child(3) {
+      transform: rotate(-45deg) translate(6px, -6px);
+    }
+
+    /* Navigation */
+    nav#primaryNav {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      background: #0069d9;
+      margin-top: 12px;
+      border-radius: 6px;
+    }
+    nav#primaryNav.open {
+      display: flex;
+    }
+    nav#primaryNav a {
+      padding: 14px 20px;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    nav#primaryNav a:first-child {
+      border-top: none;
+    }
+    nav#primaryNav a:hover,
+    nav#primaryNav a:focus {
+      background: rgba(255, 255, 255, 0.25);
+      outline: none;
+    }
+
+    /* Desktop nav */
+    @media (min-width: 768px) {
+      #menuToggle {
+        display: none;
+      }
+      nav#primaryNav {
+        display: flex !important;
+        flex-direction: row;
+        width: auto;
+        background: transparent;
+        margin-top: 0;
+        border-radius: 0;
+      }
+      nav#primaryNav a {
+        border: none;
+        padding: 12px 18px;
+      }
+      nav#primaryNav a:hover,
+      nav#primaryNav a:focus {
+        background: rgba(255, 255, 255, 0.35);
+        outline: none;
+      }
+    }
+
+    /* Search Bar */
+    #searchBar {
+      max-width: 900px;
+      width: 100%;
+      padding: 10px 20px;
+      margin: 16px auto 0 auto;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      transition: border-color 0.3s;
+    }
+    #searchInput:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 5px #007bffaa;
+    }
+
+    /* Buttons */
+    button {
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin: 15px auto;
+      display: block;
+      max-width: 280px;
+      width: 90%;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      font-weight: 600;
+    }
+    button:hover,
+    button:focus {
+      background: #0056b3;
+      outline: none;
+    }
+
+    /* Form */
+    #uploadForm {
+      display: none;
+      max-width: 900px;
+      width: 100%;
+      margin: 20px auto 30px auto;
+      padding: 20px;
+      border-radius: 8px;
+      background: #f9f9f9;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    #uploadForm input[type="file"],
+    #uploadForm textarea {
+      width: 100%;
+      font-size: 1rem;
+      margin-bottom: 14px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-family: inherit;
+    }
+    #uploadForm textarea {
+      min-height: 90px;
+    }
+    #uploadForm button {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+    }
+
+    /* Posts container */
+    #postContainer {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto 40px auto;
+      padding: 0 20px 20px 20px;
+    }
+
+    /* Post cards */
+    .post-item {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+      background: #fff;
+      box-shadow: 0 1px 5px rgb(0 0 0 / 0.04);
+      transition: box-shadow 0.3s;
+    }
+    .post-item:hover,
+    .post-item:focus-within {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+    }
+
+    /* Post header */
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .post-owner img.avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid #ccc;
+      box-shadow: 0 0 5px rgba(0,0,0,0.07);
+      user-select: none;
+    }
+    .post-owner div {
+      line-height: 1.1;
+      user-select: text;
+    }
+    .post-time {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* Post caption */
+    .post-caption {
+      margin-bottom: 14px;
+      font-size: 1rem;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+
+    /* Media */
+    .post-media img,
+    .post-media video {
+      max-width: 100%;
+      border-radius: 8px;
+      background: black;
+      display: block;
+      margin: 0 auto 12px auto;
+      user-select: none;
+    }
+    .post-media video {
+      max-height: 400px;
+    }
+
+    /* Post actions */
+    .post-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .post-actions button,
+    .post-actions select {
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    .post-actions button:hover,
+    .post-actions select:hover,
+    .post-actions button:focus,
+    .post-actions select:focus {
+      background: #0056b3;
+      outline: none;
+    }
+    .post-actions button.liked {
+      background: #28a745 !important; /* green */
+      color: #fff !important;
+    }
+    .post-actions button.boosted {
+      background-color: gold !important;
+      color: #000 !important;
+    }
+    .post-actions select {
+      color: #000;
+      background: white;
+      border: 1px solid #007bff;
+      padding: 8px 14px;
+      min-width: 120px;
+    }
+    .post-actions select option {
+      color: #000;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      #uploadForm {
+        padding: 16px 14px;
+      }
+      .post-actions {
+        justify-content: center;
+      }
+      .post-actions button,
+      .post-actions select {
+        flex: 1 1 100%;
+        max-width: 100%;
+        text-align: center;
+      }
+    }
   </style>
 </head>
 <body>
@@ -14,13 +361,14 @@
       <img
         src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
         alt="DRFMedia Logo"
+        draggable="false"
       />
       <h1>DRFMedia</h1>
     </div>
-    <button id="menuToggle" aria-label="Toggle menu">
+    <button id="menuToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="primaryNav">
       <span></span><span></span><span></span>
     </button>
-    <nav id="primaryNav">
+    <nav id="primaryNav" role="navigation" aria-label="Primary navigation">
       <a href="timeline.html">Timeline</a>
       <a href="profile.html">Profile</a>
       <a href="#" id="loginNavLink">Login</a>
@@ -34,33 +382,42 @@
       id="searchInput"
       placeholder="Search posts..."
       aria-label="Search posts"
+      autocomplete="off"
+      spellcheck="false"
     />
   </div>
 
-  <button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">
-    Sign in with Google
-  </button>
-  <button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">
-    Logout
-  </button>
+  <button id="loginBtn" style="max-width: 900px;">Sign in with Google</button>
+  <button id="logoutBtn" style="display:none; max-width: 900px;">Logout</button>
 
   <form
     id="uploadForm"
-    style="display:none; max-width:700px; margin:20px auto;"
-    enctype="multipart/form-data">
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    enctype="multipart/form-data"
+    aria-label="Upload post form"
+  >
+    <input
+      type="file"
+      id="mediaFile"
+      accept="image/*,video/*"
+      required
+      aria-required="true"
+      aria-describedby="fileHelp"
+    />
+    <div id="fileHelp" style="font-size:0.85rem; color:#555; margin-bottom:8px;">
+      Allowed file types: images and videos.
+    </div>
     <textarea
       id="caption"
       placeholder="Write your caption..."
       required
       minlength="4"
-      style="width:100%; margin-top:10px; padding:8px; font-size:1em;"></textarea>
-    <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">
-      Post
-    </button>
+      aria-required="true"
+      rows="4"
+    ></textarea>
+    <button type="submit">Post</button>
   </form>
 
-  <div id="postContainer" aria-live="polite"></div>
+  <main id="postContainer" aria-live="polite" aria-relevant="additions" tabindex="-1"></main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
@@ -71,14 +428,14 @@
       set,
       onValue,
       get,
-      runTransaction
+      runTransaction,
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
     import {
       getAuth,
       signInWithPopup,
       signOut,
       GoogleAuthProvider,
-      onAuthStateChanged
+      onAuthStateChanged,
     } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -104,37 +461,64 @@
     const postContainer = document.getElementById("postContainer");
     const searchInput = document.getElementById("searchInput");
 
-    let currentUser = null;
-    let allPosts = [];
-
-    document.getElementById("menuToggle").addEventListener("click", () => {
-      document.getElementById("primaryNav").classList.toggle("open");
+    // Menu toggle
+    const menuToggle = document.getElementById("menuToggle");
+    const primaryNav = document.getElementById("primaryNav");
+    menuToggle.addEventListener("click", () => {
+      const expanded = menuToggle.getAttribute("aria-expanded") === "true";
+      menuToggle.setAttribute("aria-expanded", !expanded);
+      menuToggle.classList.toggle("open");
+      primaryNav.classList.toggle("open");
     });
 
+    // Nav login/logout links sync with buttons
+    const loginNavLink = document.getElementById("loginNavLink");
+    const logoutNavLink = document.getElementById("logoutNavLink");
+
+    loginNavLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      loginBtn.click();
+    });
+    logoutNavLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      logoutBtn.click();
+    });
+
+    // Escape to prevent XSS
     const escapeHTML = (str) =>
-      str.replace(/[&<>\"]/g, (c) => ({
+      str.replace(/[&<>"]/g, (c) => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
-        '"': "&quot;"
+        '"': "&quot;",
       }[c]));
+
+    let currentUser = null;
+    let allPosts = [];
 
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       uploadForm.style.display = user ? "block" : "none";
       loginBtn.style.display = user ? "none" : "block";
       logoutBtn.style.display = user ? "block" : "none";
+      loginNavLink.style.display = user ? "none" : "inline";
+      logoutNavLink.style.display = user ? "inline" : "none";
       renderPosts();
     });
 
-    loginBtn.onclick = () => signInWithPopup(auth, provider).catch((e) => alert("Login failed: " + e.message));
-    logoutBtn.onclick = () => signOut(auth).catch((e) => alert("Logout failed: " + e.message));
+    loginBtn.onclick = () =>
+      signInWithPopup(auth, provider).catch((e) =>
+        alert("Login failed: " + e.message)
+      );
+    logoutBtn.onclick = () =>
+      signOut(auth).catch((e) => alert("Logout failed: " + e.message));
 
     uploadForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!currentUser) return alert("Please login.");
       if (!mediaFile.files.length) return alert("Select a file.");
-      if (captionInput.value.trim().length < 4) return alert("Caption too short.");
+      if (captionInput.value.trim().length < 4)
+        return alert("Caption too short.");
 
       uploadForm.querySelector("button").disabled = true;
       const file = mediaFile.files[0];
@@ -142,11 +526,14 @@
       fd.append("file", file);
 
       try {
-        const pinataJWT = "Bearer your_pinata_token_here";
+        // Put your actual Pinata JWT here
+        const pinataJWT =
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_jwt_token_here";
+
         const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
           headers: { Authorization: pinataJWT },
-          body: fd
+          body: fd,
         });
         if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
         const { IpfsHash } = await res.json();
@@ -165,7 +552,7 @@
           commentsCount: 0,
           boostsCount: 0,
           boostedBy: {},
-          likesBy: {}
+          likesBy: {},
         });
 
         captionInput.value = "";
@@ -193,35 +580,115 @@
         if (!post.caption.toLowerCase().includes(filter)) continue;
 
         const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
-        const mediaHTML = post.mediaType === "video"
-          ? `<video src="${url1}" controls playsinline preload="metadata"></video>`
-          : `<img src="${url1}" alt="Post media" loading="lazy" />`;
+
+        const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
+        const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
+
+        const dateStr = new Date(post.timestamp).toLocaleString();
+
+        const mediaHTML =
+          post.mediaType === "video"
+            ? `<video src="${url1}" controls playsinline preload="metadata" poster="" loading="lazy"></video>`
+            : `<img src="${url1}" alt="Post media" loading="lazy" />`;
+
+        const likesCount = post.likesCount || 0;
+        const boostsCount = post.boostsCount || 0;
+        const commentsCount = post.commentsCount || 0;
+
+        const likedClass = isLiked ? "liked" : "";
+        const boostedClass = isBoosted ? "boosted" : "";
 
         const card = document.createElement("article");
         card.className = "post-item";
+        card.tabIndex = 0; // make focusable for accessibility
         card.innerHTML = `
-          <header class="post-owner">
-            <img src="${post.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" class="avatar" />
+          <header class="post-owner" aria-label="Post owner info">
+            <img src="${post.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" class="avatar" draggable="false"/>
             <div>
               <div>${escapeHTML(post.displayName || "Anonymous")}</div>
-              <time class="post-time">${new Date(post.timestamp).toLocaleString()}</time>
+              <time class="post-time" datetime="${new Date(
+                post.timestamp
+              ).toISOString()}">${dateStr}</time>
             </div>
           </header>
           <div class="post-caption">${escapeHTML(post.caption)}</div>
           <div class="post-media">${mediaHTML}</div>
-          <div class="post-actions">
-            <button onclick="likePost('${post.id}')">👍 Like (${post.likesCount || 0})</button>
-            <button onclick="commentOnPost('${post.id}')">💬 Comment (${post.commentsCount || 0})</button>
-            <button onclick="boostPost('${post.id}')">🚀 Boost (${post.boostsCount || 0})</button>
+          <div class="post-actions" role="group" aria-label="Post actions">
+            <button class="${likedClass}" aria-pressed="${
+          isLiked ? "true" : "false"
+        }" onclick="likePost('${post.id}')">👍 Like (${likesCount})</button>
+            <button onclick="commentOnPost('${post.id}')">💬 Comment (${commentsCount})</button>
+            <button class="${boostedClass}" onclick="boostPost('${post.id}')">🚀 Boost (${boostsCount})</button>
             <button onclick="repost('${post.id}')">🔄 Repost</button>
-            <a href="https://account.skrill.com/wallet/sendmoney?recipient=digitalrufiyacoin@gmail.com&amount=10&currency=USD" target="_blank">
-              <button>Donate via Skrill</button>
-            </a>
+            <select aria-label="Donate to post by ${escapeHTML(
+              post.displayName
+            )}" onchange="donateToPost('${post.id}', '${post.userId}', this.value)">
+              <option value="">Donate 💖</option>
+              <option value="1">🌹 $1</option>
+              <option value="10">🦁 $10</option>
+              <option value="20">🙏 $20</option>
+              <option value="30">✨ $30</option>
+            </select>
           </div>
         `;
         postContainer.appendChild(card);
       }
     }
+
+    searchInput.addEventListener("input", () => renderPosts());
+
+    window.likePost = async function (postId) {
+      if (!currentUser) return alert("Please login to like posts.");
+      const likeRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
+      const postLikesCountRef = ref(db, `posts/${postId}/likesCount`);
+      try {
+        const snapshot = await get(likeRef);
+        if (snapshot.exists()) {
+          await set(likeRef, null);
+          await runTransaction(postLikesCountRef, (count) => (count || 1) - 1);
+        } else {
+          await set(likeRef, true);
+          await runTransaction(postLikesCountRef, (count) => (count || 0) + 1);
+        }
+      } catch (err) {
+        alert("Error liking post: " + err.message);
+      }
+    };
+
+    window.boostPost = async function (postId) {
+      if (!currentUser) return alert("Please login to boost posts.");
+      const boostRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
+      const boostsCountRef = ref(db, `posts/${postId}/boostsCount`);
+      try {
+        const snapshot = await get(boostRef);
+        if (snapshot.exists()) {
+          await set(boostRef, null);
+          await runTransaction(boostsCountRef, (count) => (count || 1) - 1);
+        } else {
+          await set(boostRef, true);
+          await runTransaction(boostsCountRef, (count) => (count || 0) + 1);
+        }
+      } catch (err) {
+        alert("Error boosting post: " + err.message);
+      }
+    };
+
+    window.repost = function (postId) {
+      alert("Repost feature coming soon!");
+    };
+
+    window.commentOnPost = function (postId) {
+      alert("Comments are not implemented yet.");
+    };
+
+    window.donateToPost = function (postId, postUserId, amount) {
+      if (!currentUser) return alert("Please login to donate.");
+      if (!amount) return; 
+      alert(`You chose to donate $${amount} to post ${postId} by user ${postUserId}.`);
+      // Reset select box:
+      const selects = document.querySelectorAll("select");
+      selects.forEach((sel) => (sel.value = ""));
+    };
   </script>
 </body>
 </html>
