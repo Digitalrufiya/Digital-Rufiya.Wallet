@@ -48,7 +48,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, set, push, get, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getDatabase, ref, set, push, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -95,8 +95,11 @@ logoutBtn.onclick = () => signOut(auth);
 
 async function donate(postId, value) {
   if (!currentUser) return alert("Login required");
-  const ownerRef = ref(db, `posts/${postId}/owner`);
+  
+  // Changed 'owner' to 'userId' to get post owner
+  const ownerRef = ref(db, `posts/${postId}/userId`);
   const ownerSnap = await get(ownerRef);
+  
   if (!ownerSnap.exists()) return alert("Post owner not found");
   const ownerId = ownerSnap.val();
 
