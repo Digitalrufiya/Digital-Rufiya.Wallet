@@ -3,155 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Warzone Donation Platform</title>
+  <title>DRFMedia Timeline + Donations</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
-    header {
-      background: #007bff; color: white; padding: 10px 20px;
-      display: flex; justify-content: space-between; align-items: center;
+    body { font-family: Arial, sans-serif; background: #fff; color: #222; margin: 0; }
+    header { background: #007bff; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { margin: 0; font-size: 1.4em; }
+    .donate-btns button {
+      margin: 5px; padding: 8px 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer;
     }
-    .navbar-left { display: flex; align-items: center; gap: 10px; }
-    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
-    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
-    .post-item { border: 1px solid #ccc; border-radius: 6px; padding: 15px; margin: 20px auto; max-width: 700px; background: #fafafa; }
-    .post-owner { display: flex; align-items: center; gap: 10px; }
-    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-    .post-time { font-size: 0.85em; color: #555; }
-    .post-caption { margin-top: 10px; white-space: pre-wrap; }
-    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
-    .post-actions button {
-      cursor: pointer; border: none; background: #007bff; color: white;
-      padding: 6px 12px; border-radius: 5px; font-size: 0.9em; margin: 5px 3px;
-    }
-    .post-actions button:hover { background: #0056b3; }
-    .post-actions .boosted { background-color: gold !important; color: black !important; }
-    .donation-note { font-size: 0.9em; margin-top: 8px; color: #555; }
-    .crypto-section { text-align: center; margin: 30px 0; }
-    .crypto-section h2 { margin-bottom: 10px; }
-    .crypto-section input { padding: 10px; font-size: 1em; width: 90%; max-width: 400px; }
-    .crypto-section button { margin-top: 10px; padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    .rose { background: #e91e63; color: white; }
+    .lion { background: #f39c12; color: white; }
+    .dua  { background: #009688; color: white; }
+    .star { background: #673ab7; color: white; }
+    .highlight-btn { background: gold; color: black; font-weight: bold; }
+    .highlighted { border: 2px solid gold !important; }
+    .wallet-info { padding: 10px; background: #f1f1f1; margin: 15px auto; max-width: 700px; border-radius: 6px; }
+    .withdraw-form textarea, .withdraw-form input { width: 100%; margin-top: 10px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .withdraw-form button { margin-top: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>DRFMedia — Gaza Support</h1>
+    <div>
+      <button id="loginBtn">Sign in</button>
+      <button id="logoutBtn" style="display:none;">Logout</button>
+    </div>
+  </header>
 
-<header>
-  <div class="navbar-left">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/logo.png" alt="DRFMedia Logo" />
-    <h1>DRFMedia — Warzone Relief</h1>
+  <div id="wallet" class="wallet-info" style="display:none;">
+    Welcome <span id="username"></span> | Coins: <strong id="coinBalance">0</strong><br />
+    <button onclick="document.getElementById('withdrawSection').style.display='block'">Request Withdrawal</button>
   </div>
-</header>
 
-<div id="postContainer"></div>
+  <div id="postList"></div>
 
-<div class="crypto-section">
-  <h2>Support Warzone Donations (Crypto)</h2>
-  <p>Send USDC to: <strong id="walletAddress">0xYourWalletAddressHere</strong></p>
-  <input type="text" value="0xYourWalletAddressHere" readonly onclick="this.select()" />
-  <button onclick="payWithMetaMask()">Donate with MetaMask (USDC)</button>
-</div>
+  <div id="withdrawSection" class="withdraw-form" style="display:none; max-width: 600px; margin: auto;">
+    <h3>Withdraw Request</h3>
+    <input type="number" id="withdrawAmount" placeholder="Amount to withdraw (coins)" />
+    <textarea id="withdrawInfo" placeholder="Enter your PayPal / Bank / Wallet info"></textarea>
+    <button onclick="submitWithdraw()">Submit Request</button>
+  </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, set, push, get, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.appspot.com",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
-  let currentUser = null;
-  onAuthStateChanged(auth, user => currentUser = user);
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const wallet = document.getElementById("wallet");
+const coinBalance = document.getElementById("coinBalance");
+const username = document.getElementById("username");
 
-  const postContainer = document.getElementById("postContainer");
+let currentUser = null;
 
-  onValue(ref(db, "posts"), snapshot => {
-    const posts = snapshot.val() || {};
-    const sorted = Object.entries(posts).map(([id, p]) => ({ id, ...p })).sort((a, b) => b.timestamp - a.timestamp);
-    postContainer.innerHTML = "";
-    for (const post of sorted) {
-      const isBoosted = post.boostedBy && post.boostedBy["admin"];
-      const mediaUrl = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
-      const media = post.mediaType === "video" ? `<video src="${mediaUrl}" controls></video>` : `<img src="${mediaUrl}" />`;
-      const article = document.createElement("article");
-      article.className = "post-item";
-      article.innerHTML = `
-        <div class="post-owner">
-          <img src="${post.photoURL || ''}" class="avatar" />
-          <div>
-            <div>${post.displayName || 'Anonymous'}</div>
-            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-          </div>
-        </div>
-        <div class="post-caption">${post.caption}</div>
-        ${media}
-        <div class="post-actions">
-          <button onclick="donate('${post.id}', '🌹 Rose', 1)">🌹 Rose ($1)</button>
-          <button onclick="donate('${post.id}', '🦁 Lion', 10)">🦁 Lion ($10)</button>
-          <button onclick="donate('${post.id}', '🙏 Dua', 20)">🙏 Dua ($20)</button>
-          <button onclick="donate('${post.id}', '✨ Star', 30)">✨ Star ($30)</button>
-          <button class="${isBoosted ? 'boosted' : ''}" onclick="boost('${post.id}')">🚀 Highlight (Admin Only)</button>
-        </div>
-        <div class="donation-note">Your donations help families in war zones instantly without delay.</div>
-      `;
-      postContainer.appendChild(article);
-    }
-  });
+onAuthStateChanged(auth, async user => {
+  currentUser = user;
+  loginBtn.style.display = user ? "none" : "inline-block";
+  logoutBtn.style.display = user ? "inline-block" : "none";
+  wallet.style.display = user ? "block" : "none";
 
-  window.donate = async (postId, type, usd) => {
-    if (!currentUser) return alert("Please login to donate.");
-    const donationRef = ref(db, `postDonations/${postId}/${Date.now()}`);
-    await set(donationRef, {
-      userId: currentUser.uid,
-      name: currentUser.displayName,
-      symbol: type,
-      usd,
-      timestamp: Date.now()
-    });
-    alert(`Donation successful: ${type} - $${usd}`);
-  };
-
-  window.boost = async (postId) => {
-    if (!currentUser || currentUser.email !== "digitalrufiya@gmail.com") return alert("Only admin can highlight posts.");
-    const postRef = ref(db, `posts/${postId}/boostedBy`);
-    const boostData = { admin: true };
-    await set(postRef, boostData);
-    alert("Post is now highlighted.");
-  };
-
-  window.payWithMetaMask = async () => {
-    if (typeof window.ethereum === 'undefined') return alert("MetaMask not found. Please install it.");
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
-    const usdcAddress = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // USDC on Ethereum mainnet
-    const to = "0xYourWalletAddressHere";
-    const amountInUSDC = 1; // example $1
-    const amount = BigInt(amountInUSDC * 1e6).toString();
-    try {
-      await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: account,
-          to,
-          value: "0x0",
-          data: "",
-        }]
-      });
-    } catch (err) {
-      alert("Payment failed: " + err.message);
-    }
+  if (user) {
+    username.textContent = user.displayName || "User";
+    const coinsRef = ref(db, `coins/${user.uid}`);
+    const snapshot = await get(coinsRef);
+    coinBalance.textContent = snapshot.exists() ? snapshot.val() : 0;
   }
-</script>
 
+  renderPosts();
+});
+
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
+logoutBtn.onclick = () => signOut(auth);
+
+async function donate(postId, value) {
+  if (!currentUser) return alert("Login required");
+  const ownerRef = ref(db, `posts/${postId}/owner`);
+  const ownerSnap = await get(ownerRef);
+  if (!ownerSnap.exists()) return alert("Post owner not found");
+  const ownerId = ownerSnap.val();
+
+  const coinMap = { rose: 1, lion: 10, dua: 20, star: 30 };
+  const coins = coinMap[value];
+  const userCoinsRef = ref(db, `coins/${ownerId}`);
+  const userSnap = await get(userCoinsRef);
+  const current = userSnap.exists() ? userSnap.val() : 0;
+  await set(userCoinsRef, current + coins);
+  alert("Donation successful!");
+  if (ownerId === currentUser.uid) coinBalance.textContent = current + coins;
+}
+
+function renderPosts() {
+  document.getElementById("postList").innerHTML = "";
+  const dummyPosts = [
+    { id: "p1", user: "Ahmad from Gaza", owner: "user1", highlighted: true },
+    { id: "p2", user: "Fatima from Syria", owner: "user2", highlighted: false }
+  ];
+
+  for (let post of dummyPosts) {
+    const card = document.createElement("div");
+    card.className = post.highlighted ? "highlighted" : "";
+    card.innerHTML = `
+      <h3>${post.user}</h3>
+      <div class="donate-btns">
+        <button class="rose" onclick="donate('${post.id}','rose')">🌹 Rose ($1)</button>
+        <button class="lion" onclick="donate('${post.id}','lion')">🦁 Lion ($10)</button>
+        <button class="dua" onclick="donate('${post.id}','dua')">🙏 Dua ($20)</button>
+        <button class="star" onclick="donate('${post.id}','star')">✨ Star ($30)</button>
+      </div>
+      <div><button class="highlight-btn" disabled>🔒 Only admin can highlight verified posts</button></div>
+    `;
+    document.getElementById("postList").appendChild(card);
+  }
+}
+
+window.donate = donate;
+
+window.submitWithdraw = async function () {
+  if (!currentUser) return alert("Login required");
+  const amt = parseInt(document.getElementById("withdrawAmount").value);
+  const info = document.getElementById("withdrawInfo").value.trim();
+  if (!amt || !info) return alert("Fill all fields");
+
+  const reqRef = push(ref(db, `withdrawals/${currentUser.uid}`));
+  await set(reqRef, {
+    amount: amt,
+    info,
+    status: "Pending",
+    timestamp: Date.now()
+  });
+  alert("Withdraw request sent.");
+  document.getElementById("withdrawSection").style.display = "none";
+};
+</script>
 </body>
 </html>
