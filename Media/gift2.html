@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <style>
+    /* Your original styles here */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -236,6 +237,40 @@
   </style>
 </head>
 <body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <nav id="primaryNav">
+    <a href="#">Home</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
+</header>
+
+<div id="searchBar">
+  <input type="text" id="searchInput" placeholder="Search posts..." />
+</div>
+
+<form id="uploadForm" style="max-width:700px; margin: 0 auto 20px; padding: 0 15px; display:none;">
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <input type="text" id="caption" placeholder="Write a caption..." minlength="4" required />
+  <button type="submit">Post</button>
+</form>
+
+<main id="postContainer"></main>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
@@ -281,9 +316,14 @@
   let currentUser = null;
   let allPosts = [];
 
-  document.getElementById("menuToggle").addEventListener("click", () => {
-    document.getElementById("primaryNav").classList.toggle("open");
-  });
+  // Menu toggle safely
+  const menuToggleBtn = document.getElementById("menuToggle");
+  if (menuToggleBtn) {
+    menuToggleBtn.addEventListener("click", () => {
+      const nav = document.getElementById("primaryNav");
+      if (nav) nav.classList.toggle("open");
+    });
+  }
 
   const escapeHTML = (str) =>
     str.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -291,8 +331,8 @@
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
     uploadForm.style.display = user ? "block" : "none";
-    loginBtn.style.display = user ? "none" : "block";
-    logoutBtn.style.display = user ? "block" : "none";
+    loginBtn.style.display = user ? "none" : "inline-block";
+    logoutBtn.style.display = user ? "inline-block" : "none";
     renderPosts();
   });
 
@@ -311,6 +351,7 @@
     fd.append("file", file);
 
     try {
+      // Replace your JWT token here
       const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_jwt_token_here";
 
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
@@ -500,5 +541,6 @@ May Allah reward your generosity. 🤲
     selects.forEach((sel) => (sel.value = ""));
   };
 </script>
+
 </body>
 </html>
