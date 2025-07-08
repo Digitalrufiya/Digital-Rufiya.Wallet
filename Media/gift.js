@@ -1,70 +1,38 @@
-// gifts.js
-// Handles wallet connection and sending preset gift amounts to any wallet address
+// gifts.js — Skrill-based donation system for posts
 
-import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js";
-
-class GiftSender {
-  constructor(connectBtnId, postsContainerId) {
-    this.signer = null;
-    this.userAddress = null;
-    this.connectBtn = document.getElementById(connectBtnId);
+class SkrillGifter {
+  constructor(postsContainerId) {
     this.postsContainer = document.getElementById(postsContainerId);
 
     this.giftOptions = [
-      { label: "🌹 Rose", amountEth: "1.0" },
-      { label: "💖 Heart", amountEth: "5.0" },
-      { label: "🦁 Lion", amountEth: "10.0" },
-      { label: "🛡️ Protection", amountEth: "15.0" },
-      { label: "🙏 Dua", amountEth: "30.0" }
+      { label: "🌹 Rose", amountUSD: "1.00" },
+      { label: "💖 Heart", amountUSD: "5.00" },
+      { label: "🦁 Lion", amountUSD: "10.00" },
+      { label: "🛡️ Protection", amountUSD: "15.00" },
+      { label: "🙏 Dua", amountUSD: "30.00" }
     ];
 
-    if (!this.connectBtn || !this.postsContainer) {
-      console.error("GiftSender: Connect button or posts container not found.");
+    if (!this.postsContainer) {
+      console.error("SkrillGifter: posts container not found.");
       return;
     }
 
-    this.setupConnectButton();
+    this.renderGiftButtonsForAllPosts();
   }
 
-  setupConnectButton() {
-    this.connectBtn.addEventListener("click", async () => {
-      if (!window.ethereum) {
-        alert("Please install MetaMask or compatible wallet to send gifts.");
-        return;
-      }
-      try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        this.signer = provider.getSigner();
-        this.userAddress = await this.signer.getAddress();
-
-        this.connectBtn.textContent = `Connected: ${this.userAddress.substring(0,6)}...${this.userAddress.slice(-4)}`;
-        this.connectBtn.disabled = true;
-        this.renderGiftButtonsForAllPosts();
-      } catch (err) {
-        alert("Wallet connection failed: " + err.message);
-      }
-    });
-  }
-
-  // Render gift buttons for all posts inside postsContainer
   renderGiftButtonsForAllPosts() {
     const postElements = this.postsContainer.querySelectorAll(".post-item");
     postElements.forEach(postEl => {
-      const postId = postEl.dataset.postId;
-      // Expect the receiver wallet address is stored in data attribute data-wallet-address
-      const receiverWallet = postEl.dataset.walletAddress;
-      if (receiverWallet) {
-        this.renderGiftButtons(postEl, receiverWallet);
-      }
+      const postId = postEl.dataset.postId || "unknown"; // fallback
+      const receiverName = postEl.dataset.displayName || "Anonymous";
+      this.renderGiftButtons(postEl, receiverName);
     });
   }
 
-  // Render gift buttons inside a post element
-  renderGiftButtons(postElement, receiverWalletAddress) {
-    if (!postElement || !receiverWalletAddress) return;
+  renderGiftButtons(postElement, receiverName) {
+    if (!postElement) return;
 
-    // Check if gifts container already exists, else create it
+    // Check if gift container exists, or create
     let container = postElement.querySelector(".gifts-container");
     if (!container) {
       container = document.createElement("div");
@@ -72,40 +40,22 @@ class GiftSender {
       container.style.marginTop = "12px";
       postElement.appendChild(container);
     }
-    container.innerHTML = ""; // clear previous buttons
+    container.innerHTML = ""; // clear previous
 
-    this.giftOptions.forEach(({ label, amountEth }) => {
-      const btn = document.createElement("button");
-      btn.textContent = `${label} $${amountEth}`;
-      btn.className = "gift-btn";
-      btn.style.marginRight = "8px";
-      btn.onclick = () => this.sendGift(receiverWalletAddress, amountEth);
+    this.giftOptions.forEach(({ label, amountUSD }) => {
+      const btn = document.createElement("a");
+      const url = this.buildSkrillURL(amountUSD, receiverName);
+      btn.href = url;
+      btn.target = "_blank";
+      btn.innerHTML = `<button style="margin: 5px; padding: 8px 14px; background: #5A2D82; color: white; border: none; border-radius: 5px; cursor: pointer;">${label} $${amountUSD}</button>`;
       container.appendChild(btn);
     });
   }
 
-  async sendGift(toAddress, amountEth) {
-    if (!this.signer) {
-      alert("Please connect your wallet first!");
-      return;
-    }
-
-    if (!ethers.utils.isAddress(toAddress)) {
-      alert("Invalid recipient wallet address.");
-      return;
-    }
-
-    try {
-      const tx = await this.signer.sendTransaction({
-        to: toAddress,
-        value: ethers.utils.parseEther(amountEth),
-      });
-      alert(`Gift sent! Transaction hash:\n${tx.hash}`);
-    } catch (err) {
-      alert("Failed to send gift: " + err.message);
-    }
+  buildSkrillURL(amount, name) {
+    return `https://pay.skrill.com/?pay_to=digitalrufiyacoin@gmail.com&amount=${amount}&currency=USD&detail1_description=Gift+to+${encodeURIComponent(name)}&detail1_text=Thank+you+for+spreading+truth`;
   }
 }
 
-// Export for use in your app.js
-export default GiftSender;
+// Export for module usage
+export default SkrillGifter;
