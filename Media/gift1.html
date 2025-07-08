@@ -3,271 +3,207 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
-  <link rel="icon" href="https://drfmedia.com/favicon.ico" />
+  <title>DRFMedia — Spread Kindness & Truth</title>
   <style>
-    /* [Styles are same as your file, already clean and mobile-friendly] */
-    /* To save space, I’ll not repeat them here since you already pasted full CSS */
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #fff;
+      color: #111;
+      height: 100%;
+      overflow-x: hidden;
+    }
+    header {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: #007bff;
+      color: #fff;
+      padding: 10px 20px;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 1.2rem;
+      margin: 0;
+    }
+    #toggleViewBtn {
+      background: #fff;
+      color: #007bff;
+      border: none;
+      padding: 8px 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    main {
+      margin-top: 60px;
+    }
+    .post {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      position: relative;
+      background: #000;
+      color: white;
+      overflow: hidden;
+    }
+    .post video,
+    .post img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+    .post .info {
+      position: relative;
+      z-index: 1;
+      padding: 16px;
+      background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+    }
+    .post .info h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+    .post .info p {
+      font-size: 0.9rem;
+      margin-top: 4px;
+      white-space: pre-line;
+    }
+    .post .actions {
+      position: absolute;
+      right: 10px;
+      bottom: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 2;
+    }
+    .post .actions button {
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 50%;
+      padding: 10px;
+      width: 44px;
+      height: 44px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    form#uploadForm {
+      padding: 20px;
+      background: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    form#uploadForm input,
+    form#uploadForm textarea,
+    form#uploadForm button {
+      font-size: 1rem;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    form#uploadForm button {
+      background: #007bff;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #prayerContainer {
+      padding: 20px;
+      display: none;
+    }
+    .prayer-item {
+      background: #e6f0ff;
+      margin-bottom: 16px;
+      padding: 16px;
+      border-left: 4px solid #007bff;
+      border-radius: 6px;
+    }
+    .prayer-item h4 {
+      margin: 0 0 6px 0;
+      color: #004085;
+    }
+    .prayer-item p {
+      margin: 0;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="navbar-left">
-    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
-    <h1>DRFMedia Timeline</h1>
-  </div>
-  <button id="menuToggle" aria-label="Toggle menu">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
-  <nav id="primaryNav" aria-label="Primary navigation">
-    <a href="index.html">Home</a>
-    <a href="timeline.html">Timeline</a>
-    <a href="prayers.html">Prayer Wall</a>
-    <a href="about.html">About</a>
-  </nav>
-  <button id="loginBtn">Login</button>
-  <button id="logoutBtn" style="display:none;">Logout</button>
+  <h1>DRFMedia Timeline</h1>
+  <button id="toggleViewBtn">Prayer Wall</button>
 </header>
 
 <main>
-  <section id="searchBar">
-    <input type="search" id="searchInput" placeholder="Search posts, prayers, users..." aria-label="Search posts, prayers, users" />
-    <button id="toggleViewBtn" aria-pressed="false">Switch to Prayer Wall</button>
+  <!-- TikTok Style Posts -->
+  <section id="postContainer">
+    <div class="post">
+      <video src="sample1.mp4" autoplay loop muted playsinline></video>
+      <div class="info">
+        <h3>@user1</h3>
+        <p>#kindness 🙏🌍\nThis is a test video</p>
+      </div>
+      <div class="actions">
+        <button title="Like">❤️</button>
+        <button title="Comment">💬</button>
+        <button title="Boost">⭐</button>
+      </div>
+    </div>
+
+    <div class="post">
+      <img src="sample2.jpg" alt="Inspiration">
+      <div class="info">
+        <h3>@user2</h3>
+        <p>Always spread the truth #motivation</p>
+      </div>
+      <div class="actions">
+        <button>❤️</button>
+        <button>💬</button>
+        <button>⭐</button>
+      </div>
+    </div>
   </section>
 
-  <form id="uploadForm" enctype="multipart/form-data" novalidate>
-    <input type="file" id="mediaFile" accept="image/*,video/*" />
-    <textarea id="caption" placeholder="Write your caption here..." required minlength="4" maxlength="500"></textarea>
-    <button type="submit" disabled>Upload Post</button>
-  </form>
+  <!-- Prayer Wall -->
+  <section id="prayerContainer">
+    <div class="prayer-item">
+      <h4>@hassanfayaz</h4>
+      <p>Ya Allah grant peace to Gaza and give food to the hungry. 🤲</p>
+    </div>
+  </section>
 
-  <section id="postContainer" aria-live="polite" aria-relevant="additions"></section>
-
-  <section id="prayerContainer" hidden aria-live="polite" aria-relevant="additions"></section>
-
-  <form class="prayer-form" id="prayerForm" hidden novalidate>
-    <textarea id="prayerText" placeholder="Write your prayer request here..." required minlength="4" maxlength="500"></textarea>
-    <button type="submit" disabled>Submit Prayer</button>
+  <!-- Upload Form -->
+  <form id="uploadForm">
+    <input type="file" accept="video/*,image/*" />
+    <textarea placeholder="Write your caption here..."></textarea>
+    <button type="submit">Upload Post</button>
   </form>
 </main>
 
 <script>
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const menuToggle = document.getElementById('menuToggle');
-const primaryNav = document.getElementById('primaryNav');
-const toggleViewBtn = document.getElementById('toggleViewBtn');
-const postContainer = document.getElementById('postContainer');
-const prayerContainer = document.getElementById('prayerContainer');
-const uploadForm = document.getElementById('uploadForm');
-const prayerForm = document.getElementById('prayerForm');
-const searchInput = document.getElementById('searchInput');
+  const toggleBtn = document.getElementById('toggleViewBtn');
+  const postContainer = document.getElementById('postContainer');
+  const prayerContainer = document.getElementById('prayerContainer');
 
-// Simulated login
-loginBtn.addEventListener('click', () => {
-  localStorage.setItem('loggedIn', 'true');
-  loginBtn.style.display = 'none';
-  logoutBtn.style.display = 'inline-block';
-  uploadForm.style.display = 'block';
-  prayerForm.hidden = false;
-});
-logoutBtn.addEventListener('click', () => {
-  localStorage.removeItem('loggedIn');
-  loginBtn.style.display = 'inline-block';
-  logoutBtn.style.display = 'none';
-  uploadForm.style.display = 'none';
-  prayerForm.hidden = true;
-});
-
-// Menu toggle
-menuToggle.addEventListener('click', () => {
-  primaryNav.classList.toggle('open');
-});
-
-// Toggle Timeline/Prayer
-let currentView = 'timeline';
-toggleViewBtn.addEventListener('click', () => {
-  if (currentView === 'timeline') {
-    postContainer.hidden = true;
-    prayerContainer.hidden = false;
-    toggleViewBtn.textContent = 'Switch to Timeline';
-    currentView = 'prayer';
-  } else {
-    prayerContainer.hidden = true;
-    postContainer.hidden = false;
-    toggleViewBtn.textContent = 'Switch to Prayer Wall';
-    currentView = 'timeline';
-  }
-});
-
-// Enable/disable buttons
-document.getElementById('caption').addEventListener('input', e => {
-  uploadForm.querySelector('button').disabled = e.target.value.trim().length < 3;
-});
-document.getElementById('prayerText').addEventListener('input', e => {
-  prayerForm.querySelector('button').disabled = e.target.value.trim().length < 3;
-});
-
-// Upload post
-uploadForm.addEventListener('submit', e => {
-  e.preventDefault();
-  const file = document.getElementById('mediaFile').files[0];
-  const caption = document.getElementById('caption').value.trim();
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    const url = reader.result;
-    const type = file.type.startsWith('video') ? 'video' : 'image';
-    const post = {
-      id: Date.now(),
-      type,
-      url,
-      caption,
-      time: new Date().toLocaleString(),
-      comments: [],
-      likes: 0,
-      boosted: false
-    };
-    const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-    posts.unshift(post);
-    localStorage.setItem('posts', JSON.stringify(posts));
-    renderPosts();
-    uploadForm.reset();
-    uploadForm.querySelector('button').disabled = true;
+  toggleBtn.onclick = () => {
+    const isPrayer = prayerContainer.style.display === 'block';
+    prayerContainer.style.display = isPrayer ? 'none' : 'block';
+    postContainer.style.display = isPrayer ? 'block' : 'none';
+    toggleBtn.textContent = isPrayer ? 'Prayer Wall' : 'Back to Timeline';
   };
-
-  if (file) reader.readAsDataURL(file);
-});
-
-// Submit prayer
-prayerForm.addEventListener('submit', e => {
-  e.preventDefault();
-  const text = document.getElementById('prayerText').value.trim();
-  const prayer = {
-    id: Date.now(),
-    text,
-    time: new Date().toLocaleString()
-  };
-  const prayers = JSON.parse(localStorage.getItem('prayers') || '[]');
-  prayers.unshift(prayer);
-  localStorage.setItem('prayers', JSON.stringify(prayers));
-  renderPrayers();
-  prayerForm.reset();
-  prayerForm.querySelector('button').disabled = true;
-});
-
-// Render timeline
-function renderPosts() {
-  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-  postContainer.innerHTML = '';
-  posts.forEach(post => {
-    const div = document.createElement('div');
-    div.className = 'post-item';
-    div.innerHTML = `
-      <div class="post-owner">
-        <img src="https://i.pravatar.cc/40?u=${post.id}" class="avatar" />
-        <div>
-          <div>User</div>
-          <div class="post-time">${post.time}</div>
-        </div>
-      </div>
-      <div class="post-caption">${post.caption}</div>
-      <div class="post-media">${post.type === 'image' ? `<img src="${post.url}" />` : `<video controls src="${post.url}"></video>`}</div>
-      <div class="post-actions">
-        <button onclick="likePost(${post.id})">Like (${post.likes})</button>
-        <button onclick="boostPost(${post.id})" class="${post.boosted ? 'boosted' : ''}">Boost</button>
-      </div>
-      <div class="comments-container" id="comments-${post.id}"></div>
-      <form class="comment-form" onsubmit="addComment(event, ${post.id})">
-        <input type="text" placeholder="Write comment..." required />
-        <button type="submit">Comment</button>
-      </form>
-    `;
-    postContainer.appendChild(div);
-    renderComments(post.id, post.comments);
-  });
-}
-function renderComments(id, comments) {
-  const container = document.getElementById('comments-' + id);
-  container.innerHTML = '';
-  comments.forEach(c => {
-    container.innerHTML += `
-      <div class="comment">
-        <img src="https://i.pravatar.cc/30?u=${id}" class="avatar" />
-        <div class="comment-body">
-          <strong>User</strong>${c}
-        </div>
-      </div>
-    `;
-  });
-}
-function likePost(id) {
-  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-  const post = posts.find(p => p.id === id);
-  post.likes++;
-  localStorage.setItem('posts', JSON.stringify(posts));
-  renderPosts();
-}
-function boostPost(id) {
-  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-  const post = posts.find(p => p.id === id);
-  post.boosted = true;
-  localStorage.setItem('posts', JSON.stringify(posts));
-  renderPosts();
-}
-function addComment(e, id) {
-  e.preventDefault();
-  const input = e.target.querySelector('input');
-  const text = input.value.trim();
-  if (!text) return;
-  const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-  const post = posts.find(p => p.id === id);
-  post.comments.push(text);
-  localStorage.setItem('posts', JSON.stringify(posts));
-  renderPosts();
-}
-
-// Render prayers
-function renderPrayers() {
-  const prayers = JSON.parse(localStorage.getItem('prayers') || '[]');
-  prayerContainer.innerHTML = '';
-  prayers.forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'prayer-item';
-    div.innerHTML = `
-      <div class="prayer-owner">
-        <img src="https://i.pravatar.cc/40?u=${p.id}" class="avatar" />
-        <div>
-          <div>User</div>
-          <div class="prayer-time">${p.time}</div>
-        </div>
-      </div>
-      <div class="prayer-text">${p.text}</div>
-    `;
-    prayerContainer.appendChild(div);
-  });
-}
-
-// Search bar
-searchInput.addEventListener('input', e => {
-  const q = e.target.value.toLowerCase();
-  document.querySelectorAll('.post-item, .prayer-item').forEach(el => {
-    el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-});
-
-// Init
-if (localStorage.getItem('loggedIn') === 'true') {
-  loginBtn.style.display = 'none';
-  logoutBtn.style.display = 'inline-block';
-  uploadForm.style.display = 'block';
-  prayerForm.hidden = false;
-}
-renderPosts();
-renderPrayers();
 </script>
 
 </body>
