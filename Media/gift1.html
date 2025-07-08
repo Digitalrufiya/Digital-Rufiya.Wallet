@@ -3,20 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Gift Page</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>DRFMedia Gift Page</title>
   <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    .gifts-container {
+      margin-top: 12px;
+    }
     .gifts-container button {
-      margin: 5px;
-      padding: 8px 14px;
       background: #5A2D82;
       color: white;
       border: none;
       border-radius: 5px;
+      padding: 8px 14px;
+      margin-right: 8px;
       cursor: pointer;
     }
-    .gifts-container {
-      margin-top: 12px;
+    .post-item {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 15px;
+      margin: 20px auto;
+      background: #fafafa;
+      max-width: 700px;
+    }
+    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
+    .post-media img {
+      max-width: 100%;
+      border-radius: 6px;
+      margin-top: 10px;
+      background: black;
+      display: block;
+    }
+    .post-actions button {
+      margin-top: 10px;
+      margin-right: 8px;
+      padding: 6px 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -27,103 +62,48 @@
     <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
     <h1>DRFMedia</h1>
   </div>
-  <button id="menuToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <nav id="primaryNav">
-    <a href="timeline.html">Timeline</a>
-    <a href="profile.html">Profile</a>
-    <a href="#" id="loginNavLink">Login</a>
-    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
-  </nav>
 </header>
 
-<div id="searchBar">
-  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
-</div>
+<div id="postContainer">
 
-<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
-<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
-
-<div id="postContainer" aria-live="polite">
-  <!-- Sample Post Example -->
-  <article class="post-item" data-post-id="example123" data-display-name="Supporter">
+  <!-- Example Post -->
+  <article class="post-item" data-display-name="Supporter">
     <header class="post-owner">
-      <img src="https://via.placeholder.com/40" alt="User avatar" class="avatar" />
-      <div>
-        <div>Supporter</div>
-        <time class="post-time">Just Now</time>
-      </div>
+      <img src="https://via.placeholder.com/40" alt="User" class="avatar" />
+      <div>Supporter</div>
     </header>
-    <div class="post-caption">This is a sample post for donation feature.</div>
+    <div class="post-caption">This is a sample post with Skrill donation below.</div>
     <div class="post-media">
-      <img src="https://via.placeholder.com/600x300" alt="Sample" loading="lazy" />
+      <img src="https://via.placeholder.com/600x300" alt="Media" />
     </div>
     <div class="post-actions">
       <button>👍 Like</button>
       <button>💬 Comment</button>
-      <button>🚀 Boost</button>
-      <button>🔄 Repost</button>
     </div>
-    <div class="gifts-container"></div>
+    <div class="gifts-container" id="giftButtons"></div>
   </article>
+
 </div>
 
-<script type="module">
-  class SkrillGifter {
-    constructor(postsContainerId) {
-      this.postsContainer = document.getElementById(postsContainerId);
+<script>
+  const giftOptions = [
+    { label: '🌹 Rose', amountUSD: '1.00' },
+    { label: '💖 Heart', amountUSD: '5.00' },
+    { label: '🦁 Lion', amountUSD: '10.00' },
+    { label: '🛡️ Protection', amountUSD: '15.00' },
+    { label: '🙏 Dua', amountUSD: '30.00' }
+  ];
 
-      this.giftOptions = [
-        { label: "🌹 Rose", amountUSD: "1.00" },
-        { label: "💖 Heart", amountUSD: "5.00" },
-        { label: "🦁 Lion", amountUSD: "10.00" },
-        { label: "🛡️ Protection", amountUSD: "15.00" },
-        { label: "🙏 Dua", amountUSD: "30.00" }
-      ];
+  const receiverName = document.querySelector('.post-item').dataset.displayName || 'Anonymous';
+  const giftContainer = document.getElementById('giftButtons');
 
-      if (!this.postsContainer) {
-        console.error("SkrillGifter: posts container not found.");
-        return;
-      }
-
-      this.renderGiftButtonsForAllPosts();
-    }
-
-    renderGiftButtonsForAllPosts() {
-      const postElements = this.postsContainer.querySelectorAll(".post-item");
-      postElements.forEach(postEl => {
-        const postId = postEl.dataset.postId || "unknown";
-        const receiverName = postEl.dataset.displayName || "Anonymous";
-        this.renderGiftButtons(postEl, receiverName);
-      });
-    }
-
-    renderGiftButtons(postElement, receiverName) {
-      if (!postElement) return;
-
-      let container = postElement.querySelector(".gifts-container");
-      if (!container) {
-        container = document.createElement("div");
-        container.className = "gifts-container";
-        postElement.appendChild(container);
-      }
-      container.innerHTML = "";
-
-      this.giftOptions.forEach(({ label, amountUSD }) => {
-        const btn = document.createElement("a");
-        const url = this.buildSkrillURL(amountUSD, receiverName);
-        btn.href = url;
-        btn.target = "_blank";
-        btn.innerHTML = `<button>${label} $${amountUSD}</button>`;
-        container.appendChild(btn);
-      });
-    }
-
-    buildSkrillURL(amount, name) {
-      return `https://pay.skrill.com/?pay_to=digitalrufiyacoin@gmail.com&amount=${amount}&currency=USD&detail1_description=Gift+to+${encodeURIComponent(name)}&detail1_text=Thank+you+for+spreading+truth`;
-    }
-  }
-
-  new SkrillGifter('postContainer');
+  giftOptions.forEach(({ label, amountUSD }) => {
+    const a = document.createElement('a');
+    a.href = `https://pay.skrill.com/?pay_to=digitalrufiyacoin@gmail.com&amount=${amountUSD}&currency=USD&detail1_description=Gift+to+${encodeURIComponent(receiverName)}&detail1_text=Thank+you+for+spreading+truth`;
+    a.target = '_blank';
+    a.innerHTML = `<button>${label} $${amountUSD}</button>`;
+    giftContainer.appendChild(a);
+  });
 </script>
 
 </body>
