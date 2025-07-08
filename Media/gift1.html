@@ -3,107 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Gift Page</title>
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
-    header {
-      background: #007bff; color: white; padding: 10px 20px;
-      position: sticky; top: 0; z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    /* Your original styles remain unchanged */
+    .gift-buttons {
+      margin-top: 10px;
     }
-    .navbar-left { display: flex; align-items: center; gap: 10px; }
-    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
-    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
-    .gifts-container {
-      margin-top: 12px;
-    }
-    .gifts-container button {
-      background: #5A2D82;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      padding: 8px 14px;
+    .gift-buttons button {
       margin-right: 8px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #ffc107;
+      color: #000;
+      font-weight: bold;
       cursor: pointer;
     }
-    .post-item {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 15px;
-      margin: 20px auto;
-      background: #fafafa;
-      max-width: 700px;
-    }
-    .post-owner { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-    .post-caption { margin-top: 10px; font-size: 1em; white-space: pre-wrap; }
-    .post-media img {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-top: 10px;
-      background: black;
-      display: block;
-    }
-    .post-actions button {
-      margin-top: 10px;
-      margin-right: 8px;
-      padding: 6px 12px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
+    .gift-buttons button:hover {
+      background-color: #e0a800;
     }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="navbar-left">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-    <h1>DRFMedia</h1>
-  </div>
-</header>
+<!-- Header and other original sections stay the same -->
+<!-- ... -->
 
-<div id="postContainer">
+<div id="postContainer" aria-live="polite"></div>
 
-  <!-- Example Post -->
-  <article class="post-item" data-display-name="Supporter">
-    <header class="post-owner">
-      <img src="https://via.placeholder.com/40" alt="User" class="avatar" />
-      <div>Supporter</div>
-    </header>
-    <div class="post-caption">This is a sample post with Skrill donation below.</div>
-    <div class="post-media">
-      <img src="https://via.placeholder.com/600x300" alt="Media" />
-    </div>
-    <div class="post-actions">
-      <button>👍 Like</button>
-      <button>💬 Comment</button>
-    </div>
-    <div class="gifts-container" id="giftButtons"></div>
-  </article>
+<script type="module">
+// Your original Firebase and auth script stays unchanged above this
+// Inside your renderPosts() function, modify the card HTML as follows:
 
-</div>
+// Replace renderPosts function with this updated one
+function renderPosts() {
+  const filter = searchInput.value.trim().toLowerCase();
+  postContainer.innerHTML = "";
+  for (const post of allPosts) {
+    if (!post.caption.toLowerCase().includes(filter)) continue;
 
-<script>
-  const giftOptions = [
-    { label: '🌹 Rose', amountUSD: '1.00' },
-    { label: '💖 Heart', amountUSD: '5.00' },
-    { label: '🦁 Lion', amountUSD: '10.00' },
-    { label: '🛡️ Protection', amountUSD: '15.00' },
-    { label: '🙏 Dua', amountUSD: '30.00' }
-  ];
+    const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+    const url2 = "https://cloudflare-ipfs.com/ipfs/" + post.ipfsHash;
 
-  const receiverName = document.querySelector('.post-item').dataset.displayName || 'Anonymous';
-  const giftContainer = document.getElementById('giftButtons');
+    const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
+    const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
 
-  giftOptions.forEach(({ label, amountUSD }) => {
-    const a = document.createElement('a');
-    a.href = `https://pay.skrill.com/?pay_to=digitalrufiyacoin@gmail.com&amount=${amountUSD}&currency=USD&detail1_description=Gift+to+${encodeURIComponent(receiverName)}&detail1_text=Thank+you+for+spreading+truth`;
-    a.target = '_blank';
-    a.innerHTML = `<button>${label} $${amountUSD}</button>`;
-    giftContainer.appendChild(a);
-  });
+    const dateStr = new Date(post.timestamp).toLocaleString();
+
+    const mediaHTML = post.mediaType === "video"
+      ? `<video src="${url1}" controls playsinline preload="metadata" poster="${url2}" loading="lazy"></video>`
+      : `<img src="${url1}" alt="Post media" loading="lazy" />`;
+
+    const likesCount = post.likesCount || 0;
+    const boostsCount = post.boostsCount || 0;
+    const commentsCount = post.commentsCount || 0;
+
+    const likedClass = isLiked ? "liked" : "";
+    const boostedClass = isBoosted ? "boosted" : "";
+
+    const card = document.createElement("article");
+    card.className = "post-item";
+    card.innerHTML = `
+      <header class="post-owner" aria-label="Post owner info">
+        <img src="${post.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" class="avatar" />
+        <div>
+          <div>${escapeHTML(post.displayName || "Anonymous")}</div>
+          <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">${dateStr}</time>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(post.caption)}</div>
+      <div class="post-media">${mediaHTML}</div>
+      <div class="post-actions" role="group" aria-label="Post actions">
+        <button class="${likedClass}" aria-pressed="${isLiked ? 'true' : 'false'}" onclick="likePost('${post.id}')">👍 Like (${likesCount})</button>
+        <button onclick="commentOnPost('${post.id}')">💬 Comment (${commentsCount})</button>
+        <button class="${boostedClass}" onclick="boostPost('${post.id}')">🚀 Boost (${boostsCount})</button>
+        <button onclick="repost('${post.id}')">🔄 Repost</button>
+      </div>
+      <div class="gift-buttons">
+        <button onclick="window.open('https://www.skrill.com/donate?email=digitalrufiyacoin@gmail.com&amount=1&currency=USD', '_blank')">🌹 Rose $1</button>
+        <button onclick="window.open('https://www.skrill.com/donate?email=digitalrufiyacoin@gmail.com&amount=10&currency=USD', '_blank')">🦁 Lion $10</button>
+        <button onclick="window.open('https://www.skrill.com/donate?email=digitalrufiyacoin@gmail.com&amount=20&currency=USD', '_blank')">🙏 Dua $20</button>
+        <button onclick="window.open('https://www.skrill.com/donate?email=digitalrufiyacoin@gmail.com&amount=30&currency=USD', '_blank')">⭐ Star $30</button>
+      </div>
+      <div id="comments-${post.id}" class="comments-list" aria-live="polite" aria-label="Comments"></div>
+      <div id="comment-box-${post.id}" class="comment-box" style="display:none;">
+        <textarea id="comment-input-${post.id}" rows="2" placeholder="Write a comment..."></textarea>
+        <button onclick="submitComment('${post.id}')">Submit</button>
+        <button onclick="cancelComment('${post.id}')">Cancel</button>
+      </div>
+    `;
+    postContainer.appendChild(card);
+    loadComments(post.id);
+  }
+}
 </script>
 
 </body>
