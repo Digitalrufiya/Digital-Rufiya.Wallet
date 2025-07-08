@@ -1,205 +1,660 @@
-<!-- DRFMedia - Video Only Timeline -->
-<!-- Posting form and image posts removed. Only video posts are displayed. -->
-<!-- Retains full design, likes, comments, boosts, search, login, donate, etc. -->
-
-<!-- Full updated HTML file below -->
-<!-- START OF FILE -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Video Only</title>
-  <!-- Keep all original CSS as-is -->
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <style>
-    /* Keep all your original CSS unchanged */
+    /* Reset & base */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #222;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-size: 16px;
+    }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 12px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .navbar-left img {
+      height: 44px;
+      width: 44px;
+      border-radius: 6px;
+      background: white;
+      padding: 3px;
+      box-shadow: 0 0 5px rgba(255 255 255 / 0.6);
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .navbar-left h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      user-select: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    #menuToggle {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 32px;
+      height: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    #menuToggle span {
+      display: block;
+      height: 4px;
+      background: white;
+      border-radius: 3px;
+      transition: background-color 0.3s;
+    }
+    #menuToggle:hover span {
+      background: #d0e6ff;
+    }
+    #primaryNav {
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      background: #0069d9;
+      margin-top: 14px;
+      border-radius: 6px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+      user-select: none;
+      max-height: 60vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #primaryNav.open {
+      display: flex;
+    }
+    #primaryNav a {
+      padding: 14px 22px;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+      transition: background-color 0.3s;
+      font-size: 1.1rem;
+      white-space: nowrap;
+    }
+    #primaryNav a:first-child {
+      border-top: none;
+    }
+    #primaryNav a:hover,
+    #primaryNav a:focus {
+      background: rgba(255, 255, 255, 0.3);
+      outline: none;
+    }
+    @media (min-width: 768px) {
+      #menuToggle {
+        display: none;
+      }
+      #primaryNav {
+        display: flex !important;
+        flex-direction: row;
+        width: auto;
+        background: transparent;
+        margin-top: 0;
+        border-radius: 0;
+        box-shadow: none;
+        max-height: none;
+        overflow: visible;
+      }
+      #primaryNav a {
+        border: none;
+        padding: 10px 18px;
+        color: white;
+        font-size: 1rem;
+        white-space: normal;
+      }
+      #primaryNav a:hover,
+      #primaryNav a:focus {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
+    #loginBtn, #logoutBtn {
+      background: #0056b3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 12px;
+      transition: background-color 0.3s;
+      user-select: none;
+      min-width: 90px;
+      white-space: nowrap;
+    }
+    #loginBtn:hover, #logoutBtn:hover {
+      background: #003d80;
+    }
+    #searchBar {
+      max-width: 700px;
+      margin: 18px auto 26px auto;
+      padding: 0 20px;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      border: 1.5px solid #ccc;
+      transition: border-color 0.3s;
+      outline-offset: 2px;
+    }
+    #searchInput:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    #uploadForm {
+      max-width: 700px;
+      margin: 0 auto 28px auto;
+      padding: 12px 20px;
+      display: none;
+      background: #f5f8ff;
+      border: 1px solid #cbdcff;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0, 123, 255, 0.1);
+      user-select: none;
+      box-sizing: border-box;
+    }
+    #uploadForm > * {
+      display: block;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 1.1rem;
+    }
+    #mediaFile {
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: #444;
+      border: 1px solid #ccc;
+      transition: border-color 0.3s;
+    }
+    #mediaFile:hover, #mediaFile:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    #caption {
+      padding: 14px 16px;
+      font-size: 1.15rem;
+      border-radius: 8px;
+      border: 1.5px solid #ccc;
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+      line-height: 1.4;
+    }
+    #caption:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    #uploadForm button {
+      background: #007bff;
+      color: white;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+      min-width: 100%;
+      box-sizing: border-box;
+    }
+    #uploadForm button:disabled {
+      background: #a0c8ff;
+      cursor: default;
+    }
+    #uploadForm button:hover:not(:disabled) {
+      background: #0056b3;
+    }
+    #postContainer {
+      max-width: 700px;
+      margin: 0 auto 40px auto;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+    .post-item {
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 28px;
+      background: #fafafa;
+      box-shadow: 0 1px 8px rgb(0 0 0 / 0.04);
+      transition: box-shadow 0.3s ease;
+      word-break: break-word;
+      font-size: 1.1rem;
+    }
+    .post-item:hover {
+      box-shadow: 0 3px 15px rgba(0, 123, 255, 0.15);
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 700;
+      user-select: none;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .post-owner div {
+      line-height: 1.15;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .post-time {
+      font-size: 0.87rem;
+      color: #666;
+      margin-top: 6px;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .post-caption {
+      margin-top: 14px;
+      font-size: 1.15rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #222;
+      line-height: 1.6;
+      min-height: 60px;
+    }
+    .post-media {
+      margin-top: 16px;
+    }
+    video,
+    img {
+      max-width: 100%;
+      border-radius: 12px;
+      background: #000;
+      display: block;
+      box-shadow: 0 1px 12px rgb(0 0 0 / 0.15);
+      cursor: pointer;
+      transition: transform 0.25s ease;
+      user-select: none;
+      height: auto;
+    }
+    video:hover,
+    img:hover {
+      transform: scale(1.02);
+    }
+    .post-actions {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      user-select: none;
+      justify-content: flex-start;
+    }
+    .post-actions button,
+    .post-actions select {
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: background-color 0.3s, color 0.3s;
+      min-width: 100px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .post-actions button:hover,
+    .post-actions select:hover {
+      background: #0056b3;
+      color: #fff;
+    }
+    .post-actions button.liked {
+      background: #28a745 !important;
+      color: #fff !important;
+      box-shadow: 0 0 8px #28a745aa;
+    }
+    .post-actions button.boosted {
+      background-color: gold !important;
+      color: #000 !important;
+      box-shadow: 0 0 8px #ffd700cc;
+    }
+    .post-actions select {
+      color: #000;
+      background: white;
+      border: 2px solid #007bff;
+      padding: 10px 16px;
+      min-width: 130px;
+    }
+    .post-actions select option {
+      color: #000;
+    }
+    .comments-container {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      max-height: 240px;
+      overflow-y: auto;
+      user-select: none;
+    }
+    .comment {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+    .comment .avatar {
+      width: 30px;
+      height: 30px;
+      margin-right: 12px;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .comment .comment-body {
+      background: #f1f1f1;
+      padding: 8px 14px;
+      border-radius: 8px;
+      flex: 1;
+      word-break: break-word;
+      color: #222;
+    }
+    .comment .comment-body strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 700;
+      color: #007bff;
+      user-select: text;
+    }
+    .comment-form {
+      margin-top: 16px;
+      display: flex;
+      gap: 12px;
+      user-select: none;
+      flex-wrap: nowrap;
+    }
+    .comment-form input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1.5px solid #ccc;
+      font-size: 1.1rem;
+      font-family: inherit;
+      transition: border-color 0.3s;
+      min-width: 0;
+    }
+    .comment-form input:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    .comment-form button {
+      padding: 12px 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      user-select: none;
+      flex-shrink: 0;
+      min-width: 110px;
+      white-space: nowrap;
+    }
+    .comment-form button:hover {
+      background: #0056b3;
+    }
+    /* Scrollbar for comments container */
+    .comments-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .comments-container::-webkit-scrollbar-thumb {
+      background: #007bffaa;
+      border-radius: 10px;
+    }
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      #uploadForm, #searchBar, #postContainer {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+      .post-actions button,
+      .post-actions select {
+        flex: 1 1 48%;
+        min-width: unset;
+        font-size: 1rem;
+        padding: 10px 12px;
+      }
+      .comment-form button {
+        min-width: unset;
+        padding: 10px 12px;
+        font-size: 1rem;
+      }
+      .comment-form input {
+        font-size: 1rem;
+        padding: 10px 12px;
+      }
+      .navbar-left h1 {
+        font-size: 1.3rem;
+      }
+      #loginBtn, #logoutBtn {
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        min-width: 70px;
+        margin-left: 6px;
+      }
+      #searchInput {
+        font-size: 1rem;
+        padding: 10px 14px;
+      }
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <!-- Header unchanged -->
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <nav id="primaryNav">
+    <a href="#">Home</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 </header>
 
 <div id="searchBar">
-  <input type="text" id="searchInput" placeholder="Search videos..." />
+  <input type="text" id="searchInput" placeholder="Search posts..." />
 </div>
 
-<!-- Removed uploadForm entirely -->
+<form id="uploadForm" autocomplete="off" novalidate>
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <textarea id="caption" placeholder="Write a caption..." minlength="4" required rows="3"></textarea>
+  <button type="submit">Post</button>
+</form>
 
 <main id="postContainer" aria-live="polite"></main>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getDatabase, ref, push, set, onValue, get, runTransaction
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import {
-    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-  const firebaseConfig = { /* Your config as-is */ };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const postContainer = document.getElementById("postContainer");
-  const searchInput = document.getElementById("searchInput");
-  let currentUser = null;
-  let allPosts = [];
-
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    loginBtn.style.display = user ? "none" : "inline-block";
-    logoutBtn.style.display = user ? "inline-block" : "none";
-    renderPosts();
+  // JavaScript (your original logic with minor menu toggle fix)
+  let posts = JSON.parse(localStorage.getItem('posts') || '[]');
+  let userId = '';
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const uploadForm = document.getElementById('uploadForm');
+  const postContainer = document.getElementById('postContainer');
+  const searchInput = document.getElementById('searchInput');
+  const menuToggle = document.getElementById('menuToggle');
+  const primaryNav = document.getElementById('primaryNav');
+  
+  menuToggle.addEventListener('click', () => {
+    primaryNav.classList.toggle('open');
   });
 
-  loginBtn.onclick = () => signInWithPopup(auth, provider).catch((e) => alert("Login failed: " + e.message));
-  logoutBtn.onclick = () => signOut(auth).catch((e) => alert("Logout failed: " + e.message));
+  // Google Login simulation (for example)
+  loginBtn.onclick = () => {
+    userId = prompt('Enter your name to simulate login:');
+    if (userId) {
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = 'inline-block';
+      uploadForm.style.display = 'block';
+      renderPosts();
+    }
+  };
 
-  const postsRef = ref(db, "posts");
-  onValue(postsRef, (snapshot) => {
-    const posts = snapshot.val() || {};
-    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-    allPosts.sort((a, b) => b.timestamp - a.timestamp);
-    renderPosts();
-  });
+  logoutBtn.onclick = () => {
+    userId = '';
+    loginBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+    uploadForm.style.display = 'none';
+    postContainer.innerHTML = '';
+  };
 
-  function escapeHTML(str) {
-    return String(str).replace(/[&<>\"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
+  function renderPosts(filter = '') {
+    let filteredPosts = posts;
+    if (filter.trim()) {
+      const f = filter.trim().toLowerCase();
+      filteredPosts = posts.filter(p => 
+        p.caption.toLowerCase().includes(f) || 
+        p.owner.toLowerCase().includes(f)
+      );
+    }
+    postContainer.innerHTML = '';
+    if (filteredPosts.length === 0) {
+      postContainer.innerHTML = '<p style="text-align:center;color:#777;">No posts found.</p>';
+      return;
+    }
+    filteredPosts.slice().reverse().forEach(post => {
+      const postEl = document.createElement('article');
+      postEl.className = 'post-item';
 
-  function renderPosts() {
-    const filter = searchInput.value.trim().toLowerCase();
-    postContainer.innerHTML = "";
-    for (const post of allPosts) {
-      if (!post.caption.toLowerCase().includes(filter)) continue;
-      if (post.mediaType !== "video") continue; // Only show videos
-
-      const url = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
-      const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
-      const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
-      const dateStr = new Date(post.timestamp).toLocaleString();
-
-      const card = document.createElement("article");
-      card.className = "post-item";
-      card.innerHTML = `
-        <header class="post-owner">
-          <img src="${post.photoURL || 'https://via.placeholder.com/40'}" class="avatar" alt="${escapeHTML(post.displayName)} avatar">
-          <div>
-            <div>${escapeHTML(post.displayName || "Anonymous")}</div>
-            <time class="post-time">${dateStr}</time>
-          </div>
-        </header>
-        <div class="post-caption">${escapeHTML(post.caption)}</div>
-        <div class="post-media">
-          <video src="${url}" controls preload="metadata" playsinline></video>
+      postEl.innerHTML = `
+        <div class="post-owner" title="${post.owner}">
+          <div>${post.owner}</div>
         </div>
-        <div class="post-actions">
-          <button class="${isLiked ? 'liked' : ''}" onclick="likePost('${post.id}')">${isLiked ? "👍 Liked" : "👍 Like"} (${post.likesCount || 0})</button>
-          <button onclick="commentOnPost('${post.id}')">💬 Comment (${post.commentsCount || 0})</button>
-          <button class="${isBoosted ? 'boosted' : ''}" onclick="boostPost('${post.id}')">${isBoosted ? "🚀 Boosted" : "🚀 Boost"} (${post.boostsCount || 0})</button>
-          <select onchange="donateToPost('${post.id}', '${post.userId}', this.value)">
-            <option value="">Donate 💖</option>
-            <option value="1">$1</option>
-            <option value="10">$10</option>
-            <option value="20">$20</option>
-          </select>
-        </div>
-        <div class="comments-container" id="comments-${post.id}"></div>
-        ${currentUser ? `
-        <form class="comment-form" onsubmit="return submitComment(event, '${post.id}')">
-          <input type="text" id="comment-input-${post.id}" placeholder="Write a comment..." required />
-          <button type="submit">Post</button>
-        </form>` : ""}
+        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+        <div class="post-caption">${escapeHtml(post.caption)}</div>
+        <div class="post-media"></div>
       `;
-      postContainer.appendChild(card);
-      loadComments(post.id);
-    }
+
+      const mediaDiv = postEl.querySelector('.post-media');
+      if (post.mediaType === 'image') {
+        const img = document.createElement('img');
+        img.src = post.mediaData;
+        img.alt = escapeHtml(post.caption);
+        mediaDiv.appendChild(img);
+      } else if (post.mediaType === 'video') {
+        const video = document.createElement('video');
+        video.src = post.mediaData;
+        video.controls = true;
+        mediaDiv.appendChild(video);
+      }
+      
+      postContainer.appendChild(postEl);
+    });
   }
 
-  searchInput.addEventListener("input", renderPosts);
-
-  window.likePost = async function (postId) {
-    if (!currentUser) return alert("Login first");
-    const likeRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
-    const countRef = ref(db, `posts/${postId}/likesCount`);
-    const snap = await get(likeRef);
-    if (snap.exists()) {
-      await set(likeRef, null);
-      await runTransaction(countRef, c => (c || 1) - 1);
-    } else {
-      await set(likeRef, true);
-      await runTransaction(countRef, c => (c || 0) + 1);
-    }
-  };
-
-  window.boostPost = async function (postId) {
-    if (!currentUser) return alert("Login first");
-    const boostRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
-    const countRef = ref(db, `posts/${postId}/boostsCount`);
-    const snap = await get(boostRef);
-    if (snap.exists()) {
-      await set(boostRef, null);
-      await runTransaction(countRef, c => (c || 1) - 1);
-    } else {
-      await set(boostRef, true);
-      await runTransaction(countRef, c => (c || 0) + 1);
-    }
-  };
-
-  window.commentOnPost = function (postId) {
-    const input = document.getElementById("comment-input-" + postId);
-    if (input) input.focus();
-  };
-
-  window.submitComment = async function (e, postId) {
+  uploadForm.onsubmit = e => {
     e.preventDefault();
-    const input = document.getElementById("comment-input-" + postId);
-    const comment = input.value.trim();
-    if (!comment) return;
+    const fileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
+    if (!fileInput.files.length) return alert('Please select a media file');
+    if (captionInput.value.trim().length < 4) return alert('Caption must be at least 4 characters');
 
-    const newRef = push(ref(db, `comments/${postId}`));
-    await set(newRef, {
-      userId: currentUser.uid,
-      name: currentUser.displayName || "User",
-      photo: currentUser.photoURL || "",
-      text: comment,
-      timestamp: Date.now(),
-    });
-    input.value = "";
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const mediaData = event.target.result;
+      const mediaType = file.type.startsWith('image/') ? 'image' : (file.type.startsWith('video/') ? 'video' : '');
+      if (!mediaType) return alert('Unsupported media type');
+
+      const post = {
+        owner: userId,
+        timestamp: Date.now(),
+        caption: captionInput.value.trim(),
+        mediaType,
+        mediaData
+      };
+      posts.push(post);
+      localStorage.setItem('posts', JSON.stringify(posts));
+      captionInput.value = '';
+      fileInput.value = '';
+      renderPosts(searchInput.value);
+    };
+    reader.readAsDataURL(file);
   };
 
-  function loadComments(postId) {
-    const container = document.getElementById("comments-" + postId);
-    const refPath = ref(db, `comments/${postId}`);
-    onValue(refPath, (snapshot) => {
-      const comments = snapshot.val() || {};
-      const entries = Object.values(comments).sort((a, b) => a.timestamp - b.timestamp);
-      container.innerHTML = entries.map(c => `
-        <div class="comment">
-          <img src="${c.photo || 'https://via.placeholder.com/28'}" class="avatar" />
-          <div class="comment-body"><strong>${escapeHTML(c.name)}</strong><br>${escapeHTML(c.text)}</div>
-        </div>`).join("");
+  searchInput.oninput = e => {
+    renderPosts(e.target.value);
+  };
+
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, function(m) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m];
     });
   }
 
-  window.donateToPost = function (postId, userId, amount) {
-    if (!currentUser) return alert("Login to donate");
-    if (!amount) return;
-    const skrillEmail = "digitalrufiyacoin@gmail.com";
-    alert(`Send $${amount} to: ${skrillEmail} via Skrill\nThank you!`);
-    document.querySelectorAll("select").forEach(sel => sel.value = "");
-  };
+  // Initialize
+  if (userId) {
+    uploadForm.style.display = 'block';
+    loginBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+    renderPosts();
+  }
 </script>
 
 </body>
 </html>
-
-<!-- END OF FILE -->
