@@ -437,7 +437,7 @@
     <a href="#">Contact</a>
   </nav>
   <div>
-    <button id="loginBtn">Login</button>
+    <button id="loginBtn">Login with Google</button>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </div>
 </header>
@@ -454,14 +454,39 @@
 
 <main id="postContainer" aria-live="polite"></main>
 
-<script>
-  const menuToggleBtn = document.getElementById("menuToggle");
-  if (menuToggleBtn) {
-    menuToggleBtn.addEventListener("click", () => {
-      const nav = document.getElementById("primaryNav");
-      if (nav) nav.classList.toggle("open");
-    });
-  }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    push,
+    set,
+    onValue,
+    get,
+    runTransaction,
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getAuth,
+    signInWithPopup,
+    signOut,
+    GoogleAuthProvider,
+    onAuthStateChanged,
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
   const loginBtn = document.getElementById("loginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
@@ -471,157 +496,263 @@
   const postContainer = document.getElementById("postContainer");
   const searchInput = document.getElementById("searchInput");
 
-  // Posts saved in localStorage under 'posts'
-  // userId saved in localStorage under 'userId'
+  let currentUser = null;
+  let allPosts = [];
 
-  let userId = localStorage.getItem('userId') || '';
-  let posts = JSON.parse(localStorage.getItem('posts') || '[]');
-
-  function savePosts() {
-    localStorage.setItem('posts', JSON.stringify(posts));
+  // Menu toggle safely
+  const menuToggleBtn = document.getElementById("menuToggle");
+  if (menuToggleBtn) {
+    menuToggleBtn.addEventListener("click", () => {
+      const nav = document.getElementById("primaryNav");
+      if (nav) nav.classList.toggle("open");
+    });
   }
 
-  // Escape HTML to prevent XSS
-  function escapeHTML(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
+  const escapeHTML = (str) =>
+    String(str).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  function renderPosts() {
-    const filter = searchInput.value.trim().toLowerCase();
-    postContainer.innerHTML = "";
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    uploadForm.style.display = user ? "block" : "none";
+    loginBtn.style.display = user ? "none" : "inline-block";
+    logoutBtn.style.display = user ? "inline-block" : "none";
+    renderPosts();
+  });
 
-    // Sort posts newest first
-    posts.sort((a, b) => b.timestamp - a.timestamp);
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch((e) => alert("Login failed: " + e.message));
+  logoutBtn.onclick = () => signOut(auth).catch((e) => alert("Logout failed: " + e.message));
 
-    for (const post of posts) {
-      if (!post.caption.toLowerCase().includes(filter)) continue;
-
-      const dateStr = new Date(post.timestamp).toLocaleString();
-
-      const mediaHTML = post.mediaType === "video"
-        ? `<video src="${post.mediaUrl}" controls playsinline preload="metadata" aria-label="Video post"></video>`
-        : `<img src="${post.mediaUrl}" alt="Post media" loading="lazy" />`;
-
-      const card = document.createElement("article");
-      card.className = "post-item";
-      card.innerHTML = `
-        <header class="post-owner">
-          <img src="${post.photoURL || "https://via.placeholder.com/40"}" class="avatar" alt="${escapeHTML(post.displayName || "Anonymous")}'s avatar" />
-          <div>
-            <div>${escapeHTML(post.displayName || "Anonymous")}</div>
-            <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">${dateStr}</time>
-          </div>
-        </header>
-        <div class="post-caption">${escapeHTML(post.caption)}</div>
-        <div class="post-media">${mediaHTML}</div>
-      `;
-      postContainer.appendChild(card);
-    }
-  }
-
-  // Show/hide upload form & buttons depending on login state
-  function updateUI() {
-    if (userId) {
-      uploadForm.style.display = "block";
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-    } else {
-      uploadForm.style.display = "none";
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-    }
-  }
-
-  // On page load
-  updateUI();
-  renderPosts();
-
-  // Login simulation
-  loginBtn.onclick = () => {
-    const name = prompt("Enter your display name to login:");
-    if (name && name.trim()) {
-      userId = Date.now().toString(); // Simple unique ID
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('userName', name.trim());
-      updateUI();
-      alert(`Welcome, ${name.trim()}! You can now post.`);
-    }
-  };
-
-  // Logout
-  logoutBtn.onclick = () => {
-    userId = "";
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userName');
-    updateUI();
-  };
-
-  // Validate file type
-  function isValidFileType(file) {
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/gif", "video/mp4", "video/webm", "video/ogg"];
-    return validTypes.includes(file.type);
-  }
-
-  uploadForm.onsubmit = (e) => {
+  uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!currentUser) return alert("Please login.");
+    if (!mediaFile.files.length) return alert("Select a file.");
+    if (captionInput.value.trim().length < 4) return alert("Caption too short.");
 
-    if (!userId) {
-      alert("You must login to post.");
-      return;
-    }
-
+    uploadForm.querySelector("button").disabled = true;
     const file = mediaFile.files[0];
-    const caption = captionInput.value.trim();
+    const fd = new FormData();
+    fd.append("file", file);
 
-    if (!file) {
-      alert("Please select a media file.");
-      return;
-    }
-    if (!isValidFileType(file)) {
-      alert("Unsupported file type. Please upload images or videos only.");
-      return;
-    }
-    if (caption.length < 4) {
-      alert("Caption must be at least 4 characters.");
-      return;
-    }
+    try {
+      // Replace your JWT token here
+      const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04YTM3MTU3MmYzZjYiLCJlbWFpbCI6ImRpdGFscnVmaWFAY29pbi5jb20ifSwiaWF0IjoxNjg4NTg4MDg5LCJleHAiOjE3MjQxMTQ0ODksInN1YiI6ImFwaS1rZXkifQ.Yh8uEmpsjhHCQ6ny-QiOFu63Frh1rQm5TpRx5SK4-cE";
 
-    const reader = new FileReader();
-    reader.onload = function () {
-      const mediaUrl = reader.result;
-      const mediaType = file.type.startsWith("video") ? "video" : "image";
-      const displayName = localStorage.getItem('userName') || "Anonymous";
-
-      // Save post
-      posts.push({
-        id: Date.now().toString(),
-        userId,
-        displayName,
-        photoURL: "https://drfmedia.com/favicon.ico", // Static avatar, can be replaced
-        caption,
-        mediaUrl,
-        mediaType,
-        timestamp: Date.now(),
+      const uploadResp = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        body: fd,
+        headers: {
+          Authorization: pinataJWT,
+        },
       });
 
-      savePosts();
-      renderPosts();
+      if (!uploadResp.ok) throw new Error("Upload failed");
 
-      // Reset form
-      uploadForm.reset();
-    };
-    reader.readAsDataURL(file);
-  };
+      const uploadData = await uploadResp.json();
+      const ipfsHash = uploadData.IpfsHash;
 
-  // Live search filter
-  searchInput.oninput = () => {
+      const postData = {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName || currentUser.email || "Anonymous",
+        photoURL: currentUser.photoURL || "https://drfmedia.com/favicon.ico",
+        ipfsHash,
+        caption: captionInput.value.trim(),
+        createdAt: Date.now(),
+        likes: 0,
+        likedBy: {},
+      };
+
+      const newPostRef = push(ref(db, "posts"));
+      await set(newPostRef, postData);
+
+      captionInput.value = "";
+      mediaFile.value = "";
+      alert("Post uploaded successfully.");
+    } catch (err) {
+      alert("Error uploading post: " + err.message);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+    }
+  });
+
+  // Fetch posts once and on update
+  onValue(ref(db, "posts"), (snapshot) => {
+    const val = snapshot.val();
+    allPosts = val ? Object.entries(val).map(([key, val]) => ({ id: key, ...val })) : [];
     renderPosts();
-  };
+  });
+
+  searchInput.addEventListener("input", renderPosts);
+
+  function renderPosts() {
+    if (!currentUser) {
+      postContainer.innerHTML = `<p style="text-align:center; color:#666;">Please login to view posts.</p>`;
+      return;
+    }
+
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    const filteredPosts = allPosts
+      .filter(p => p.caption.toLowerCase().includes(searchTerm) || (p.displayName && p.displayName.toLowerCase().includes(searchTerm)))
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    if (filteredPosts.length === 0) {
+      postContainer.innerHTML = `<p style="text-align:center; color:#666;">No posts found.</p>`;
+      return;
+    }
+
+    postContainer.innerHTML = filteredPosts
+      .map(postToHTML)
+      .join("");
+  }
+
+  function postToHTML(post) {
+    const isLiked = post.likedBy && post.likedBy[currentUser.uid];
+    const time = new Date(post.createdAt).toLocaleString();
+
+    // Media URL (IPFS)
+    const mediaUrl = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+
+    // Determine if video or image
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(mediaUrl);
+
+    // Likes count
+    const likesCount = post.likes || 0;
+
+    return `
+      <article class="post-item" tabindex="0" aria-label="Post by ${escapeHTML(post.displayName)} posted on ${time}">
+        <div class="post-owner" aria-label="Post owner info">
+          <img src="${escapeHTML(post.photoURL)}" alt="${escapeHTML(post.displayName)}'s avatar" width="44" height="44" />
+          <div>
+            <div>${escapeHTML(post.displayName)}</div>
+            <time class="post-time" datetime="${new Date(post.createdAt).toISOString()}">${time}</time>
+          </div>
+        </div>
+        <div class="post-caption">${escapeHTML(post.caption)}</div>
+        <div class="post-media">
+          ${
+            isVideo
+              ? `<video controls preload="metadata" src="${mediaUrl}" alt="Video posted by ${escapeHTML(post.displayName)}"></video>`
+              : `<img src="${mediaUrl}" alt="Image posted by ${escapeHTML(post.displayName)}" loading="lazy" />`
+          }
+        </div>
+        <div class="post-actions" aria-label="Post actions">
+          <button data-postid="${post.id}" aria-pressed="${isLiked ? "true" : "false"}" class="${isLiked ? "liked" : ""}" title="Like this post">${isLiked ? "Liked" : "Like"} (${likesCount})</button>
+          <select data-postid="${post.id}" aria-label="Boost post by amount">
+            <option value="0">Boost</option>
+            <option value="10">10 DRF</option>
+            <option value="50">50 DRF</option>
+            <option value="100">100 DRF</option>
+          </select>
+        </div>
+        <div class="comments-container" id="comments-${post.id}" aria-live="polite" aria-relevant="additions"></div>
+        <form class="comment-form" data-postid="${post.id}" aria-label="Add comment form">
+          <input type="text" name="comment" placeholder="Add a comment..." required aria-required="true" />
+          <button type="submit">Send</button>
+        </form>
+      </article>
+    `;
+  }
+
+  // Like and Boost handling (delegated)
+  postContainer.addEventListener("click", async (e) => {
+    if (!currentUser) return alert("Please login to interact.");
+
+    if (e.target.tagName === "BUTTON" && e.target.dataset.postid) {
+      const postId = e.target.dataset.postid;
+      const userId = currentUser.uid;
+
+      const postLikesRef = ref(db, `posts/${postId}`);
+
+      try {
+        await runTransaction(postLikesRef, (post) => {
+          if (post) {
+            post.likedBy = post.likedBy || {};
+            if (post.likedBy[userId]) {
+              post.likes = (post.likes || 0) - 1;
+              delete post.likedBy[userId];
+            } else {
+              post.likes = (post.likes || 0) + 1;
+              post.likedBy[userId] = true;
+            }
+          }
+          return post;
+        });
+      } catch (err) {
+        alert("Error liking post: " + err.message);
+      }
+    }
+  });
+
+  postContainer.addEventListener("change", async (e) => {
+    if (!currentUser) return alert("Please login to interact.");
+
+    if (e.target.tagName === "SELECT" && e.target.dataset.postid) {
+      const amount = parseInt(e.target.value);
+      if (amount > 0) {
+        alert(`You boosted post ${e.target.dataset.postid} by ${amount} DRF tokens!`);
+        e.target.value = "0";
+      }
+    }
+  });
+
+  // Comments loading & adding
+  function loadComments(postId) {
+    const commentsRef = ref(db, `comments/${postId}`);
+    const container = document.getElementById(`comments-${postId}`);
+    if (!container) return;
+
+    onValue(commentsRef, (snapshot) => {
+      const val = snapshot.val();
+      const comments = val ? Object.values(val) : [];
+      container.innerHTML = comments.length
+        ? comments
+            .map(
+              (c) =>
+                `<div class="comment" tabindex="0">
+                  <img class="avatar" src="${escapeHTML(c.photoURL || 'https://drfmedia.com/favicon.ico')}" alt="${escapeHTML(c.displayName || 'User')}'s avatar" />
+                  <div class="comment-body"><strong>${escapeHTML(c.displayName || 'Anonymous')}</strong>${escapeHTML(c.text)}</div>
+                </div>`
+            )
+            .join("")
+        : `<p style="color:#666; font-style: italic;">No comments yet.</p>`;
+    });
+  }
+
+  postContainer.addEventListener("submit", async (e) => {
+    if (e.target.classList.contains("comment-form")) {
+      e.preventDefault();
+      if (!currentUser) return alert("Please login to comment.");
+
+      const form = e.target;
+      const postId = form.dataset.postid;
+      const input = form.querySelector("input[name='comment']");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const commentData = {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName || currentUser.email || "Anonymous",
+        photoURL: currentUser.photoURL || "https://drfmedia.com/favicon.ico",
+        text,
+        createdAt: Date.now(),
+      };
+
+      try {
+        const commentsRef = ref(db, `comments/${postId}`);
+        await push(commentsRef, commentData);
+        input.value = "";
+      } catch (err) {
+        alert("Error adding comment: " + err.message);
+      }
+    }
+  });
+
+  // After posts render, load comments for visible posts
+  const observer = new MutationObserver(() => {
+    allPosts.forEach(post => loadComments(post.id));
+  });
+
+  observer.observe(postContainer, { childList: true });
+
 </script>
 
 </body>
