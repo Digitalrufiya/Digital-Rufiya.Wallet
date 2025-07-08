@@ -3,613 +3,128 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <title>DRFMedia Timeline — Gift Page</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #fff;
-      color: #222;
-    }
-    header {
-      background: #007bff;
+    .gifts-container button {
+      margin: 5px;
+      padding: 8px 14px;
+      background: #5A2D82;
       color: white;
-      padding: 10px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-    .navbar-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .navbar-left img {
-      height: 40px;
-      width: 40px;
-      border-radius: 4px;
-      background: white;
-      padding: 2px;
-    }
-    .navbar-left h1 {
-      margin: 0;
-      font-size: 1.4em;
-      font-weight: 700;
-    }
-    #menuToggle {
-      background: transparent;
       border: none;
-      cursor: pointer;
-      width: 30px;
-      height: 25px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 0;
-    }
-    #menuToggle span {
-      display: block;
-      height: 3.5px;
-      background: white;
-      border-radius: 3px;
-    }
-    #primaryNav {
-      width: 100%;
-      display: none;
-      flex-direction: column;
-      background: #0069d9;
-      margin-top: 10px;
-      border-radius: 4px;
-    }
-    #primaryNav.open {
-      display: flex;
-    }
-    #primaryNav a {
-      padding: 12px 20px;
-      color: white;
-      text-decoration: none;
-      font-weight: 600;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    #primaryNav a:first-child {
-      border-top: none;
-    }
-    #primaryNav a:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-    @media (min-width: 768px) {
-      #menuToggle {
-        display: none;
-      }
-      #primaryNav {
-        display: flex !important;
-        flex-direction: row;
-        width: auto;
-        background: transparent;
-        margin-top: 0;
-        border-radius: 0;
-      }
-      #primaryNav a {
-        border: none;
-        padding: 10px 15px;
-        color: white;
-      }
-      #primaryNav a:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #ccc;
-      box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
-    }
-    #postContainer {
-      max-width: 700px;
-      margin: 20px auto;
-      padding: 0 15px;
-    }
-    .post-item {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 20px;
-      background: #fafafa;
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-    }
-    .post-owner div {
-      line-height: 1.1;
-    }
-    .post-time {
-      font-size: 0.85em;
-      color: #555;
-      margin-top: 4px;
-    }
-    .post-caption {
-      margin-top: 10px;
-      font-size: 1em;
-      white-space: pre-wrap;
-    }
-    video,
-    img {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-top: 10px;
-      background: black;
-      display: block;
-    }
-    #searchBar {
-      max-width: 700px;
-      margin: 10px auto 20px auto;
-      padding: 0 15px;
-    }
-    #searchInput {
-      width: 100%;
-      padding: 8px 12px;
-      font-size: 1em;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    .post-actions button,
-    .post-actions select {
-      cursor: pointer;
-      border: none;
-      background: #007bff;
-      color: white;
-      padding: 6px 12px;
       border-radius: 5px;
-      font-size: 0.9em;
-      transition: background-color 0.3s;
-      margin-right: 8px;
-    }
-    .post-actions button:hover,
-    .post-actions select:hover {
-      background: #0056b3;
-    }
-    .post-actions button.liked {
-      background: #28a745 !important;
-      /* green */
-      color: #fff !important;
-    }
-    .post-actions button.boosted {
-      background-color: gold !important;
-      color: #000 !important;
-    }
-    .post-actions select {
-      color: #000;
-      background: white;
-      border: 1px solid #007bff;
-      padding: 5px 10px;
-      min-width: 110px;
-    }
-    .post-actions select option {
-      color: #000;
-    }
-    /* Comments section styles */
-    .comments-section {
-      margin-top: 10px;
-      border-top: 1px solid #ddd;
-      padding-top: 10px;
-    }
-    .comment-item {
-      padding: 5px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 0.9em;
-    }
-    .comment-input {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px;
-    }
-    .comment-input textarea {
-      flex-grow: 1;
-      padding: 6px 8px;
-      font-size: 0.9em;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      resize: vertical;
-    }
-    .comment-input button {
-      padding: 6px 12px;
-      background: #007bff;
-      color: white;
-      border-radius: 4px;
-      border: none;
       cursor: pointer;
-      font-size: 0.9em;
-      transition: background-color 0.3s;
     }
-    .comment-input button:hover {
-      background: #0056b3;
+    .gifts-container {
+      margin-top: 12px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="navbar-left">
-      <img
-        src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
-        alt="DRFMedia Logo"
-      />
-      <h1>DRFMedia</h1>
-    </div>
-    <button id="menuToggle" aria-label="Toggle menu">
-      <span></span><span></span><span></span>
-    </button>
-    <nav id="primaryNav">
-      <a href="timeline.html">Timeline</a>
-      <a href="profile.html">Profile</a>
-      <a href="#" id="loginNavLink">Login</a>
-      <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
-    </nav>
-  </header>
 
-  <div id="searchBar">
-    <input
-      type="search"
-      id="searchInput"
-      placeholder="Search posts..."
-      aria-label="Search posts"
-    />
+<header>
+  <div class="navbar-left">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <h1>DRFMedia</h1>
   </div>
+  <button id="menuToggle" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <nav id="primaryNav">
+    <a href="timeline.html">Timeline</a>
+    <a href="profile.html">Profile</a>
+    <a href="#" id="loginNavLink">Login</a>
+    <a href="#" id="logoutNavLink" style="display:none;">Logout</a>
+  </nav>
+</header>
 
-  <button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">
-    Sign in with Google
-  </button>
-  <button
-    id="logoutBtn"
-    style="display:none; max-width: 700px; margin: 10px auto;"
-  >
-    Logout
-  </button>
+<div id="searchBar">
+  <input type="search" id="searchInput" placeholder="Search posts..." aria-label="Search posts" />
+</div>
 
-  <form
-    id="uploadForm"
-    style="display:none; max-width:700px; margin:20px auto;"
-    enctype="multipart/form-data"
-  >
-    <input type="file" id="mediaFile" accept="image/*,video/*" required />
-    <textarea
-      id="caption"
-      placeholder="Write your caption..."
-      required
-      minlength="4"
-      style="width:100%; margin-top:10px; padding:8px; font-size:1em;"
-    ></textarea>
-    <button type="submit" style="margin-top:10px; padding: 10px 20px; font-size:1em;">
-      Post
-    </button>
-  </form>
+<button id="loginBtn" style="display: block; max-width: 700px; margin: 10px auto;">Sign in with Google</button>
+<button id="logoutBtn" style="display:none; max-width: 700px; margin: 10px auto;">Logout</button>
 
-  <div id="postContainer" aria-live="polite"></div>
+<div id="postContainer" aria-live="polite">
+  <!-- Sample Post Example -->
+  <article class="post-item" data-post-id="example123" data-display-name="Supporter">
+    <header class="post-owner">
+      <img src="https://via.placeholder.com/40" alt="User avatar" class="avatar" />
+      <div>
+        <div>Supporter</div>
+        <time class="post-time">Just Now</time>
+      </div>
+    </header>
+    <div class="post-caption">This is a sample post for donation feature.</div>
+    <div class="post-media">
+      <img src="https://via.placeholder.com/600x300" alt="Sample" loading="lazy" />
+    </div>
+    <div class="post-actions">
+      <button>👍 Like</button>
+      <button>💬 Comment</button>
+      <button>🚀 Boost</button>
+      <button>🔄 Repost</button>
+    </div>
+    <div class="gifts-container"></div>
+  </article>
+</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      push,
-      set,
-      onValue,
-      get,
-      update,
-      runTransaction,
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import {
-      getAuth,
-      signInWithPopup,
-      signOut,
-      GoogleAuthProvider,
-      onAuthStateChanged,
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+<script type="module">
+  class SkrillGifter {
+    constructor(postsContainerId) {
+      this.postsContainer = document.getElementById(postsContainerId);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.appspot.com",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:dc999df2c0c37241ff3f40",
-    };
+      this.giftOptions = [
+        { label: "🌹 Rose", amountUSD: "1.00" },
+        { label: "💖 Heart", amountUSD: "5.00" },
+        { label: "🦁 Lion", amountUSD: "10.00" },
+        { label: "🛡️ Protection", amountUSD: "15.00" },
+        { label: "🙏 Dua", amountUSD: "30.00" }
+      ];
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const uploadForm = document.getElementById("uploadForm");
-    const mediaFile = document.getElementById("mediaFile");
-    const captionInput = document.getElementById("caption");
-    const postContainer = document.getElementById("postContainer");
-    const searchInput = document.getElementById("searchInput");
-
-    let currentUser = null;
-    let allPosts = [];
-
-    // Toggle menu on small screens
-    document.getElementById("menuToggle").addEventListener("click", () => {
-      document.getElementById("primaryNav").classList.toggle("open");
-    });
-
-    // Escape to prevent XSS
-    const escapeHTML = (str) =>
-      str.replace(/[&<>"]/g, (c) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-      }[c]));
-
-    // Auth state changed
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
-      uploadForm.style.display = user ? "block" : "none";
-      loginBtn.style.display = user ? "none" : "block";
-      logoutBtn.style.display = user ? "block" : "none";
-      renderPosts();
-    });
-
-    loginBtn.onclick = () =>
-      signInWithPopup(auth, provider).catch((e) =>
-        alert("Login failed: " + e.message)
-      );
-    logoutBtn.onclick = () =>
-      signOut(auth).catch((e) => alert("Logout failed: " + e.message));
-
-    // Upload handler - uploads file to Pinata, then saves post to Firebase Realtime DB
-    uploadForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentUser) return alert("Please login.");
-      if (!mediaFile.files.length) return alert("Select a file.");
-      if (captionInput.value.trim().length < 4)
-        return alert("Caption too short.");
-
-      uploadForm.querySelector("button").disabled = true;
-      const file = mediaFile.files[0];
-      const fd = new FormData();
-      fd.append("file", file);
-
-      try {
-        // Put your actual Pinata JWT here
-        const pinataJWT =
-          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_jwt_token_here";
-
-        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: { Authorization: pinataJWT },
-          body: fd,
-        });
-        if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
-        const { IpfsHash } = await res.json();
-
-        const newPostRef = push(ref(db, "posts"));
-        await set(newPostRef, {
-          userId: currentUser.uid,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          caption: captionInput.value.trim(),
-          ipfsHash: IpfsHash,
-          mediaType: file.type.startsWith("video") ? "video" : "image",
-          mediaMimeType: file.type,
-          timestamp: Date.now(),
-          likesCount: 0,
-          commentsCount: 0,
-          boostsCount: 0,
-          boostedBy: {},
-          likesBy: {},
-        });
-
-        captionInput.value = "";
-        mediaFile.value = "";
-        alert("Posted successfully!");
-      } catch (err) {
-        alert("Upload failed: " + err.message);
-      } finally {
-        uploadForm.querySelector("button").disabled = false;
+      if (!this.postsContainer) {
+        console.error("SkrillGifter: posts container not found.");
+        return;
       }
-    });
 
-    // Load posts and listen for updates
-    const postsRef = ref(db, "posts");
-    onValue(postsRef, (snapshot) => {
-      const posts = snapshot.val() || {};
-      allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-      allPosts.sort((a, b) => b.timestamp - a.timestamp);
-      renderPosts();
-    });
-
-    // Render posts with filtering and updated like/boost button states + comments and Skrill payment form
-    function renderPosts() {
-      const filter = searchInput.value.trim().toLowerCase();
-      postContainer.innerHTML = "";
-      for (const post of allPosts) {
-        if (!post.caption.toLowerCase().includes(filter)) continue;
-
-        const url1 = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
-
-        const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
-        const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
-
-        const dateStr = new Date(post.timestamp).toLocaleString();
-
-        const mediaHTML =
-          post.mediaType === "video"
-            ? `<video src="${url1}" controls playsinline preload="metadata" poster="" loading="lazy"></video>`
-            : `<img src="${url1}" alt="Post media" loading="lazy" />`;
-
-        const likesCount = post.likesCount || 0;
-        const boostsCount = post.boostsCount || 0;
-        const commentsCount = post.commentsCount || 0;
-
-        const likedClass = isLiked ? "liked" : "";
-        const boostedClass = isBoosted ? "boosted" : "";
-
-        // Comments list HTML
-        const commentsList = (post.comments || []).map(
-          (c) =>
-            `<div class="comment-item"><strong>${escapeHTML(
-              c.authorName || "Anonymous"
-            )}</strong>: ${escapeHTML(c.text)}</div>`
-        ).join("");
-
-        const card = document.createElement("article");
-        card.className = "post-item";
-        card.innerHTML = `
-          <header class="post-owner" aria-label="Post owner info">
-            <img src="${post.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" class="avatar" />
-            <div>
-              <div>${escapeHTML(post.displayName || "Anonymous")}</div>
-              <time class="post-time" datetime="${new Date(
-                post.timestamp
-              ).toISOString()}">${dateStr}</time>
-            </div>
-          </header>
-          <div class="post-caption">${escapeHTML(post.caption)}</div>
-          <div class="post-media">${mediaHTML}</div>
-          <div class="post-actions" role="group" aria-label="Post actions">
-            <button class="${likedClass}" aria-pressed="${isLiked ? "true" : "false"}" onclick="likePost('${post.id}')">👍 Like (${likesCount})</button>
-            <button onclick="toggleComments('${post.id}')">💬 Comment (${commentsCount})</button>
-            <button class="${boostedClass}" onclick="boostPost('${post.id}')">🚀 Boost (${boostsCount})</button>
-            <button onclick="repost('${post.id}')">🔄 Repost</button>
-            <select aria-label="Donate to post by ${escapeHTML(post.displayName)}" onchange="donateToPost('${post.id}', '${post.userId}', this.value)">
-              <option value="">Donate 💖</option>
-              <option value="1">🌹 $1</option>
-              <option value="10">🦁 $10</option>
-              <option value="20">🙏 $20</option>
-              <option value="30">✨ $30</option>
-            </select>
-          </div>
-          <div class="comments-section" id="comments-section-${post.id}" style="display:none;">
-            ${commentsList}
-            <div class="comment-input">
-              <textarea id="comment-input-${post.id}" rows="2" placeholder="Write a comment..."></textarea>
-              <button onclick="addComment('${post.id}')">Send</button>
-            </div>
-          </div>
-          <form action="https://pay.skrill.com" method="post" target="_blank" style="margin-top:15px; border-top:1px solid #ddd; padding-top:10px;">
-            <!-- Skrill Payment Integration -->
-            <input type="hidden" name="pay_to_email" value="digitalrufiyacoin@gmail.com" />
-            <input type="hidden" name="currency" value="USD" />
-            <input type="hidden" name="language" value="EN" />
-            <input type="hidden" name="prepare_only" value="1" />
-            <input type="hidden" name="recipient_description" value="DRFMedia Donation" />
-            <input type="hidden" name="transaction_id" value="${post.id}" />
-            <label for="skrill-amount-${post.id}">Donate via Skrill:</label>
-            <input type="number" name="amount" id="skrill-amount-${post.id}" min="1" step="any" placeholder="Amount (USD)" required style="width:100px; margin-left:10px;"/>
-            <button type="submit" style="margin-left:10px;">Pay with Skrill</button>
-          </form>
-        `;
-        postContainer.appendChild(card);
-      }
+      this.renderGiftButtonsForAllPosts();
     }
 
-    searchInput.addEventListener("input", () => renderPosts());
+    renderGiftButtonsForAllPosts() {
+      const postElements = this.postsContainer.querySelectorAll(".post-item");
+      postElements.forEach(postEl => {
+        const postId = postEl.dataset.postId || "unknown";
+        const receiverName = postEl.dataset.displayName || "Anonymous";
+        this.renderGiftButtons(postEl, receiverName);
+      });
+    }
 
-    // Like button handler
-    window.likePost = async function (postId) {
-      if (!currentUser) return alert("Please login to like posts.");
-      const likeRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
-      const postLikesCountRef = ref(db, `posts/${postId}/likesCount`);
-      try {
-        const snapshot = await get(likeRef);
-        if (snapshot.exists()) {
-          // Unlike
-          await set(likeRef, null);
-          // Decrement count safely with transaction
-          await runTransaction(postLikesCountRef, (count) => (count || 1) - 1);
-        } else {
-          // Like
-          await set(likeRef, true);
-          await runTransaction(postLikesCountRef, (count) => (count || 0) + 1);
-        }
-      } catch (err) {
-        alert("Error liking post: " + err.message);
+    renderGiftButtons(postElement, receiverName) {
+      if (!postElement) return;
+
+      let container = postElement.querySelector(".gifts-container");
+      if (!container) {
+        container = document.createElement("div");
+        container.className = "gifts-container";
+        postElement.appendChild(container);
       }
-    };
+      container.innerHTML = "";
 
-    // Boost button handler
-    window.boostPost = async function (postId) {
-      if (!currentUser) return alert("Please login to boost posts.");
-      const boostRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
-      const boostsCountRef = ref(db, `posts/${postId}/boostsCount`);
-      try {
-        const snapshot = await get(boostRef);
-        if (snapshot.exists()) {
-          // Remove boost
-          await set(boostRef, null);
-          await runTransaction(boostsCountRef, (count) => (count || 1) - 1);
-        } else {
-          // Add boost
-          await set(boostRef, true);
-          await runTransaction(boostsCountRef, (count) => (count || 0) + 1);
-        }
-      } catch (err) {
-        alert("Error boosting post: " + err.message);
-      }
-    };
+      this.giftOptions.forEach(({ label, amountUSD }) => {
+        const btn = document.createElement("a");
+        const url = this.buildSkrillURL(amountUSD, receiverName);
+        btn.href = url;
+        btn.target = "_blank";
+        btn.innerHTML = `<button>${label} $${amountUSD}</button>`;
+        container.appendChild(btn);
+      });
+    }
 
-    // Placeholder repost function
-    window.repost = function (postId) {
-      alert("Repost feature coming soon!");
-    };
+    buildSkrillURL(amount, name) {
+      return `https://pay.skrill.com/?pay_to=digitalrufiyacoin@gmail.com&amount=${amount}&currency=USD&detail1_description=Gift+to+${encodeURIComponent(name)}&detail1_text=Thank+you+for+spreading+truth`;
+    }
+  }
 
-    // Toggle comments visibility
-    window.toggleComments = function (postId) {
-      const section = document.getElementById(`comments-section-${postId}`);
-      if (section) {
-        section.style.display = section.style.display === "none" ? "block" : "none";
-      }
-    };
+  new SkrillGifter('postContainer');
+</script>
 
-    // Add comment handler
-    window.addComment = async function (postId) {
-      if (!currentUser) return alert("Please login to comment.");
-      const textarea = document.getElementById(`comment-input-${postId}`);
-      if (!textarea) return;
-      const text = textarea.value.trim();
-      if (!text) return alert("Comment cannot be empty.");
-
-      const commentsRef = ref(db, `posts/${postId}/comments`);
-      try {
-        // Push new comment
-        const newCommentRef = push(commentsRef);
-        await set(newCommentRef, {
-          authorId: currentUser.uid,
-          authorName: currentUser.displayName || "Anonymous",
-          text,
-          timestamp: Date.now(),
-        });
-        // Clear textarea
-        textarea.value = "";
-      } catch (err) {
-        alert("Error adding comment: " + err.message);
-      }
-    };
-
-    // Donation dropdown placeholder, still here in case
-    window.donateToPost = function (postId, postUserId, amount) {
-      if (!currentUser) return alert("Please login to donate.");
-      if (!amount) return; // no selection
-      alert(`You chose to donate $${amount} to post ${postId} by user ${postUserId}. Use Skrill form below to pay.`);
-      // Reset select box:
-      const selects = document.querySelectorAll("select");
-      selects.forEach((sel) => (sel.value = ""));
-    };
-  </script>
 </body>
 </html>
