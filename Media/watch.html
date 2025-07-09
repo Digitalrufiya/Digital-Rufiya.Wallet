@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Watch — Inspiring Ummah</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9fafa;
+      color: #222;
+    }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .navbar-left img {
+      height: 42px;
+      width: 42px;
+      border-radius: 6px;
+      background: white;
+      padding: 2px;
+    }
+    .navbar-left h1 {
+      font-size: 1.4em;
+      margin: 0;
+    }
+    .dark-mode-toggle {
+      background: white;
+      color: #007bff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .post-item {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      padding: 16px;
+      max-width: 700px;
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .post-owner img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+    }
+    .post-time {
+      font-size: 0.85em;
+      color: #666;
+    }
+    .post-caption {
+      margin-top: 10px;
+      font-size: 1.1rem;
+    }
+    .post-media img, .post-media video {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 8px;
+      background: #000;
+    }
+    .post-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .post-actions button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .view-count {
+      font-size: 0.9em;
+      color: #444;
+    }
+    body.dark {
+      background: #121212;
+      color: #ddd;
+    }
+    body.dark .post-item {
+      background: #1f1f1f;
+    }
+    body.dark .post-time,
+    body.dark .view-count {
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="Logo" />
+    <h1>DRFMedia Watch</h1>
+  </div>
+  <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 Toggle</button>
+</header>
+
+<div id="postContainer"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getDatabase,
+    ref,
+    onValue,
+    runTransaction
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+  });
+
+  const db = getDatabase(app);
+  const postContainer = document.getElementById("postContainer");
+
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, (snapshot) => {
+    const posts = snapshot.val() || {};
+    const sorted = Object.entries(posts).map(([id, post]) => ({ id, ...post }))
+      .sort((a, b) => b.timestamp - a.timestamp);
+    postContainer.innerHTML = "";
+    sorted.forEach(renderPost);
+  });
+
+  function renderPost(post) {
+    const ipfsURL = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+    const altURL = `https://cloudflare-ipfs.com/ipfs/${post.ipfsHash}`;
+    const isVideo = post.mediaType === "video";
+    const media = isVideo
+      ? `<video controls preload="metadata" poster="${altURL}" onerror="this.src='${altURL}'"><source src="${ipfsURL}" type="${post.mediaMimeType}" /></video>`
+      : `<img src="${ipfsURL}" alt="Media post" onerror="this.src='${altURL}'" loading="lazy" />`;
+
+    const card = document.createElement("div");
+    card.className = "post-item";
+    card.innerHTML = `
+      <div class="post-owner">
+        <img src="${post.photoURL || 'https://via.placeholder.com/36'}" alt="User" />
+        <div>
+          <div><strong>${post.displayName || "Anonymous"}</strong></div>
+          <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="post-caption">${post.caption}</div>
+      <div class="post-media">${media}</div>
+      <div class="post-actions">
+        <span class="view-count">👁️ Views: ${post.views || 0}</span>
+        <button onclick="donate('${post.displayName || 'User'}')">💖 Donate</button>
+      </div>
+    `;
+    postContainer.appendChild(card);
+
+    // update view count silently
+    const viewsRef = ref(db, `posts/${post.id}/views`);
+    runTransaction(viewsRef, (v) => (v || 0) + 1);
+  }
+
+  window.donate = (name) => {
+    alert(`To support ${name}, please send donation via Skrill to:\n\nEmail: digitalrufiyacoin@gmail.com\nJazakAllah Khair 💖`);
+  };
+
+  window.toggleDarkMode = () => {
+    document.body.classList.toggle("dark");
+  };
+</script>
+
+</body>
+</html>
