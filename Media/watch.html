@@ -18,22 +18,124 @@
     .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
     video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
     .post-media video { background: black; width: 100%; border-radius: 6px; }
-    .comment-box textarea {
-      width: 100%; padding: 6px; margin-top: 6px;
-      border: 1px solid #ccc; border-radius: 4px; resize: vertical;
+
+    .post-item {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin: 16px 20px;
+      padding: 14px 18px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
     }
-    .comment-box button {
-      margin-top: 4px; background: #007bff; color: #fff; border: none;
-      padding: 5px 10px; border-radius: 4px; cursor: pointer;
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
     }
-    .dark-mode {
-      background: #121212; color: #ddd;
+    .post-owner img.avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #eee;
     }
-    .dark-mode header {
-      background: #1e1e1e;
+    .post-caption {
+      margin: 12px 0;
+      font-size: 1.1rem;
     }
-    .dark-mode .post-caption, .dark-mode .post-time {
-      color: #ccc;
+    .post-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .post-actions button, .post-actions select {
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 1rem;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+    .post-actions button:hover, .post-actions select:hover {
+      background: #0056b3;
+    }
+    .post-actions button.liked {
+      background: #28a745 !important;
+      box-shadow: 0 0 8px #28a745aa;
+    }
+    .post-actions button.boosted {
+      background: gold !important;
+      color: #000 !important;
+      box-shadow: 0 0 8px #ffd700cc;
+    }
+    .comments-container {
+      margin-top: 10px;
+      max-height: 160px;
+      overflow-y: auto;
+      border-top: 1px solid #ccc;
+      padding-top: 8px;
+    }
+    .comment {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .comment img.avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #eee;
+    }
+    .comment-body {
+      background: #f5f5f5;
+      padding: 6px 12px;
+      border-radius: 8px;
+      flex: 1;
+      word-break: break-word;
+    }
+    .comment-body strong {
+      display: block;
+      color: #007bff;
+      margin-bottom: 4px;
+    }
+    .comment-form {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+    .comment-form input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1.5px solid #ccc;
+      font-size: 1rem;
+      font-family: inherit;
+      outline-offset: 2px;
+      transition: border-color 0.3s;
+    }
+    .comment-form input:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    .comment-form button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    .comment-form button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
@@ -41,21 +143,24 @@
 
 <header>
   <div class="navbar-left">
-    <img src="logo.png" alt="Logo" />
-    <h1>DRFMedia</h1>
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
   </div>
-  <button onclick="toggleDarkMode()" style="background:#000;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">🌙</button>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
 </header>
 
-<div id="postContainer" style="padding: 10px;"></div>
+<div id="postContainer" aria-live="polite"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, push, set, onValue, get, update
+    getDatabase, ref, push, set, onValue, get, runTransaction
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import {
-    getAuth, onAuthStateChanged
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -71,105 +176,220 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const postContainer = document.getElementById("postContainer");
+
   let currentUser = null;
-
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-  });
-
-  const postsRef = ref(db, "posts");
   let allPosts = [];
 
-  onValue(postsRef, snapshot => {
-    const posts = snapshot.val() || {};
-    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
-    allPosts.sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0)); // trending
+  // Auth state change
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    loginBtn.style.display = user ? "none" : "inline-block";
+    logoutBtn.style.display = user ? "inline-block" : "none";
     renderPosts();
   });
 
-  function incrementView(postId) {
-    const viewRef = ref(db, `posts/${postId}/viewsCount`);
-    update(ref(db, `posts/${postId}`), { viewsCount: (allPosts.find(p => p.id === postId)?.viewsCount || 0) + 1 });
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+  logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
+
+  // Listen to posts in realtime
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, snapshot => {
+    const posts = snapshot.val() || {};
+    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
+    allPosts.sort((a, b) => b.timestamp - a.timestamp);
+    renderPosts();
+  });
+
+  // Escape HTML helper to prevent XSS
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
   function renderPosts() {
-    const container = document.getElementById("postContainer");
-    if (!container) return;
-    container.innerHTML = "";
+    postContainer.innerHTML = "";
+    if (!allPosts.length) {
+      postContainer.innerHTML = `<p style="padding:20px; text-align:center;">No posts available yet.</p>`;
+      return;
+    }
 
     for (const post of allPosts) {
-      const { id, ipfsHash, mediaType, mediaMimeType, caption, photoURL, displayName, timestamp } = post;
-      const isVideo = mediaType === "video";
+      const ipfsHash = post.ipfsHash;
+      const isVideo = post.mediaType === "video";
       const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
       const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
-      const views = post.viewsCount || 0;
 
       const mediaHTML = isVideo
-        ? `<video controls poster="${url2}"><source src="${url1}" type="${mediaMimeType}"></video>`
-        : `<img src="${url1}" onerror="this.src='${url2}'" alt="Image post" />`;
+        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'" style="border-radius:6px; width:100%;">
+            <source src="${url1}" type="${post.mediaMimeType}" />
+          </video>`
+        : `<img src="${url1}" alt="Post media" loading="lazy" onerror="this.onerror=null;this.src='${url2}'" style="border-radius:6px;" />`;
+
+      const isLiked = currentUser && post.likesBy && post.likesBy[currentUser.uid];
+      const isBoosted = currentUser && post.boostedBy && post.boostedBy[currentUser.uid];
 
       const article = document.createElement("article");
       article.className = "post-item";
       article.innerHTML = `
-        <header class="post-owner" style="display:flex;align-items:center;gap:10px;">
-          <img src="${photoURL || ''}" class="avatar" style="height:40px;width:40px;border-radius:50%;" />
+        <header class="post-owner">
+          <img src="${post.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" class="avatar" />
           <div>
-            <div>${displayName || 'Anonymous'}</div>
-            <div class="post-time">${new Date(timestamp).toLocaleString()}</div>
+            <div>${escapeHTML(post.displayName || "Anonymous")}</div>
+            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
           </div>
         </header>
-        <div class="post-caption">${caption || ''}</div>
+        <div class="post-caption">${escapeHTML(post.caption)}</div>
         <div class="post-media">${mediaHTML}</div>
-        <div style="margin:6px 0;font-size:0.9em;">👁 Views: ${views}</div>
-        <button onclick="donateNow('${id}')" style="background:#28a745;color:white;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;">💖 Donate</button>
-        <a href="${url1}" download style="margin-left:10px;font-size:0.9em;">⬇ Download</a>
-        <div class="comment-box" style="margin-top:10px;">
-          <textarea id="comment-${id}" placeholder="Leave a comment..."></textarea>
-          <button onclick="submitComment('${id}')">Send</button>
-          <div id="comments-${id}" style="margin-top:6px;font-size:0.9em;"></div>
+        <div class="post-actions">
+          <button class="${isLiked ? "liked" : ""}" aria-pressed="${isLiked ? "true" : "false"}" aria-label="Like post" data-id="${post.id}">👍 Like (${post.likesCount || 0})</button>
+          <button aria-label="Comment on post" data-id="${post.id}">💬 Comment (${post.commentsCount || 0})</button>
+          <button class="${isBoosted ? "boosted" : ""}" aria-pressed="${isBoosted ? "true" : "false"}" aria-label="Boost post" data-id="${post.id}">🚀 Boost (${post.boostsCount || 0})</button>
+          <button aria-label="Repost post" data-id="${post.id}">🔄 Repost</button>
+          <select aria-label="Donate to post" data-id="${post.id}">
+            <option value="">Donate 💖</option>
+            <option value="1">🌹 $1</option>
+            <option value="10">🦁 $10</option>
+            <option value="20">🙏 $20</option>
+            <option value="30">✨ $30</option>
+          </select>
         </div>
+        <div class="comments-container" id="comments-${post.id}" aria-live="polite"></div>
+        ${currentUser ? `
+        <form class="comment-form" data-id="${post.id}" aria-label="Add comment form">
+          <input type="text" placeholder="Write a comment..." required minlength="1" aria-required="true" />
+          <button type="submit">Post</button>
+        </form>
+        ` : ""}
       `;
-      container.appendChild(article);
-      incrementView(id);
-      loadComments(id);
+
+      postContainer.appendChild(article);
+
+      // Load comments for this post
+      loadComments(post.id);
     }
+
+    // Attach event listeners to buttons/selects
+    attachPostEventListeners();
   }
 
-  function donateNow(postId) {
-    alert(`Donate to this post via Skrill.\nEmail: digitalrufiyacoin@gmail.com\nReference: Post ID ${postId}`);
-  }
+  function attachPostEventListeners() {
+    // Like buttons
+    postContainer.querySelectorAll("button[aria-label='Like post']").forEach(btn => {
+      btn.onclick = async e => {
+        if (!currentUser) return alert("Please login first.");
+        const postId = btn.getAttribute("data-id");
+        const likesRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
+        const likesCountRef = ref(db, `posts/${postId}/likesCount`);
 
-  function submitComment(postId) {
-    const textArea = document.getElementById(`comment-${postId}`);
-    const comment = textArea.value.trim();
-    if (!comment) return;
-    const newCommentRef = push(ref(db, `comments/${postId}`));
-    set(newCommentRef, {
-      text: comment,
-      time: Date.now(),
-      user: currentUser?.email || "Guest"
+        // Toggle like state transactionally
+        await runTransaction(likesRef, current => (current ? null : true));
+        await runTransaction(likesCountRef, current => current ? current + (btn.classList.contains("liked") ? -1 : 1) : 1);
+      };
     });
-    textArea.value = "";
-    loadComments(postId);
+
+    // Boost buttons
+    postContainer.querySelectorAll("button[aria-label='Boost post']").forEach(btn => {
+      btn.onclick = async e => {
+        if (!currentUser) return alert("Please login first.");
+        const postId = btn.getAttribute("data-id");
+        const boostsRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
+        const boostsCountRef = ref(db, `posts/${postId}/boostsCount`);
+
+        // Toggle boost state transactionally
+        await runTransaction(boostsRef, current => (current ? null : true));
+        await runTransaction(boostsCountRef, current => current ? current + (btn.classList.contains("boosted") ? -1 : 1) : 1);
+      };
+    });
+
+    // Comment buttons to focus input
+    postContainer.querySelectorAll("button[aria-label='Comment on post']").forEach(btn => {
+      btn.onclick = e => {
+        const postId = btn.getAttribute("data-id");
+        const form = postContainer.querySelector(`form.comment-form[data-id="${postId}"]`);
+        if (form) {
+          form.querySelector("input").focus();
+        }
+      };
+    });
+
+    // Repost button (basic alert)
+    postContainer.querySelectorAll("button[aria-label='Repost post']").forEach(btn => {
+      btn.onclick = e => {
+        alert("Repost feature coming soon!");
+      };
+    });
+
+    // Donate dropdown
+    postContainer.querySelectorAll("select[aria-label='Donate to post']").forEach(sel => {
+      sel.onchange = e => {
+        const amount = sel.value;
+        if (!amount) return;
+        alert(`Thank you for your donation of $${amount}! Donation feature coming soon.`);
+        sel.value = "";
+      };
+    });
+
+    // Comment form submit
+    postContainer.querySelectorAll("form.comment-form").forEach(form => {
+      form.onsubmit = async e => {
+        e.preventDefault();
+        if (!currentUser) return alert("Please login first.");
+        const postId = form.getAttribute("data-id");
+        const input = form.querySelector("input");
+        const text = input.value.trim();
+        if (!text) return;
+        const commentData = {
+          uid: currentUser.uid,
+          displayName: currentUser.displayName || "Anonymous",
+          photoURL: currentUser.photoURL || "",
+          text,
+          timestamp: Date.now()
+        };
+        const commentsRef = ref(db, `posts/${postId}/comments`);
+        const commentsCountRef = ref(db, `posts/${postId}/commentsCount`);
+
+        try {
+          await push(commentsRef, commentData);
+          await runTransaction(commentsCountRef, current => current ? current + 1 : 1);
+          input.value = "";
+        } catch (err) {
+          alert("Error posting comment: " + err.message);
+        }
+      };
+    });
   }
 
+  // Load comments for each post
   function loadComments(postId) {
-    const commentRef = ref(db, `comments/${postId}`);
-    onValue(commentRef, snapshot => {
+    const commentsContainer = document.getElementById(`comments-${postId}`);
+    if (!commentsContainer) return;
+
+    const commentsRef = ref(db, `posts/${postId}/comments`);
+    onValue(commentsRef, snapshot => {
       const comments = snapshot.val() || {};
-      const commentBox = document.getElementById(`comments-${postId}`);
-      commentBox.innerHTML = Object.values(comments).map(c => `<div><strong>${c.user}</strong>: ${c.text}</div>`).join("");
+      commentsContainer.innerHTML = "";
+      const commentEntries = Object.entries(comments).sort((a,b) => a[1].timestamp - b[1].timestamp);
+      for (const [cid, comment] of commentEntries) {
+        const commentEl = document.createElement("div");
+        commentEl.className = "comment";
+        commentEl.innerHTML = `
+          <img src="${comment.photoURL || 'https://via.placeholder.com/30'}" alt="Commenter avatar" class="avatar" />
+          <div class="comment-body">
+            <strong>${escapeHTML(comment.displayName || "Anonymous")}</strong>
+            <div>${escapeHTML(comment.text)}</div>
+            <small style="color:#555;">${new Date(comment.timestamp).toLocaleString()}</small>
+          </div>
+        `;
+        commentsContainer.appendChild(commentEl);
+      }
     });
   }
 
-  // Theme toggle
-  function toggleDarkMode() {
-    const isDark = document.body.classList.toggle("dark-mode");
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  }
-  if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark-mode");
-  }
 </script>
+
 </body>
 </html>
