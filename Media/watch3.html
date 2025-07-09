@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    .search-box { flex: 1; max-width: 300px; margin: 0 20px; }
+    .search-box input {
+      width: 100%; padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc;
+    }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    .post-media video { background: black; width: 100%; border-radius: 6px; }
+    .donate-barcode { text-align: center; margin-top: 10px; }
+    .donate-barcode img { width: 150px; height: auto; }
+    .donate-barcode a { color: #007bff; font-weight: bold; display: block; margin-top: 5px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
+  </div>
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Search posts..." />
+  </div>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
+</header>
+
+<div id="postContainer" aria-live="polite"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, get, runTransaction } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const postContainer = document.getElementById("postContainer");
+const searchInput = document.getElementById("searchInput");
+
+let currentUser = null;
+let allPosts = [];
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  loginBtn.style.display = user ? "none" : "inline-block";
+  logoutBtn.style.display = user ? "inline-block" : "none";
+  renderPosts();
+});
+
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
+logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
+
+const postsRef = ref(db, "posts");
+onValue(postsRef, snapshot => {
+  const posts = snapshot.val() || {};
+  allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post })).sort((a, b) => b.timestamp - a.timestamp);
+  renderPosts();
+});
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>\"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function renderPosts() {
+  const query = searchInput.value.toLowerCase();
+  postContainer.innerHTML = "";
+  const filtered = allPosts.filter(p => p.caption?.toLowerCase().includes(query));
+  if (!filtered.length) {
+    postContainer.innerHTML = `<p style="padding:20px; text-align:center;">No posts found.</p>`;
+    return;
+  }
+  for (const post of filtered) {
+    const url = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+    const isVideo = post.mediaType === "video";
+    const media = isVideo ? `<video controls><source src="${url}" type="${post.mediaMimeType}" /></video>` : `<img src="${url}" alt="Post image" />`;
+    const article = document.createElement("article");
+    article.className = "post-item";
+    article.innerHTML = `
+      <header class="post-owner">
+        <img src="${post.photoURL || ''}" class="avatar" />
+        <div>
+          <div>${escapeHTML(post.displayName || 'Anonymous')}</div>
+          <div>${new Date(post.timestamp).toLocaleString()}</div>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(post.caption)}</div>
+      <div class="post-media">${media}</div>
+      <div class="post-actions">
+        <button>👍 Like (${post.likesCount || 0})</button>
+        <button>💬 Comment (${post.commentsCount || 0})</button>
+        <button>🚀 Boost (${post.boostsCount || 0})</button>
+        <button>🔄 Repost</button>
+        <select onchange="if(this.value) window.open('https://account.skrill.com/pay?to=digitalrufiyacoin@gmail.com&amount=' + this.value, '_blank');">
+          <option value="">Donate 💖</option>
+          <option value="1">$1</option>
+          <option value="10">$10</option>
+          <option value="20">$20</option>
+        </select>
+      </div>
+      <div class="donate-barcode">
+        <img src="https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=mailto:digitalrufiyacoin@gmail.com" alt="Donate QR">
+        <a href="https://account.skrill.com/pay?to=digitalrufiyacoin@gmail.com" target="_blank">Donate via Skrill</a>
+      </div>
+    `;
+    postContainer.appendChild(article);
+  }
+}
+
+searchInput.addEventListener("input", renderPosts);
+</script>
+
+</body>
+</html>
