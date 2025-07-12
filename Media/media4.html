@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light dark" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
 
+  <!-- optional external CSS if you keep style.css -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -119,6 +120,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebas
 import { getDatabase, ref, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
+/* replace with your own JWT */
 const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
 const firebaseConfig = {
@@ -135,6 +137,7 @@ const db    = getDatabase(app);
 const auth  = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+/* dom refs */
 const loginBtn  = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const uploadForm= document.getElementById("uploadForm");
@@ -145,10 +148,13 @@ const searchIn  = document.getElementById("searchInput");
 const menuTog   = document.getElementById("menuToggle");
 const primaryNav= document.getElementById("primaryNav");
 
+/* state */
 let currentUser=null, isAdmin=false, allPosts=[];
 
+/* utils */
 const esc = s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 
+/* auth */
 loginBtn.onclick = ()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
 logoutBtn.onclick= ()=>signOut(auth).catch(e=>alert(e.message));
 
@@ -164,6 +170,7 @@ onAuthStateChanged(auth,async user=>{
   renderPosts();
 });
 
+/* upload */
 uploadForm.addEventListener("submit",async e=>{
   e.preventDefault();
   if(!currentUser)return alert("Login first");
@@ -171,6 +178,7 @@ uploadForm.addEventListener("submit",async e=>{
   if(captionIn.value.trim().length<4)return alert("Caption too short");
   uploadForm.querySelector("button").disabled=true;
 
+  /* pinata */
   try{
     const fd=new FormData();fd.append("file",mediaFile.files[0]);
     const up=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{method:"POST",headers:{Authorization:pinataJWT},body:fd});
@@ -190,161 +198,141 @@ uploadForm.addEventListener("submit",async e=>{
   finally{uploadForm.querySelector("button").disabled=false}
 });
 
+/* live posts */
 onValue(ref(db,"posts"),snap=>{
   const p=snap.val()||{};
   allPosts=Object.entries(p).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
   renderPosts();
 });
 
+/* render */
 function renderPosts(){
-  const q=searchIn.value.trim().toLowerCase();
-  postWrap.innerHTML="";
+  const q = searchIn.value.trim().toLowerCase();
+  postWrap.innerHTML = "";
   for(const p of allPosts){
-    if(!p.caption.toLowerCase().includes(q))continue;
-    const url="https://gateway.pinata.cloud/ipfs/"+p.ipfsHash;
-    const owner=currentUser&&p.userId===currentUser.uid;
-    const liked=currentUser&&p.likedBy&&p.likedBy[currentUser.uid];
-    const boosted=currentUser&&p.boostedBy&&p.boostedBy[currentUser.uid];
-    const card=document.createElement("article");
-    card.className="post-item";
-    card.innerHTML=`
+    const captionLower = p.caption ? p.caption.toLowerCase() : "";
+    if(!captionLower.includes(q)) continue;
+    const url = "https://gateway.pinata.cloud/ipfs/" + p.ipfsHash;
+    const owner = currentUser && p.userId === currentUser.uid;
+    const liked = currentUser && p.likedBy && p.likedBy[currentUser.uid];
+    const boosted = currentUser && p.boostedBy && p.boostedBy[currentUser.uid];
+    
+    const card = document.createElement("article");
+    card.className = "post-item";
+    card.innerHTML = `
       <header class="post-owner">
-        <img class="avatar" src="${p.photoURL||"https://via.placeholder.com/40"}" alt="avatar">
+        <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="avatar">
         <div>
-          <div>${esc(p.displayName||"Anon")}</div>
+          <div>${esc(p.displayName || "Anon")}</div>
           <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
         </div>
       </header>
       <div class="post-caption">${esc(p.caption)}</div>
-      <div class="post-media">${p.mediaType==="video"
+      <div class="post-media">${p.mediaType === "video"
           ? `<video src="${url}" controls playsinline preload="metadata"></video>`
           : `<img src="${url}" alt="media">`}</div>
       <div class="post-actions">
-        <button class="${liked?'liked':''}"  onclick="likePost('${p.id}')">👍 Like (${p.likesCount||0})</button>
-        <button onclick="commentOnPost('${p.id}')">💬 Comment (${p.commentsCount||0})</button>
-        <button class="${boosted?'boosted':''}"  onclick="boostPost('${p.id}')">🚀 Boost (${p.boostsCount||0})</button>
-        ${owner?`<button class="delete-btn" onclick="deletePost('${p.id}')">🗑️ Delete</button>`:""}
+        <button class="${liked ? 'liked' : ''} like-btn">👍 Like (${p.likesCount || 0})</button>
+        <button class="comment-btn">💬 Comment (${p.commentsCount || 0})</button>
+        <button class="${boosted ? 'boosted' : ''} boost-btn">🚀 Boost (${p.boostsCount || 0})</button>
+        <button class="repost-btn">🔄 Repost</button>
       </div>
-      <section id="comments-${p.id}" class="comments-list"></section>
-      <form onsubmit="return postComment(event,'${p.id}')" class="comment-box">
-        <textarea required minlength="1" placeholder="Write a comment…"></textarea>
-        <button type="submit" class="btn" style="font-size:0.85rem;margin-top:0.25rem;">Post Comment</button>
-      </form>
-    `;
+      <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
+      <div id="comment-box-${p.id}" class="comment-box" style="display:none">
+        <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
+        <button class="submit-comment-btn">Submit</button>
+        <button class="cancel-comment-btn">Cancel</button>
+      </div>`;
+
     postWrap.appendChild(card);
-    renderComments(p.id);
+
+    /* delete button for owner or admin */
+    if(isAdmin || owner){
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑️ Delete";
+      delBtn.className = "delete-btn";
+      delBtn.onclick = () => deletePost(p.id);
+      card.querySelector(".post-actions").appendChild(delBtn);
+    }
+
+    // Bind event listeners programmatically:
+    card.querySelector(".like-btn").onclick = () => likePost(p.id);
+    card.querySelector(".comment-btn").onclick = () => commentOnPost(p.id);
+    card.querySelector(".boost-btn").onclick = () => boostPost(p.id);
+    card.querySelector(".repost-btn").onclick = () => repost(p.id);
+
+    card.querySelector(".submit-comment-btn").onclick = () => submitComment(p.id);
+    card.querySelector(".cancel-comment-btn").onclick = () => cancelComment(p.id);
+
+    loadComments(p.id);
   }
 }
 
-async function likePost(id){
-  if(!currentUser)return alert("Login first");
-  const postRef=ref(db,"posts/"+id);
-  const snap=await get(postRef);
-  const post=snap.val();
-  if(!post)return;
-  if(post.likedBy&&post.likedBy[currentUser.uid]){
-    post.likesCount=(post.likesCount||1)-1;
-    delete post.likedBy[currentUser.uid];
-  }else{
-    post.likesCount=(post.likesCount||0)+1;
-    post.likedBy=post.likedBy||{};
-    post.likedBy[currentUser.uid]=true;
-  }
-  await set(postRef,post);
-}
+/* actions */
+window.likePost = async id => {
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.likedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,`posts/${id}/likedBy`),list);
+  await set(ref(db,`posts/${id}/likesCount`),Object.keys(list).length);
+};
+window.boostPost = async id => {
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.boostedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,`posts/${id}/boostedBy`),list);
+  await set(ref(db,`posts/${id}/boostsCount`),Object.keys(list).length);
+};
+window.repost = async id => {
+  if(!currentUser)return alert("Login");
+  const osnap=await get(ref(db,"posts/"+id));if(!osnap.exists())return;
+  const o=osnap.val();
+  await set(push(ref(db,"posts")),{userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL,caption:`[Reposted by ${currentUser.displayName||"Anon"}]\n\n${o.caption}`,ipfsHash:o.ipfsHash,mediaType:o.mediaType,mediaMimeType:o.mediaMimeType,timestamp:Date.now(),likesCount:0,commentsCount:0,boostsCount:0,likedBy:{},boostedBy:{}});  
+};
 
-async function boostPost(id){
-  if(!currentUser)return alert("Login first");
-  const postRef=ref(db,"posts/"+id);
-  const snap=await get(postRef);
-  const post=snap.val();
-  if(!post)return;
-  if(post.boostedBy&&post.boostedBy[currentUser.uid]){
-    post.boostsCount=(post.boostsCount||1)-1;
-    delete post.boostedBy[currentUser.uid];
-  }else{
-    post.boostsCount=(post.boostsCount||0)+1;
-    post.boostedBy=post.boostedBy||{};
-    post.boostedBy[currentUser.uid]=true;
-  }
-  await set(postRef,post);
-}
+/* delete */
+window.deletePost = async id => {
+  if(!currentUser)return alert("Login required");
+  const ownerSnap=await get(ref(db,`posts/${id}/userId`));
+  if(!(isAdmin|| (ownerSnap.exists()&&ownerSnap.val()===currentUser.uid)))return alert("No permission");
+  if(!confirm("Delete this post permanently?"))return;
+  await set(ref(db,`posts/${id}`),null);
+  await set(ref(db,`comments/${id}`),null);
+  alert("Deleted");
+};
 
-async function deletePost(id){
-  if(!currentUser)return alert("Login first");
-  const postRef=ref(db,"posts/"+id);
-  const snap=await get(postRef);
-  const post=snap.val();
-  if(!post)return;
-  if(post.userId!==currentUser.uid && !isAdmin)return alert("No permission");
-  await set(postRef,null);
-}
-
-async function commentOnPost(id){
-  if(!currentUser)return alert("Login first");
-  const commentsRef=ref(db,"comments/"+id);
-  const commentText=prompt("Write your comment:");
-  if(!commentText || commentText.trim().length===0)return;
-  const newCommentRef=push(commentsRef);
-  await set(newCommentRef,{
-    userId:currentUser.uid,
-    displayName:currentUser.displayName,
-    photoURL:currentUser.photoURL,
-    text:commentText.trim(),
-    timestamp:Date.now()
-  });
-  renderComments(id);
-}
-
-async function renderComments(postId){
-  const commentsList=document.getElementById("comments-"+postId);
-  if(!commentsList)return;
-  const commentsSnap=await get(ref(db,"comments/"+postId));
-  const comments=commentsSnap.val()||{};
-  commentsList.innerHTML="";
-  Object.entries(comments).sort((a,b)=>b[1].timestamp - a[1].timestamp).forEach(([id,cm])=>{
-    const el=document.createElement("article");
-    el.style.marginBottom="0.5rem";
-    el.innerHTML=`
-      <div style="display:flex;align-items:center;gap:.4rem;font-weight:600">
-        <img src="${cm.photoURL||'https://via.placeholder.com/30'}" alt="avatar" style="width:30px;height:30px;border-radius:50%;object-fit:cover;box-shadow:0 1px 3px rgba(0,0,0,.2)">
-        <div>${esc(cm.displayName||"Anon")}</div>
-        <time style="margin-left:auto;font-size:.75rem;color:#666" datetime="${new Date(cm.timestamp).toISOString()}">${new Date(cm.timestamp).toLocaleString()}</time>
-      </div>
-      <div style="margin-top:.25rem;padding-left:40px">${esc(cm.text)}</div>
-    `;
-    commentsList.appendChild(el);
+/* comments */
+window.commentOnPost = id => document.getElementById(`comment-box-${id}`).style.display="block";
+window.cancelComment = id => document.getElementById(`comment-box-${id}`).style.display="none";
+window.submitComment = async id => {
+  if(!currentUser)return alert("Login");
+  const txt = document.getElementById(`comment-input-${id}`).value.trim();
+  if(!txt)return;
+  await set(push(ref(db,`comments/${id}`)),{userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL,text:txt,timestamp:Date.now()});
+  const psnap=await get(ref(db,"posts/"+id));
+  if(psnap.exists()){await set(ref(db,`posts/${id}/commentsCount`),(psnap.val().commentsCount||0)+1);}
+  document.getElementById(`comment-input-${id}`).value="";
+  window.cancelComment(id);
+};
+async function loadComments(id){
+  const cSnap=await get(ref(db,`comments/${id}`));
+  const box=document.getElementById(`comments-${id}`);
+  if(!box)return;box.innerHTML="";
+  if(!cSnap.exists())return;
+  Object.values(cSnap.val()).sort((a,b)=>a.timestamp-b.timestamp).forEach(c=>{
+    box.insertAdjacentHTML("beforeend",
+      `<div><strong>${esc(c.displayName||"Anon")}</strong>: ${esc(c.text)}<br><small>${new Date(c.timestamp).toLocaleString()}</small></div>`);
   });
 }
 
-async function postComment(e,id){
-  e.preventDefault();
-  if(!currentUser)return alert("Login first");
-  const form=e.target;
-  const textarea=form.querySelector("textarea");
-  if(!textarea.value.trim())return alert("Comment empty");
-  const commentsRef=ref(db,"comments/"+id);
-  const newCommentRef=push(commentsRef);
-  await set(newCommentRef,{
-    userId:currentUser.uid,
-    displayName:currentUser.displayName,
-    photoURL:currentUser.photoURL,
-    text:textarea.value.trim(),
-    timestamp:Date.now()
-  });
-  textarea.value="";
-  renderComments(id);
-  return false;
-}
-
+/* search + nav toggle */
 searchIn.addEventListener("input",renderPosts);
-
 menuTog.addEventListener("click",()=>{
-  const expanded = menuTog.getAttribute("aria-expanded") === "true";
-  menuTog.setAttribute("aria-expanded",!expanded);
   primaryNav.classList.toggle("open");
+  menuTog.setAttribute("aria-expanded",primaryNav.classList.contains("open"));
 });
 </script>
-
 </body>
 </html>
