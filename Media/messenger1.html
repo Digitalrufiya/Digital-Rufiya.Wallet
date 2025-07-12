@@ -1,70 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>DRFMessenger — Final Fix</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat | DRFMedia</title>
   <style>
-    /* your CSS here, same as before */
-    *{box-sizing:border-box;}
-    body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
-    nav{background:#0066cc;color:#fff;padding:15px;text-align:center;font-weight:bold;}
-    #loginBtn{margin-top:10px;padding:8px 16px;font-size:1rem;cursor:pointer;border:none;border-radius:5px;background:#fff;color:#0066cc;}
-    #container{display:none;flex:1;overflow:hidden;}
-    #usersList{width:240px;background:#fff;border-right:1px solid #ccc;overflow-y:auto;}
-    #usersList h2{margin:0;padding:15px;background:#0066cc;color:#fff;}
-    .user-item{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #eee;cursor:pointer;}
-    .user-item:hover{background:#e6f2ff;}
-    .user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
-    .user-name{flex:1;font-weight:600;}
-    #chatArea{flex:1;display:flex;flex-direction:column;background:#fff;}
-    #chatHeader{padding:15px;border-bottom:1px solid #ccc;background:#f7f7f7;font-weight:bold;}
-    #messagesContainer{flex:1;padding:10px;overflow-y:auto;background:#f0f0f0;display:flex;flex-direction:column;}
-    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;}
-    .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
-    .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
-    .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
-    .preview img{max-width:100%;border-radius:4px;}
-    .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
-    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
-    #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;}
-    #sendBtn{margin-left:8px;padding:0 16px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;}
-    #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
-    #emojiBtn{background:none;border:none;font-size:20px;margin-left:8px;cursor:pointer;}
-    emoji-picker{position:absolute;bottom:60px;right:20px;display:none;z-index:10;}
-    #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    nav {
+      background-color: #0066cc;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 15px 0;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 1.1rem;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background-color 0.3s ease;
+    }
+    nav a:hover, nav a.active {
+      background-color: #004999;
+    }
+    nav button.logout-btn {
+      background: #cc3300;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    nav button.logout-btn:hover {
+      background-color: #990000;
+    }
+    #chatContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .message {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .message .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ccc;
+      flex-shrink: 0;
+    }
+    .message .content {
+      max-width: 80%;
+    }
+    .message .username {
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+    .message .text {
+      white-space: pre-wrap;
+    }
+    .message .timestamp {
+      font-size: 0.75em;
+      color: #666;
+      margin-left: auto;
+      align-self: flex-end;
+    }
+    #inputForm {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-family: inherit;
+    }
+    #sendBtn {
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+    #sendBtn:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+    @media (max-width: 480px) {
+      #chatContainer {
+        margin: 10px;
+        padding: 10px;
+      }
+      nav a, nav button.logout-btn {
+        font-size: 1rem;
+        padding: 6px 12px;
+      }
+    }
   </style>
 </head>
 <body>
-  <nav>DRFMessenger</nav>
 
-  <!-- Login screen -->
-  <div id="loginNotice">
-    <p>Please sign in with Google to use the chat.</p>
-    <button id="loginBtn">Sign in with Google</button>
-  </div>
+<nav>
+  <a href="media.html">Timeline</a>
+  <a href="profile.html">Profile</a>
+  <a href="chat.html" class="active" aria-current="page">Chat</a>
+  <button class="logout-btn" id="logoutBtn">Logout</button>
+</nav>
 
-  <!-- Messenger UI -->
-  <div id="container">
-    <div id="usersList">
-      <h2>Users</h2>
-    </div>
-    <div id="chatArea">
-      <div id="chatHeader">Select a user to chat</div>
-      <div id="messagesContainer"></div>
-      <div id="inputArea">
-        <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
-        <button id="emojiBtn">😊</button>
-        <button id="sendBtn" disabled>Send</button>
-        <emoji-picker id="picker"></emoji-picker>
-      </div>
-    </div>
-  </div>
+<div id="chatContainer" role="region" aria-label="Chat messages and input">
+  <div id="messages" tabindex="0" aria-live="polite" aria-relevant="additions"></div>
+  <form id="inputForm" aria-label="Send chat message">
+    <input type="text" id="messageInput" placeholder="Type your message..." aria-label="Message input" autocomplete="off" required minlength="1" maxlength="500" />
+    <button type="submit" id="sendBtn" disabled>Send</button>
+  </form>
+</div>
 
-<script>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+  import { getDatabase, ref, push, onChildAdded, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+  import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -74,132 +163,111 @@
     messagingSenderId: "608135115201",
     appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
 
-  const loginNotice = document.getElementById('loginNotice');
-  const loginBtn = document.getElementById('loginBtn');
-  const container = document.getElementById('container');
-  const usersListEl = document.getElementById('usersList');
-  const chatHeaderEl = document.getElementById('chatHeader');
-  const messagesContainerEl = document.getElementById('messagesContainer');
-  const inputMessageEl = document.getElementById('inputMessage');
-  const sendBtnEl = document.getElementById('sendBtn');
-  const emojiBtn = document.getElementById('emojiBtn');
-  const emojiPicker = document.getElementById('picker');
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
 
-  let currentUser = null, selectedUser = null, messagesRef = null;
+  const messagesDiv = document.getElementById('messages');
+  const inputForm = document.getElementById('inputForm');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
 
-  loginBtn.onclick = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert(err.message));
-  };
+  let currentUser = null;
 
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      loginNotice.style.display = 'none';
-      container.style.display = 'flex';
-      loadUsers();
-    } else {
-      currentUser = null;
-      loginNotice.style.display = 'flex';
-      container.style.display = 'none';
+  // Enable/disable send button based on input content
+  messageInput.addEventListener('input', () => {
+    sendBtn.disabled = messageInput.value.trim().length === 0;
+  });
+
+  // Escape to prevent HTML injection
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  // Format timestamp to readable string
+  function formatTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleString();
+  }
+
+  // Append a message element to messagesDiv
+  function appendMessage(msg) {
+    const div = document.createElement('div');
+    div.className = 'message';
+
+    div.innerHTML = `
+      <img src="${escapeHTML(msg.photoURL || 'https://via.placeholder.com/40?text=User')}" alt="Avatar" class="avatar" />
+      <div class="content">
+        <div class="username">${escapeHTML(msg.displayName || 'Anonymous')}</div>
+        <div class="text">${escapeHTML(msg.text)}</div>
+      </div>
+      <div class="timestamp" title="${formatTimestamp(msg.timestamp)}">${formatTimestamp(msg.timestamp)}</div>
+    `;
+
+    messagesDiv.appendChild(div);
+    // Scroll to bottom on new message
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  // Load messages in realtime
+  function loadMessages() {
+    const messagesRef = ref(db, 'chatMessages');
+    onChildAdded(messagesRef, snapshot => {
+      const msg = snapshot.val();
+      appendMessage(msg);
+    });
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      alert("Please login to use chat.");
+      window.location.href = "timeline.html";
+      return;
+    }
+    currentUser = user;
+    loadMessages();
+  });
+
+  inputForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const text = messageInput.value.trim();
+    if (text.length === 0) return;
+
+    sendBtn.disabled = true;
+
+    try {
+      const messagesRef = ref(db, 'chatMessages');
+      await push(messagesRef, {
+        userId: currentUser.uid,
+        displayName: currentUser.displayName || 'Anonymous',
+        photoURL: currentUser.photoURL || '',
+        text,
+        timestamp: Date.now()
+      });
+      messageInput.value = '';
+      sendBtn.disabled = true;
+    } catch (err) {
+      alert("Failed to send message: " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      messageInput.focus();
     }
   });
 
-  function loadUsers() {
-    db.ref('profiles').once('value').then(snap => {
-      usersListEl.innerHTML = '<h2>Users</h2>';
-      snap.forEach(child => {
-        const wallet = child.key;
-        const u = child.val();
-        if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
-        const div = document.createElement('div');
-        div.className = 'user-item';
-        div.innerHTML = `<img src="${u.photoUrl||'https://i.pravatar.cc/40'}" class="user-avatar">
-                         <div class="user-name">${u.name||wallet}</div>`;
-        div.onclick = () => selectUser(wallet, u.name||wallet);
-        usersListEl.appendChild(div);
-      });
-    });
-  }
-
-  function selectUser(wallet, name) {
-    selectedUser = { wallet, name };
-    chatHeaderEl.textContent = 'Chat with ' + name;
-    inputMessageEl.disabled = false;
-    sendBtnEl.disabled = false;
-    messagesContainerEl.innerHTML = '';
-    inputMessageEl.value = '';
-    if (messagesRef) messagesRef.off(); // detach previous listener
-    listenMessages();
-  }
-
-  function getChatId(a,b) {
-    a = a.toLowerCase(); b = b.toLowerCase();
-    return a < b ? a + '_' + b : b + '_' + a;
-  }
-
-  function listenMessages() {
-    if (!currentUser || !selectedUser) return;
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    messagesRef = db.ref('messages/' + chatId);
-    messagesRef.off();
-    messagesContainerEl.innerHTML = '';
-
-    messagesRef.on('child_added', snapshot => {
-      const m = snapshot.val();
-      const d = document.createElement('div');
-      d.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
-      // Replace URLs in text with clickable links
-      let html = m.text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
-      d.innerHTML = html;
-      messagesContainerEl.appendChild(d);
-
-      // Check for image URL for preview
-      const imgMatch = m.text.match(/(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif))/i);
-      if (imgMatch) {
-        const p = document.createElement('div');
-        p.className = 'preview';
-        p.innerHTML = `<img src="${imgMatch[0]}" alt="preview" />`;
-        messagesContainerEl.appendChild(p);
-      }
-      messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
-    });
-  }
-
-  sendBtnEl.onclick = () => {
-    const txt = inputMessageEl.value.trim();
-    if (!txt || !selectedUser || !currentUser) return alert("Select user and write a message");
-
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    // Push message with timestamp
-    db.ref('messages/' + chatId).push({
-      sender: currentUser.uid,
-      text: txt,
-      timestamp: Date.now()
-    }).then(() => {
-      inputMessageEl.value = '';
-    }).catch(e => alert("Error sending message: " + e.message));
-  };
-
-  inputMessageEl.onkeydown = e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendBtnEl.click();
+  logoutBtn.addEventListener('click', async () => {
+    try {
+      await signOut(auth);
+      window.location.href = "timeline.html";
+    } catch (e) {
+      alert("Logout failed: " + e.message);
     }
-  };
-
-  emojiBtn.onclick = () => {
-    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
-  };
-
-  emojiPicker.addEventListener('emoji-click', event => {
-    inputMessageEl.value += event.detail.unicode;
-    inputMessageEl.focus();
   });
 </script>
+
 </body>
 </html>
