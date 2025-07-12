@@ -546,66 +546,69 @@
       renderPosts();
     });
 
-    // Generate thumbnail for videos client side for preview
-    async function generateVideoThumbnail(file) {
-      return new Promise((resolve) => {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.muted = true;
-        video.src = URL.createObjectURL(file);
-        video.currentTime = 1;
-
-        video.onloadeddata = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          URL.revokeObjectURL(video.src);
-          resolve(canvas.toDataURL("image/png"));
-        };
-
-        video.onerror = () => resolve(null);
-      });
-    }
-
-    function createMediaElement(post) {
-      if (!post.ipfsHash) return fallbackElement("Missing media");
-
-      const url = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
-
-      if (post.mediaType === "video") {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.playsInline = true;
-        video.preload = "metadata";
-        video.src = url;
-
-        // On error fallback
-        video.onerror = () => {
-          video.replaceWith(fallbackElement("Video load failed"));
-        };
-
-        return video;
-      } else {
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = "media";
-        img.loading = "lazy";
-
-        img.onerror = () => {
-          img.replaceWith(fallbackElement("Image load failed"));
-        };
-
-        return img;
-      }
-    }
+    // IPFS gateway rotation helper
+    const IPFS_GATEWAYS = [
+      "https://gateway.pinata.cloud/ipfs/",
+      "https://ipfs.io/ipfs/",
+      "https://cloudflare-ipfs.com/ipfs/",
+      "https://dweb.link/ipfs/",
+    ];
 
     function fallbackElement(text) {
       const div = document.createElement("div");
       div.className = "fallback-media";
       div.textContent = text;
       return div;
+    }
+
+    function createMediaElement(post) {
+      if (!post.ipfsHash) return fallbackElement("Missing media");
+
+      let attempt = 0;
+
+      const buildURL = () => IPFS_GATEWAYS[attempt] + post.ipfsHash;
+
+      if (post.mediaType === "video") {
+        const video = document.createElement("video");
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        video.crossOrigin = "anonymous";
+
+        const tryNext = () => {
+          if (attempt >= IPFS_GATEWAYS.length) {
+            video.replaceWith(fallbackElement("Video load failed"));
+            return;
+          }
+          video.src = buildURL();
+          video.load();
+          attempt++;
+        };
+
+        video.onerror = tryNext;
+        video.onstalled = () => setTimeout(tryNext, 4000);
+
+        tryNext();
+        return video;
+      } else {
+        const img = document.createElement("img");
+        img.alt = "media";
+        img.loading = "lazy";
+        img.crossOrigin = "anonymous";
+
+        const tryNext = () => {
+          if (attempt >= IPFS_GATEWAYS.length) {
+            img.replaceWith(fallbackElement("Image load failed"));
+            return;
+          }
+          img.src = buildURL();
+          attempt++;
+        };
+
+        img.onerror = tryNext;
+        tryNext();
+        return img;
+      }
     }
 
     function renderPosts() {
@@ -706,74 +709,4 @@
         caption: `[Reposted by ${currentUser.displayName || "Anon"}]\n\n${o.caption}`,
         ipfsHash: o.ipfsHash,
         mediaType: o.mediaType,
-        mediaMimeType: o.mediaMimeType,
-        timestamp: Date.now(),
-        likesCount: 0,
-        commentsCount: 0,
-        boostsCount: 0,
-        likedBy: {},
-        boostedBy: {},
-      });
-    };
-
-    window.deletePost = async (id) => {
-      if (!currentUser) return alert("Login required");
-      const ownerSnap = await get(ref(db, `posts/${id}/userId`));
-      if (!(isAdmin || (ownerSnap.exists() && ownerSnap.val() === currentUser.uid)))
-        return alert("No permission");
-      if (!confirm("Delete this post permanently?")) return;
-      await set(ref(db, `posts/${id}`), null);
-      await set(ref(db, `comments/${id}`), null);
-      alert("Deleted");
-    };
-
-    window.commentOnPost = (id) =>
-      (document.getElementById(`comment-box-${id}`).style.display = "block");
-    window.cancelComment = (id) =>
-      (document.getElementById(`comment-box-${id}`).style.display = "none");
-
-    window.submitComment = async (id) => {
-      if (!currentUser) return alert("Login required");
-      const txt = document.getElementById(`comment-input-${id}`).value.trim();
-      if (!txt) return;
-      await set(push(ref(db, `comments/${id}`)), {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
-        text: txt,
-        timestamp: Date.now(),
-      });
-      const psnap = await get(ref(db, "posts/" + id));
-      if (psnap.exists()) {
-        await set(ref(db, `posts/${id}/commentsCount`), (psnap.val().commentsCount || 0) + 1);
-      }
-      document.getElementById(`comment-input-${id}`).value = "";
-      window.cancelComment(id);
-    };
-
-    async function loadComments(id) {
-      const cSnap = await get(ref(db, `comments/${id}`));
-      const box = document.getElementById(`comments-${id}`);
-      if (!box) return;
-      box.innerHTML = "";
-      if (!cSnap.exists()) return;
-      Object.values(cSnap.val())
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .forEach((c) => {
-          box.insertAdjacentHTML(
-            "beforeend",
-            `<div><strong>${esc(c.displayName || "Anon")}</strong>: ${esc(
-              c.text
-            )}<br><small>${new Date(c.timestamp).toLocaleString()}</small></div>`
-          );
-        });
-    }
-
-    searchIn.addEventListener("input", renderPosts);
-    menuTog.addEventListener("click", () => {
-      primaryNav.classList.toggle("open");
-      menuTog.setAttribute("aria-expanded", primaryNav.classList.contains("open"));
-    });
-  </script>
-</body>
-</html>
+        mediaMimeType: o.mediaM
