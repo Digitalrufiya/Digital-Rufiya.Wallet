@@ -8,31 +8,19 @@
   <style>
     body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#222}
     header{background:#007bff;color:#fff;padding:10px 20px;position:sticky;top:0;z-index:1000;
-      box-shadow:0 2px 4px rgb(0 0 0 /.1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+      box-shadow:0 2px 4px rgb(0 0 0 / .1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
     .navbar-left{display:flex;align-items:center;gap:10px}
     .navbar-left img{height:40px;width:40px;border-radius:4px;background:#fff;padding:2px}
     .navbar-left h1{margin:0;font-size:1.4em;font-weight:700}
     video,img{max-width:100%;border-radius:6px;margin-top:10px;background:#000;display:block}
+    .post-media video{background:#000;width:100%;border-radius:6px}
 
-    .post-item{border:1px solid #ddd;border-radius:8px;margin:16px 20px;padding:14px 18px;
-      box-shadow:0 1px 6px rgba(0,0,0,.1)}
-    .post-owner{display:flex;align-items:center;gap:12px;font-weight:600}
-    .post-owner img.avatar{width:40px;height:40px;border-radius:50%;background:#eee}
-    .post-caption{margin:12px 0;font-size:1.05rem}
-    .post-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-    .post-actions button{cursor:pointer;border:none;background:#007bff;color:#fff;padding:6px 14px;border-radius:6px;
+    /* --- Like button styles (new) --- */
+    .post-actions{display:flex;gap:8px;margin-top:8px}
+    .like-btn{cursor:pointer;border:none;background:#007bff;color:#fff;padding:6px 14px;border-radius:6px;
       font-size:.9rem;font-weight:600;transition:background-color .3s}
-    .post-actions button:hover{background:#0056b3}
-    .post-actions button.liked{background:#28a745!important;box-shadow:0 0 8px #28a745aa}
-    .comments-container{margin-top:8px;max-height:160px;overflow-y:auto;border-top:1px solid #ccc;padding-top:6px;font-size:.9rem}
-    .comment{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
-    .comment img.avatar{width:28px;height:28px;border-radius:50%;background:#eee}
-    .comment-body{background:#f5f5f5;padding:6px 10px;border-radius:8px;flex:1}
-    .comment-body strong{display:block;color:#007bff;margin-bottom:2px;font-weight:700;font-size:.9rem}
-    .comment-form{margin-top:6px;display:flex;gap:6px}
-    .comment-form input{flex:1;padding:6px 10px;border:1px solid #ccc;border-radius:6px}
-    .comment-form button{background:#007bff;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:600}
-    .comment-form button:hover{background:#0056b3}
+    .like-btn:hover{background:#0056b3}
+    .like-btn.liked{background:#28a745!important;box-shadow:0 0 6px #28a74599}
   </style>
 </head>
 <body>
@@ -48,12 +36,12 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import {
+    getDatabase, ref, onValue, set, get
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  /* Pinata JWT – ready for uploads if needed */
-  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA
-  ";
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb...";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -72,145 +60,79 @@
   let currentUser = null;
   let allPosts    = [];
 
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth,user=>{
     currentUser = user;
     renderPosts();
   });
 
-  const postsRef = ref(db, "posts");
-  onValue(postsRef, snap => {
-    const p = snap.val() || {};
-    allPosts = Object.entries(p).map(([id, post]) => ({ id, ...post }))
-               .sort((a,b)=>b.timestamp-a.timestamp);
+  onValue(ref(db,"posts"),snap=>{
+    const posts = snap.val()||{};
+    allPosts = Object.entries(posts).map(([id,p])=>({id,...p}))
+                .sort((a,b)=>b.timestamp-a.timestamp);
     renderPosts();
   });
 
   function renderPosts(){
     const container = document.getElementById("postContainer");
+    if(!container) return;
     container.innerHTML = "";
-    allPosts.forEach(post => container.appendChild(renderPost(post)));
-  }
 
-  /* ------------ RENDER SINGLE POST ------------- */
-  function renderPost(post){
-    const { id:postId, ipfsHash, mediaType, mediaMimeType,
-            displayName='Anonymous', photoURL='', caption='',
-            timestamp=0 } = post;
+    for(const post of allPosts){
+      const {id:postId,ipfsHash,mediaType,mediaMimeType,timestamp,
+             caption='',displayName='Anonymous',photoURL=''} = post;
 
-    const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
-    const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
-    const mediaHTML = mediaType==="video"
-      ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'">
-           <source src="${url1}" type="${mediaMimeType}" />
-         </video>`
-      : `<img src="${url1}" alt="post image" onerror="this.onerror=null;this.src='${url2}'" />`;
+      const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+      const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
+      const mediaHTML = mediaType==="video"
+        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'">
+             <source src="${url1}" type="${mediaMimeType}" />
+           </video>`
+        : `<img src="${url1}" alt="image post" onerror="this.onerror=null;this.src='${url2}'" loading="lazy" />`;
 
-    const art = document.createElement("article");
-    art.className = "post-item";
-    art.innerHTML = `
-      <header class="post-owner">
-        <img src="${photoURL}" class="avatar" alt="avatar" />
-        <div>
-          <div>${displayName}</div>
-          <div class="post-time">${new Date(timestamp).toLocaleString()}</div>
+      const article = document.createElement("article");
+      article.className = "post-item";
+      article.innerHTML = `
+        <header class="post-owner">
+          <img src="${photoURL}" class="avatar" alt="avatar" />
+          <div>
+            <div>${displayName}</div>
+            <div class="post-time">${new Date(timestamp).toLocaleString()}</div>
+          </div>
+        </header>
+        <div class="post-caption">${caption}</div>
+        <div class="post-media">${mediaHTML}</div>
+
+        <!-- Like button container (new) -->
+        <div class="post-actions">
+          <button class="like-btn" aria-pressed="false">❤️ <span class="likes-count">0</span></button>
         </div>
-      </header>
-      <div class="post-caption">${caption}</div>
-      <div class="post-media">${mediaHTML}</div>
+      `;
+      container.appendChild(article);
 
-      <div class="post-actions">
-        <button class="like-btn"   aria-pressed="false">❤️ <span class="likes-count">0</span></button>
-        <button class="cmt-toggle" aria-expanded="false">💬 Comments (0)</button>
-        <button class="share-btn">🔗 Share</button>
-      </div>
+      /* ----- Like feature (new) ----- */
+      const likeBtn  = article.querySelector('.like-btn');
+      const likeSpan = likeBtn.querySelector('.likes-count');
+      const likesPath = `posts/${postId}/likes`;
+      const likesRef  = ref(db, likesPath);
+      const userRef   = () => ref(db, `${likesPath}/${currentUser?.uid}`);
 
-      <div class="comments-container" hidden>
-        <div class="comments-list"></div>
-        <form class="comment-form">
-          <input placeholder="Write a comment..." required />
-          <button>Post</button>
-        </form>
-      </div>
-    `;
-
-    /* ----- LIKE ----- */
-    const likeBtn  = art.querySelector('.like-btn');
-    const likeCnt  = likeBtn.querySelector('.likes-count');
-    const likesPath = `posts/${postId}/likes`;
-    const likeRef  = ref(db, likesPath);
-    const userLike = () => ref(db, `${likesPath}/${currentUser?.uid}`);
-
-    onValue(likeRef, s=>{
-      const d = s.val()||{};
-      likeCnt.textContent = Object.keys(d).length;
-      const liked = currentUser ? Boolean(d[currentUser.uid]) : false;
-      likeBtn.classList.toggle('liked',liked);
-      likeBtn.setAttribute('aria-pressed',liked);
-    });
-
-    likeBtn.onclick = async ()=>{
-      if(!currentUser){alert("Please sign in to like.");return;}
-      const liked = (await get(userLike())).exists();
-      await update(db,{ [`${likesPath}/${currentUser.uid}`]: liked?null:true });
-    };
-
-    /* ----- COMMENTS ----- */
-    const toggleBtn = art.querySelector('.cmt-toggle');
-    const cBox      = art.querySelector('.comments-container');
-    const cList     = art.querySelector('.comments-list');
-    const cForm     = art.querySelector('.comment-form');
-    const cInput    = cForm.querySelector('input');
-
-    // live comments count & list
-    const cmtsRef = ref(db, `posts/${postId}/comments`);
-    onValue(cmtsRef, snap=>{
-      const cmts = snap.val()||{};
-      toggleBtn.textContent = `💬 Comments (${Object.keys(cmts).length})`;
-      cList.innerHTML="";
-      Object.values(cmts).sort((a,b)=>a.timestamp-b.timestamp).forEach(c=>{
-        const div=document.createElement('div');div.className='comment';
-        div.innerHTML=`
-          <img class="avatar" src="${c.photoURL||''}" alt="avatar">
-          <div class="comment-body">
-            <strong>${c.displayName||'Anon'}</strong>${c.text}
-          </div>`;
-        cList.appendChild(div);
+      // realtime count + state
+      onValue(likesRef, snap=>{
+        const data = snap.val()||{};
+        likeSpan.textContent = Object.keys(data).length;
+        const liked = currentUser ? Boolean(data[currentUser.uid]) : false;
+        likeBtn.classList.toggle('liked', liked);
+        likeBtn.setAttribute('aria-pressed', liked);
       });
-    });
 
-    toggleBtn.onclick=()=>{
-      const hidden=cBox.hasAttribute('hidden');
-      if(hidden){cBox.removeAttribute('hidden');toggleBtn.setAttribute('aria-expanded','true');}
-      else{cBox.hidden=true;toggleBtn.setAttribute('aria-expanded','false');}
-    };
-
-    cForm.onsubmit=async e=>{
-      e.preventDefault();
-      if(!currentUser){alert("Sign in to comment.");return;}
-      const txt=cInput.value.trim();if(!txt)return;
-      const cmid=Date.now().toString(36);
-      await update(db,{
-        [`posts/${postId}/comments/${cmid}`]:{
-          displayName:currentUser.displayName||"Anon",
-          photoURL:currentUser.photoURL||"",
-          text:txt,
-          timestamp:Date.now()
-        }
-      });
-      cInput.value="";
-    };
-
-    /* ----- SHARE ----- */
-    art.querySelector('.share-btn').onclick=()=>{
-      const url=`${location.origin}/post.html?id=${postId}`;
-      if(navigator.share){
-        navigator.share({title:"DRFMedia Post",url}).catch(()=>{});
-      }else{
-        prompt("Copy link",url);
-      }
-    };
-
-    return art;
+      // toggle like on click
+      likeBtn.onclick = async ()=>{
+        if(!currentUser){ alert("Please sign in to like posts."); return; }
+        const liked = (await get(userRef())).exists();
+        await set(userRef(), liked ? null : true);   // null removes like
+      };
+      /* ----- End like feature ----- */
+    }
   }
 </script>
 </body>
