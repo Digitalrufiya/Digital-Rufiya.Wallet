@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* ---------- trimmed for brevity: styles unchanged from your file ---------- */
+    body{font-family:Arial,system-ui,sans-serif;margin:0;background:#fff;color:#222}
+    header{background:#007bff;color:#fff;padding:10px 20px;position:sticky;top:0;z-index:1000;box-shadow:0 2px 4px rgb(0 0 0 /.1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .navbar-left{display:flex;align-items:center;gap:10px}
+    .navbar-left img{height:40px;width:40px;border-radius:4px;background:#fff;padding:2px}
+    .post-item{border:1px solid #ddd;border-radius:8px;margin:16px 20px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,.1)}
+    .post-owner{display:flex;align-items:center;gap:12px;font-weight:600}
+    .post-owner img.avatar{width:40px;height:40px;border-radius:50%}
+    video,img{max-width:100%;border-radius:6px;margin-top:10px;background:#000;display:block}
+    .post-media video{width:100%}
+    /* … keep the rest of your CSS … */
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="media.html">Timeline</a>
+  <a href="profile.html" class="active">Profile</a>
+  <a href="media.html">Posts</a>
+  <a href="gift.html">Donation</a>
+  <a href="chat.html">Chat</a>
+</nav>
+
+<header>
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
+  </div>
+  <div>
+    <button id="loginBtn">Login with Google</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </div>
+</header>
+
+<div id="postContainer" aria-live="polite"></div>
+
+<!-- ───────── Skrill modal unchanged (omitted here for space) ───────── -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+/* ---------- Firebase config ---------- */
+const firebaseConfig={apiKey:"AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",authDomain:"drfsocial-23a06.firebaseapp.com",databaseURL:"https://drfsocial-23a06-default-rtdb.firebaseio.com",projectId:"drfsocial-23a06",storageBucket:"drfsocial-23a06.appspot.com",messagingSenderId:"608135115201",appId:"1:608135115201:web:dc999df2c0c37241ff3f40"};
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
+const auth=getAuth(app);
+const provider=new GoogleAuthProvider();
+
+/* ---------- DOM refs ---------- */
+const loginBtn=document.getElementById("loginBtn");
+const logoutBtn=document.getElementById("logoutBtn");
+const postContainer=document.getElementById("postContainer");
+
+/* ---------- Helpers ---------- */
+const escapeHTML=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const placeholder40=`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' rx='20' fill='%23ccc'/%3E%3C/svg%3E`;
+const placeholder30=`data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Crect width='30' height='30' rx='15' fill='%23ccc'/%3E%3C/svg%3E`;
+
+/* ---------- Auth ---------- */
+onAuthStateChanged(auth,user=>{
+  currentUser=user;
+  loginBtn.style.display=user?"none":"inline-block";
+  logoutBtn.style.display=user?"inline-block":"none";
+  renderPosts();
+});
+loginBtn.onclick=()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
+logoutBtn.onclick=()=>signOut(auth).catch(e=>alert(e.message));
+
+/* ---------- Load posts ---------- */
+let currentUser=null;
+let allPosts=[];
+onValue(ref(db,"posts"),snap=>{
+  const p=snap.val()||{};
+  allPosts=Object.entries(p).map(([id,data])=>({id,...data})).sort((a,b)=>b.timestamp-a.timestamp);
+  renderPosts();
+});
+
+/* ---------- Render ---------- */
+function renderPosts(){
+  postContainer.innerHTML="";
+  if(!allPosts.length){postContainer.innerHTML="<p style='padding:20px;text-align:center;'>No posts yet.</p>";return;}
+
+  for(const post of allPosts){
+    const ipfs=post.ipfsHash||"";
+    const gateways=[`https://gateway.pinata.cloud/ipfs/${ipfs}`,`https://cloudflare-ipfs.com/ipfs/${ipfs}`,`https://ipfs.io/ipfs/${ipfs}`];
+
+    const videoHTML=`
+      <video controls preload="none" loading="lazy" poster="${gateways[1]}" data-alt="${gateways[2]}"
+             onerror="window.switchGateway(this)" style="border-radius:6px;width:100%;">
+        <source src="${gateways[0]}" type="${post.mediaMimeType||'video/mp4'}">
+        <source src="${gateways[1]}" type="${post.mediaMimeType||'video/mp4'}">
+      </video>`;
+
+    const media=post.mediaType==="video"
+      ? videoHTML
+      : `<img src="${gateways[0]}" loading="lazy" onerror="this.onerror=null;this.src='${gateways[1]}'" style="border-radius:6px;">`;
+
+    const liked=currentUser&&post.likesBy&&post.likesBy[currentUser.uid];
+    const boosted=currentUser&&post.boostedBy&&post.boostedBy[currentUser.uid];
+
+    const card=document.createElement("article");
+    card.className="post-item";
+    card.innerHTML=`
+      <header class="post-owner">
+        <img src="${post.photoURL||placeholder40}" alt="" class="avatar">
+        <div>
+          <div>${escapeHTML(post.displayName||"Anon")}</div>
+          <small>${new Date(post.timestamp).toLocaleString()}</small>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(post.caption)}</div>
+      <div class="post-media">${media}</div>
+      <!-- actions unchanged … -->
+    `;
+    postContainer.appendChild(card);
+  }
+}
+
+/* ---------- Gateway‑switch helper ---------- */
+window.switchGateway=function(video){
+  const next=video.dataset.alt;
+  if(next){
+    video.removeAttribute("onerror");
+    video.src=next;
+    video.load();
+  }
+};
+</script>
+</body>
+</html>
