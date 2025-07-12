@@ -105,7 +105,6 @@
       currentUser = null;
       loginNotice.style.display = 'flex';
       container.style.display = 'none';
-      clearChat();
     }
   });
 
@@ -113,46 +112,40 @@
     db.ref('profiles').once('value').then(snap => {
       usersListEl.innerHTML = '<h2>Users</h2>';
       snap.forEach(child => {
-        const wallet = child.key;
+        const uid = child.key; // Firebase Auth UID
         const u = child.val();
-        if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
+        if (uid === currentUser.uid) return;
         const div = document.createElement('div');
         div.className = 'user-item';
-        div.innerHTML = `<img src="${u.photoUrl||'https://i.pravatar.cc/40'}" class="user-avatar">
-                         <div class="user-name">${u.name||wallet}</div>`;
-        div.onclick = () => selectUser(wallet, u.name||wallet);
+        div.innerHTML = `<img src="${u.photoUrl || 'https://i.pravatar.cc/40'}" class="user-avatar">
+                         <div class="user-name">${u.name || uid}</div>`;
+        div.onclick = () => selectUser(uid, u.name || uid);
         usersListEl.appendChild(div);
       });
     });
   }
 
-  function selectUser(wallet, name) {
-    selectedUser = { wallet, name };
+  function selectUser(uid, name) {
+    selectedUser = { uid, name };
     chatHeaderEl.textContent = 'Chat with ' + name;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    clearChat();
+    messagesContainerEl.innerHTML = '';
+    inputMessageEl.value = '';
+    if (messagesRef) messagesRef.off();
     listenMessages();
   }
 
-  function clearChat() {
-    if (messagesRef) messagesRef.off();
-    messagesContainerEl.innerHTML = '';
-    inputMessageEl.value = '';
+  function getChatId(a, b) {
+    a = a.toLowerCase();
+    b = b.toLowerCase();
+    return a < b ? a + '_' + b : b + '_' + a;
   }
 
   function listenMessages() {
     if (!currentUser || !selectedUser) return;
-
-    // Get correct ordered uids for reading both ways: uid1 and uid2 order does not matter
-    const uid1 = currentUser.uid.toLowerCase();
-    const uid2 = selectedUser.wallet.toLowerCase();
-
-    // We will listen on messages/uid1/uid2 and also messages/uid2/uid1 to cover both directions
-    // But usually just one direction is enough if both users write under their own path
-
-    messagesRef = db.ref('messages').child(uid1).child(uid2);
-
+    const chatId = getChatId(currentUser.uid, selectedUser.uid);
+    messagesRef = db.ref('messages/' + chatId);
     messagesRef.off();
     messagesContainerEl.innerHTML = '';
 
@@ -176,18 +169,11 @@
   }
 
   sendBtnEl.onclick = () => {
-    if (!currentUser || !selectedUser) {
-      alert('Select a user first!');
-      return;
-    }
     const txt = inputMessageEl.value.trim();
-    if (!txt) return;
+    if (!txt || !selectedUser || !currentUser) return alert("Select user and write a message");
 
-    const uid1 = currentUser.uid.toLowerCase();
-    const uid2 = selectedUser.wallet.toLowerCase();
-
-    // Write message under messages/uid1/uid2
-    db.ref('messages').child(uid1).child(uid2).push({
+    const chatId = getChatId(currentUser.uid, selectedUser.uid);
+    db.ref('messages/' + chatId).push({
       sender: currentUser.uid,
       text: txt,
       timestamp: Date.now()
