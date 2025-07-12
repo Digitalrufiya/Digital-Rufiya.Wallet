@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root{--accent:#007bff;--accent-hover:#0056b3;--accent-muted:#3399ff;--bg-body:#f8f9fa;--bg-surface:#fff;--bg-surface-alt:#fafafa;--text-body:#212529;--text-muted:#6c757d;--radius:.5rem;--shadow-sm:0 1px 2px rgba(0,0,0,.06);--shadow-md:0 2px 4px rgba(0,0,0,.1)}
+    @media(prefers-color-scheme:dark){:root{--bg-body:#181a1b;--bg-surface:#242628;--bg-surface-alt:#2b2e30;--text-body:#f1f3f5;--text-muted:#adb5bd;--shadow-sm:none;--shadow-md:none}}
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;height:100%}
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg-body);color:var(--text-body);display:flex;flex-direction:column}
+    a{color:inherit;text-decoration:none}
+    img,video{max-width:100%}
+    header{background:var(--accent);color:#fff;padding:.75rem 1rem;position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;box-shadow:var(--shadow-md)}
+    .brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:clamp(1rem,2vw,1.3rem)}
+    .brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
+    #menuToggle{display:inline-flex;flex-direction:column;width:2rem;height:1.3rem;justify-content:space-between;background:none;border:none;cursor:pointer}
+    #menuToggle span{display:block;height:3px;background:#fff;border-radius:3px}
+    #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent-muted);border-radius:var(--radius)}
+    #primaryNav.open{display:flex}
+    #primaryNav a{padding:.75rem 1.25rem;font-weight:600;border-top:1px solid rgb(255 255 255/.15);color:#fff}
+    #primaryNav a:first-child{border-top:none}
+    #primaryNav a:hover{background:rgb(255 255 255/.18)}
+    @media(min-width:768px){#menuToggle{display:none}#primaryNav{display:flex!important;flex-direction:row;gap:.25rem;background:transparent;width:auto}#primaryNav a{border:none;padding:.5rem .9rem;color:inherit}#primaryNav a:hover{background:rgb(255 255 255/.25)}}
+    .btn{display:inline-block;border:none;background:var(--accent);color:#fff;padding:.45rem .9rem;border-radius:var(--radius);font-size:.95rem;font-weight:600;cursor:pointer;transition:background-color .2s}
+    .btn:hover{background:var(--accent-hover)}.btn:disabled{background:#adb5bd;cursor:not-allowed}
+    #pageWrapper{flex:1;display:flex;flex-direction:column}
+    .container{width:min(100%,700px);margin-inline:auto;padding-inline:1rem}
+    #searchBar{margin:1rem auto 0}
+    #searchInput{width:100%;padding:.55rem .85rem;font-size:1rem;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
+    #uploadForm{margin-top:1.25rem}
+    #uploadForm textarea{width:100%;margin-top:.75rem;padding:.65rem .85rem;font-size:1rem;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical;min-height:6rem;background:var(--bg-surface);color:var(--text-body)}
+    .post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin-block:1.25rem;box-shadow:var(--shadow-sm)}
+    .post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
+    .avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ced4da;box-shadow:var(--shadow-sm)}
+    .post-time{font-size:.85rem;color:var(--text-muted);margin-top:2px}
+    .post-caption{margin-top:.75rem;white-space:pre-wrap}
+    .post-media{margin-top:.75rem}
+    video,img{border-radius:var(--radius);background:#000;display:block}
+    .post-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+    .post-actions button{flex:1 1 auto}
+    .post-actions button.liked{background:#28a745!important}
+    .post-actions button.boosted{background:gold!important;color:#000!important}
+    .post-actions button.delete-btn{background:#dc3545!important;color:#fff}.post-actions button.delete-btn:hover{background:#b52a3b!important}
+    .comments-list{margin-top:.75rem;background:var(--bg-surface);padding:.65rem;border-radius:var(--radius);max-height:10rem;overflow-y:auto;font-size:.9rem}
+    .comment-box textarea{width:100%;border-radius:var(--radius);padding:.6rem .8rem}
+    button:focus-visible,#menuToggle:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo"><span>DRFMedia</span></div>
+  <button id="menuToggle" aria-label="Toggle navigation" aria-controls="primaryNav" aria-expanded="false"><span></span><span></span><span></span></button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">Timeline</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html">Donation</a>
+    <a href="chat.html">Chat</a>
+  </nav>
+</header>
+
+<div id="pageWrapper">
+  <section id="searchBar" class="container"><input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts"></section>
+  <button id="loginBtn" class="btn" style="display:block;max-width:700px;margin:1rem auto;">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;max-width:700px;margin:1rem auto;background:#dc3545;">Logout</button>
+  <form id="uploadForm" class="container" style="display:none;">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required>
+    <textarea id="caption" placeholder="Write your caption…" minlength="4" required></textarea>
+    <button class="btn" type="submit" style="margin-top:.75rem;">Post</button>
+  </form>
+  <section id="postContainer" class="container" aria-live="polite"></section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const pinataJWT = "Bearer YOUR_LONG_PINATA_JWT_HERE";
+const firebaseConfig = {apiKey:"AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",authDomain:"drfsocial-23a06.firebaseapp.com",databaseURL:"https://drfsocial-23a06-default-rtdb.firebaseio.com",projectId:"drfsocial-23a06",storageBucket:"drfsocial-23a06.appspot.com",messagingSenderId:"608135115201",appId:"1:608135115201:web:dc999df2c0c37241ff3f40"};
+initializeApp(firebaseConfig);
+const db=getDatabase();
+const auth=getAuth();
+const provider=new GoogleAuthProvider();
+
+const loginBtn=document.getElementById("loginBtn");
+const logoutBtn=document.getElementById("logoutBtn");
+const uploadForm=document.getElementById("uploadForm");
+const mediaFile=document.getElementById("mediaFile");
+const captionIn=document.getElementById("caption");
+const postWrap=document.getElementById("postContainer");
+const searchIn=document.getElementById("searchInput");
+const menuTog=document.getElementById("menuToggle");
+const primaryNav=document.getElementById("primaryNav");
+
+let currentUser=null,isAdmin=false,allPosts=[];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+
+loginBtn.onclick=()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
+logoutBtn.onclick=()=>signOut(auth).catch(e=>alert(e.message));
+
+onAuthStateChanged(auth,async user=>{
+  currentUser=user;
+  uploadForm.style.display=user?"block":"none";
+  loginBtn.style.display=user?"none":"block";
+  logoutBtn.style.display=user?"block":"none";
+  if(user){const adSnap=await get(ref(db,`admin/${user.uid}`));isAdmin=adSnap.exists();}else isAdmin=false;
+  renderPosts();
+});
+
+uploadForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!currentUser)return alert("Login first");
+  if(!mediaFile.files[0])return alert("Select a file");
+  if(captionIn.value.trim().length<4)return alert("Caption too short");
+  uploadForm.querySelector("button").disabled=true;
+  try{
+    const fd=new FormData();fd.append("file",mediaFile.files[0]);
+    const up=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{method:"POST",headers:{Authorization:pinataJWT},body:fd});
+    if(!up.ok)throw new Error("Pinata upload failed");
+    const {IpfsHash}=await up.json();
+    await set(push(ref(db,"posts")),{userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL||null,caption:captionIn.value.trim(),ipfsHash:IpfsHash,mediaType:mediaFile.files[0].type.startsWith("video")?"video":"image",mediaMimeType:mediaFile.files[0].type,timestamp:Date.now(),likesCount:0,commentsCount:0,boostsCount:0,likedBy:{},boostedBy:{}});
+    captionIn.value="";mediaFile.value="";
+  }catch(err){alert(err.message);}finally{uploadForm.querySelector("button").disabled=false;}
+});
+
+onValue(ref(db,"posts"),snap=>{const d=snap.val()||{};allPosts=Object.entries(d).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);renderPosts();});
+
+async function renderPosts(){
+  const q=searchIn.value.trim().toLowerCase();postWrap.innerHTML="";
+  for(const p of allPosts){if(p.caption&& !p.caption.toLowerCase().includes(q))continue;
+    if(!p.photoURL){const usnap=await get(ref(db,`users/${p.userId}/photoURL`));if(usnap.exists())p.photoURL=usnap.val();if(!p.photoURL&&currentUser&&p.userId===currentUser.uid)p.photoURL=currentUser.photoURL;}
+    const url="https://gateway.pinata.cloud/ipfs/"+p.ipfsHash;
+    const owner=currentUser&&p.userId===currentUser.uid;
+    const liked=currentUser&&p.likedBy&&p.likedBy[currentUser.uid];
+    const boosted=currentUser&&p.boostedBy&&p.boostedBy[currentUser.uid];
+    const card=document.createElement("article");card.className="post-item";
+    card.innerHTML=`<header class="post-owner"><img class="avatar" src="${p.photoURL||"https://via.placeholder.com/40"}" alt="avatar"><div><div>${esc(p.displayName||"Anon")}</div><time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time></div></header><div class="post-caption">${esc(p.caption)}</div><div class="post-media">${p.mediaType==="video"?`<video src="${url}" controls playsinline preload="metadata"></video>`:`<img src="${url}" alt="media">`}</div><div class="post-actions"><button class="${liked?"liked":""} like-btn">👍 Like (${p.likesCount||0})</button><button class="${boosted?"boosted":""} boost-btn">🚀 Boost (${p.boostsCount||0})</button><button class="comment-btn">💬 Comment (${p.commentsCount||0})</button>${owner||isAdmin?'<button class="delete-btn">🗑️ Delete</button>':""}</div><div class="comments-list"></div><form class="comment-box" style="display:none;"><textarea placeholder="Write a comment…" minlength="2" required></textarea><button class="btn" type="submit" style="margin-top:.5rem;">Post Comment</button></form>`;
+    postWrap.appendChild(card);
+    const likeBtn=card.querySelector(".like-btn");
+    const boostBtn=card.querySelector(".boost-btn");
+    const deleteBtn=card.querySelector(".delete-btn");
+    const commentBtn=card.querySelector(".comment-btn");
+    const cBox=card.querySelector(".comment-box");
+    const cArea=cBox.querySelector("textarea");
+    const cList=card.querySelector(".comments-list");
+    likeBtn.onclick=()=>toggleLike(p);
+    boostBtn.onclick=()=>toggleBoost(p);
+    if(deleteBtn)deleteBtn.onclick=()=>deletePost(p);
+    commentBtn.onclick=()=>cBox.style.display=cBox.style.display==="none"?"block":"none";
+    cBox.onsubmit=e=>{e.preventDefault();if(cArea.value.trim().length<2)return alert("Too short");postComment(p,cArea.value.trim());cArea.value="";cBox.style.display="none";};
+    renderComments(p,cList);
+  }
+}
+
+function renderComments(post,list){onValue(ref(db,`posts/${post.id}/comments`),s=>{const d=s.val()||{};list.innerHTML="";Object.values(d).sort((a,b)=>a.timestamp-b.timestamp).forEach(c=>{list.insertAdjacentHTML("beforeend",`<div style='margin-bottom:6px;'><strong>${esc(c.displayName||"Anon")}:</strong> ${esc(c.text)}</div>`);});});}
+async function postComment(post,text){if(!currentUser)return alert("Login");await set(push(ref(db,`posts/${post.id}/comments`)),{userId:currentUser.uid,displayName:currentUser.displayName,text,timestamp:Date.now()});await set(ref(db,`posts/${post.id}/commentsCount`),(post.commentsCount||0)+1);}   
+async function toggleLike(post){if(!currentUser)return alert("Login");const r=ref(db,`posts/${post.id}/likedBy/${currentUser.uid}`);const s=await get(r);await set(r,s.exists()?null:true);}  
+async function toggleBoost(post){if(!currentUser)return alert("Login");const r=ref(db,`posts/${post.id}/boostedBy/${currentUser.uid}`);const s=await get(r);await set(r,s.exists()?null:true);}  
+async function deletePost(post){if(!currentUser)return alert("Login");if(!(isAdmin||post.userId===currentUser.uid))return alert("No permission");if(!confirm("Delete this post permanently?"))return;await set(ref(db,`posts/${post.id}`),null);await set(ref(db,`comments/${post.id}`),null);}  
+searchIn.oninput=renderPosts;menuTog.onclick=()=>{const open=primaryNav.classList.toggle("open");menuTog.setAttribute("aria-expanded",open);};
+</script>
+</body>
+</html>
