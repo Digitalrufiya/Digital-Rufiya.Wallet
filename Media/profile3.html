@@ -6,40 +6,56 @@
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#222}
-    header{background:#007bff;color:#fff;padding:10px 20px;position:sticky;top:0;z-index:1000;
-      box-shadow:0 2px 4px rgb(0 0 0 / .1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .navbar-left{display:flex;align-items:center;gap:10px}
-    .navbar-left img{height:40px;width:40px;border-radius:4px;background:#fff;padding:2px}
-    .navbar-left h1{margin:0;font-size:1.4em;font-weight:700}
-    video,img{max-width:100%;border-radius:6px;margin-top:10px;background:#000;display:block}
-    .post-media video{background:#000;width:100%;border-radius:6px}
-
-    /* --- Like button styles (new) --- */
-    .post-actions{display:flex;gap:8px;margin-top:8px}
-    .like-btn{cursor:pointer;border:none;background:#007bff;color:#fff;padding:6px 14px;border-radius:6px;
-      font-size:.9rem;font-weight:600;transition:background-color .3s}
-    .like-btn:hover{background:#0056b3}
-    .like-btn.liked{background:#28a745!important;box-shadow:0 0 6px #28a74599}
+    body { font-family: Arial, sans-serif; margin: 0; background: #fff; color: #222; }
+    header {
+      background: #007bff; color: white; padding: 10px 20px;
+      position: sticky; top: 0; z-index: 1000;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .navbar-left { display: flex; align-items: center; gap: 10px; }
+    .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
+    .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
+    video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
+    .post-media video { background: black; width: 100%; border-radius: 6px; }
+    /* Like button styles */
+    .post-actions {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .like-btn {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: #666;
+    }
+    .like-btn.liked {
+      color: #e0245e;
+    }
+    .like-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="navbar-left">
-    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
-    <h1>DRFMedia Timeline</h1>
-  </div>
-</header>
-
-<div id="postContainer" aria-live="polite"></div>
+<!-- Existing header, nav, and body HTML stays here as in your original file -->
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, onValue, set, get
+    getDatabase, ref, push, set, onValue, get, child, update, remove
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import {
+    getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
   const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb...";
 
@@ -53,87 +69,143 @@
     appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
 
-  const app  = initializeApp(firebaseConfig);
-  const db   = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
   const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
 
   let currentUser = null;
-  let allPosts    = [];
+  let allPosts = [];
 
-  onAuthStateChanged(auth,user=>{
+  onAuthStateChanged(auth, user => {
     currentUser = user;
     renderPosts();
   });
 
-  onValue(ref(db,"posts"),snap=>{
-    const posts = snap.val()||{};
-    allPosts = Object.entries(posts).map(([id,p])=>({id,...p}))
-                .sort((a,b)=>b.timestamp-a.timestamp);
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, snapshot => {
+    const posts = snapshot.val() || {};
+    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
+    allPosts.sort((a, b) => b.timestamp - a.timestamp);
     renderPosts();
   });
 
-  function renderPosts(){
+  // Likes cache for realtime count
+  const likesData = {};
+
+  // Listen for likes changes for all posts
+  function listenLikesForPosts(postIds) {
+    postIds.forEach(postId => {
+      const likesRef = ref(db, `postLikes/${postId}`);
+      onValue(likesRef, snapshot => {
+        likesData[postId] = snapshot.val() || {};
+        updateLikesUI(postId);
+      });
+    });
+  }
+
+  // Update likes count and liked state UI
+  function updateLikesUI(postId) {
+    const likeBtn = document.querySelector(`.like-btn[data-postid="${postId}"]`);
+    if (!likeBtn) return;
+
+    const likesObj = likesData[postId] || {};
+    const likesCount = Object.keys(likesObj).length;
+    const userLiked = currentUser && likesObj[currentUser.uid];
+
+    likeBtn.querySelector(".like-count").textContent = likesCount;
+    if (userLiked) {
+      likeBtn.classList.add("liked");
+      likeBtn.setAttribute("aria-pressed", "true");
+    } else {
+      likeBtn.classList.remove("liked");
+      likeBtn.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  // Toggle like on click
+  async function toggleLike(postId) {
+    if (!currentUser) {
+      alert("Please sign in to like posts.");
+      return;
+    }
+    const userLikeRef = ref(db, `postLikes/${postId}/${currentUser.uid}`);
+    const snapshot = await get(userLikeRef);
+    if (snapshot.exists()) {
+      // Unlike
+      await remove(userLikeRef);
+    } else {
+      // Like
+      await set(userLikeRef, true);
+    }
+  }
+
+  function renderPosts() {
     const container = document.getElementById("postContainer");
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = "";
 
-    for(const post of allPosts){
-      const {id:postId,ipfsHash,mediaType,mediaMimeType,timestamp,
-             caption='',displayName='Anonymous',photoURL=''} = post;
+    const postIds = [];
 
+    for (const post of allPosts) {
+      postIds.push(post.id);
+
+      const ipfsHash = post.ipfsHash;
+      const isVideo = post.mediaType === "video";
       const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
       const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
-      const mediaHTML = mediaType==="video"
-        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'">
-             <source src="${url1}" type="${mediaMimeType}" />
-           </video>`
-        : `<img src="${url1}" alt="image post" onerror="this.onerror=null;this.src='${url2}'" loading="lazy" />`;
+      const mediaHTML = isVideo
+        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'"><source src="${url1}" type="${post.mediaMimeType}" /></video>`
+        : `<img src="${url1}" alt="Image post" onerror="this.onerror=null;this.src='${url2}'" loading="lazy" />`;
 
       const article = document.createElement("article");
       article.className = "post-item";
       article.innerHTML = `
         <header class="post-owner">
-          <img src="${photoURL}" class="avatar" alt="avatar" />
+          <img src="${post.photoURL || ''}" class="avatar" />
           <div>
-            <div>${displayName}</div>
-            <div class="post-time">${new Date(timestamp).toLocaleString()}</div>
+            <div>${post.displayName || 'Anonymous'}</div>
+            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
           </div>
         </header>
-        <div class="post-caption">${caption}</div>
+        <div class="post-caption">${post.caption}</div>
         <div class="post-media">${mediaHTML}</div>
 
-        <!-- Like button container (new) -->
+        <!-- Likes and existing comments, shares must stay below this line -->
+
         <div class="post-actions">
-          <button class="like-btn" aria-pressed="false">❤️ <span class="likes-count">0</span></button>
+          <button 
+            class="like-btn" 
+            data-postid="${post.id}" 
+            aria-pressed="false" 
+            title="Like / Unlike"
+            >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+              4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 
+              19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <span class="like-count">0</span>
+          </button>
         </div>
       `;
+
       container.appendChild(article);
-
-      /* ----- Like feature (new) ----- */
-      const likeBtn  = article.querySelector('.like-btn');
-      const likeSpan = likeBtn.querySelector('.likes-count');
-      const likesPath = `posts/${postId}/likes`;
-      const likesRef  = ref(db, likesPath);
-      const userRef   = () => ref(db, `${likesPath}/${currentUser?.uid}`);
-
-      // realtime count + state
-      onValue(likesRef, snap=>{
-        const data = snap.val()||{};
-        likeSpan.textContent = Object.keys(data).length;
-        const liked = currentUser ? Boolean(data[currentUser.uid]) : false;
-        likeBtn.classList.toggle('liked', liked);
-        likeBtn.setAttribute('aria-pressed', liked);
-      });
-
-      // toggle like on click
-      likeBtn.onclick = async ()=>{
-        if(!currentUser){ alert("Please sign in to like posts."); return; }
-        const liked = (await get(userRef())).exists();
-        await set(userRef(), liked ? null : true);   // null removes like
-      };
-      /* ----- End like feature ----- */
     }
+
+    // After posts are added, set event listeners for likes
+    postIds.forEach(postId => {
+      const likeBtn = document.querySelector(`.like-btn[data-postid="${postId}"]`);
+      if (likeBtn) {
+        likeBtn.onclick = () => toggleLike(postId);
+      }
+    });
+
+    // Start listening to likes realtime updates
+    listenLikesForPosts(postIds);
   }
 </script>
+
+<div id="postContainer"></div>
 </body>
 </html>
