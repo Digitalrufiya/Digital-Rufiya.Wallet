@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>DRFMedia Timeline — Spread Kindness &amp; Truth</title>
+  <!-- External stylesheet can still be loaded first if you keep one -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* ---------- Design Tokens ---------- */
+    :root {
+      --accent: #007bff;
+      --accent-hover: #0056b3;
+      --accent-muted: #0069d9;
+      --bg-body: #f8f9fa;
+      --bg-surface: #ffffff;
+      --bg-surface-alt: #fafafa;
+      --text-body: #212529;
+      --text-muted: #6c757d;
+      --radius: 0.5rem;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root{
+        --bg-body: #181a1b;
+        --bg-surface: #242628;
+        --bg-surface-alt:#2b2e30;
+        --text-body:#f1f3f5;
+        --text-muted:#adb5bd;
+        --shadow-sm:none;
+        --shadow-md:none;
+      }
+    }
+
+    /* ---------- Basic Reset ---------- */
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;padding:0;height:100%;}
+    body{
+      font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background: var(--bg-body);
+      color: var(--text-body);
+      display:flex;
+      flex-direction:column;
+    }
+
+    a{color:inherit;text-decoration:none;}
+    img,video{max-width:100%;}
+
+    /* ---------- Header / Navbar ---------- */
+    header{
+      background: var(--accent);
+      color:#fff;
+      padding:.75rem 1rem;
+      position:sticky;
+      top:0;
+      z-index:1000;
+      box-shadow:var(--shadow-md);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      flex-wrap:wrap;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      font-weight:700;
+      font-size:clamp(1rem,2vw,1.3rem);
+    }
+    .brand img{
+      width:2.25rem;
+      height:2.25rem;
+      border-radius:.25rem;
+      background:#fff;
+      padding:2px;
+    }
+
+    /* ----- Mobile menu toggle ----- */
+    #menuToggle{
+      display:inline-flex;
+      flex-direction:column;
+      width:2rem;
+      height:1.3rem;
+      justify-content:space-between;
+      background:none;
+      border:none;
+      cursor:pointer;
+    }
+    #menuToggle span{
+      display:block;
+      height:3px;
+      background:#fff;
+      border-radius:3px;
+    }
+
+    /* nav links */
+    #primaryNav{
+      display:none;
+      flex-direction:column;
+      width:100%;
+      background:var(--accent-muted);
+      border-radius:var(--radius);
+    }
+    #primaryNav.open{display:flex;}
+    #primaryNav a{
+      padding:.75rem 1.25rem;
+      font-weight:600;
+      border-top:1px solid rgb(255 255 255 / .15);
+    }
+    #primaryNav a:first-child{border-top:none;}
+    #primaryNav a:hover{background:rgb(255 255 255 / .18);}
+
+    /* Desktop nav */
+    @media(min-width:768px){
+      #menuToggle{display:none;}
+      #primaryNav{
+        display:flex!important;
+        flex-direction:row;
+        gap:.25rem;
+        background:transparent;
+        width:auto;
+      }
+      #primaryNav a{
+        border:none;
+        padding:.5rem .9rem;
+      }
+      #primaryNav a:hover{background:rgb(255 255 255 / .25);}
+    }
+
+    /* ---------- Utility ---------- */
+    .btn{
+      display:inline-block;
+      border:none;
+      background:var(--accent);
+      color:#fff;
+      padding:.45rem .9rem;
+      border-radius:var(--radius);
+      font-size:.95rem;
+      font-weight:600;
+      cursor:pointer;
+      transition:background-color .2s;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn:disabled{background:#adb5bd;cursor:not-allowed;}
+
+    /* ---------- Layout Containers ---------- */
+    #pageWrapper{flex:1;display:flex;flex-direction:column;}
+    .container{width:min(100%,700px);margin-inline:auto;padding-inline:1rem;}
+
+    /* ---------- Search Bar ---------- */
+    #searchBar{margin:1rem auto 0 auto;}
+    #searchInput{
+      width:100%;
+      padding:.55rem .85rem;
+      font-size:1rem;
+      border:1px solid #ced4da;
+      border-radius:var(--radius);
+      background:var(--bg-surface);
+      color:var(--text-body);
+    }
+
+    /* ---------- Upload form ---------- */
+    #uploadForm{margin-top:1.25rem;}
+    #uploadForm textarea{
+      width:100%;
+      margin-top:.75rem;
+      padding:.65rem .85rem;
+      font-size:1rem;
+      border:1px solid #ced4da;
+      border-radius:var(--radius);
+      resize:vertical;
+      min-height:6rem;
+      background:var(--bg-surface);
+      color:var(--text-body);
+    }
+
+    /* ---------- Post Card ---------- */
+    .post-item{
+      background:var(--bg-surface-alt);
+      border:1px solid #dee2e6;
+      border-radius:var(--radius);
+      padding:1rem;
+      margin-block:1.25rem;
+      box-shadow:var(--shadow-sm);
+    }
+    .post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700;}
+    .avatar{
+      width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;
+      border:1px solid #ced4da;
+      box-shadow:var(--shadow-sm);
+    }
+    .post-time{font-size:.85rem;color:var(--text-muted);margin-top:2px;}
+    .post-caption{margin-top:.75rem;white-space:pre-wrap;word-wrap:break-word;}
+
+    .post-media{margin-top:.75rem;}
+    video,img{border-radius:var(--radius);background:#000;display:block;}
+
+    /* Actions */
+    .post-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem;}
+    .post-actions button{flex:1 1 auto;}
+    .post-actions button.liked{background:#28a745!important;}
+    .post-actions button.boosted{background:gold!important;color:#000!important;}
+
+    /* Comments */
+    .comments-list{
+      margin-top:.75rem;
+      background:var(--bg-surface);
+      padding:.65rem;
+      border-radius:var(--radius);
+      max-height:10rem;
+      overflow-y:auto;
+    }
+    .comments-list div{margin-bottom:.5rem;}
+    .comment-box textarea{width:100%;border-radius:var(--radius);padding:.6rem .8rem;}
+
+    /* --- Accessibility improvements --- */
+    button:focus-visible,#menuToggle:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+    <span>DRFMedia</span>
+  </div>
+
+  <button id="menuToggle" aria-label="Toggle navigation" aria-controls="primaryNav" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+
+  <nav id="primaryNav">
+    <a href="media.html">Timeline</a>
+    <a href="profile.html" class="active">Profile</a>
+    <a href="media.html">Posts</a>
+    <a href="gift.html">Donation</a>
+    <a href="chat.html">Chat</a>
+  </nav>
+</header>
+
+<div id="pageWrapper">
+  <section id="searchBar" class="container">
+    <input type="search" id="searchInput" placeholder="Search posts…" aria-label="Search posts" />
+  </section>
+
+  <button id="loginBtn" class="btn" style="display:block;max-width:700px;margin:1rem auto;">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;max-width:700px;margin:1rem auto;background:#dc3545;">Logout</button>
+
+  <form id="uploadForm" class="container" style="display:none;">
+    <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    <textarea id="caption" placeholder="Write your caption…" required minlength="4"></textarea>
+    <button type="submit" class="btn" style="margin-top:.75rem;">Post</button>
+  </form>
+
+  <section id="postContainer" class="container" aria-live="polite"></section>
+</div>
+
+<!-- ---------- Scripts (same as original) ---------- -->
+<script type="module">
+  /*  original JS code from user  (unchanged) */
+</script>
+</body>
+</html>
