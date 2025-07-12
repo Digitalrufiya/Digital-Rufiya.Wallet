@@ -11,7 +11,7 @@
 
   <style>
     /* ===== design tokens ===== */
-    :root{--accent:#007bff;--accent-hover:#0056b3;--accent-muted:#0069d9;
+    :root{--accent:#007bff;--accent-hover:#0056b3;--accent-muted:#3399ff; /* changed from #0069d9 */
           --bg-body:#f8f9fa;--bg-surface:#fff;--bg-surface-alt:#fafafa;
           --text-body:#212529;--text-muted:#6c757d;--radius:.5rem;
           --shadow-sm:0 1px 2px rgba(0,0,0,.06);--shadow-md:0 2px 4px rgba(0,0,0,.1)}
@@ -34,54 +34,22 @@
            box-shadow:var(--shadow-md)}
     .brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:clamp(1rem,2vw,1.3rem)}
     .brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
-    #menuToggle{display:inline-flex;flex-direction:column;width:2rem;height:1.3rem;justify-content:space-between;background:none;border:none;cursor:pointer;transition:filter 0.3s ease}
-    #menuToggle span{display:block;height:3px;background:#fff;border-radius:3px;transition:background-color 0.3s ease}
-    #primaryNav{
-      display:none;
-      flex-direction:column;
-      width:100%;
-      background:var(--accent-muted);
-      border-radius:var(--radius);
-      transition: max-height 0.3s ease, opacity 0.3s ease;
-      overflow: hidden;
-      max-height: 0;
-      opacity: 0;
-    }
-    #primaryNav.open {
-      display: flex;
-      max-height: 500px; /* enough height to show menu */
-      opacity: 1;
-    }
+    #menuToggle{display:inline-flex;flex-direction:column;width:2rem;height:1.3rem;justify-content:space-between;background:none;border:none;cursor:pointer}
+    #menuToggle span{display:block;height:3px;background:#fff;border-radius:3px}
+    #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent-muted);border-radius:var(--radius);}
+    #primaryNav.open{display:flex}
     #primaryNav a{
-      padding:.75rem 1.25rem;font-weight:600;
-      border-top:1px solid rgb(255 255 255 / 0.15);
-      transition: background-color 0.3s ease;
+      padding:.75rem 1.25rem;font-weight:600;border-top:1px solid rgb(255 255 255/.15);
+      color: #fff; /* explicitly white text for mobile menu links */
     }
     #primaryNav a:first-child{border-top:none}
-    #primaryNav a:hover{background:rgb(255 255 255 / 0.18)}
+    #primaryNav a:hover{background:rgb(255 255 255/.18)}
     @media(min-width:768px){
       #menuToggle{display:none}
-      #primaryNav{
-        display:flex !important;
-        flex-direction:row;
-        gap:.25rem;
-        background:transparent;
-        width:auto;
-        max-height:none;
-        opacity:1;
-        overflow: visible;
-      }
-      #primaryNav a{border:none;padding:.5rem .9rem}
-      #primaryNav a:hover{background:rgb(255 255 255 / 0.25)}
+      #primaryNav{display:flex!important;flex-direction:row;gap:.25rem;background:transparent;width:auto}
+      #primaryNav a{border:none;padding:.5rem .9rem;color:inherit}
+      #primaryNav a:hover{background:rgb(255 255 255/.25)}
     }
-
-    /* Mobile menu background color fix */
-    @media (max-width: 767px) {
-      #primaryNav {
-        background: #0056b3 !important;
-      }
-    }
-
     /* ===== utility buttons ===== */
     .btn{display:inline-block;border:none;background:var(--accent);color:#fff;
          padding:.45rem .9rem;border-radius:var(--radius);
@@ -89,16 +57,6 @@
     .btn:hover{background:var(--accent-hover)}.btn:disabled{background:#adb5bd;cursor:not-allowed}
     /* ===== layout ===== */
     #pageWrapper{flex:1;display:flex;flex-direction:column}
-
-    /* Smooth fade-in for posts container */
-    #postContainer {
-      opacity: 0;
-      transition: opacity 0.5s ease;
-    }
-    #postContainer.loaded {
-      opacity: 1;
-    }
-
     .container{width:min(100%,700px);margin-inline:auto;padding-inline:1rem}
     /* search */
     #searchBar{margin:1rem auto 0}
@@ -145,14 +103,14 @@
 
 <div id="pageWrapper">
   <section id="searchBar" class="container">
-    <input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts" />
+    <input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts">
   </section>
 
   <button id="loginBtn"  class="btn" style="display:block;max-width:700px;margin:1rem auto;">Sign in with Google</button>
   <button id="logoutBtn" class="btn" style="display:none;max-width:700px;margin:1rem auto;background:#dc3545;">Logout</button>
 
   <form id="uploadForm" class="container" style="display:none;">
-    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <input id="mediaFile" type="file" accept="image/*,video/*" required>
     <textarea id="caption" placeholder="Write your caption…" minlength="4" required></textarea>
     <button class="btn" type="submit" style="margin-top:.75rem;">Post</button>
   </form>
@@ -253,7 +211,6 @@ onValue(ref(db,"posts"),snap=>{
 /* render */
 function renderPosts(){
   const q = searchIn.value.trim().toLowerCase();
-  postWrap.style.opacity = 0; // fade out for smooth effect before rendering
   postWrap.innerHTML = "";
   for(const p of allPosts){
     const captionLower = p.caption ? p.caption.toLowerCase() : "";
@@ -280,123 +237,105 @@ function renderPosts(){
       <div class="post-actions">
         <button class="${liked ? 'liked' : ''} like-btn">👍 Like (${p.likesCount || 0})</button>
         <button class="comment-btn">💬 Comment (${p.commentsCount || 0})</button>
-        <button class="${boosted ? 'boosted' : ''} boost-btn">⭐ Boost (${p.boostsCount || 0})</button>
-        ${owner ? '<button class="delete-btn">🗑️ Delete</button>' : ''}
+        <button class="${boosted ? 'boosted' : ''} boost-btn">🚀 Boost (${p.boostsCount || 0})</button>
+        <button class="repost-btn">🔄 Repost</button>
       </div>
-      <div class="comments-list" style="display:none;"></div>
-      <div class="comment-box" style="display:none;">
-        <textarea placeholder="Write a comment…" rows="2" minlength="1"></textarea>
-        <button class="btn submit-comment-btn">Post Comment</button>
-      </div>
-    `;
-
-    /* event listeners */
-    const likeBtn = card.querySelector(".like-btn");
-    likeBtn.onclick = async () => {
-      if(!currentUser) return alert("Login to like posts");
-      const likedRef = ref(db,`posts/${p.id}/likedBy/${currentUser.uid}`);
-      const likesCountRef = ref(db,`posts/${p.id}/likesCount`);
-      if(liked){
-        await set(likedRef, null);
-        await set(likesCountRef, (p.likesCount || 1) - 1);
-      } else {
-        await set(likedRef, true);
-        await set(likesCountRef, (p.likesCount || 0) + 1);
-      }
-    };
-
-    const boostBtn = card.querySelector(".boost-btn");
-    boostBtn.onclick = async () => {
-      if(!currentUser) return alert("Login to boost posts");
-      const boostedRef = ref(db,`posts/${p.id}/boostedBy/${currentUser.uid}`);
-      const boostsCountRef = ref(db,`posts/${p.id}/boostsCount`);
-      if(boosted){
-        await set(boostedRef, null);
-        await set(boostsCountRef, (p.boostsCount || 1) - 1);
-      } else {
-        await set(boostedRef, true);
-        await set(boostsCountRef, (p.boostsCount || 0) + 1);
-      }
-    };
-
-    const deleteBtn = card.querySelector(".delete-btn");
-    if(deleteBtn){
-      deleteBtn.onclick = async () => {
-        if(confirm("Delete this post?")){
-          await set(ref(db,`posts/${p.id}`), null);
-        }
-      };
-    }
-
-    const commentBtn = card.querySelector(".comment-btn");
-    const commentsList = card.querySelector(".comments-list");
-    const commentBox = card.querySelector(".comment-box");
-
-    commentBtn.onclick = () => {
-      const isVisible = commentsList.style.display === "block";
-      commentsList.style.display = isVisible ? "none" : "block";
-      commentBox.style.display = isVisible ? "none" : "block";
-      if (!isVisible) loadComments();
-    };
-
-    const submitCommentBtn = card.querySelector(".submit-comment-btn");
-    const commentTextarea = card.querySelector("textarea");
-
-    async function loadComments() {
-      const commentsRef = ref(db, `comments/${p.id}`);
-      onValue(commentsRef, snap => {
-        const comments = snap.val() || {};
-        commentsList.innerHTML = "";
-        Object.entries(comments).forEach(([cid, c]) => {
-          const div = document.createElement("div");
-          div.style.borderTop = "1px solid #eee";
-          div.style.padding = "4px 0";
-          div.textContent = `${c.displayName || "Anon"}: ${c.text}`;
-          commentsList.appendChild(div);
-        });
-      }, {onlyOnce: true});
-    }
-
-    submitCommentBtn.onclick = async () => {
-      if(!currentUser) return alert("Login to comment");
-      const text = commentTextarea.value.trim();
-      if(text.length < 1) return alert("Comment too short");
-      const commentRef = push(ref(db, `comments/${p.id}`));
-      await set(commentRef, {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName,
-        text,
-        timestamp: Date.now()
-      });
-      // Increment commentsCount in posts
-      await set(ref(db, `posts/${p.id}/commentsCount`), (p.commentsCount || 0) + 1);
-      commentTextarea.value = "";
-      loadComments();
-    };
+      <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
+      <div id="comment-box-${p.id}" class="comment-box" style="display:none">
+        <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
+        <button class="submit-comment-btn">Submit</button>
+        <button class="cancel-comment-btn">Cancel</button>
+      </div>`;
 
     postWrap.appendChild(card);
+
+    /* delete button for owner or admin */
+    if(isAdmin || owner){
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑️ Delete";
+      delBtn.className = "delete-btn";
+      delBtn.onclick = () => deletePost(p.id);
+      card.querySelector(".post-actions").appendChild(delBtn);
+    }
+
+    // Bind event listeners programmatically:
+    card.querySelector(".like-btn").onclick = () => likePost(p.id);
+    card.querySelector(".comment-btn").onclick = () => commentOnPost(p.id);
+    card.querySelector(".boost-btn").onclick = () => boostPost(p.id);
+    card.querySelector(".repost-btn").onclick = () => repost(p.id);
+
+    card.querySelector(".submit-comment-btn").onclick = () => submitComment(p.id);
+    card.querySelector(".cancel-comment-btn").onclick = () => cancelComment(p.id);
+
+    loadComments(p.id);
   }
-  // Fade in posts container after rendering
-  setTimeout(() => postWrap.classList.add('loaded'), 10);
-  postWrap.style.opacity = 1;
 }
 
-/* search input */
-searchIn.addEventListener("input", () => {
-  postWrap.classList.remove('loaded');
-  renderPosts();
-});
-
-/* mobile menu toggle */
-menuTog.onclick = () => {
-  const expanded = menuTog.getAttribute("aria-expanded") === "true";
-  menuTog.setAttribute("aria-expanded", !expanded);
-  if(primaryNav.classList.contains("open")){
-    primaryNav.classList.remove("open");
-  } else {
-    primaryNav.classList.add("open");
-  }
+/* actions */
+window.likePost = async id => {
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.likedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,`posts/${id}/likedBy`),list);
+  await set(ref(db,`posts/${id}/likesCount`),Object.keys(list).length);
 };
+window.boostPost = async id => {
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.boostedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,`posts/${id}/boostedBy`),list);
+  await set(ref(db,`posts/${id}/boostsCount`),Object.keys(list).length);
+};
+window.repost = async id => {
+  if(!currentUser)return alert("Login");
+  const osnap=await get(ref(db,"posts/"+id));if(!osnap.exists())return;
+  const o=osnap.val();
+  await set(push(ref(db,"posts")),{userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL,caption:`[Reposted by ${currentUser.displayName||"Anon"}]\n\n${o.caption}`,ipfsHash:o.ipfsHash,mediaType:o.mediaType,mediaMimeType:o.mediaMimeType,timestamp:Date.now(),likesCount:0,commentsCount:0,boostsCount:0,likedBy:{},boostedBy:{}});  
+};
+
+/* delete */
+window.deletePost = async id => {
+  if(!currentUser)return alert("Login required");
+  const ownerSnap=await get(ref(db,`posts/${id}/userId`));
+  if(!(isAdmin|| (ownerSnap.exists()&&ownerSnap.val()===currentUser.uid)))return alert("No permission");
+  if(!confirm("Delete this post permanently?"))return;
+  await set(ref(db,`posts/${id}`),null);
+  await set(ref(db,`comments/${id}`),null);
+  alert("Deleted");
+};
+
+/* comments */
+window.commentOnPost = id => document.getElementById(`comment-box-${id}`).style.display="block";
+window.cancelComment = id => document.getElementById(`comment-box-${id}`).style.display="none";
+window.submitComment = async id => {
+  if(!currentUser)return alert("Login");
+  const txt = document.getElementById(`comment-input-${id}`).value.trim();
+  if(!txt)return;
+  await set(push(ref(db,`comments/${id}`)),{userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL,text:txt,timestamp:Date.now()});
+  const psnap=await get(ref(db,"posts/"+id));
+  if(psnap.exists()){await set(ref(db,`posts/${id}/commentsCount`),(psnap.val().commentsCount||0)+1);}
+  document.getElementById(`comment-input-${id}`).value="";
+  window.cancelComment(id);
+};
+async function loadComments(id){
+  const cSnap=await get(ref(db,`comments/${id}`));
+  const box=document.getElementById(`comments-${id}`);
+  if(!box)return;box.innerHTML="";
+  if(!cSnap.exists())return;
+  Object.values(cSnap.val()).sort((a,b)=>a.timestamp-b.timestamp).forEach(c=>{
+    box.insertAdjacentHTML("beforeend",
+      `<div><strong>${esc(c.displayName||"Anon")}</strong>: ${esc(c.text)}<br><small>${new Date(c.timestamp).toLocaleString()}</small></div>`);
+  });
+}
+
+/* search + nav toggle */
+searchIn.addEventListener("input",renderPosts);
+menuTog.addEventListener("click",()=>{
+  primaryNav.classList.toggle("open");
+  menuTog.setAttribute("aria-expanded",primaryNav.classList.contains("open"));
+});
 </script>
 </body>
 </html>
