@@ -1,12 +1,13 @@
 const CACHE_NAME = "drfmedia-cache-v1";
-const OFFLINE_URL = "offline.html"; // Optional
+const OFFLINE_URL = "offline.html";
 
 const urlsToCache = [
   "./",
   "./index.html",
   "./style.css",
   "./app.js",
-  "./manifest.json"
+  "./manifest.json",
+  OFFLINE_URL
 ];
 
 self.addEventListener("install", event => {
@@ -37,7 +38,16 @@ self.addEventListener("fetch", event => {
       return (
         response ||
         fetch(event.request).catch(() =>
-          caches.match(OFFLINE_URL) // fallback to offline.html
+          caches.match(OFFLINE_URL).then(fallbackResponse => {
+            if (fallbackResponse) {
+              return fallbackResponse;
+            }
+            return new Response("You are offline and the offline page is not available.", {
+              status: 503,
+              statusText: "Service Unavailable",
+              headers: { "Content-Type": "text/plain" }
+            });
+          })
         )
       );
     })
