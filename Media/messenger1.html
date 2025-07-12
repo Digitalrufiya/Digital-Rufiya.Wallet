@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>DRFMessenger (Google Auth + Link Preview + Emoji)</title>
+  <title>DRFMessenger — Final Fix</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
   <style>
+    /* your CSS here, same as before */
     *{box-sizing:border-box;}
     body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
     nav{background:#0066cc;color:#fff;padding:15px;text-align:center;font-weight:bold;}
@@ -21,16 +23,18 @@
     #chatArea{flex:1;display:flex;flex-direction:column;background:#fff;}
     #chatHeader{padding:15px;border-bottom:1px solid #ccc;background:#f7f7f7;font-weight:bold;}
     #messagesContainer{flex:1;padding:10px;overflow-y:auto;background:#f0f0f0;display:flex;flex-direction:column;}
-    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;position:relative;}
+    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;}
     .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
     .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
     .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
     .preview img{max-width:100%;border-radius:4px;}
     .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
-    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;}
+    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
     #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;}
     #sendBtn{margin-left:8px;padding:0 16px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;}
     #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
+    #emojiBtn{background:none;border:none;font-size:20px;margin-left:8px;cursor:pointer;}
+    emoji-picker{position:absolute;bottom:60px;right:20px;display:none;z-index:10;}
     #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
   </style>
 </head>
@@ -53,13 +57,14 @@
       <div id="messagesContainer"></div>
       <div id="inputArea">
         <textarea id="inputMessage" placeholder="Type a message..." disabled></textarea>
+        <button id="emojiBtn">😊</button>
         <button id="sendBtn" disabled>Send</button>
+        <emoji-picker id="picker"></emoji-picker>
       </div>
     </div>
   </div>
 
 <script>
-  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -73,7 +78,6 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // Elements
   const loginNotice = document.getElementById('loginNotice');
   const loginBtn = document.getElementById('loginBtn');
   const container = document.getElementById('container');
@@ -82,16 +86,16 @@
   const messagesContainerEl = document.getElementById('messagesContainer');
   const inputMessageEl = document.getElementById('inputMessage');
   const sendBtnEl = document.getElementById('sendBtn');
+  const emojiBtn = document.getElementById('emojiBtn');
+  const emojiPicker = document.getElementById('picker');
 
-  let currentUser = null, selectedUser = null, messagesListener = null;
+  let currentUser = null, selectedUser = null, messagesRef = null;
 
-  // Google sign-in
   loginBtn.onclick = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert(err.message));
   };
 
-  // Auth state
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
@@ -102,126 +106,100 @@
       currentUser = null;
       loginNotice.style.display = 'flex';
       container.style.display = 'none';
-      selectedUser = null;
-      chatHeaderEl.textContent = 'Select a user to chat';
-      messagesContainerEl.innerHTML = '';
-      inputMessageEl.disabled = true;
-      sendBtnEl.disabled = true;
     }
   });
 
-  // Load user profiles
   function loadUsers() {
-    db.ref('profiles').once('value')
-      .then(snap => {
-        usersListEl.innerHTML = '<h2>Users</h2>';
-        snap.forEach(child => {
-          const wallet = child.key;
-          const u = child.val();
-          if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
-          const div = document.createElement('div');
-          div.className = 'user-item';
-          div.innerHTML = `
-            <img src="${u.photoUrl || 'https://i.pravatar.cc/40'}" class="user-avatar" />
-            <div class="user-name">${u.name || wallet}</div>
-          `;
-          div.onclick = () => selectUser(wallet, u.name || wallet);
-          usersListEl.appendChild(div);
-        });
-      })
-      .catch(err => console.error('Load users failed:', err));
+    db.ref('profiles').once('value').then(snap => {
+      usersListEl.innerHTML = '<h2>Users</h2>';
+      snap.forEach(child => {
+        const wallet = child.key;
+        const u = child.val();
+        if (wallet.toLowerCase() === currentUser.uid.toLowerCase()) return;
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `<img src="${u.photoUrl||'https://i.pravatar.cc/40'}" class="user-avatar">
+                         <div class="user-name">${u.name||wallet}</div>`;
+        div.onclick = () => selectUser(wallet, u.name||wallet);
+        usersListEl.appendChild(div);
+      });
+    });
   }
 
-  // Start chat
   function selectUser(wallet, name) {
     selectedUser = { wallet, name };
     chatHeaderEl.textContent = 'Chat with ' + name;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    inputMessageEl.value = '';
     messagesContainerEl.innerHTML = '';
+    inputMessageEl.value = '';
+    if (messagesRef) messagesRef.off(); // detach previous listener
     listenMessages();
-    highlightSelected();
-  }
-  function highlightSelected() {
-    document.querySelectorAll('.user-item').forEach(el => {
-      el.classList.toggle('active', el.textContent.includes(selectedUser.name));
-    });
   }
 
-  // Chat ID generator
-  function getChatId(a, b) {
+  function getChatId(a,b) {
     a = a.toLowerCase(); b = b.toLowerCase();
     return a < b ? a + '_' + b : b + '_' + a;
   }
 
-  // Listen messages with emojis and link preview
   function listenMessages() {
-    if (messagesListener) messagesListener.off();
-
+    if (!currentUser || !selectedUser) return;
     const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    const ref = db.ref('messages/' + chatId);
+    messagesRef = db.ref('messages/' + chatId);
+    messagesRef.off();
+    messagesContainerEl.innerHTML = '';
 
-    messagesListener = ref.on('value', snap => {
-      messagesContainerEl.innerHTML = '';
+    messagesRef.on('child_added', snapshot => {
+      const m = snapshot.val();
+      const d = document.createElement('div');
+      d.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
+      // Replace URLs in text with clickable links
+      let html = m.text.replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+      d.innerHTML = html;
+      messagesContainerEl.appendChild(d);
 
-      snap.forEach(childSnap => {
-        const m = childSnap.val();
-        const d = document.createElement('div');
-        d.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
-
-        // Replace URLs with clickable links
-        let messageHTML = m.text.replace(
-          /(https?:\/\/[^\s]+)/g,
-          url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
-        );
-
-        // Basic emoji support
-        messageHTML = messageHTML.replace(/:\)/g, "😊")
-                                 .replace(/:\(/g, "😞")
-                                 .replace(/:D/g, "😄");
-
-        d.innerHTML = messageHTML;
-
-        // Image preview for image URLs in message
-        const imgMatch = m.text.match(/(https?:\/\/\S+\.(?:png|jpg|jpeg|gif))/i);
-        if (imgMatch) {
-          const p = document.createElement('div');
-          p.className = 'preview';
-          p.innerHTML = `<img src="${imgMatch[0]}" alt="Image preview" />`;
-          messagesContainerEl.appendChild(p);
-        }
-
-        messagesContainerEl.appendChild(d);
-      });
-
-      // Scroll to bottom when new messages arrive
+      // Check for image URL for preview
+      const imgMatch = m.text.match(/(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif))/i);
+      if (imgMatch) {
+        const p = document.createElement('div');
+        p.className = 'preview';
+        p.innerHTML = `<img src="${imgMatch[0]}" alt="preview" />`;
+        messagesContainerEl.appendChild(p);
+      }
       messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
     });
   }
 
-  // Send message function
   sendBtnEl.onclick = () => {
     const txt = inputMessageEl.value.trim();
-    if (!txt || !selectedUser) return;
+    if (!txt || !selectedUser || !currentUser) return alert("Select user and write a message");
 
     const chatId = getChatId(currentUser.uid, selectedUser.wallet);
+    // Push message with timestamp
     db.ref('messages/' + chatId).push({
       sender: currentUser.uid,
       text: txt,
       timestamp: Date.now()
     }).then(() => {
       inputMessageEl.value = '';
-    }).catch(err => {
-      alert('Error sending message: ' + err.message);
-    });
+    }).catch(e => alert("Error sending message: " + e.message));
   };
+
   inputMessageEl.onkeydown = e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendBtnEl.click();
     }
   };
+
+  emojiBtn.onclick = () => {
+    emojiPicker.style.display = emojiPicker.style.display === 'none' ? 'block' : 'none';
+  };
+
+  emojiPicker.addEventListener('emoji-click', event => {
+    inputMessageEl.value += event.detail.unicode;
+    inputMessageEl.focus();
+  });
 </script>
 </body>
 </html>
