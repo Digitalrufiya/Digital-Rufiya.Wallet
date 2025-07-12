@@ -8,7 +8,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
   <style>
-    /* your CSS here, same as before */
     *{box-sizing:border-box;}
     body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
     nav{background:#0066cc;color:#fff;padding:15px;text-align:center;font-weight:bold;}
@@ -106,6 +105,7 @@
       currentUser = null;
       loginNotice.style.display = 'flex';
       container.style.display = 'none';
+      clearChat();
     }
   });
 
@@ -131,24 +131,31 @@
     chatHeaderEl.textContent = 'Chat with ' + name;
     inputMessageEl.disabled = false;
     sendBtnEl.disabled = false;
-    messagesContainerEl.innerHTML = '';
-    inputMessageEl.value = '';
-    if (messagesRef) messagesRef.off(); // detach previous listener
+    clearChat();
     listenMessages();
   }
 
-  function getChatId(a,b) {
-    a = a.toLowerCase(); b = b.toLowerCase();
-    return a < b ? a + '_' + b : b + '_' + a;
+  function clearChat() {
+    if (messagesRef) messagesRef.off();
+    messagesContainerEl.innerHTML = '';
+    inputMessageEl.value = '';
   }
 
   function listenMessages() {
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    messagesRef = db.ref('messages/' + chatId);
-    messagesRef.off(); // remove old listeners if any
+    if (!currentUser || !selectedUser) return;
+
+    // Get correct ordered uids for reading both ways: uid1 and uid2 order does not matter
+    const uid1 = currentUser.uid.toLowerCase();
+    const uid2 = selectedUser.wallet.toLowerCase();
+
+    // We will listen on messages/uid1/uid2 and also messages/uid2/uid1 to cover both directions
+    // But usually just one direction is enough if both users write under their own path
+
+    messagesRef = db.ref('messages').child(uid1).child(uid2);
+
+    messagesRef.off();
     messagesContainerEl.innerHTML = '';
 
-    // Use child_added to append messages as they come (better UX)
     messagesRef.on('child_added', snapshot => {
       const m = snapshot.val();
       const d = document.createElement('div');
@@ -164,21 +171,29 @@
         p.innerHTML = `<img src="${imgMatch[0]}" alt="preview" />`;
         messagesContainerEl.appendChild(p);
       }
-
       messagesContainerEl.scrollTop = messagesContainerEl.scrollHeight;
     });
   }
 
   sendBtnEl.onclick = () => {
+    if (!currentUser || !selectedUser) {
+      alert('Select a user first!');
+      return;
+    }
     const txt = inputMessageEl.value.trim();
-    if (!txt || !selectedUser) return;
-    const chatId = getChatId(currentUser.uid, selectedUser.wallet);
-    db.ref('messages/' + chatId).push({
+    if (!txt) return;
+
+    const uid1 = currentUser.uid.toLowerCase();
+    const uid2 = selectedUser.wallet.toLowerCase();
+
+    // Write message under messages/uid1/uid2
+    db.ref('messages').child(uid1).child(uid2).push({
       sender: currentUser.uid,
       text: txt,
       timestamp: Date.now()
+    }).then(() => {
+      inputMessageEl.value = '';
     }).catch(e => alert("Error sending message: " + e.message));
-    inputMessageEl.value = '';
   };
 
   inputMessageEl.onkeydown = e => {
@@ -194,6 +209,7 @@
 
   emojiPicker.addEventListener('emoji-click', event => {
     inputMessageEl.value += event.detail.unicode;
+    inputMessageEl.focus();
   });
 </script>
 </body>
