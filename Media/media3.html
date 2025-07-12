@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
-
   <link rel="stylesheet" href="style.css" />
-
   <style>
     :root {
       --accent: #007bff;
@@ -35,15 +33,8 @@
       }
     }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; }
 
     body {
       font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -53,320 +44,78 @@
       flex-direction: column;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    img, video {
-      max-width: 100%;
-      border-radius: var(--radius);
-      background: #000;
-      display: block;
-    }
+    a { color: inherit; text-decoration: none; }
+    img, video { max-width:100%; border-radius:var(--radius); background:#000; display:block; }
 
     header {
       background: var(--accent);
-      color: #fff;
-      padding: 0.75rem 1rem;
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
+      color:#fff; padding:0.75rem 1rem; position:sticky; top:0; z-index:1000;
+      display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
       box-shadow: var(--shadow-md);
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 700;
-      font-size: clamp(1rem, 2vw, 1.3rem);
+    .brand { display:flex; align-items:center; gap:0.5rem; font-weight:700; font-size:clamp(1rem,2vw,1.3rem);}    
+    .brand img { width:2.25rem; height:2.25rem; border-radius:0.25rem; background:#fff; padding:2px; }
+
+    #menuToggle { display:inline-flex; flex-direction:column; width:2rem; height:1.3rem; justify-content:space-between; background:none; border:none; cursor:pointer; }
+    #menuToggle span{ display:block; height:3px; background:#fff; border-radius:3px; }
+    #primaryNav{ display:none; flex-direction:column; width:100%; background:var(--accent-muted); border-radius:var(--radius);}    
+    #primaryNav.open{ display:flex; }
+    #primaryNav a{ padding:0.75rem 1.25rem; font-weight:600; border-top:1px solid rgb(255 255 255 / 0.15); }
+    #primaryNav a:first-child{ border-top:none; }
+    #primaryNav a:hover, #primaryNav a.active{ background:rgb(255 255 255 / 0.25); }
+
+    @media(min-width:768px){
+      #menuToggle{ display:none; }
+      #primaryNav{ display:flex!important; flex-direction:row; gap:0.25rem; background:transparent; width:auto; }
+      #primaryNav a{ border:none; padding:0.5rem 0.9rem; }
     }
 
-    .brand img {
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: 0.25rem;
-      background: #fff;
-      padding: 2px;
-    }
+    .btn{ display:inline-block; border:none; background:var(--accent); color:#fff; padding:0.45rem 0.9rem; border-radius:var(--radius); font-size:0.95rem; font-weight:600; cursor:pointer; transition:background-color 0.2s; max-width:700px; margin:1rem auto; width:100%; }
+    .btn:hover{ background:var(--accent-hover); }
+    .btn:disabled{ background:#adb5bd; cursor:not-allowed; }
+    #logoutBtn{ background:#dc3545; }
 
-    #menuToggle {
-      display: inline-flex;
-      flex-direction: column;
-      width: 2rem;
-      height: 1.3rem;
-      justify-content: space-between;
-      background: none;
-      border: none;
-      cursor: pointer;
-    }
+    #pageWrapper{ flex:1; display:flex; flex-direction:column; }
+    .container{ width:min(100%,700px); margin-inline:auto; padding-inline:1rem; }
 
-    #menuToggle span {
-      display: block;
-      height: 3px;
-      background: #fff;
-      border-radius: 3px;
-    }
+    #searchBar{ margin:1rem auto 0; }
+    #searchInput{ width:100%; padding:0.55rem 0.85rem; font-size:1rem; border:1px solid #ced4da; border-radius:var(--radius); background:var(--bg-surface); color:var(--text-body); }
 
-    #primaryNav {
-      display: none;
-      flex-direction: column;
-      width: 100%;
-      background: var(--accent-muted);
-      border-radius: var(--radius);
-    }
+    #uploadForm{ margin-top:1.25rem; }
+    #uploadForm textarea{ width:100%; margin-top:0.75rem; padding:0.65rem 0.85rem; font-size:1rem; border:1px solid #ced4da; border-radius:var(--radius); resize:vertical; min-height:6rem; background:var(--bg-surface); color:var(--text-body); }
 
-    #primaryNav.open {
-      display: flex;
-    }
+    .post-item{ background:var(--bg-surface-alt); border:1px solid #dee2e6; border-radius:var(--radius); padding:1rem; margin-block:1.25rem; box-shadow:var(--shadow-sm); }
+    .post-owner{ display:flex; align-items:center; gap:0.6rem; font-weight:700; }
+    .avatar{ width:2.25rem; height:2.25rem; border-radius:50%; object-fit:cover; border:1px solid #ced4da; box-shadow:var(--shadow-sm); }
+    .post-time{ font-size:0.85rem; color:var(--text-muted); margin-top:2px; }
+    .post-caption{ margin-top:0.75rem; white-space:pre-wrap; }
+    .post-media{ margin-top:0.75rem; position:relative; min-height:200px; background:#000; display:flex; align-items:center; justify-content:center; }
 
-    #primaryNav a {
-      padding: 0.75rem 1.25rem;
-      font-weight: 600;
-      border-top: 1px solid rgb(255 255 255 / 0.15);
-    }
+    video,img{ max-height:400px; border-radius:var(--radius); background:#000; display:block; width:100%; height:auto; object-fit:contain; }
 
-    #primaryNav a:first-child {
-      border-top: none;
-    }
+    .fallback-media{ color:#fff; text-align:center; padding:1rem; }
 
-    #primaryNav a:hover,
-    #primaryNav a.active {
-      background: rgb(255 255 255 / 0.25);
-    }
+    .post-actions{ display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem; }
+    .post-actions button{ flex:1 1 auto; }
+    .post-actions button.liked{ background:#28a745!important; }
+    .post-actions button.boosted{ background:gold!important; color:#000!important; }
+    .post-actions button.delete-btn{ background:#dc3545!important; color:#fff; }
+    .post-actions button.delete-btn:hover{ background:#b52a3b!important; }
 
-    @media (min-width: 768px) {
-      #menuToggle {
-        display: none;
-      }
+    .comments-list{ margin-top:0.75rem; background:var(--bg-surface); padding:0.65rem; border-radius:var(--radius); max-height:10rem; overflow-y:auto; font-size:0.9rem; color:var(--text-body); }
+    .comment-box textarea{ width:100%; border-radius:var(--radius); padding:0.6rem 0.8rem; resize:vertical; font-size:1rem; }
 
-      #primaryNav {
-        display: flex !important;
-        flex-direction: row;
-        gap: 0.25rem;
-        background: transparent;
-        width: auto;
-      }
-
-      #primaryNav a {
-        border: none;
-        padding: 0.5rem 0.9rem;
-      }
-    }
-
-    .btn {
-      display: inline-block;
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      padding: 0.45rem 0.9rem;
-      border-radius: var(--radius);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      max-width: 700px;
-      margin: 1rem auto;
-      width: 100%;
-    }
-
-    .btn:hover {
-      background: var(--accent-hover);
-    }
-
-    .btn:disabled {
-      background: #adb5bd;
-      cursor: not-allowed;
-    }
-
-    #logoutBtn {
-      background: #dc3545;
-    }
-
-    #pageWrapper {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .container {
-      width: min(100%, 700px);
-      margin-inline: auto;
-      padding-inline: 1rem;
-    }
-
-    #searchBar {
-      margin: 1rem auto 0;
-    }
-
-    #searchInput {
-      width: 100%;
-      padding: 0.55rem 0.85rem;
-      font-size: 1rem;
-      border: 1px solid #ced4da;
-      border-radius: var(--radius);
-      background: var(--bg-surface);
-      color: var(--text-body);
-    }
-
-    #uploadForm {
-      margin-top: 1.25rem;
-    }
-
-    #uploadForm textarea {
-      width: 100%;
-      margin-top: 0.75rem;
-      padding: 0.65rem 0.85rem;
-      font-size: 1rem;
-      border: 1px solid #ced4da;
-      border-radius: var(--radius);
-      resize: vertical;
-      min-height: 6rem;
-      background: var(--bg-surface);
-      color: var(--text-body);
-    }
-
-    .post-item {
-      background: var(--bg-surface-alt);
-      border: 1px solid #dee2e6;
-      border-radius: var(--radius);
-      padding: 1rem;
-      margin-block: 1.25rem;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-weight: 700;
-    }
-
-    .avatar {
-      width: 2.25rem;
-      height: 2.25rem;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #ced4da;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .post-time {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .post-caption {
-      margin-top: 0.75rem;
-      white-space: pre-wrap;
-    }
-
-    .post-media {
-      margin-top: 0.75rem;
-      position: relative;
-      min-height: 200px;
-      background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    video,
-    img {
-      max-height: 400px;
-      border-radius: var(--radius);
-      background: #000;
-      display: block;
-      width: 100%;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .fallback-media {
-      color: #fff;
-      text-align: center;
-      padding: 1rem;
-    }
-
-    .post-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-
-    .post-actions button {
-      flex: 1 1 auto;
-    }
-
-    .post-actions button.liked {
-      background: #28a745 !important;
-    }
-
-    .post-actions button.boosted {
-      background: gold !important;
-      color: #000 !important;
-    }
-
-    .post-actions button.delete-btn {
-      background: #dc3545 !important;
-      color: #fff;
-    }
-
-    .post-actions button.delete-btn:hover {
-      background: #b52a3b !important;
-    }
-
-    .comments-list {
-      margin-top: 0.75rem;
-      background: var(--bg-surface);
-      padding: 0.65rem;
-      border-radius: var(--radius);
-      max-height: 10rem;
-      overflow-y: auto;
-      font-size: 0.9rem;
-      color: var(--text-body);
-    }
-
-    .comment-box textarea {
-      width: 100%;
-      border-radius: var(--radius);
-      padding: 0.6rem 0.8rem;
-      resize: vertical;
-      font-size: 1rem;
-    }
-
-    button:focus-visible,
-    #menuToggle:focus-visible {
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
+    button:focus-visible, #menuToggle:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <img
-        src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
-        alt="DRFMedia Logo"
-      />
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
       <span>DRFMedia</span>
     </div>
-    <button
-      id="menuToggle"
-      aria-label="Toggle navigation"
-      aria-controls="primaryNav"
-      aria-expanded="false"
-    >
-      <span></span><span></span><span></span>
-    </button>
+    <button id="menuToggle" aria-label="Toggle navigation" aria-controls="primaryNav" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav id="primaryNav">
       <a href="media.html" class="active">Timeline</a>
       <a href="profile.html">Profile</a>
@@ -377,53 +126,29 @@
 
   <div id="pageWrapper">
     <section id="searchBar" class="container">
-      <input
-        id="searchInput"
-        type="search"
-        placeholder="Search posts…"
-        aria-label="Search posts"
-      />
+      <input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts" />
     </section>
 
     <button id="loginBtn" class="btn" style="display:block;">Sign in with Google</button>
-    <button id="logoutBtn" class="btn" style="display:none; background:#dc3545;">
-      Logout
-    </button>
+    <button id="logoutBtn" class="btn" style="display:none; background:#dc3545;">Logout</button>
 
     <form id="uploadForm" class="container" style="display:none;">
       <input id="mediaFile" type="file" accept="image/*,video/*" required />
-      <textarea
-        id="caption"
-        placeholder="Write your caption…"
-        minlength="4"
-        required
-      ></textarea>
-      <button class="btn" type="submit" style="margin-top: 0.75rem;">Post</button>
+      <textarea id="caption" placeholder="Write your caption…" minlength="4" required></textarea>
+      <button class="btn" type="submit" style="margin-top:0.75rem;">Post</button>
     </form>
 
     <section id="postContainer" class="container" aria-live="polite"></section>
   </div>
 
+  <!-- Optimized main script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getDatabase,
-      ref,
-      push,
-      set,
-      onValue,
-      get,
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-    import {
-      getAuth,
-      signInWithPopup,
-      signOut,
-      GoogleAuthProvider,
-      onAuthStateChanged,
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getDatabase, ref, push, set, onValue, get, update } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-    const pinataJWT =
-      "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+    /* -------------------- CONFIG -------------------- */
+    const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpX...YOUR-TOKEN..."; // replace with valid
 
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -434,119 +159,31 @@
       messagingSenderId: "608135115201",
       appId: "1:608135115201:web:dc999df2c0c37241ff3f40",
     };
+
+    /* -------------------- INIT -------------------- */
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db  = getDatabase(app);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+    /* -------------------- ELEMENTS -------------------- */
+    const loginBtn   = document.getElementById("loginBtn");
+    const logoutBtn  = document.getElementById("logoutBtn");
     const uploadForm = document.getElementById("uploadForm");
-    const mediaFile = document.getElementById("mediaFile");
-    const captionIn = document.getElementById("caption");
-    const postWrap = document.getElementById("postContainer");
-    const searchIn = document.getElementById("searchInput");
-    const menuTog = document.getElementById("menuToggle");
+    const mediaFile  = document.getElementById("mediaFile");
+    const captionIn  = document.getElementById("caption");
+    const postWrap   = document.getElementById("postContainer");
+    const searchIn   = document.getElementById("searchInput");
+    const menuTog    = document.getElementById("menuToggle");
     const primaryNav = document.getElementById("primaryNav");
 
-    let currentUser = null,
-      isAdmin = false,
-      allPosts = [];
+    let currentUser = null;
+    let isAdmin = false;
+    let allPosts = [];
 
-    const esc = (s) =>
-      s.replace(/[&<>"]/g, (c) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-      }[c]));
+    /* -------------------- HELPERS -------------------- */
+    const esc = (s) => s.replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 
-    loginBtn.onclick = () =>
-      signInWithPopup(auth, provider).catch((e) => alert(e.message));
-    logoutBtn.onclick = () =>
-      signOut(auth).catch((e) => alert(e.message));
-
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      uploadForm.style.display = user ? "block" : "none";
-      loginBtn.style.display = user ? "none" : "block";
-      logoutBtn.style.display = user ? "block" : "none";
-
-      if (user) {
-        try {
-          const adSnap = await get(ref(db, `admin/${user.uid}`));
-          isAdmin = adSnap.exists();
-        } catch {
-          isAdmin = false;
-        }
-      } else isAdmin = false;
-      renderPosts();
-    });
-
-    uploadForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentUser) return alert("Login first");
-      if (!mediaFile.files[0]) return alert("Select a file");
-      if (captionIn.value.trim().length < 4) return alert("Caption too short");
-
-      uploadForm.querySelector("button").disabled = true;
-
-      try {
-        // Pinata upload
-        const fd = new FormData();
-        fd.append("file", mediaFile.files[0]);
-
-        const up = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-          method: "POST",
-          headers: {
-            Authorization: pinataJWT,
-          },
-          body: fd,
-        });
-
-        if (!up.ok)
-          throw new Error(
-            `Pinata upload failed with status ${up.status} ${up.statusText}`
-          );
-
-        const { IpfsHash } = await up.json();
-        if (!IpfsHash || typeof IpfsHash !== "string") throw new Error("Invalid IPFS hash returned.");
-
-        const newRef = push(ref(db, "posts"));
-        await set(newRef, {
-          userId: currentUser.uid,
-          displayName: currentUser.displayName,
-          photoURL: currentUser.photoURL,
-          caption: captionIn.value.trim(),
-          ipfsHash: IpfsHash,
-          mediaType: mediaFile.files[0].type.startsWith("video") ? "video" : "image",
-          mediaMimeType: mediaFile.files[0].type,
-          timestamp: Date.now(),
-          likesCount: 0,
-          commentsCount: 0,
-          boostsCount: 0,
-          likedBy: {},
-          boostedBy: {},
-        });
-
-        captionIn.value = "";
-        mediaFile.value = "";
-      } catch (err) {
-        alert("Upload error: " + err.message);
-      } finally {
-        uploadForm.querySelector("button").disabled = false;
-      }
-    });
-
-    onValue(ref(db, "posts"), (snap) => {
-      const p = snap.val() || {};
-      allPosts = Object.entries(p)
-        .map(([id, v]) => ({ id, ...v }))
-        .sort((a, b) => b.timestamp - a.timestamp);
-      renderPosts();
-    });
-
-    // IPFS gateway rotation helper
     const IPFS_GATEWAYS = [
       "https://gateway.pinata.cloud/ipfs/",
       "https://ipfs.io/ipfs/",
@@ -554,159 +191,155 @@
       "https://dweb.link/ipfs/",
     ];
 
-    function fallbackElement(text) {
-      const div = document.createElement("div");
-      div.className = "fallback-media";
-      div.textContent = text;
-      return div;
-    }
-
-    function createMediaElement(post) {
-      if (!post.ipfsHash) return fallbackElement("Missing media");
-
+    function createMediaElement(post){
+      if(!post.ipfsHash) return fallback("Missing media");
       let attempt = 0;
+      const buildURL = () => IPFS_GATEWAYS[attempt]+post.ipfsHash;
 
-      const buildURL = () => IPFS_GATEWAYS[attempt] + post.ipfsHash;
-
-      if (post.mediaType === "video") {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.playsInline = true;
-        video.preload = "metadata";
-        video.crossOrigin = "anonymous";
-
+      if(post.mediaType === "video"){
+        const v = document.createElement("video");
+        v.controls = true; v.playsInline = true; v.preload="metadata"; v.crossOrigin="anonymous";
         const tryNext = () => {
-          if (attempt >= IPFS_GATEWAYS.length) {
-            video.replaceWith(fallbackElement("Video load failed"));
-            return;
-          }
-          video.src = buildURL();
-          video.load();
-          attempt++;
-        };
-
-        video.onerror = tryNext;
-        video.onstalled = () => setTimeout(tryNext, 4000);
-
-        tryNext();
-        return video;
-      } else {
-        const img = document.createElement("img");
-        img.alt = "media";
-        img.loading = "lazy";
-        img.crossOrigin = "anonymous";
-
+          if(attempt >= IPFS_GATEWAYS.length){ v.replaceWith(fallback("Video failed")); return; }
+          v.src = buildURL(); v.load(); attempt++; };
+        v.onerror = tryNext; v.onstalled = () => setTimeout(tryNext,4000);
+        tryNext(); return v;
+      }
+      else{
+        const img = document.createElement("img"); img.alt="media"; img.loading="lazy"; img.crossOrigin="anonymous";
         const tryNext = () => {
-          if (attempt >= IPFS_GATEWAYS.length) {
-            img.replaceWith(fallbackElement("Image load failed"));
-            return;
-          }
-          img.src = buildURL();
-          attempt++;
-        };
-
-        img.onerror = tryNext;
-        tryNext();
-        return img;
+          if(attempt >= IPFS_GATEWAYS.length){ img.replaceWith(fallback("Image failed")); return; }
+          img.src = buildURL(); attempt++; };
+        img.onerror = tryNext; tryNext(); return img;
       }
     }
+    const fallback = txt => { const d=document.createElement("div"); d.className="fallback-media"; d.textContent=txt; return d; };
 
-    function renderPosts() {
+    /* -------------------- AUTH -------------------- */
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e=>alert(e.message));
+    logoutBtn.onclick= () => signOut(auth).catch(e=>alert(e.message));
+
+    onAuthStateChanged(auth, async user=>{
+      currentUser=user;
+      uploadForm.style.display = user?"block":"none";
+      loginBtn.style.display  = user?"none":"block";
+      logoutBtn.style.display = user?"block":"none";
+      if(user){
+        try{ const adSnap = await get(ref(db,`admin/${user.uid}`)); isAdmin=adSnap.exists(); }catch{ isAdmin=false; }
+      }else isAdmin=false;
+      renderPosts();
+    });
+
+    /* -------------------- UPLOAD -------------------- */
+    uploadForm.addEventListener("submit", async e=>{
+      e.preventDefault();
+      if(!currentUser) return alert("Login first");
+      if(!mediaFile.files[0]) return alert("Select a file");
+      if(captionIn.value.trim().length<4) return alert("Caption too short");
+      uploadForm.querySelector("button").disabled=true;
+      try{
+        const fd = new FormData(); fd.append("file", mediaFile.files[0]);
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {method:"POST", headers:{Authorization:pinataJWT}, body:fd});
+        if(!res.ok) throw new Error(`Pinata error ${res.status}`);
+        const {IpfsHash} = await res.json(); if(!IpfsHash) throw new Error("Invalid IPFS");
+        const newRef = push(ref(db,"posts"));
+        await set(newRef, {
+          userId: currentUser.uid,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+          caption: captionIn.value.trim(),
+          ipfsHash: IpfsHash,
+          mediaType: mediaFile.files[0].type.startsWith("video")?"video":"image",
+          mediaMimeType: mediaFile.files[0].type,
+          timestamp: Date.now(),
+          likesCount:0, commentsCount:0, boostsCount:0,
+        });
+        captionIn.value=""; mediaFile.value="";
+      }catch(err){ alert("Upload error: "+err.message); }
+      finally{ uploadForm.querySelector("button").disabled=false; }
+    });
+
+    /* -------------------- POSTS LISTEN -------------------- */
+    onValue(ref(db,"posts"), snap=>{
+      const data = snap.val()||{};
+      allPosts = Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+      renderPosts();
+    });
+
+    /* -------------------- RENDER -------------------- */
+    const observer = new IntersectionObserver(entries=>{
+      entries.forEach(en=>{ if(en.isIntersecting){ const el=en.target; const postId=el.dataset.pid; if(postId&&!el.dataset.loaded){ el.dataset.loaded="1"; const p=allPosts.find(x=>x.id===postId); if(p){ el.innerHTML=""; el.appendChild(createMediaElement(p)); } } });
+    }, {rootMargin:"200px"});
+
+    function renderPosts(){
       const q = searchIn.value.trim().toLowerCase();
-      postWrap.innerHTML = "";
-
-      for (const p of allPosts) {
-        if (!p.caption.toLowerCase().includes(q)) continue;
-
-        const owner = currentUser && p.userId === currentUser.uid;
+      postWrap.innerHTML="";
+      for(const p of allPosts){
+        if(!p.caption.toLowerCase().includes(q)) continue;
+        const owner = currentUser&&p.userId===currentUser.uid;
         const liked = currentUser && p.likedBy && p.likedBy[currentUser.uid];
         const boosted = currentUser && p.boostedBy && p.boostedBy[currentUser.uid];
 
-        const card = document.createElement("article");
-        card.className = "post-item";
-
-        card.innerHTML = `
-          <header class="post-owner">
-            <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="avatar" />
-            <div>
-              <div>${esc(p.displayName || "Anon")}</div>
-              <time class="post-time" datetime="${new Date(
-                p.timestamp
-              ).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
-            </div>
-          </header>
-          <div class="post-caption">${esc(p.caption)}</div>
-          <div class="post-media" id="media-${p.id}">
-            <div class="loading-placeholder">Loading media...</div>
+        const card=document.createElement("article"); card.className="post-item";
+        card.innerHTML=`
+        <header class="post-owner">
+          <img class="avatar" src="${p.photoURL||"https://via.placeholder.com/40"}" alt="avatar" />
+          <div>
+            <div>${esc(p.displayName||"Anon")}</div>
+            <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
           </div>
-          <div class="post-actions">
-            <button class="${liked ? "liked" : ""}" onclick="likePost('${p.id}')">👍 Like (${p.likesCount || 0})</button>
-            <button onclick="commentOnPost('${p.id}')">💬 Comment (${p.commentsCount || 0})</button>
-            <button class="${boosted ? "boosted" : ""}" onclick="boostPost('${p.id}')">🚀 Boost (${p.boostsCount || 0})</button>
-            <button onclick="repost('${p.id}')">🔄 Repost</button>
-          </div>
-          <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
-          <div id="comment-box-${p.id}" class="comment-box" style="display:none">
-            <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
-            <button onclick="submitComment('${p.id}')">Submit</button>
-            <button onclick="cancelComment('${p.id}')">Cancel</button>
-          </div>`;
-
+        </header>
+        <div class="post-caption">${esc(p.caption)}</div>
+        <div class="post-media" data-pid="${p.id}"><div class="loading-placeholder">Loading...</div></div>
+        <div class="post-actions">
+          <button class="${liked?"liked":""}" onclick="likePost('${p.id}')">👍 Like (${p.likesCount||0})</button>
+          <button onclick="commentOnPost('${p.id}')">💬 Comment (${p.commentsCount||0})</button>
+          <button class="${boosted?"boosted":""}" onclick="boostPost('${p.id}')">🚀 Boost (${p.boostsCount||0})</button>
+          <button onclick="repost('${p.id}')">🔄 Repost</button>
+        </div>
+        <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
+        <div id="comment-box-${p.id}" class="comment-box" style="display:none">
+          <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
+          <button onclick="submitComment('${p.id}')">Submit</button>
+          <button onclick="cancelComment('${p.id}')">Cancel</button>
+        </div>`;
         postWrap.appendChild(card);
-
-        // Add Delete button if owner or admin
-        if (isAdmin || owner) {
-          const delBtn = document.createElement("button");
-          delBtn.textContent = "🗑️ Delete";
-          delBtn.className = "delete-btn";
-          delBtn.onclick = () => deletePost(p.id);
-          card.querySelector(".post-actions").appendChild(delBtn);
-        }
-
-        // Replace media placeholder with actual media element asynchronously
-        const mediaContainer = document.getElementById(`media-${p.id}`);
-        mediaContainer.innerHTML = "";
-        const mediaEl = createMediaElement(p);
-        mediaContainer.appendChild(mediaEl);
-
-        loadComments(p.id);
+        if(isAdmin||owner){ const dbtn=document.createElement("button"); dbtn.textContent="🗑️ Delete"; dbtn.className="delete-btn"; dbtn.onclick=()=>deletePost(p.id); card.querySelector(".post-actions").appendChild(dbtn); }
+        const mediaHolder=card.querySelector(".post-media"); observer.observe(mediaHolder);
       }
     }
 
-    window.likePost = async (id) => {
-      if (!currentUser) return alert("Login required");
-      const snap = await get(ref(db, "posts/" + id));
-      if (!snap.exists()) return;
-      const post = snap.val();
-      const list = post.likedBy || {};
-      if (list[currentUser.uid]) delete list[currentUser.uid];
-      else list[currentUser.uid] = true;
-      await set(ref(db, `posts/${id}/likedBy`), list);
-      await set(ref(db, `posts/${id}/likesCount`), Object.keys(list).length);
+    /* -------------------- INTERACT -------------------- */
+    searchIn.addEventListener("input", ()=>renderPosts());
+    menuTog.addEventListener("click", ()=>{ const o=primaryNav.classList.toggle("open"); menuTog.setAttribute("aria-expanded",o); });
+
+    /* Global functions (kept simple) */
+    window.likePost = async id=>{
+      if(!currentUser) return alert("Login required");
+      const snap=await get(ref(db,"posts/"+id)); if(!snap.exists()) return; const p=snap.val(); const liked=p.likedBy||{}; liked[currentUser.uid]?delete liked[currentUser.uid]:liked[currentUser.uid]=true;
+      await update(ref(db,"posts/"+id), {likedBy:liked, likesCount:Object.keys(liked).length});
+    };
+    window.boostPost = async id=>{
+      if(!currentUser) return alert("Login required");
+      const snap=await get(ref(db,"posts/"+id)); if(!snap.exists()) return; const p=snap.val(); const boosted=p.boostedBy||{}; boosted[currentUser.uid]?delete boosted[currentUser.uid]:boosted[currentUser.uid]=true;
+      await update(ref(db,"posts/"+id), {boostedBy:boosted, boostsCount:Object.keys(boosted).length});
+    };
+    window.repost = async id=>{
+      if(!currentUser) return alert("Login required");
+      const osnap=await get(ref(db,"posts/"+id)); if(!osnap.exists()) return; const o=osnap.val();
+      await set(push(ref(db,"posts")), {
+        userId: currentUser.uid, displayName: currentUser.displayName, photoURL: currentUser.photoURL,
+        caption:`[Reposted by ${currentUser.displayName||"Anon"}]\n\n${o.caption}`,
+        ipfsHash:o.ipfsHash, mediaType:o.mediaType, mediaMimeType:o.mediaMimeType, timestamp:Date.now(), likesCount:0, commentsCount:0, boostsCount:0
+      });
     };
 
-    window.boostPost = async (id) => {
-      if (!currentUser) return alert("Login required");
-      const snap = await get(ref(db, "posts/" + id));
-      if (!snap.exists()) return;
-      const post = snap.val();
-      const list = post.boostedBy || {};
-      if (list[currentUser.uid]) delete list[currentUser.uid];
-      else list[currentUser.uid] = true;
-      await set(ref(db, `posts/${id}/boostedBy`), list);
-      await set(ref(db, `posts/${id}/boostsCount`), Object.keys(list).length);
-    };
-
-    window.repost = async (id) => {
-      if (!currentUser) return alert("Login required");
-      const osnap = await get(ref(db, "posts/" + id));
-      if (!osnap.exists()) return;
-      const o = osnap.val();
-      await set(push(ref(db, "posts")), {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
-        caption: `[Reposted by ${currentUser.displayName || "Anon"}]\n\n${o.caption}`,
-        ipfsHash: o.ipfsHash,
-        mediaType: o.mediaType,
-        mediaMimeType: o.mediaM
+    /* placeholder stubs */
+    window.commentOnPost = id=>{ document.getElementById(`comment-box-${id}`).style.display="block"; };
+    window.cancelComment = id=>{ document.getElementById(`comment-box-${id}`).style.display="none"; };
+    window.submitComment = id=>alert("Comments not implemented yet");
+    const loadComments = id=>{};
+    const deletePost  = id=>alert("Delete not implemented yet");
+  </script>
+</body>
+</html>
