@@ -3,294 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Profile | DRFMedia</title>
+  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background-color: #f4f4f4;
-      color: #222;
-    }
-    nav {
-      background-color: #0066cc;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      padding: 15px 0;
-    }
-    nav a {
-      color: white;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 1.1rem;
-      padding: 8px 16px;
-      border-radius: 6px;
-      transition: background-color 0.3s ease;
-    }
-    nav a:hover, nav a.active {
-      background-color: #004999;
-    }
-    #profile {
-      max-width: 700px;
-      margin: 20px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    #coverPhoto {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 10px 10px 0 0;
-      background: #ddd;
-      cursor: pointer;
-      margin-bottom: 10px;
-      position: relative;
-    }
-    #profilePhotoWrapper {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin: -70px auto 10px;
-      border-radius: 50%;
-      border: 4px solid white;
-      overflow: hidden;
-      cursor: pointer;
-      background: #eee;
-    }
-    #profilePhoto {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    input[type="file"] {
-      display: none;
-    }
-    #editName, #editBio, #editToken {
-      width: 100%;
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 1rem;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      font-family: inherit;
-    }
-    #editName {
-      font-weight: bold;
-      font-size: 1.5rem;
-    }
-    #editBio {
-      min-height: 60px;
-      resize: vertical;
-    }
-    #editToken {
-      font-family: monospace;
-    }
-    #saveProfileBtn {
-      display: block;
-      margin: 0 auto 20px;
-      background-color: #0066cc;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #saveProfileBtn:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-    #userPosts {
-      max-width: 700px;
-      margin: 30px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .post-item {
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 15px;
-      margin-bottom: 20px;
-      background: #fafafa;
-    }
-    .post-owner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-    }
-    .post-owner div {
-      line-height: 1.1;
-    }
-    .post-time {
-      font-size: 0.85em;
-      color: #555;
-      margin-top: 4px;
-    }
-    .post-caption {
-      margin-top: 10px;
-      font-size: 1em;
-      white-space: pre-wrap;
-    }
-    video, img {
-      max-width: 100%;
-      border-radius: 6px;
-      margin-top: 10px;
-      background: black;
-      display: block;
-    }
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #ccc;
-      box-shadow: 0 0 3px rgba(0,0,0,0.1);
-    }
-    /* Post actions styling */
-    .post-actions {
-      margin-top: 12px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .post-actions button {
-      cursor: pointer;
-      border: none;
-      background: #007bff;
-      color: white;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      user-select: none;
-      transition: background-color 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .post-actions button:hover {
-      background: #0056b3;
-    }
-    .post-actions button.liked {
-      background: #28a745 !important;
-      box-shadow: 0 0 8px #28a745aa;
-    }
-    .post-actions button.boosted {
-      background: gold !important;
-      color: #000 !important;
-      box-shadow: 0 0 8px #ffd700cc;
-    }
-    /* Comments container */
-    .comments-container {
-      margin-top: 10px;
-      max-height: 160px;
-      overflow-y: auto;
-      border-top: 1px solid #ccc;
-      padding-top: 8px;
-      font-size: 0.9rem;
-    }
-    .comment {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    .comment img.avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: #eee;
-    }
-    .comment-body {
-      background: #f5f5f5;
-      padding: 6px 12px;
-      border-radius: 8px;
-      flex: 1;
-      word-break: break-word;
-    }
-    .comment-body strong {
-      display: block;
-      color: #007bff;
-      margin-bottom: 4px;
-    }
-    .comment-form {
-      margin-top: 10px;
-      display: flex;
-      gap: 8px;
-    }
-    .comment-form input {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1.5px solid #ccc;
-      font-size: 1rem;
-      font-family: inherit;
-      outline-offset: 2px;
-      transition: border-color 0.3s;
-    }
-    .comment-form input:focus {
-      border-color: #007bff;
-      outline: none;
-    }
-    .comment-form button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 0.3s;
-    }
-    .comment-form button:hover {
-      background: #0056b3;
-    }
+    body{font-family:Arial,sans-serif;margin:0;background:#fff;color:#222}
+    header{background:#007bff;color:#fff;padding:10px 20px;position:sticky;top:0;z-index:1000;
+      box-shadow:0 2px 4px rgb(0 0 0 / .1);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .navbar-left{display:flex;align-items:center;gap:10px}
+    .navbar-left img{height:40px;width:40px;border-radius:4px;background:#fff;padding:2px}
+    .navbar-left h1{margin:0;font-size:1.4em;font-weight:700}
+    video,img{max-width:100%;border-radius:6px;margin-top:10px;background:#000;display:block}
+    .post-item{border:1px solid #ddd;border-radius:8px;margin:16px 20px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,.1)}
+    .post-owner{display:flex;align-items:center;gap:12px;font-weight:600}
+    .post-owner img.avatar{width:40px;height:40px;border-radius:50%;background:#eee}
+    .post-caption{margin:12px 0;font-size:1.1rem}
+    .post-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .post-actions button{cursor:pointer;border:none;background:#007bff;color:#fff;padding:6px 14px;border-radius:6px;font-size:.9rem;font-weight:600;transition:background-color .3s}
+    .post-actions button:hover{background:#0056b3}
+    .post-actions button.liked{background:#28a745!important;box-shadow:0 0 8px #28a745aa}
   </style>
 </head>
 <body>
 
-<nav>
-  <a href="media.html">Timeline</a>
-  <a href="profile.html" class="active">Profile</a>
-</nav>
-
-<div id="profile">
-  <img id="coverPhoto" src="" alt="Cover Photo" title="Click to change cover photo" tabindex="0" />
-  
-  <div id="profilePhotoWrapper" title="Click to change profile photo" tabindex="0">
-    <img id="profilePhoto" src="" alt="Profile Photo" />
+<header>
+  <div class="navbar-left">
+    <img src="https://drfmedia.com/favicon.ico" alt="DRFMedia Logo" />
+    <h1>DRFMedia Timeline</h1>
   </div>
-  
-  <input type="file" id="coverPhotoInput" accept="image/*" />
-  <input type="file" id="profilePhotoInput" accept="image/*" />
+</header>
 
-  <input type="text" id="editName" placeholder="Your name" maxlength="50" aria-label="Edit your name" />
-  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250" aria-label="Edit your bio"></textarea>
-  <input type="text" id="editToken" placeholder="Your DRFM Token Address (for charity)" maxlength="42" aria-label="Edit your DRFM token address" />
-  <button id="saveProfileBtn" disabled>Save Profile</button>
-</div>
-
-<div id="userPosts" aria-live="polite"></div>
+<div id="postContainer" aria-live="polite"></div>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, onValue, update, get, query, orderByChild
-  } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
-  import {
-    getAuth, onAuthStateChanged, updateProfile
-  } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+    getDatabase, ref, onValue, update, get
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+  /* 🔑  Pinata JWT — use for future upload logic if needed */
+  const pinataJWT = "Bearer YOUR_REAL_PINATA_JWT_HERE";
 
+  /* 🔥 Firebase config */
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -302,413 +56,94 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  const db  = getDatabase(app);
   const auth = getAuth(app);
 
-  const coverPhoto = document.getElementById('coverPhoto');
-  const profilePhoto = document.getElementById('profilePhoto');
-  const profilePhotoWrapper = document.getElementById('profilePhotoWrapper');
-  const coverPhotoInput = document.getElementById('coverPhotoInput');
-  const profilePhotoInput = document.getElementById('profilePhotoInput');
-  const editName = document.getElementById('editName');
-  const editBio = document.getElementById('editBio');
-  const editToken = document.getElementById('editToken');
-  const saveProfileBtn = document.getElementById('saveProfileBtn');
-  const userPostsContainer = document.getElementById('userPosts');
-
   let currentUser = null;
-  let profileData = {};
-  let allUserPosts = [];
+  let allPosts    = [];
 
-  // Helper
-  function escapeHTML(str) {
-    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
-
-  function checkChanges() {
-    if (!currentUser) {
-      saveProfileBtn.disabled = true;
-      return;
-    }
-    const nameChanged = editName.value.trim() !== (currentUser.displayName || "");
-    const bioChanged = editBio.value.trim() !== (profileData.bio || "");
-    const tokenChanged = editToken.value.trim() !== (profileData.drfmToken || "");
-    const coverChanged = coverPhoto.src.startsWith('blob:');
-    const profileChanged = profilePhoto.src.startsWith('blob:');
-
-    saveProfileBtn.disabled = !(nameChanged || bioChanged || tokenChanged || coverChanged || profileChanged);
-  }
-
-  coverPhotoInput.addEventListener('change', e => {
-    if (!currentUser) return;
-    const file = e.target.files[0];
-    if (!file) return;
-    coverPhoto.src = URL.createObjectURL(file);
-    checkChanges();
-  });
-
-  profilePhotoInput.addEventListener('change', e => {
-    if (!currentUser) return;
-    const file = e.target.files[0];
-    if (!file) return;
-    profilePhoto.src = URL.createObjectURL(file);
-    checkChanges();
-  });
-
-  coverPhoto.addEventListener('click', () => coverPhotoInput.click());
-  profilePhotoWrapper.addEventListener('click', () => profilePhotoInput.click());
-
-  coverPhoto.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); coverPhotoInput.click(); } });
-  profilePhotoWrapper.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); profilePhotoInput.click(); } });
-
-  editName.addEventListener('input', checkChanges);
-  editBio.addEventListener('input', checkChanges);
-  editToken.addEventListener('input', checkChanges);
-
-  saveProfileBtn.addEventListener('click', async () => {
-    if (!currentUser) return alert("Not logged in.");
-
-    saveProfileBtn.disabled = true;
-    saveProfileBtn.textContent = "Saving...";
-
-    try {
-      const updates = {};
-      const userRef = ref(db, 'users/' + currentUser.uid);
-
-      // Upload cover photo if changed (blob)
-      if (coverPhoto.src.startsWith('blob:')) {
-        const file = coverPhotoInput.files[0];
-        const url = await uploadFileToPinata(file);
-        updates.coverPhoto = url;
-        coverPhoto.src = url;
-      }
-
-      // Upload profile photo if changed (blob)
-      if (profilePhoto.src.startsWith('blob:')) {
-        const file = profilePhotoInput.files[0];
-        const url = await uploadFileToPinata(file);
-        updates.photoURL = url;
-        profilePhoto.src = url;
-      }
-
-      // Update display name in Firebase Auth profile
-      if (editName.value.trim() !== (currentUser.displayName || "")) {
-        await updateProfile(currentUser, { displayName: editName.value.trim() });
-      }
-
-      updates.bio = editBio.value.trim();
-      updates.drfmToken = editToken.value.trim();
-
-      await update(userRef, updates);
-
-      alert("Profile saved!");
-      profileData = { ...profileData, ...updates };
-      saveProfileBtn.disabled = true;
-    } catch (err) {
-      alert("Error saving profile: " + err.message);
-    } finally {
-      saveProfileBtn.textContent = "Save Profile";
-      checkChanges();
-    }
-  });
-
-  async function uploadFileToPinata(file) {
-    const fd = new FormData();
-    fd.append("file", file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: { Authorization: PINATA_JWT },
-      body: fd
-    });
-    if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
-    const { IpfsHash } = await res.json();
-    return "https://gateway.pinata.cloud/ipfs/" + IpfsHash;
-  }
-
-  // Load user profile and posts
-  onAuthStateChanged(auth, async user => {
+  /* Auth state */
+  onAuthStateChanged(auth, user => {
     currentUser = user;
-    if (!user) {
-      alert("Please login first.");
-      window.location.href = "timeline.html";
-      return;
-    }
-    document.title = `${user.displayName}'s Profile | DRFMedia`;
-    // Load profile data from DB
-    const userRef = ref(db, 'users/' + user.uid);
-    const snapshot = await get(userRef);
-    if (snapshot.exists()) {
-      profileData = snapshot.val();
-    } else {
-      profileData = {};
-    }
-
-    // Load Firebase Auth displayName & photoURL if not stored
-    if (!profileData.photoURL) profilePhoto.src = user.photoURL || "https://via.placeholder.com/120";
-    else profilePhoto.src = profileData.photoURL;
-
-    if (!profileData.coverPhoto) coverPhoto.src = "https://via.placeholder.com/700x180?text=Cover+Photo";
-    else coverPhoto.src = profileData.coverPhoto;
-
-    editName.value = user.displayName || "";
-    editBio.value = profileData.bio || "";
-    editToken.value = profileData.drfmToken || "";
-
-    saveProfileBtn.disabled = true;
-
-    // Load user's posts ordered by timestamp descending
-    const postsRef = query(ref(db, 'posts'), orderByChild('uid'));
-    onValue(postsRef, snapshot => {
-      const postsData = snapshot.val();
-      allUserPosts = [];
-      if (postsData) {
-        for (const postId in postsData) {
-          if (postsData[postId].uid === user.uid) {
-            allUserPosts.push({ id: postId, ...postsData[postId] });
-          }
-        }
-      }
-      allUserPosts.sort((a, b) => b.timestamp - a.timestamp);
-      renderPosts();
-    });
+    renderPosts();
   });
 
-  function formatTimestamp(ts) {
-    const d = new Date(ts);
-    return d.toLocaleString();
-  }
+  /* Listen to posts */
+  const postsRef = ref(db, "posts");
+  onValue(postsRef, snapshot => {
+    const posts = snapshot.val() || {};
+    allPosts = Object.entries(posts).map(([id, post]) => ({ id, ...post }));
+    allPosts.sort((a, b) => b.timestamp - a.timestamp);
+    renderPosts();
+  });
 
-  // === LIKE FEATURE ===
-  // Data structure in DB: likes/{postId}/{uid}: true or false (presence indicates liked)
-  // Like counts stored in posts/{postId}/likesCount
-
-  // Render posts
+  /* Render feed */
   function renderPosts() {
-    userPostsContainer.innerHTML = "";
-    if (allUserPosts.length === 0) {
-      userPostsContainer.textContent = "You have not posted anything yet.";
-      return;
-    }
+    const container = document.getElementById("postContainer");
+    if (!container) return;
+    container.innerHTML = "";
 
-    allUserPosts.forEach(post => {
-      const {
-        id: postId,
-        caption = "",
-        imageURL = "",
-        videoURL = "",
-        timestamp,
-        uid: postOwnerUID,
-        likesCount = 0,
-        comments = {}
-      } = post;
+    for (const post of allPosts) {
+      const { id: postId } = post;
+      const ipfsHash = post.ipfsHash;
+      const isVideo  = post.mediaType === "video";
+      const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+      const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
 
-      const isVideo = videoURL && videoURL.trim() !== "";
-      const isImage = imageURL && imageURL.trim() !== "";
+      const mediaHTML = isVideo
+        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'">
+             <source src="${url1}" type="${post.mediaMimeType}" />
+           </video>`
+        : `<img src="${url1}" alt="Image post" onerror="this.onerror=null;this.src='${url2}'" loading="lazy" />`;
 
-      // Create post container
-      const postDiv = document.createElement("article");
-      postDiv.className = "post-item";
-      postDiv.setAttribute("tabindex", "0");
-      postDiv.setAttribute("aria-label", `Post from ${currentUser.displayName} posted on ${formatTimestamp(timestamp)}`);
+      const article = document.createElement("article");
+      article.className = "post-item";
+      article.innerHTML = `
+        <header class="post-owner">
+          <img src="${post.photoURL || ''}" class="avatar" alt="avatar" />
+          <div>
+            <div>${post.displayName || 'Anonymous'}</div>
+            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+          </div>
+        </header>
+        <div class="post-caption">${post.caption || ''}</div>
+        <div class="post-media">${mediaHTML}</div>
+        <div class="post-actions">
+          <button class="like-btn" aria-pressed="false">❤️ <span class="likes-count">0</span></button>
+        </div>
+      `;
+      container.appendChild(article);
 
-      // Post owner header
-      const ownerDiv = document.createElement("div");
-      ownerDiv.className = "post-owner";
+      /* --- LIKE FEATURE --- */
+      const likeBtn         = article.querySelector('.like-btn');
+      const likesCountSpan  = likeBtn.querySelector('.likes-count');
+      const likesPath       = `posts/${postId}/likes`;
+      const likeRef         = ref(db, likesPath);
+      const userLikeRef     = () => ref(db, `${likesPath}/${currentUser ? currentUser.uid : "anon"}`);
 
-      const avatarImg = document.createElement("img");
-      avatarImg.src = profilePhoto.src || "https://via.placeholder.com/32";
-      avatarImg.alt = currentUser.displayName + " avatar";
-      avatarImg.className = "avatar";
-
-      const ownerNameDiv = document.createElement("div");
-      ownerNameDiv.textContent = currentUser.displayName || "Unknown";
-
-      ownerDiv.appendChild(avatarImg);
-      ownerDiv.appendChild(ownerNameDiv);
-
-      const postTimeDiv = document.createElement("div");
-      postTimeDiv.className = "post-time";
-      postTimeDiv.textContent = formatTimestamp(timestamp);
-
-      // Caption
-      const captionDiv = document.createElement("div");
-      captionDiv.className = "post-caption";
-      captionDiv.textContent = caption;
-
-      // Media element
-      let mediaElem = null;
-      if (isVideo) {
-        mediaElem = document.createElement("video");
-        mediaElem.setAttribute("controls", "");
-        mediaElem.setAttribute("preload", "metadata");
-        mediaElem.src = videoURL;
-        mediaElem.alt = "Video post";
-      } else if (isImage) {
-        mediaElem = document.createElement("img");
-        mediaElem.src = imageURL;
-        mediaElem.alt = "Image post";
-      }
-
-      // Post actions container
-      const actionsDiv = document.createElement("div");
-      actionsDiv.className = "post-actions";
-
-      // --- LIKE BUTTON ---
-      const likeBtn = document.createElement("button");
-      likeBtn.type = "button";
-      likeBtn.className = "like-btn";
-      likeBtn.setAttribute("aria-pressed", "false");
-      likeBtn.setAttribute("aria-label", "Like post");
-      likeBtn.innerHTML = `❤️ <span class="likes-count">${likesCount || 0}</span>`;
-
-      // Fetch whether current user liked this post, update UI
-      const likeRef = ref(db, `likes/${postId}/${currentUser.uid}`);
+      /* live state */
       onValue(likeRef, snap => {
-        if (snap.exists()) {
-          likeBtn.classList.add("liked");
-          likeBtn.setAttribute("aria-pressed", "true");
-        } else {
-          likeBtn.classList.remove("liked");
-          likeBtn.setAttribute("aria-pressed", "false");
-        }
+        const data = snap.val() || {};
+        likesCountSpan.textContent = Object.keys(data).length;
+        const liked = currentUser ? Boolean(data[currentUser.uid]) : false;
+        likeBtn.classList.toggle('liked', liked);
+        likeBtn.setAttribute('aria-pressed', liked);
       });
 
-      likeBtn.addEventListener("click", async () => {
-        const likeStatusSnap = await get(likeRef);
-        const postRef = ref(db, `posts/${postId}`);
-
-        if (likeStatusSnap.exists()) {
-          // Unlike: remove like node and decrement count
-          await update(ref(db), {
-            [`likes/${postId}/${currentUser.uid}`]: null,
-            [`posts/${postId}/likesCount`]: (likesCount > 0 ? likesCount - 1 : 0),
-          });
-        } else {
-          // Like: add like node and increment count
-          await update(ref(db), {
-            [`likes/${postId}/${currentUser.uid}`]: true,
-            [`posts/${postId}/likesCount`]: (likesCount + 1),
-          });
+      /* toggle like */
+      likeBtn.onclick = async () => {
+        if (!currentUser) {
+          alert("Please sign in to like posts.");
+          return;
         }
-      });
-
-      // --- SHARE BUTTON (existing feature) ---
-      const shareBtn = document.createElement("button");
-      shareBtn.type = "button";
-      shareBtn.className = "share-btn";
-      shareBtn.setAttribute("aria-label", "Share post");
-      shareBtn.textContent = "Share";
-      shareBtn.addEventListener("click", () => {
-        const url = `${window.location.origin}/media.html?postId=${postId}`;
-        if (navigator.share) {
-          navigator.share({
-            title: `Post by ${currentUser.displayName}`,
-            url,
-          }).catch(() => {
-            alert("Sharing failed or cancelled.");
-          });
-        } else {
-          prompt("Copy this link to share:", url);
-        }
-      });
-
-      // --- COMMENTS (existing feature) ---
-      // Comments container
-      const commentsContainer = document.createElement("div");
-      commentsContainer.className = "comments-container";
-      // Render existing comments
-      if (comments) {
-        Object.entries(comments).forEach(([commentId, comment]) => {
-          const commentDiv = document.createElement("div");
-          commentDiv.className = "comment";
-          commentDiv.tabIndex = 0;
-
-          const commentAvatar = document.createElement("img");
-          commentAvatar.src = comment.photoURL || "https://via.placeholder.com/28";
-          commentAvatar.alt = `${comment.name} avatar`;
-          commentAvatar.className = "avatar";
-
-          const commentBody = document.createElement("div");
-          commentBody.className = "comment-body";
-
-          const commenterName = document.createElement("strong");
-          commenterName.textContent = comment.name || "Anonymous";
-
-          const commentText = document.createElement("span");
-          commentText.textContent = comment.text || "";
-
-          commentBody.appendChild(commenterName);
-          commentBody.appendChild(commentText);
-
-          commentDiv.appendChild(commentAvatar);
-          commentDiv.appendChild(commentBody);
-
-          commentsContainer.appendChild(commentDiv);
+        const liked = (await get(userLikeRef())).exists();
+        await update(db, {
+          [`${likesPath}/${currentUser.uid}`]: liked ? null : true
         });
-      }
-
-      // Comment form
-      const commentForm = document.createElement("form");
-      commentForm.className = "comment-form";
-
-      const commentInput = document.createElement("input");
-      commentInput.type = "text";
-      commentInput.placeholder = "Add a comment...";
-      commentInput.required = true;
-      commentInput.setAttribute("aria-label", "Add comment input");
-
-      const commentSubmitBtn = document.createElement("button");
-      commentSubmitBtn.type = "submit";
-      commentSubmitBtn.textContent = "Post";
-
-      commentForm.appendChild(commentInput);
-      commentForm.appendChild(commentSubmitBtn);
-
-      commentForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const text = commentInput.value.trim();
-        if (!text) return;
-
-        const newCommentRef = ref(db, `posts/${postId}/comments`);
-        const newCommentId = Date.now().toString();
-
-        const newCommentData = {
-          name: currentUser.displayName || "Anonymous",
-          uid: currentUser.uid,
-          text,
-          photoURL: profilePhoto.src,
-          timestamp: Date.now(),
-        };
-
-        // Save comment to DB
-        const updateData = {};
-        updateData[`posts/${postId}/comments/${newCommentId}`] = newCommentData;
-
-        try {
-          await update(ref(db), updateData);
-          commentInput.value = "";
-          // Comments UI will update automatically via onValue listener
-        } catch (err) {
-          alert("Error posting comment: " + err.message);
-        }
-      });
-
-      // Assemble post div
-      postDiv.appendChild(ownerDiv);
-      postDiv.appendChild(postTimeDiv);
-      postDiv.appendChild(captionDiv);
-      if (mediaElem) postDiv.appendChild(mediaElem);
-      actionsDiv.appendChild(likeBtn);
-      actionsDiv.appendChild(shareBtn);
-      postDiv.appendChild(actionsDiv);
-      postDiv.appendChild(commentsContainer);
-      postDiv.appendChild(commentForm);
-
-      userPostsContainer.appendChild(postDiv);
-    });
+      };
+      /* --- end like feature --- */
+    }
   }
 </script>
-
 </body>
 </html>
