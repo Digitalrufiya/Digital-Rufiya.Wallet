@@ -17,7 +17,7 @@
     .navbar-left img { height: 40px; width: 40px; border-radius: 4px; background: white; padding: 2px; }
     .navbar-left h1 { margin: 0; font-size: 1.4em; font-weight: 700; }
     video, img { max-width: 100%; border-radius: 6px; margin-top: 10px; background: black; display: block; }
-    .post-media video { background: black; width: 100%; border-radius: 6px; }
+    .post-media video { width: 100%; border-radius: 6px; }
 
     .post-item {
       border: 1px solid #ddd;
@@ -194,9 +194,9 @@
 <nav>
   <a href="media.html">Timeline</a>
   <a href="profile.html" class="active">Profile</a>
-   <a href="media.html">Posts</a>
-   <a href="gift.html">Donation</a>
-    <a href="chat.html">Chat</a>
+  <a href="media.html">Posts</a>
+  <a href="gift.html">Donation</a>
+  <a href="chat.html">Chat</a>
 </nav>
 
 <header>
@@ -218,9 +218,9 @@
     <h2 id="skrillModalTitle">Skrill Donation</h2>
     <p id="skrillModalDesc">
       Email: <strong>digitalrufiyacoin@gmail.com</strong><br />
-      Amount: <strong>$<span id="skrillAmount">1</span></strong>
+      Amount: $<strong id="skrillAmount">1</strong>
     </p>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?data=digitalrufiyacoin%40gmail.com&size=180x180" />
+    <img id="skrillQRCode" src="https://api.qrserver.com/v1/create-qr-code/?data=digitalrufiyacoin%40gmail.com&size=180x180" alt="Skrill QR Code" />
     <button id="openSkrillSiteBtn" type="button">Open Skrill.com</button>
     <button id="closeSkrillModalBtn" type="button" style="margin-top:12px; background:#ccc; color:#000;">Close</button>
   </div>
@@ -229,7 +229,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import {
-    getDatabase, ref, push, set, onValue, get, runTransaction
+    getDatabase, ref, push, runTransaction, onValue
   } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import {
     getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
@@ -263,7 +263,15 @@
   let currentUser = null;
   let allPosts = [];
 
-  // Auth state change
+  // Escape HTML helper to prevent XSS
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  // Placeholders for avatar
+  const placeholderAvatar40 = 'https://via.placeholder.com/40?text=User';
+  const placeholderAvatar30 = 'https://via.placeholder.com/30?text=User';
+
   onAuthStateChanged(auth, user => {
     currentUser = user;
     loginBtn.style.display = user ? "none" : "inline-block";
@@ -274,7 +282,7 @@
   loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert("Login failed: " + e.message));
   logoutBtn.onclick = () => signOut(auth).catch(e => alert("Logout failed: " + e.message));
 
-  // Listen to posts in realtime
+  // Listen for posts realtime updates
   const postsRef = ref(db, "posts");
   onValue(postsRef, snapshot => {
     const posts = snapshot.val() || {};
@@ -283,10 +291,29 @@
     renderPosts();
   });
 
-  // Escape HTML helper to prevent XSS
-  function escapeHTML(str) {
-    return String(str).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  }
+  // Fallback for video source loading error - try next gateway
+  window.switchGateway = function(videoElem) {
+    let idx = parseInt(videoElem.dataset.idx || "1");
+    const g1 = videoElem.dataset.g1;
+    const g2 = videoElem.dataset.g2;
+    const g3 = videoElem.dataset.g3;
+
+    idx++;
+    if (idx > 3) {
+      // no more fallbacks, stop trying
+      videoElem.onerror = null;
+      return;
+    }
+
+    let nextSrc = "";
+    if (idx === 2) nextSrc = g2;
+    else if (idx === 3) nextSrc = g3;
+
+    videoElem.dataset.idx = idx;
+    videoElem.src = nextSrc;
+    videoElem.load();
+    videoElem.play().catch(() => {}); // ignore play errors
+  };
 
   function renderPosts() {
     postContainer.innerHTML = "";
@@ -296,14 +323,15 @@
     }
 
     for (const post of allPosts) {
-      const ipfsHash = post.ipfsHash;
+      const ipfsHash = post.ipfsHash || "";
       const isVideo = post.mediaType === "video";
       const url1 = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
       const url2 = `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`;
+      const url3 = `https://ipfs.io/ipfs/${ipfsHash}`;
 
       const mediaHTML = isVideo
-        ? `<video controls preload="metadata" poster="${url2}" onerror="this.onerror=null;this.src='${url2}'" style="border-radius:6px; width:100%;">
-            <source src="${url1}" type="${post.mediaMimeType}" />
+        ? `<video controls preload="none" poster="${url2}" data-g1="${url1}" data-g2="${url2}" data-g3="${url3}" data-idx="1" onerror="switchGateway(this)" style="border-radius:6px; width:100%;">
+            <source src="${url1}" type="${post.mediaMimeType || "video/mp4"}" />
           </video>`
         : `<img src="${url1}" alt="Post media" loading="lazy" onerror="this.onerror=null;this.src='${url2}'" style="border-radius:6px;" />`;
 
@@ -314,10 +342,10 @@
       article.className = "post-item";
       article.innerHTML = `
         <header class="post-owner">
-          <img src="${post.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" class="avatar" />
+          <img src="${escapeHTML(post.photoURL || placeholderAvatar40)}" alt="User avatar" class="avatar" />
           <div>
             <div>${escapeHTML(post.displayName || "Anonymous")}</div>
-            <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+            <small>${new Date(post.timestamp).toLocaleString()}</small>
           </div>
         </header>
         <div class="post-caption">${escapeHTML(post.caption)}</div>
@@ -340,8 +368,7 @@
         <form class="comment-form" data-id="${post.id}" aria-label="Add comment form">
           <input type="text" placeholder="Write a comment..." required minlength="1" aria-required="true" />
           <button type="submit">Post</button>
-        </form>
-        ` : ""}
+        </form>` : ""}
       `;
 
       postContainer.appendChild(article);
@@ -350,42 +377,47 @@
       loadComments(post.id);
     }
 
-    // Attach event listeners to buttons/selects
     attachPostEventListeners();
   }
 
   function attachPostEventListeners() {
     // Like buttons
     postContainer.querySelectorAll("button[aria-label='Like post']").forEach(btn => {
-      btn.onclick = async e => {
+      btn.onclick = async () => {
         if (!currentUser) return alert("Please login first.");
         const postId = btn.getAttribute("data-id");
         const likesRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
         const likesCountRef = ref(db, `posts/${postId}/likesCount`);
 
-        // Toggle like state transactionally
-        await runTransaction(likesRef, current => (current ? null : true));
-        await runTransaction(likesCountRef, current => current ? current + (btn.classList.contains("liked") ? -1 : 1) : 1);
+        // Toggle like atomically
+        await runTransaction(likesRef, liked => liked ? null : true);
+        // Update likes count
+        await runTransaction(likesCountRef, count => {
+          if (btn.classList.contains("liked")) return (count || 1) - 1;
+          else return (count || 0) + 1;
+        });
       };
     });
 
     // Boost buttons
     postContainer.querySelectorAll("button[aria-label='Boost post']").forEach(btn => {
-      btn.onclick = async e => {
+      btn.onclick = async () => {
         if (!currentUser) return alert("Please login first.");
         const postId = btn.getAttribute("data-id");
-        const boostsRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
+        const boostedRef = ref(db, `posts/${postId}/boostedBy/${currentUser.uid}`);
         const boostsCountRef = ref(db, `posts/${postId}/boostsCount`);
 
-        // Toggle boost state transactionally
-        await runTransaction(boostsRef, current => (current ? null : true));
-        await runTransaction(boostsCountRef, current => current ? current + (btn.classList.contains("boosted") ? -1 : 1) : 1);
+        await runTransaction(boostedRef, boosted => boosted ? null : true);
+        await runTransaction(boostsCountRef, count => {
+          if (btn.classList.contains("boosted")) return (count || 1) - 1;
+          else return (count || 0) + 1;
+        });
       };
     });
 
-    // Comment buttons to focus input
+    // Comment buttons focus input
     postContainer.querySelectorAll("button[aria-label='Comment on post']").forEach(btn => {
-      btn.onclick = e => {
+      btn.onclick = () => {
         const postId = btn.getAttribute("data-id");
         const form = postContainer.querySelector(`form.comment-form[data-id="${postId}"]`);
         if (form) {
@@ -394,44 +426,9 @@
       };
     });
 
-    // Repost buttons
-    postContainer.querySelectorAll("button[aria-label='Repost post']").forEach(btn => {
-      btn.onclick = async e => {
-        if (!currentUser) return alert("Please login first.");
-        const postId = btn.getAttribute("data-id");
-
-        // Find original post data
-        const originalPost = allPosts.find(p => p.id === postId);
-        if (!originalPost) return alert("Original post not found.");
-
-        // Prepare repost data
-        const repostData = {
-          caption: originalPost.caption + " (Reposted)",
-          displayName: currentUser.displayName || "Anonymous",
-          photoURL: currentUser.photoURL || "",
-          mediaType: originalPost.mediaType,
-          mediaMimeType: originalPost.mediaMimeType || "",
-          ipfsHash: originalPost.ipfsHash,
-          timestamp: Date.now(),
-          likesCount: 0,
-          boostsCount: 0,
-          commentsCount: 0,
-          likesBy: {},
-          boostedBy: {}
-        };
-
-        try {
-          await push(ref(db, "posts"), repostData);
-          alert("Post reposted successfully!");
-        } catch (err) {
-          alert("Error reposting: " + err.message);
-        }
-      };
-    });
-
-    // Donate dropdown (show Skrill modal)
+    // Donation select
     postContainer.querySelectorAll("select[aria-label='Donate to post']").forEach(sel => {
-      sel.onchange = e => {
+      sel.onchange = () => {
         const amount = sel.value;
         if (!amount) return;
         skrillAmountSpan.textContent = amount;
@@ -440,7 +437,7 @@
       };
     });
 
-    // Comment form submit
+    // Comment form submission
     postContainer.querySelectorAll("form.comment-form").forEach(form => {
       form.onsubmit = async e => {
         e.preventDefault();
@@ -449,62 +446,61 @@
         const input = form.querySelector("input");
         const text = input.value.trim();
         if (!text) return;
-        const commentData = {
+
+        // Push comment
+        const commentsRef = ref(db, `posts/${postId}/comments`);
+        await push(commentsRef, {
           uid: currentUser.uid,
-          displayName: currentUser.displayName || "Anonymous",
-          photoURL: currentUser.photoURL || "",
+          displayName: currentUser.displayName || "Anon",
+          photoURL: currentUser.photoURL || placeholderAvatar30,
           text,
           timestamp: Date.now()
-        };
-        const commentsRef = ref(db, `posts/${postId}/comments`);
-        const commentsCountRef = ref(db, `posts/${postId}/commentsCount`);
+        });
 
-        try {
-          await push(commentsRef, commentData);
-          await runTransaction(commentsCountRef, current => current ? current + 1 : 1);
-          input.value = "";
-        } catch (err) {
-          alert("Error posting comment: " + err.message);
-        }
+        // Update comments count
+        const commentsCountRef = ref(db, `posts/${postId}/commentsCount`);
+        await runTransaction(commentsCountRef, count => (count || 0) + 1);
+
+        input.value = "";
       };
     });
   }
 
-  // Load comments for each post
   function loadComments(postId) {
     const commentsContainer = document.getElementById(`comments-${postId}`);
-    if (!commentsContainer) return;
-
     const commentsRef = ref(db, `posts/${postId}/comments`);
     onValue(commentsRef, snapshot => {
       const comments = snapshot.val() || {};
       commentsContainer.innerHTML = "";
-      const commentEntries = Object.entries(comments).sort((a,b) => a[1].timestamp - b[1].timestamp);
-      for (const [cid, comment] of commentEntries) {
-        const commentEl = document.createElement("div");
-        commentEl.className = "comment";
-        commentEl.innerHTML = `
-          <img src="${comment.photoURL || 'https://via.placeholder.com/30'}" alt="Commenter avatar" class="avatar" />
-          <div class="comment-body">
-            <strong>${escapeHTML(comment.displayName || "Anonymous")}</strong>
-            <div>${escapeHTML(comment.text)}</div>
-            <small style="color:#555;">${new Date(comment.timestamp).toLocaleString()}</small>
-          </div>
-        `;
-        commentsContainer.appendChild(commentEl);
-      }
+      Object.entries(comments)
+        .sort((a, b) => a[1].timestamp - b[1].timestamp) // oldest first
+        .forEach(([cid, comment]) => {
+          const cDiv = document.createElement("div");
+          cDiv.className = "comment";
+          cDiv.innerHTML = `
+            <img src="${escapeHTML(comment.photoURL || placeholderAvatar30)}" alt="Commenter avatar" class="avatar" />
+            <div class="comment-body">
+              <strong>${escapeHTML(comment.displayName)}</strong>
+              <div>${escapeHTML(comment.text)}</div>
+            </div>
+          `;
+          commentsContainer.appendChild(cDiv);
+        });
     });
   }
 
-  // Skrill modal buttons
+  // Skrill modal controls
   openSkrillSiteBtn.onclick = () => {
-    window.open("https://www.skrill.com", "_blank");
+    window.open("https://www.skrill.com/en/", "_blank", "noopener");
   };
   closeSkrillModalBtn.onclick = () => {
     skrillModal.style.display = "none";
   };
-
+  skrillModal.onclick = e => {
+    if (e.target === skrillModal) {
+      skrillModal.style.display = "none";
+    }
+  };
 </script>
-
 </body>
 </html>
