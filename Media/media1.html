@@ -6,7 +6,6 @@
   <meta name="color-scheme" content="light dark" />
   <title>DRFMedia Timeline — Spread Kindness & Truth</title>
 
-  <!-- optional external CSS if you keep style.css -->
   <link rel="stylesheet" href="style.css" />
 
   <style>
@@ -17,7 +16,8 @@
           --shadow-sm:0 1px 2px rgba(0,0,0,.06);--shadow-md:0 2px 4px rgba(0,0,0,.1)}
     @media(prefers-color-scheme:dark){
       :root{--bg-body:#181a1b;--bg-surface:#242628;--bg-surface-alt:#2b2e30;
-            --text-body:#f1f3f5;--text-muted:#adb5bd;--shadow-sm:none;--shadow-md:none}}
+            --text-body:#f1f3f5;--text-muted:#adb5bd;--shadow-sm:none;--shadow-md:none}
+    }
     /* ===== base reset ===== */
     *,*::before,*::after{box-sizing:border-box}
     html,body{margin:0;padding:0;height:100%}
@@ -44,7 +44,8 @@
       #menuToggle{display:none}
       #primaryNav{display:flex!important;flex-direction:row;gap:.25rem;background:transparent;width:auto}
       #primaryNav a{border:none;padding:.5rem .9rem}
-      #primaryNav a:hover{background:rgb(255 255 255/.25)}}
+      #primaryNav a:hover{background:rgb(255 255 255/.25)}
+    }
     /* ===== utility buttons ===== */
     .btn{display:inline-block;border:none;background:var(--accent);color:#fff;
          padding:.45rem .9rem;border-radius:var(--radius);
@@ -113,30 +114,13 @@
   <section id="postContainer" class="container" aria-live="polite"></section>
 </div>
 
-<!-- ==== Gateway helper for resilient video loading ==== -->
-<script>
-const _gw = [
-  "https://ipfs.io/ipfs/",
-  "https://gateway.pinata.cloud/ipfs/",
-  "https://cloudflare-ipfs.com/ipfs/"
-];
-window.tryNextGateway = v=>{
-  const h = v.dataset.hash;
-  let i = (+v.dataset.gw||0)+1;
-  if(i>=_gw.length) i=0;
-  v.dataset.gw=i;
-  v.querySelector("source").src=_gw[i]+h;
-  v.load();
-};
-</script>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
 /* replace with your own JWT */
-const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -167,7 +151,7 @@ const primaryNav= document.getElementById("primaryNav");
 let currentUser=null, isAdmin=false, allPosts=[];
 
 /* utils */
-const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const esc = s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 
 /* auth */
 loginBtn.onclick = ()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
@@ -176,7 +160,7 @@ logoutBtn.onclick= ()=>signOut(auth).catch(e=>alert(e.message));
 onAuthStateChanged(auth,async user=>{
   currentUser=user;
   uploadForm.style.display=user?"block":"none";
-  loginBtn .style.display=user?"none":"block";
+  loginBtn .style.display=user?"none" :"block";
   logoutBtn.style.display=user?"block":"none";
   if(user){
     const adSnap = await get(ref(db,`admin/${user.uid}`));
@@ -186,7 +170,32 @@ onAuthStateChanged(auth,async user=>{
 });
 
 /* upload */
-uploadForm.addEventListener("submit",async e=>{/* unchanged */});
+uploadForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!currentUser)return alert("Login first");
+  if(!mediaFile.files[0])return alert("Select a file");
+  if(captionIn.value.trim().length<4)return alert("Caption too short");
+  uploadForm.querySelector("button").disabled=true;
+
+  /* pinata */
+  try{
+    const fd=new FormData();fd.append("file",mediaFile.files[0]);
+    const up=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{method:"POST",headers:{Authorization:pinataJWT},body:fd});
+    if(!up.ok)throw new Error("Pinata upload failed");
+    const {IpfsHash}=await up.json();
+    const newRef=push(ref(db,"posts"));
+    await set(newRef,{
+      userId:currentUser.uid,displayName:currentUser.displayName,photoURL:currentUser.photoURL,
+      caption:captionIn.value.trim(),ipfsHash:IpfsHash,
+      mediaType:mediaFile.files[0].type.startsWith("video")?"video":"image",
+      mediaMimeType:mediaFile.files[0].type,timestamp:Date.now(),
+      likesCount:0,commentsCount:0,boostsCount:0,likedBy:{},boostedBy:{}});
+
+    captionIn.value="";
+    mediaFile.value="";
+  }catch(err){alert(err.message)}
+  finally{uploadForm.querySelector("button").disabled=false}
+});
 
 /* live posts */
 onValue(ref(db,"posts"),snap=>{
@@ -201,61 +210,125 @@ function renderPosts(){
   postWrap.innerHTML="";
   for(const p of allPosts){
     if(!p.caption.toLowerCase().includes(q))continue;
-    const gw0 = `https://ipfs.io/ipfs/${p.ipfsHash}`;
-    const mediaHTML = p.mediaType==="video" ?
-      `<video controls playsinline preload="none" poster="${gw0}#t=0.1" data-hash="${p.ipfsHash}" data-gw="0" onerror="tryNextGateway(this)"><source src="${gw0}" type="${p.mediaMimeType||'video/mp4'}"></video>` :
-      `<img src="${gw0}" loading="lazy" onerror="this.onerror=null;this.src='https://cloudflare-ipfs.com/ipfs/${p.ipfsHash}'" alt="media">`;
-
-    const liked   = currentUser && p.likedBy   && p.likedBy  [currentUser.uid];
-    const boosted = currentUser && p.boostedBy && p.boostedBy[currentUser.uid];
-    const owner   = currentUser && p.userId===currentUser.uid;
-
-    postWrap.insertAdjacentHTML("beforeend`,
-      `<article class="post-item" id="post-${p.id}">
-        <header class="post-owner">
-          <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="avatar">
-          <div><div>${esc(p.displayName||'Anon')}</div>
-               <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time></div>
-        </header>
-        <div class="post-caption">${esc(p.caption)}</div>
-        <div class="post-media">${mediaHTML}</div>
-        <div class="post-actions">
-          <button class="${liked?'liked':''}"  onclick="likePost('${p.id}')">👍 Like (${p.likesCount||0})</button>
-          <button onclick="commentOnPost('${p.id}')">💬 Comment (${p.commentsCount||0})</button>
-          <button class="${boosted?'boosted':''}"  onclick="boostPost('${p.id}')">🚀 Boost (${p.boostsCount||0})</button>
-          <button onclick="repost('${p.id}')">🔄 Repost</button>
+    const url="https://gateway.pinata.cloud/ipfs/"+p.ipfsHash;
+    const owner=currentUser&&p.userId===currentUser.uid;
+    const liked=currentUser&&p.likedBy&&p.likedBy[currentUser.uid];
+    const boosted=currentUser&&p.boostedBy&&p.boostedBy[currentUser.uid];
+    const card=document.createElement("article");
+    card.className="post-item";
+    card.innerHTML=`
+      <header class="post-owner">
+        <img class="avatar" src="${p.photoURL||"https://via.placeholder.com/40"}" alt="avatar">
+        <div>
+          <div>${esc(p.displayName||"Anon")}</div>
+          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
         </div>
-        <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
-        <div id="comment-box-${p.id}" class="comment-box" style="display:none">
-          <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
-          <button onclick="submitComment('${p.id}')">Submit</button>
-          <button onclick="cancelComment('${p.id}')">Cancel</button>
-        </div>
-      </article>`);
-
+      </header>
+      <div class="post-caption">${esc(p.caption)}</div>
+      <div class="post-media">${p.mediaType==="video"
+          ? `<video src="${url}" controls playsinline preload="metadata"></video>`
+          : `<img src="${url}" alt="media">`}</div>
+      <div class="post-actions">
+        <button class="${liked?'liked':''}"  onclick="likePost('${p.id}')">👍 Like (${p.likesCount||0})</button>
+        <button onclick="commentOnPost('${p.id}')">💬 Comment (${p.commentsCount||0})</button>
+        <button class="${boosted?'boosted':''}"  onclick="boostPost('${p.id}')">🚀 Boost (${p.boostsCount||0})</button>
+        <button onclick="repost('${p.id}')">🔄 Repost</button>
+      </div>
+      <div id="comments-${p.id}" class="comments-list" aria-live="polite"></div>
+      <div id="comment-box-${p.id}" class="comment-box" style="display:none">
+        <textarea id="comment-input-${p.id}" rows="2" placeholder="Write a comment…"></textarea>
+        <button onclick="submitComment('${p.id}')">Submit</button>
+        <button onclick="cancelComment('${p.id}')">Cancel</button>
+      </div>`;
+    postWrap.appendChild(card);
+    /* delete button for owner or admin */
     if(isAdmin||owner){
-      const d=document.createElement('button');
-      d.textContent='🗑️ Delete';
-      d.className='delete-btn';
-      d.onclick=()=>deletePost(p.id);
-      postWrap.lastElementChild.querySelector('.post-actions').appendChild(d);
+      const delBtn=document.createElement("button");
+      delBtn.textContent="🗑️ Delete";
+      delBtn.className="delete-btn";
+      delBtn.onclick=()=>deletePost(p.id);
+      card.querySelector(".post-actions").appendChild(delBtn);
     }
     loadComments(p.id);
   }
 }
 
-/* the rest of JS actions (likes, boosts, comments, etc.) unchanged */
-window.likePost=async id=>{/* … original code … */};
-window.boostPost=async id=>{/* … */};
-window.repost=async id=>{/* … */};
-window.deletePost=async id=>{/* … */};
-window.commentOnPost=id=>{/* … */};
-window.cancelComment=id=>{/* … */};
-window.submitComment=async id=>{/* … */};
-async function loadComments(id){/* … */}
+/* actions */
+window.likePost=async id=>{
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.likedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,"posts/"+id+"/likedBy"),list);
+  const count=Object.keys(list).length;
+  await set(ref(db,"posts/"+id+"/likesCount"),count);
+};
 
-searchIn.addEventListener('input',renderPosts);
-menuTog.addEventListener('click',()=>{primaryNav.classList.toggle('open');menuTog.setAttribute('aria-expanded',primaryNav.classList.contains('open'));});
+window.boostPost=async id=>{
+  if(!currentUser)return alert("Login");
+  const snap=await get(ref(db,"posts/"+id));if(!snap.exists())return;
+  const post=snap.val();const list=post.boostedBy||{};
+  list[currentUser.uid]?delete list[currentUser.uid]:list[currentUser.uid]=true;
+  await set(ref(db,"posts/"+id+"/boostedBy"),list);
+  const count=Object.keys(list).length;
+  await set(ref(db,"posts/"+id+"/boostsCount"),count);
+};
+
+window.commentOnPost=id=>{
+  const box=document.getElementById(`comment-box-${id}`);
+  box.style.display=box.style.display==="none"?"block":"none";
+  const input=document.getElementById(`comment-input-${id}`);
+  input.focus();
+};
+
+window.submitComment=async id=>{
+  if(!currentUser)return alert("Login");
+  const input=document.getElementById(`comment-input-${id}`);
+  const txt=input.value.trim();
+  if(txt.length<1)return alert("Comment too short");
+  const cRef=ref(db,"comments/"+id);
+  const newC=push(cRef);
+  await set(newC,{userId:currentUser.uid,displayName:currentUser.displayName,text:txt,timestamp:Date.now()});
+  input.value="";
+  cancelComment(id);
+  loadComments(id);
+};
+
+window.cancelComment=id=>{
+  const box=document.getElementById(`comment-box-${id}`);
+  box.style.display="none";
+};
+
+async function loadComments(postId){
+  const cRef=ref(db,"comments/"+postId);
+  const cSnap=await get(cRef);
+  const commentsList=document.getElementById(`comments-${postId}`);
+  if(!cSnap.exists()){
+    commentsList.innerHTML="";
+    return;
+  }
+  const comments=Object.entries(cSnap.val()).sort((a,b)=>a[1].timestamp-b[1].timestamp);
+  commentsList.innerHTML=comments.map(([cid,c])=>`
+    <div>
+      <strong>${esc(c.displayName||"Anon")}</strong>: ${esc(c.text)}
+    </div>`).join("");
+}
+
+window.deletePost=async id=>{
+  if(!confirm("Delete this post?"))return;
+  await set(ref(db,"posts/"+id),null);
+  await set(ref(db,"comments/"+id),null);
+};
+
+/* search */
+searchIn.addEventListener("input",renderPosts);
+
+/* nav toggle */
+menuTog.onclick=()=>{
+  const expanded=menuTog.getAttribute("aria-expanded")==="true";
+  menuTog.setAttribute("aria-expanded",!expanded);
+  primaryNav.classList.toggle("open");
+};
 </script>
 </body>
 </html>
