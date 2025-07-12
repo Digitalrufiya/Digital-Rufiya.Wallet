@@ -3,99 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
+  <title>DRFMedia — Upload & View Posts</title>
   <style>
-    :root{--accent:#007bff;--accent-hover:#0056b3;--accent-muted:#3399ff;--bg-body:#f8f9fa;--bg-surface:#fff;--bg-surface-alt:#fafafa;--text-body:#212529;--text-muted:#6c757d;--radius:.5rem;--shadow-sm:0 1px 2px rgba(0,0,0,.06);--shadow-md:0 2px 4px rgba(0,0,0,.1)}
-    @media(prefers-color-scheme:dark){:root{--bg-body:#181a1b;--bg-surface:#242628;--bg-surface-alt:#2b2e30;--text-body:#f1f3f5;--text-muted:#adb5bd;--shadow-sm:none;--shadow-md:none}}
-    *,*::before,*::after{box-sizing:border-box}
-    html,body{margin:0;height:100%}
-    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg-body);color:var(--text-body);display:flex;flex-direction:column}
-    a{color:inherit;text-decoration:none}
-    img,video{max-width:100%}
-    header{background:var(--accent);color:#fff;padding:.75rem 1rem;position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;box-shadow:var(--shadow-md)}
-    .brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:clamp(1rem,2vw,1.3rem)}
-    .brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
-    #menuToggle{display:inline-flex;flex-direction:column;width:2rem;height:1.3rem;justify-content:space-between;border:none;background:none;cursor:pointer}
-    #menuToggle span{display:block;height:3px;background:#fff;border-radius:3px}
-    #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent-muted);border-radius:var(--radius)}
-    #primaryNav.open{display:flex}
-    #primaryNav a{padding:.75rem 1.25rem;font-weight:600;border-top:1px solid rgb(255 255 255/.15);color:#fff}
-    #primaryNav a:first-child{border-top:none}
-    #primaryNav a:hover{background:rgb(255 255 255/.18)}
-    @media(min-width:768px){#menuToggle{display:none}#primaryNav{display:flex!important;flex-direction:row;gap:.25rem;background:transparent;width:auto}#primaryNav a{border:none;padding:.5rem .9rem;color:inherit}#primaryNav a:hover{background:rgb(255 255 255/.25)}}
-    .btn{display:inline-block;border:none;background:var(--accent);color:#fff;padding:.45rem .9rem;border-radius:var(--radius);font-size:.95rem;font-weight:600;cursor:pointer;transition:background-color .2s}
-    .btn:hover{background:var(--accent-hover)}.btn:disabled{background:#adb5bd;cursor:not-allowed}
-    #pageWrapper{flex:1;display:flex;flex-direction:column}
-    .container{width:min(100%,700px);margin-inline:auto;padding-inline:1rem}
-    #searchBar{margin:1rem auto 0}
-    #searchInput{width:100%;padding:.55rem .85rem;font-size:1rem;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
-    #uploadForm{margin-top:1.25rem;display:none}
-    #uploadForm textarea{width:100%;margin-top:.75rem;padding:.65rem .85rem;font-size:1rem;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical;min-height:6rem;background:var(--bg-surface);color:var(--text-body)}
-    .post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin-block:1.25rem;box-shadow:var(--shadow-sm)}
-    .post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
-    .avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ced4da;box-shadow:var(--shadow-sm)}
-    .post-time{font-size:.85rem;color:var(--text-muted);margin-top:2px}
-    .post-media{margin-top:.75rem}
-    .post-caption{margin-top:.75rem;white-space:pre-wrap}
-    video,img{border-radius:var(--radius);background:#000;display:block}
-    .post-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
-    .post-actions button{flex:1 1 auto}
-    .post-actions button.liked{background:#28a745!important}
-    .post-actions button.boosted{background:gold!important;color:#000!important}
-    .post-actions button.delete-btn{background:#dc3545!important;color:#fff}.post-actions button.delete-btn:hover{background:#b52a3b!important}
-    .comments-list{margin-top:.75rem;background:var(--bg-surface);padding:.65rem;border-radius:var(--radius);max-height:10rem;overflow-y:auto;font-size:.9rem}
-    .comment-box textarea{width:100%;border-radius:var(--radius);padding:.6rem .8rem}
+    /* Basic clean styles */
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f8f9fa;
+      color: #212529;
+      margin: 0; padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.25rem;
+    }
+    main {
+      flex: 1;
+      max-width: 700px;
+      margin: 1rem auto;
+      padding: 0 1rem;
+      width: 100%;
+    }
+    form {
+      background: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+      margin-bottom: 2rem;
+    }
+    input[type="file"], textarea {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ced4da;
+      border-radius: 0.4rem;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    textarea {
+      min-height: 80px;
+    }
+    button {
+      margin-top: 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.7rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button:disabled {
+      background: #adb5bd;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background: #0056b3;
+    }
+    section.posts {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    article.post-item {
+      background: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      padding: 1rem;
+    }
+    .caption {
+      margin-bottom: 0.75rem;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      color: #212529;
+    }
+    video, img {
+      width: 100%;
+      border-radius: 0.5rem;
+      background: #000;
+      display: block;
+      max-height: 400px;
+      object-fit: contain;
+    }
+    video {
+      outline: none;
+    }
+    #loginBtn, #logoutBtn {
+      max-width: 700px;
+      margin: 1rem auto;
+      display: block;
+      padding: 0.7rem 1rem;
+      font-weight: 600;
+      font-size: 1rem;
+      border-radius: 0.4rem;
+      border: none;
+      cursor: pointer;
+      color: white;
+      background-color: #007bff;
+      transition: background-color 0.2s ease;
+    }
+    #logoutBtn {
+      background-color: #dc3545;
+    }
+    #loginBtn:hover { background-color: #0056b3; }
+    #logoutBtn:hover { background-color: #b52a3b; }
   </style>
 </head>
 <body>
-<header>
-  <div class="brand"><img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" alt="Logo"><span>DRFMedia</span></div>
-  <button id="menuToggle" aria-expanded="false"><span></span><span></span><span></span></button>
-  <nav id="primaryNav"><a href="media.html" class="active">Timeline</a><a href="profile.html">Profile</a><a href="gift.html">Donation</a><a href="chat.html">Chat</a></nav>
-</header>
-<div id="pageWrapper">
-  <section id="searchBar" class="container"><input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts"></section>
-  <button id="loginBtn" class="btn" style="max-width:700px;margin:1rem auto;">Sign in with Google</button>
-  <button id="logoutBtn" class="btn" style="display:none;max-width:700px;margin:1rem auto;background:#dc3545;">Logout</button>
-  <form id="uploadForm" class="container" enctype="multipart/form-data">
-    <input id="mediaFile" type="file" accept="image/*,video/*" required>
-    <textarea id="caption" placeholder="Write your caption…" minlength="4" required></textarea>
-    <button class="btn" type="submit" style="margin-top:.75rem;">Post</button>
-  </form>
-  <section id="postContainer" class="container" aria-live="polite"></section>
-</div>
-<script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import {getDatabase,ref,push,set,onValue,get,update} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import {getAuth,signInWithPopup,signOut,GoogleAuthProvider,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  <header>DRFMedia — Upload & View Posts</header>
 
-/* Pinata JWT */
-const pinataJWT="Bearer YOUR_PINATA_JWT_HERE";
-/* Firebase config */
-const firebaseConfig={apiKey:"AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",authDomain:"drfsocial-23a06.firebaseapp.com",databaseURL:"https://drfsocial-23a06-default-rtdb.firebaseio.com",projectId:"drfsocial-23a06",storageBucket:"drfsocial-23a06.appspot.com",messagingSenderId:"608135115201",appId:"1:608135115201:web:dc999df2c0c37241ff3f40"};
-initializeApp(firebaseConfig);
-const db=getDatabase();
-const auth=getAuth();
-const provider=new GoogleAuthProvider();
+  <button id="loginBtn">Sign in with Google</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
 
-/* dom refs */
-const loginBtn=document.getElementById("loginBtn");
-const logoutBtn=document.getElementById("logoutBtn");
-const uploadForm=document.getElementById("uploadForm");
-const mediaFile=document.getElementById("mediaFile");
-const captionIn=document.getElementById("caption");
-const postContainer=document.getElementById("postContainer");
-const searchIn=document.getElementById("searchInput");
-const menuTog=document.getElementById("menuToggle");
-const primaryNav=document.getElementById("primaryNav");
+  <main>
+    <form id="uploadForm" style="display:none;">
+      <label for="mediaFile">Choose Image or Video to Upload:</label>
+      <input id="mediaFile" type="file" accept="image/*,video/*" required />
+      
+      <label for="caption">Caption (text):</label>
+      <textarea id="caption" placeholder="Write your caption..." minlength="4" required></textarea>
+      
+      <button type="submit">Post</button>
+    </form>
 
-let currentUser=null;let allPosts=[];
-const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));
+    <section class="posts" id="postContainer" aria-live="polite" aria-label="Posts feed"></section>
+  </main>
 
-loginBtn.onclick=()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
-logoutBtn.onclick=()=>signOut(auth).catch(e=>alert(e.message));
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+    import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-onAuthStateChanged(auth,user=>{currentUser=user;uploadForm.style.display=user?"block":"none";loginBtn.style.display=user?"none":"block";logoutBtn.style.display=user?"block":"none";renderPosts();});
+    // Replace with your Pinata JWT token (keep 'Bearer ' prefix)
+    const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE";
 
-uploadForm.onsubmit=async e=>{e.preventDefault();if(!currentUser)return alert("Login first");if(!mediaFile.files[0])return alert("Select file");if(captionIn.value.trim().length<4)return alert("Caption too short");uploadForm.querySelector("button").disabled=true;try{const fd=new FormData();fd.append("file",mediaFile.files[0]);const res=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{method:"POST",headers:{Authorization:pinataJWT},body:fd});if(!res.
+    const firebaseConfig = {
+      apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain:        "drfsocial-23a06.firebaseapp.com",
+      databaseURL:       "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId:         "drfsocial-23a06",
+      storageBucket:     "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId:             "1:608135115201:web:dc999df2c0c37241ff3f40"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const uploadForm = document.getElementById("uploadForm");
+    const mediaFile = document.getElementById("mediaFile");
+    const captionIn = document.getElementById("caption");
+    const postContainer = document.getElementById("postContainer");
+
+    let currentUser = null;
+
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
+    logoutBtn.onclick = () => signOut(auth).catch(e => alert(e.message));
+
+    onAuthStateChanged(auth, user => {
+      currentUser = user;
+      if(user){
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        uploadForm.style.display = "block";
+      } else {
+        loginBtn.style.display = "block";
+        logoutBtn.style.display = "none";
+        uploadForm.style.display = "none";
+      }
+      loadPosts();
+    });
+
+    uploadForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      if(!currentUser) return alert("Please sign in to upload.");
+
+      if(!mediaFile.files[0]) return alert("Please select a file.");
+      if(captionIn.value.trim().length < 4) return alert("Caption is too short.");
+
+      uploadForm.querySelector("button").disabled = true;
+
+      try {
+        const fd = new FormData();
+        fd.append("file", mediaFile.files[0]);
+
+        const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+          method: "POST",
+          headers: { Authorization: pinataJWT },
+          body: fd
+        });
+
+        if(!res.ok) throw new Error("Upload failed");
+
+        const { IpfsHash } = await res.json();
+
+        const newPostRef = push(ref(db, "posts"));
+        await set(newPostRef, {
+          userId: currentUser.uid,
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL || "",
+          caption: captionIn.value.trim(),
+          ipfsHash: IpfsHash,
+          mediaType: mediaFile.files[0].type.startsWith("video") ? "video" : "image",
+          mediaMimeType: mediaFile.files[0].type,
+          timestamp: Date.now()
+        });
+
+        captionIn.value = "";
+        mediaFile.value = "";
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        uploadForm.querySelector("button").disabled = false;
+      }
+    });
+
+    function loadPosts() {
+      onValue(ref(db, "posts"), snapshot => {
+        const posts = snapshot.val() || {};
+        const postsArr = Object.entries(posts).sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+        postContainer.innerHTML = "";
+        postsArr.forEach(([id, post]) => {
+          const postEl = document.createElement("article");
+          postEl.className = "post-item";
+
+          const mediaUrl = "https://gateway.pinata.cloud/ipfs/" + post.ipfsHash;
+
+          postEl.innerHTML = `
+            <div class="caption">${escapeHTML(post.caption)}</div>
+            ${post.mediaType === "video"
+              ? `<video src="${mediaUrl}" controls playsinline preload="metadata" poster="" ></video>`
+              : `<img src="${mediaUrl}" alt="Post image" loading="lazy" />`
+            }
+            <time style="display:block; margin-top:0.5rem; font-size:0.8rem; color:#6c757d;">
+              ${new Date(post.timestamp).toLocaleString()}
+            </time>
+          `;
+
+          postContainer.appendChild(postEl);
+        });
+      });
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>"]/g, tag => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;"
+      })[tag] || tag);
+    }
+  </script>
+</body>
+</html>
