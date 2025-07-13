@@ -1,360 +1,143 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light dark" />
-  <title>DRFMedia Timeline — Spread Kindness & Truth</title>
-
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    /* Your existing CSS, including button styles */
-
-    /* Disabled action buttons style */
-    .btn.disabled, button.disabled {
-      background: #adb5bd !important;
-      cursor: not-allowed !important;
-      opacity: 0.6;
-    }
-  </style>
-</head>
-<body>
-<header>
-  <div class="brand">
-    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
-    <span>DRFMedia</span>
-  </div>
-  <button id="menuToggle" aria-label="Toggle navigation" aria-controls="primaryNav" aria-expanded="false"><span></span><span></span><span></span></button>
-  <nav id="primaryNav">
-    <a href="media.html">Timeline</a>
-    <a href="profile.html" class="active">Profile</a>
-    <a href="media.html">Posts</a>
-    <a href="gift.html">Donation</a>
-    <a href="chat.html">Chat</a>
-  </nav>
-</header>
-
-<div id="pageWrapper">
-  <section id="searchBar" class="container">
-    <input id="searchInput" type="search" placeholder="Search posts…" aria-label="Search posts" />
-  </section>
-
-  <button id="loginBtn"  class="btn" style="display:block;max-width:700px;margin:1rem auto;">Sign in with Google</button>
-  <button id="logoutBtn" class="btn" style="display:none;max-width:700px;margin:1rem auto;background:#dc3545;">Logout</button>
-
-  <form id="uploadForm" class="container" style="display:none;">
-    <input id="mediaFile" type="file" accept="image/*,video/*" required />
-    <textarea id="caption" placeholder="Write your caption…" minlength="4" required></textarea>
-    <button class="btn" type="submit" style="margin-top:.75rem;">Post</button>
-  </form>
-
-  <section id="postContainer" class="container" aria-live="polite"></section>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, push, set, onValue, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-/* JWT and Firebase config - keep your own */
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // truncated
-const firebaseConfig = {
-  apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain:        "drfsocial-23a06.firebaseapp.com",
-  databaseURL:       "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId:         "drfsocial-23a06",
-  storageBucket:     "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId:             "1:608135115201:web:b3d1f368e0c09ac4400f43",
-  measurementId:     "G-TBFQX80NRP"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const uploadForm = document.getElementById("uploadForm");
-const postWrap = document.getElementById("postContainer");
-const searchIn = document.getElementById("searchInput");
-
-let currentUser = null;
-let allPosts = [];
-
-function esc(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-const ipfsGateways = [
-  "https://gateway.pinata.cloud/ipfs/",
-  "https://cloudflare-ipfs.com/ipfs/",
-  "https://ipfs.io/ipfs/"
-];
-const gatewayCache = new Map();
-
-async function getWorkingGatewayUrl(cid) {
-  if (gatewayCache.has(cid)) return gatewayCache.get(cid);
-  for (const gateway of ipfsGateways) {
-    try {
-      const res = await fetch(gateway + cid, { method: 'HEAD' });
-      if (res.ok) {
-        gatewayCache.set(cid, gateway + cid);
-        return gateway + cid;
-      }
-    } catch {}
-  }
-  return null;
-}
-
-function loadVideoWithRetry(videoEl, url, maxRetries = 3) {
-  let retries = 0;
-  function tryLoad() {
-    videoEl.src = url;
-    videoEl.load();
-  }
-  videoEl.oncanplay = () => { videoEl.dataset.loaded = "true"; };
-  videoEl.onerror = () => {
-    if (retries < maxRetries) {
-      retries++;
-      setTimeout(tryLoad, 2 ** retries * 1000);
-    } else {
-      const errorMsg = document.createElement('p');
-      errorMsg.style.color = 'red';
-      errorMsg.textContent = 'Failed to load video after multiple attempts.';
-      videoEl.insertAdjacentElement('afterend', errorMsg);
-    }
-  };
-  tryLoad();
-}
-
-const videoObserver = new IntersectionObserver(entries => {
-  for (const entry of entries) {
-    if (entry.isIntersecting) {
-      const video = entry.target;
-      if (video.dataset.src) {
-        loadVideoWithRetry(video, video.dataset.src);
-        videoObserver.unobserve(video);
-      }
-    }
-  }
-}, { threshold: 0.25 });
-
-async function renderVideo(post) {
-  const container = document.createElement('div');
-  container.className = "post-media";
-
-  const workingUrl = await getWorkingGatewayUrl(post.ipfsHash);
-  if (!workingUrl) {
-    container.innerHTML = '<p style="color:red;">Video unavailable (all gateways failed)</p>';
-    return container;
-  }
-
-  const video = document.createElement('video');
-  video.setAttribute('controls', '');
-  video.setAttribute('playsinline', '');
-  video.setAttribute('preload', 'metadata');
-  video.dataset.src = workingUrl;
-  video.style.borderRadius = '0.5rem';
-  video.style.background = '#000';
-  video.style.display = 'block';
-
-  videoObserver.observe(video);
-  container.appendChild(video);
-
-  return container;
-}
-
-async function renderPosts() {
-  const q = searchIn.value.trim().toLowerCase();
-  postWrap.innerHTML = "";
-  for (const p of allPosts) {
-    const captionLower = p.caption ? p.caption.toLowerCase() : "";
-    if (!captionLower.includes(q)) continue;
-    const owner = currentUser && p.userId === currentUser.uid;
-    const liked = currentUser && p.likedBy && p.likedBy[currentUser.uid];
-    const boosted = currentUser && p.boostedBy && p.boostedBy[currentUser.uid];
-    const isLoggedIn = !!currentUser;
-
-    const card = document.createElement("article");
-    card.className = "post-item";
-    card.innerHTML = `
-      <header class="post-owner">
-        <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="avatar" />
-        <div>
-          <div>${esc(p.displayName || "Anon")}</div>
-          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
-        </div>
-      </header>
-      <div class="post-caption">${esc(p.caption)}</div>
-      <div class="post-media" id="media-${p.id}"></div>
-      <div class="post-actions">
-        <button class="like-btn ${liked ? 'liked' : ''}" ${!isLoggedIn ? 'disabled class="disabled"' : ''}>👍 Like (${p.likesCount || 0})</button>
-        <button class="comment-btn" ${!isLoggedIn ? 'disabled class="disabled"' : ''}>💬 Comment (${p.commentsCount || 0})</button>
-        <button class="boost-btn ${boosted ? 'boosted' : ''}" ${!isLoggedIn ? 'disabled class="disabled"' : ''}>🚀 Boost (${p.boostsCount || 0})</button>
-        ${owner ? '<button class="delete-btn">🗑️ Delete</button>' : ''}
-      </div>
-      <div class="comments-list" aria-live="polite"></div>
-      <form class="comment-box" style="display:none;">
-        <textarea placeholder="Write a comment…" minlength="2" required></textarea>
-        <button class="btn" type="submit" style="margin-top:.5rem;">Post Comment</button>
-      </form>
-    `;
-    postWrap.appendChild(card);
-
-    const mediaContainer = document.getElementById(`media-${p.id}`);
-    if (p.mediaType === "video") {
-      const videoEl = await renderVideo(p);
-      mediaContainer.replaceWith(videoEl);
-    } else {
-      const img = document.createElement('img');
-      img.src = `https://gateway.pinata.cloud/ipfs/${p.ipfsHash}`;
-      img.alt = "media";
-      img.style.borderRadius = '.5rem';
-      img.style.background = '#000';
-      img.style.display = 'block';
-      img.dataset.loaded = "true";
-      mediaContainer.replaceWith(img);
-    }
-
-    // Buttons and comment toggles
-    const likeBtn = card.querySelector(".like-btn");
-    const boostBtn = card.querySelector(".boost-btn");
-    const deleteBtn = card.querySelector(".delete-btn");
-    const commentBtn = card.querySelector(".comment-btn");
-    const commentList = card.querySelector(".comments-list");
-    const commentForm = card.querySelector(".comment-box");
-    const commentInput = commentForm.querySelector("textarea");
-
-    // Disabled buttons alert for not logged in users
-    const disabledAlert = () => alert("Please log in to perform this action.");
-
-    likeBtn.onclick = () => {
-      if (!isLoggedIn) return disabledAlert();
-      toggleLike(p);
-    };
-    boostBtn.onclick = () => {
-      if (!isLoggedIn) return disabledAlert();
-      toggleBoost(p);
-    };
-    if (deleteBtn) deleteBtn.onclick = () => deletePost(p);
-    commentBtn.onclick = () => {
-      if (!isLoggedIn) return disabledAlert();
-      commentForm.style.display = commentForm.style.display === "none" ? "block" : "none";
-    };
-    commentForm.onsubmit = e => {
-      e.preventDefault();
-      if (commentInput.value.trim().length < 2) return alert("Comment too short");
-      postComment(p, commentInput.value.trim(), commentList, commentInput, commentForm);
-    };
-
-    renderComments(p, commentList);
-  }
-}
-
-loginBtn.onclick = () => signInWithPopup(auth, provider);
-logoutBtn.onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, user => {
-  currentUser = user;
-  loginBtn.style.display = user ? "none" : "block";
-  logoutBtn.style.display = user ? "block" : "none";
-  uploadForm.style.display = user ? "block" : "none";
-
-  // Fetch and render posts regardless of login state
-  get(ref(db, "posts")).then(snapshot => {
-    const p = snapshot.val() || {};
-    allPosts = Object.entries(p).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.timestamp - a.timestamp);
-    renderPosts();
-  });
-});
-
-uploadForm.onsubmit = async e => {
-  e.preventDefault();
-  const fileInput = document.getElementById("mediaFile");
-  const captionInput = document.getElementById("caption");
-
-  if (!fileInput.files.length) return alert("Please select a file");
-  if (captionInput.value.trim().length < 4) return alert("Caption too short");
-
-  const file = fileInput.files[0];
-  const isVideo = file.type.startsWith("video/");
-  const isImage = file.type.startsWith("image/");
-
-  if (!isVideo && !isImage) return alert("File must be an image or video");
-
-  uploadForm.querySelector("button").disabled = true;
+// --- Likes toggle ---
+async function toggleLike(post) {
+  if (!currentUser) return alert("Please login to like.");
+  const postRef = ref(db, `posts/${post.id}/likedBy/${currentUser.uid}`);
+  const likesCountRef = ref(db, `posts/${post.id}/likesCount`);
+  const likedNow = post.likedBy && post.likedBy[currentUser.uid];
 
   try {
-    const data = new FormData();
-    data.append('file', file);
+    if (likedNow) {
+      // Remove like
+      await set(postRef, null);
+      await updateCount(likesCountRef, -1);
+    } else {
+      // Add like
+      await set(postRef, true);
+      await updateCount(likesCountRef, 1);
+    }
+  } catch (e) {
+    alert("Error toggling like: " + e.message);
+  }
+}
 
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: { Authorization: pinataJWT },
-      body: data
-    });
+// --- Boost toggle (like super like) ---
+async function toggleBoost(post) {
+  if (!currentUser) return alert("Please login to boost.");
+  const boostRef = ref(db, `posts/${post.id}/boostedBy/${currentUser.uid}`);
+  const boostsCountRef = ref(db, `posts/${post.id}/boostsCount`);
+  const boostedNow = post.boostedBy && post.boostedBy[currentUser.uid];
 
-    if (!res.ok) throw new Error("Pinata upload failed");
+  try {
+    if (boostedNow) {
+      await set(boostRef, null);
+      await updateCount(boostsCountRef, -1);
+    } else {
+      await set(boostRef, true);
+      await updateCount(boostsCountRef, 1);
+    }
+  } catch (e) {
+    alert("Error toggling boost: " + e.message);
+  }
+}
 
-    const json = await res.json();
+// --- Update count helper ---
+async function updateCount(refPath, delta) {
+  await get(refPath).then(snapshot => {
+    let current = snapshot.val() || 0;
+    current += delta;
+    if (current < 0) current = 0;
+    return set(refPath, current);
+  });
+}
 
-    const newPost = {
+// --- Delete post ---
+async function deletePost(post) {
+  if (!confirm("Delete this post?")) return;
+  if (!currentUser || currentUser.uid !== post.userId) return alert("Not authorized.");
+  try {
+    await set(ref(db, `posts/${post.id}`), null);
+    allPosts = allPosts.filter(p => p.id !== post.id);
+    renderPosts();
+  } catch (e) {
+    alert("Error deleting post: " + e.message);
+  }
+}
+
+// --- Post a comment ---
+async function postComment(post, commentText, commentList, commentInput, commentForm) {
+  if (!currentUser) return alert("Please login to comment.");
+  try {
+    const commentRef = push(ref(db, `posts/${post.id}/comments`));
+    await set(commentRef, {
       userId: currentUser.uid,
       displayName: currentUser.displayName || "Anon",
       photoURL: currentUser.photoURL || "",
-      caption: captionInput.value.trim(),
-      ipfsHash: json.IpfsHash,
-      mediaType: isVideo ? "video" : "image",
-      timestamp: Date.now(),
-      likesCount: 0,
-      commentsCount: 0,
-      boostsCount: 0
-    };
+      text: commentText,
+      timestamp: Date.now()
+    });
+    // Update comment count
+    const commentsCountRef = ref(db, `posts/${post.id}/commentsCount`);
+    await updateCount(commentsCountRef, 1);
 
-    const newPostRef = push(ref(db, "posts"));
-    await set(newPostRef, newPost);
+    commentInput.value = "";
+    commentForm.style.display = "none";
 
-    fileInput.value = "";
-    captionInput.value = "";
-
+    // Refresh post comments in UI
+    await fetchPostComments(post.id, commentList);
   } catch (e) {
-    alert("Upload failed: " + e.message);
-  } finally {
-    uploadForm.querySelector("button").disabled = false;
+    alert("Error posting comment: " + e.message);
   }
-};
+}
 
-function toggleLike(post) {
-  alert("Like toggled (implement logic)");
+// --- Fetch and render comments ---
+async function fetchPostComments(postId, commentList) {
+  const commentsRef = ref(db, `posts/${postId}/comments`);
+  const snapshot = await get(commentsRef);
+  const comments = snapshot.val() || {};
+  const sortedComments = Object.entries(comments)
+    .map(([id, c]) => ({ id, ...c }))
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  commentList.innerHTML = '';
+  if (sortedComments.length === 0) {
+    commentList.innerHTML = "<em>No comments yet.</em>";
+    return;
+  }
+
+  for (const c of sortedComments) {
+    const commentEl = document.createElement('div');
+    commentEl.style.padding = '0.3rem 0';
+    commentEl.style.borderBottom = '1px solid #ddd';
+    commentEl.innerHTML = `
+      <strong>${esc(c.displayName)}</strong>: ${esc(c.text)}
+      <div style="font-size:0.75rem;color:var(--text-muted);">
+        ${new Date(c.timestamp).toLocaleString()}
+      </div>
+    `;
+    commentList.appendChild(commentEl);
+  }
 }
-function toggleBoost(post) {
-  alert("Boost toggled (implement logic)");
-}
-function deletePost(post) {
-  if (!confirm("Delete this post?")) return;
-  alert("Delete (implement logic)");
-}
-function postComment(post, commentText, commentList, commentInput, commentForm) {
-  alert("Post comment (implement logic)");
-  commentInput.value = "";
-  commentForm.style.display = "none";
-}
+
+// --- Render comments UI ---
 function renderComments(post, commentList) {
-  commentList.innerHTML = "<em>No comments yet.</em>";
+  fetchPostComments(post.id, commentList);
 }
 
-searchIn.oninput = () => renderPosts();
-
-const menuToggle = document.getElementById('menuToggle');
-const primaryNav = document.getElementById('primaryNav');
-menuToggle.onclick = () => {
-  const isOpen = primaryNav.classList.toggle('open');
-  menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-};
-</script>
-</body>
-</html>
+// --- Share button ---
+function sharePost(post) {
+  const url = `${window.location.origin}${window.location.pathname}#post-${post.id}`;
+  if (navigator.share) {
+    navigator.share({
+      title: `Check out this post by ${post.displayName}`,
+      text: post.caption,
+      url
+    }).catch(e => alert("Share failed: " + e.message));
+  } else {
+    // fallback copy to clipboard
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Post link copied to clipboard!");
+    }).catch(() => {
+      alert("Copy failed. Here's the link: " + url);
+    });
+  }
+}
