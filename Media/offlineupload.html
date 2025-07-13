@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DRFMedia — Offline Upload PWA</title>
 
-  <!-- Service‑worker registration (make sure serviceworker.js exists at site root) -->
+  <!-- Service-worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/serviceworker.js')
@@ -14,26 +14,34 @@
     }
   </script>
 
-  <!-- optional external CSS -->
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* super‑simple demo styles */
     body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 600px; }
     input, textarea { width: 100%; margin-top: 1rem; padding: .5rem; }
     .btn { display: inline-block; background: #007bff; color: #fff; border: none;
            padding: .6rem 1rem; margin-top: 1rem; border-radius: 4px; cursor: pointer; }
     .btn:disabled { background: #aaa; }
+    #ipfsLink { margin-top: 1rem; }
+    #queueList { margin-top: 2rem; background: #f9f9f9; padding: 1rem; border-radius: 6px; max-height: 200px; overflow-y: auto; }
+    #queueList h3 { margin-top: 0; }
+    #queueList ul { padding-left: 1.2rem; }
   </style>
 </head>
 <body>
   <h1>Offline Upload Demo</h1>
 
-  <input type="file" id="mediaFile" />
-  <textarea id="caption" placeholder="Write caption…"></textarea>
+  <input type="file" id="mediaFile" accept="image/*,video/*" />
+  <textarea id="caption" placeholder="Write caption…" rows="3"></textarea>
   <button class="btn" id="uploadBtn">Upload</button>
 
+  <div id="ipfsLink"></div>
+
+  <div id="queueList">
+    <h3>Queued Uploads</h3>
+    <ul id="queuedUploadsUl"></ul>
+  </div>
+
   <script type="module">
-  /* ---------- CONFIG: replace with real secrets ---------- */
   const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
   const firebaseConfig = {
     apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -44,7 +52,6 @@
     messagingSenderId: "608135115201",
     appId:             "1:608135115201:web:dc999df2c0c37241ff3f40"
   };
-  /* ------------------------------------------------------ */
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
@@ -52,7 +59,13 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  /* IndexedDB helpers */
+  const fileIn = document.getElementById('mediaFile');
+  const capIn  = document.getElementById('caption');
+  const btn    = document.getElementById('uploadBtn');
+  const ipfsLinkDiv = document.getElementById('ipfsLink');
+  const queuedUploadsUl = document.getElementById('queuedUploadsUl');
+
+  // IndexedDB helpers
   function openDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open('drfmedia', 1);
@@ -63,7 +76,7 @@
         }
       };
       req.onsuccess = () => resolve(req.result);
-      req.onerror   = () => reject(req.error);
+      req.onerror = () => reject(req.error);
     });
   }
 
@@ -74,36 +87,90 @@
       .objectStore('uploads')
       .add({ file, caption, ts: Date.now() });
     db.close();
+    await renderQueueList();
   }
 
-  /* DOM refs */
-  const fileIn = document.getElementById('mediaFile');
-  const capIn  = document.getElementById('caption');
-  const btn    = document.getElementById('uploadBtn');
+  async function getQueuedUploads() {
+    const db = await openDB();
+    const tx = db.transaction('uploads', 'readonly');
+    const store = tx.objectStore('uploads');
+    const all = [];
+    return new Promise((res, rej) => {
+      const cursorReq = store.openCursor();
+      cursorReq.onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) {
+          all.push(cursor.value);
+          cursor.continue();
+        } else {
+          res(all);
+          db.close();
+        }
+      };
+      cursorReq.onerror = () => rej(cursorReq.error);
+    });
+  }
+
+  async function renderQueueList() {
+    const uploads = await getQueuedUploads();
+    queuedUploadsUl.innerHTML = '';
+    if (uploads.length === 0) {
+      queuedUploadsUl.innerHTML = '<li><em>No queued uploads</em></li>';
+      return;
+    }
+    uploads.forEach(item => {
+      const li = document.createElement('li');
+      const date = new Date(item.ts).toLocaleString();
+      li.textContent = `${date}: ${item.caption}`;
+      queuedUploadsUl.appendChild(li);
+    });
+  }
 
   btn.onclick = async () => {
-    if (!fileIn.files[0]) return alert('Choose a file');
+    ipfsLinkDiv.innerHTML = '';
+    const file = fileIn.files[0];
+    if (!file) return alert('Choose a file');
     if (capIn.value.trim().length < 3) return alert('Write a caption');
 
+    // Validate file type and size
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      return alert('Only images or videos allowed');
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      return alert('Max file size is 50MB');
+    }
+
     btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
     try {
       if (!navigator.onLine) {
-        await queueUpload(fileIn.files[0], capIn.value.trim());
+        await queueUpload(file, capIn.value.trim());
         if ('SyncManager' in window) {
           const reg = await navigator.serviceWorker.ready;
           await reg.sync.register('upload-posts');
         }
         alert('📥 Queued offline. Will upload when online.');
       } else {
-        await uploadNow(fileIn.files[0], capIn.value.trim());
+        const ipfsHash = await uploadNow(file, capIn.value.trim());
         alert('Uploaded immediately ✅');
+
+        // Show IPFS link
+        ipfsLinkDiv.innerHTML = `
+          <strong>IPFS Link:</strong> 
+          <a href="https://gateway.pinata.cloud/ipfs/${ipfsHash}" target="_blank" rel="noopener noreferrer">
+            https://gateway.pinata.cloud/ipfs/${ipfsHash}
+          </a>
+        `;
       }
       fileIn.value = '';
-      capIn.value  = '';
+      capIn.value = '';
+      await renderQueueList();
     } catch (e) {
       alert(e.message);
     } finally {
       btn.disabled = false;
+      btn.textContent = 'Upload';
     }
   };
 
@@ -121,7 +188,11 @@
     const { IpfsHash } = await up.json();
     const newRef = push(ref(db, 'posts'));
     await set(newRef, { caption, ipfsHash: IpfsHash, timestamp: Date.now() });
+    return IpfsHash;
   }
+
+  // On page load render queued list
+  renderQueueList();
   </script>
 </body>
 </html>
