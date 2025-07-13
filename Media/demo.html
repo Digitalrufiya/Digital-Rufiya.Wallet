@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>DRFMedia Timeline — Offline & Advanced</title>
+
+  <style>
+    /* Keep your original styles + some tweaks */
+    :root {
+      --accent: #007bff;
+      --accent-hover: #0056b3;
+      --accent-muted: #3399ff;
+      --bg-body: #f8f9fa;
+      --bg-surface: #fff;
+      --bg-surface-alt: #fafafa;
+      --text-body: #212529;
+      --text-muted: #6c757d;
+      --radius: 0.5rem;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-body: #181a1b;
+        --bg-surface: #242628;
+        --bg-surface-alt: #2b2e30;
+        --text-body: #f1f3f5;
+        --text-muted: #adb5bd;
+        --shadow-sm: none;
+        --shadow-md: none;
+      }
+    }
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-body);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      margin: 0;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-md);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: clamp(1rem, 2vw, 1.3rem);
+    }
+    .brand img {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.25rem;
+      background: #fff;
+      padding: 2px;
+    }
+    #menuToggle {
+      display: inline-flex;
+      flex-direction: column;
+      width: 2rem;
+      height: 1.3rem;
+      justify-content: space-between;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    #menuToggle span {
+      display: block;
+      height: 3px;
+      background: #fff;
+      border-radius: 3px;
+    }
+    #primaryNav {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      background: var(--accent-muted);
+      border-radius: var(--radius);
+    }
+    #primaryNav.open {
+      display: flex;
+    }
+    #primaryNav a {
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+      border-top: 1px solid rgb(255 255 255 / 0.15);
+      color: #fff;
+      text-decoration: none;
+    }
+    #primaryNav a:first-child {
+      border-top: none;
+    }
+    #primaryNav a:hover {
+      background: rgb(255 255 255 / 0.18);
+    }
+    @media (min-width: 768px) {
+      #menuToggle {
+        display: none;
+      }
+      #primaryNav {
+        display: flex !important;
+        flex-direction: row;
+        gap: 0.25rem;
+        background: transparent;
+        width: auto;
+      }
+      #primaryNav a {
+        border: none;
+        padding: 0.5rem 0.9rem;
+        color: inherit;
+      }
+      #primaryNav a:hover {
+        background: rgb(255 255 255 / 0.25);
+      }
+    }
+    .btn {
+      display: inline-block;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.45rem 0.9rem;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      max-width: 700px;
+      margin: 1rem auto;
+      width: 100%;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+    .btn:disabled {
+      background: #adb5bd;
+      cursor: not-allowed;
+    }
+    #pageWrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      width: min(100%, 700px);
+      margin-inline: auto;
+      padding-inline: 1rem;
+    }
+    #searchBar {
+      margin: 1rem auto 0;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 0.55rem 0.85rem;
+      font-size: 1rem;
+      border: 1px solid #ced4da;
+      border-radius: var(--radius);
+      background: var(--bg-surface);
+      color: var(--text-body);
+      box-sizing: border-box;
+    }
+    #uploadForm {
+      margin-top: 1.25rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #uploadForm input,
+    #uploadForm textarea {
+      width: 100%;
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      font-size: 1rem;
+      border: 1px solid #ced4da;
+      border-radius: var(--radius);
+      background: var(--bg-surface);
+      color: var(--text-body);
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    .post-item {
+      background: var(--bg-surface-alt);
+      border: 1px solid #dee2e6;
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-block: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      word-break: break-word;
+    }
+    .post-owner {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+    }
+    .avatar {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ced4da;
+      box-shadow: var(--shadow-sm);
+    }
+    .post-time {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .post-caption {
+      margin-top: 0.75rem;
+      white-space: pre-wrap;
+    }
+    .post-media {
+      margin-top: 0.75rem;
+    }
+    video,
+    img {
+      border-radius: var(--radius);
+      background: #000;
+      display: block;
+      max-width: 100%;
+      max-height: 360px;
+      object-fit: contain;
+    }
+    .post-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .post-actions button {
+      flex: 1 1 auto;
+      user-select: none;
+    }
+    .post-actions button.liked {
+      background: #28a745 !important;
+    }
+    .post-actions button.boosted {
+      background: gold !important;
+      color: #000 !important;
+    }
+    .post-actions button.delete-btn {
+      background: #dc3545 !important;
+      color: #fff;
+    }
+    .post-actions button.delete-btn:hover {
+      background: #b52a3b !important;
+    }
+    .comments-list {
+      margin-top: 0.75rem;
+      background: var(--bg-surface);
+      padding: 0.65rem;
+      border-radius: var(--radius);
+      max-height: 10rem;
+      overflow-y: auto;
+      font-size: 0.9rem;
+    }
+    .comment-box textarea {
+      width: 100%;
+      border-radius: var(--radius);
+      padding: 0.6rem 0.8rem;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    button:focus-visible,
+    #menuToggle:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+    .offline-indicator {
+      max-width: 700px;
+      margin: 0.5rem auto;
+      text-align: center;
+      background: #ffc107;
+      color: #212529;
+      font-weight: 600;
+      padding: 0.3rem 0.5rem;
+      border-radius: var(--radius);
+      display: none;
+    }
+    .media-error {
+      color: #dc3545;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img
+        src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311"
+        alt="DRFMedia Logo"
+      />
+      <span>DRFMedia</span>
+    </div>
+    <button
+      id="menuToggle"
+      aria-label="Toggle navigation"
+      aria-controls="primaryNav"
+      aria-expanded="false"
+    >
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="primaryNav">
+      <a href="media.html">Timeline</a>
+      <a href="profile.html" class="active">Profile</a>
+      <a href="media.html">Posts</a>
+      <a href="gift.html">Donation</a>
+      <a href="chat.html">Chat</a>
+    </nav>
+  </header>
+
+  <div id="pageWrapper">
+    <section id="searchBar" class="container">
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Search posts…"
+        aria-label="Search posts"
+      />
+    </section>
+
+    <button
+      id="loginBtn"
+      class="btn"
+      style="display: block; max-width: 700px; margin: 1rem auto"
+    >
+      Sign in with Google
+    </button>
+    <button
+      id="logoutBtn"
+      class="btn"
+      style="display: none; max-width: 700px; margin: 1rem auto; background: #dc3545"
+    >
+      Logout
+    </button>
+
+    <form
+      id="uploadForm"
+      class="container"
+      style="display: none"
+      enctype="multipart/form-data"
+    >
+      <input id="mediaFile" type="file" accept="image/*,video/*" required />
+      <textarea
+        id="caption"
+        placeholder="Write your caption…"
+        minlength="4"
+        required
+      ></textarea>
+      <button class="btn" type="submit" style="margin-top: 0.75rem">
+        Post
+      </button>
+    </form>
+
+    <div class="offline-indicator" role="alert" aria-live="assertive"></div>
+
+    <main id="postsContainer" class="container" aria-live="polite" aria-relevant="additions">
+      <!-- Posts will load here -->
+    </main>
+  </div>
+
+  <script type="module">
+    // ==== Service Worker Registration ====
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker
+          .register('sw.js')
+          .then(() => console.log('Service Worker Registered'))
+          .catch(console.error);
+      });
+    }
+
+    // ==== IndexedDB helpers ====
+
+    const DB_NAME = 'DRFMediaDB';
+    const DB_VERSION = 1;
+    const POSTS_STORE = 'posts';
+    const UPLOADS_STORE = 'pendingUploads';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = e => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(POSTS_STORE)) {
+            db.createObjectStore(POSTS_STORE, { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains(UPLOADS_STORE)) {
+            db.createObjectStore(UPLOADS_STORE, { autoIncrement: true });
+          }
+        };
+      });
+    }
+
+    async function getAllPosts() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(POSTS_STORE, 'readonly');
+        const store = tx.objectStore(POSTS_STORE);
+        const request = store.getAll();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    }
+
+    async function savePosts(posts) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(POSTS_STORE, 'readwrite');
+        const store = tx.objectStore(POSTS_STORE);
+        posts.forEach(post => store.put(post));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function saveSinglePost(post) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(POSTS_STORE, 'readwrite');
+        const store = tx.objectStore(POSTS_STORE);
+        store.put(post);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function clearAllPosts() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(POSTS_STORE, 'readwrite');
+        const store = tx.objectStore(POSTS_STORE);
+        const req = store.clear();
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // Pending uploads (offline posts)
+    async function savePendingUpload(data) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(UPLOADS_STORE, 'readwrite');
+        const store = tx.objectStore(UPLOADS_STORE);
+        store.add(data);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function getAllPendingUploads() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(UPLOADS_STORE, 'readonly');
+        const store = tx.objectStore(UPLOADS_STORE);
+        const req = store.getAll();
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => resolve(req.result);
+      });
+    }
+    async function clearPendingUploads() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(UPLOADS_STORE, 'readwrite');
+        const store = tx.objectStore(UPLOADS_STORE);
+        const req = store.clear();
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // ==== Helper: sanitize string safely ====
+    function esc(s) {
+      return typeof s === 'string'
+        ? s.replace(/[&<>"]/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+          )
+        : '';
+    }
+
+    // ==== DOM Elements ====
+    const postsContainer = document.getElementById('postsContainer');
+    const searchInput = document.getElementById('searchInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const mediaFileInput = document.getElementById('mediaFile');
+    const captionInput = document.getElementById('caption');
+    const offlineIndicator = document.querySelector('.offline-indicator');
+
+    // ==== Firebase Setup (please add your config) ====
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
+    import {
+      getDatabase,
+      ref,
+      onValue,
+      push,
+      set,
+      remove,
+      serverTimestamp,
+    } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      onAuthStateChanged,
+      signOut,
+    } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+
+    // TODO: Replace with your Firebase config
+    const firebaseConfig = {
+      apiKey: 'YOUR_API_KEY',
+      authDomain: 'YOUR_AUTH_DOMAIN',
+      databaseURL: 'YOUR_DATABASE_URL',
+      projectId: 'YOUR_PROJECT_ID',
+      storageBucket: 'YOUR_STORAGE_BUCKET',
+      messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
+      appId: 'YOUR_APP_ID',
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // ==== Auth state ====
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = 'block';
+        uploadForm.style.display = 'block';
+        loadPostsFromFirebase();
+        syncPendingUploads();
+      } else {
+        loginBtn.style.display = 'block';
+        logoutBtn.style.display = 'none';
+        uploadForm.style.display = 'none';
+        postsContainer.innerHTML = '<p>Please sign in to see posts.</p>';
+      }
+    });
+
+    loginBtn.addEventListener('click', () => {
+      signInWithPopup(auth, provider).catch(console.error);
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth).catch(console.error);
+    });
+
+    // ==== Search ====
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase();
+      filterPosts(q);
+    });
+
+    // ==== Filter posts by caption or owner ====
+    let allPosts = [];
+    function filterPosts(query) {
+      const filtered = allPosts.filter(
+        p =>
+          (p.caption && p.caption.toLowerCase().includes(query)) ||
+          (p.ownerName && p.ownerName.toLowerCase().includes(query))
+      );
+      renderPosts(filtered);
+    }
+
+    // ==== Render posts ====
+    function renderPosts(posts) {
+      postsContainer.innerHTML = '';
+      if (!posts.length) {
+        postsContainer.innerHTML = '<p>No posts found.</p>';
+        return;
+      }
+      posts.forEach(post => {
+        // Skip invalid posts
+        if (!post.ipfsHash) return;
+
+        const div = document.createElement('article');
+        div.className = 'post-item';
+        div.setAttribute('tabindex', '0');
+
+        const ownerName = esc(post.ownerName || 'Anonymous');
+        const caption = esc(post.caption || '');
+        const timestamp = post.createdAt
+          ? new Date(post.createdAt).toLocaleString()
+          : 'Unknown time';
+
+        div.innerHTML = `
+          <header class="post-owner">
+            <img
+              src="${esc(post.ownerAvatar || 'https://i.pravatar.cc/48')}"
+              alt="Avatar of ${ownerName}"
+              class="avatar"
+              loading="lazy"
+            />
+            <div>
+              <div>${ownerName}</div>
+              <div class="post-time">${timestamp}</div>
+            </div>
+          </header>
+          <div class="post-caption">${caption}</div>
+          <div class="post-media">
+            ${renderMedia(post.ipfsHash, post.mediaType)}
+          </div>
+        `;
+
+        postsContainer.appendChild(div);
+
+        // Media load error fallback
+        const mediaEl = div.querySelector('video, img');
+        if (mediaEl) {
+          mediaEl.addEventListener('error', () => {
+            const errMsg = document.createElement('div');
+            errMsg.className = 'media-error';
+            errMsg.textContent = 'Failed to load media.';
+            mediaEl.replaceWith(errMsg);
+          });
+        }
+      });
+    }
+
+    // ==== Render media tag ====
+    function renderMedia(ipfsHash, mediaType) {
+      if (!ipfsHash) return '';
+      // Use fallback gateway & handle undefined
+      const ipfsURL = `https://gateway.pinata.cloud/ipfs/${encodeURIComponent(ipfsHash)}`;
+
+      if (mediaType === 'video') {
+        return `<video controls preload="metadata" muted playsinline width="100%" height="auto" >
+            <source src="${ipfsURL}" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>`;
+      } else {
+        return `<img loading="lazy" src="${ipfsURL}" alt="Post media" />`;
+      }
+    }
+
+    // ==== Load posts from Firebase & cache ====
+    async function loadPostsFromFirebase() {
+      offlineIndicator.style.display = 'none';
+
+      const postsRef = ref(db, 'posts/');
+      onValue(
+        postsRef,
+        async snapshot => {
+          const val = snapshot.val();
+          if (!val) {
+            allPosts = [];
+            renderPosts(allPosts);
+            await clearAllPosts();
+            return;
+          }
+          // Convert snapshot object to array, filter out invalid
+          const postsArr = Object.entries(val)
+            .map(([id, post]) => ({
+              id,
+              ownerName: post.ownerName || 'Anonymous',
+              ownerAvatar: post.ownerAvatar || '',
+              caption: post.caption || '',
+              ipfsHash: post.ipfsHash || null,
+              mediaType: post.mediaType || 'image',
+              createdAt: post.createdAt || Date.now(),
+            }))
+            .filter(p => p.ipfsHash);
+
+          allPosts = postsArr;
+
+          renderPosts(allPosts);
+
+          // Save posts offline cache
+          try {
+            await savePosts(allPosts);
+          } catch (e) {
+            console.warn('Failed saving posts offline', e);
+          }
+        },
+        {
+          onlyOnce: false,
+        }
+      );
+    }
+
+    // ==== Load posts from IndexedDB cache on startup (fallback offline) ====
+    window.addEventListener('load', async () => {
+      if (!navigator.onLine) {
+        offlineIndicator.textContent =
+          'You are offline. Showing cached posts.';
+        offlineIndicator.style.display = 'block';
+
+        try {
+          allPosts = await getAllPosts();
+          renderPosts(allPosts);
+        } catch (e) {
+          postsContainer.innerHTML =
+            '<p>Failed to load cached posts.</p>';
+        }
+      }
+    });
+
+    // ==== Upload post form handling ====
+    uploadForm.addEventListener('submit', async e => {
+      e.preventDefault();
+
+      if (!mediaFileInput.files.length) {
+        alert('Please select an image or video file.');
+        return;
+      }
+      if (!captionInput.value.trim()) {
+        alert('Caption cannot be empty.');
+        return;
+      }
+
+      const file = mediaFileInput.files[0];
+      const caption = captionInput.value.trim();
+
+      // Prepare post data
+      const postData = {
+        ownerName: auth.currentUser.displayName || 'Anonymous',
+        ownerAvatar: auth.currentUser.photoURL || '',
+        caption,
+        mediaType: file.type.startsWith('video') ? 'video' : 'image',
+        createdAt: Date.now(),
+      };
+
+      if (!navigator.onLine) {
+        // Offline - save to pending uploads
+        await savePendingUpload({ file, postData });
+        alert(
+          'You are offline. Your post is saved locally and will be uploaded when back online.'
+        );
+        mediaFileInput.value = '';
+        captionInput.value = '';
+        return;
+      }
+
+      // Online - upload directly
+      await uploadPost(file, postData);
+      mediaFileInput.value = '';
+      captionInput.value = '';
+    });
+
+    // ==== Upload post to Firebase + Pinata (mock upload function) ====
+
+    async function uploadPost(file, postData) {
+      try {
+        offlineIndicator.style.display = 'none';
+        // Simulate upload to IPFS/Pinata
+        const ipfsHash = await mockPinataUpload(file);
+
+        // Add IPFS hash to postData
+        postData.ipfsHash = ipfsHash;
+
+        // Save post to Firebase
+        const postsRef = ref(db, 'posts/');
+        const newPostRef = push(postsRef);
+        await set(newPostRef, postData);
+
+        alert('Post uploaded successfully!');
+      } catch (e) {
+        alert('Upload failed, saving offline for later.');
+        await savePendingUpload({ file, postData });
+      }
+    }
+
+    // ==== Mock Pinata upload (replace with real API) ====
+    async function mockPinataUpload(file) {
+      // Simulate upload delay & return fake IPFS hash
+      await new Promise(r => setTimeout(r, 1500));
+      // Use random hash string for demo
+      return (
+        'Qm' +
+        Math.random()
+          .toString(36)
+          .substring(2, 15) +
+        Math.random()
+          .toString(36)
+          .substring(2, 15)
+      );
+    }
+
+    // ==== Sync pending uploads when back online ====
+    async function syncPendingUploads() {
+      if (!navigator.onLine) return;
+
+      const pending = await getAllPendingUploads();
+      if (!pending.length) return;
+
+      offlineIndicator.textContent = 'Uploading saved posts...';
+      offlineIndicator.style.display = 'block';
+
+      for (const item of pending) {
+        try {
+          await uploadPost(item.file, item.postData);
+          // Remove after successful upload
+        } catch (e) {
+          console.warn('Upload failed', e);
+          break;
+        }
+      }
+
+      await clearPendingUploads();
+
+      offlineIndicator.style.display = 'none';
+    }
+
+    // ==== Listen for online/offline ====
+    window.addEventListener('online', () => {
+      offlineIndicator.textContent = 'Back online.';
+      offlineIndicator.style.display = 'block';
+      syncPendingUploads();
+      setTimeout(() => {
+        offlineIndicator.style.display = 'none';
+      }, 3000);
+    });
+
+    window.addEventListener('offline', () => {
+      offlineIndicator.textContent = 'You are offline.';
+      offlineIndicator.style.display = 'block';
+    });
+
+    // ==== Menu toggle for mobile ====
+    const menuToggle = document.getElementById('menuToggle');
+    const primaryNav = document.getElementById('primaryNav');
+
+    menuToggle.addEventListener('click', () => {
+      const isOpen = primaryNav.classList.toggle('open');
+      menuToggle.setAttribute('aria-expanded', isOpen);
+    });
+
+  </script>
+
+  <!-- Service Worker: Place in sw.js in same folder as this HTML -->
+  <script>
+    // This script writes sw.js automatically for demo, ideally host sw.js separately
+    const swCode = `
+      const CACHE_NAME = 'drfmedia-cache-v1';
+      const OFFLINE_URL = 'offline.html';
+      const STATIC_ASSETS = [
+        '/',
+        'offlineupload.html',
+        'style.css',
+        // Add other assets your app needs
+      ];
+
+      self.addEventListener('install', event => {
+        event.waitUntil(
+          caches.open(CACHE_NAME).then(cache => {
+            return cache.addAll(STATIC_ASSETS);
+          })
+        );
+        self.skipWaiting();
+      });
+
+      self.addEventListener('activate', event => {
+        event.waitUntil(
+          caches.keys().then(keys => {
+            return Promise.all(
+              keys
+                .filter(key => key !== CACHE_NAME)
+                .map(key => caches.delete(key))
+            );
+          })
+        );
+        self.clients.claim();
+      });
+
+      self.addEventListener('fetch', event => {
+        // Network first, fallback to cache for HTML & API
+        if (
+          event.request.method === 'GET' &&
+          (event.request.headers.get('accept').includes('text/html') ||
+            event.request.url.includes('/posts') ||
+            event.request.url.includes('/ipfs/'))
+        ) {
+          event.respondWith(
+            fetch(event.request)
+              .then(response => {
+                // Put in cache
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return response;
+              })
+              .catch(() =>
+                caches.match(event.request).then(cachedResponse => cachedResponse || caches.match(OFFLINE_URL))
+              )
+          );
+          return;
+        }
+        // Cache first for other assets
+        event.respondWith(
+          caches.match(event.request).then(cachedResponse => cachedResponse || fetch(event.request))
+        );
+      });
+    `;
+    // Write to sw.js if allowed - only works if you serve files via localhost or real server
+    if ('showSaveFilePicker' in window) {
+      // No, do nothing, user needs manual sw.js file.
+    } else {
+      // You must create sw.js manually with above content.
+      console.warn('Please create sw.js file with the provided service worker code.');
+    }
+  </script>
+</body>
+</html>
