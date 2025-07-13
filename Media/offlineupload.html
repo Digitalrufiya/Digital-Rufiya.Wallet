@@ -1,111 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DRFMedia — Offline Upload PWA</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DRFMedia — Offline Upload PWA</title>
 
-<!-- service‑worker registration -->
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/serviceworker.js")
-    .then(() => console.log("SW registered ✅"))
-    .catch(e  => console.error("SW registration failed ❌", e));
-}
-</script>
+  <!-- Service‑worker registration (make sure serviceworker.js exists at site root) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/serviceworker.js')
+        .then(() => console.log('SW registered ✅'))
+        .catch(err => console.error('SW registration failed ❌', err));
+    }
+  </script>
 
-<link rel="stylesheet" href="style.css" />
-<style>
-/* super‑simple demo styles */
-body{font-family:Arial,sans-serif;margin:2rem auto;max-width:600px}
-input,textarea{width:100%;margin-top:1rem;padding:.5rem}
-.btn{display:inline-block;background:#007bff;color:#fff;border:none;
-     padding:.6rem 1rem;margin-top:1rem;border-radius:4px;cursor:pointer}
-.btn:disabled{background:#aaa}
-</style>
+  <!-- optional external CSS -->
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* super‑simple demo styles */
+    body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 600px; }
+    input, textarea { width: 100%; margin-top: 1rem; padding: .5rem; }
+    .btn { display: inline-block; background: #007bff; color: #fff; border: none;
+           padding: .6rem 1rem; margin-top: 1rem; border-radius: 4px; cursor: pointer; }
+    .btn:disabled { background: #aaa; }
+  </style>
 </head>
 <body>
-<h1>Offline Upload Demo</h1>
+  <h1>Offline Upload Demo</h1>
 
-<input type="file" id="mediaFile" />
-<textarea id="caption" placeholder="Write caption…"></textarea>
-<button class="btn" id="uploadBtn">Upload</button>
+  <input type="file" id="mediaFile" />
+  <textarea id="caption" placeholder="Write caption…"></textarea>
+  <button class="btn" id="uploadBtn">Upload</button>
 
-<script type="module">
-/* ---------- CONFIG: put your real keys here ---------- */
-const pinataJWT = "Bearer 
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
-const firebaseConfig = {
-   apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain:        "drfsocial-23a06.firebaseapp.com",
-  databaseURL:       "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId:         "drfsocial-23a06",
-  storageBucket:     "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId:             "1:608135115201:web:dc999df2c0c37241ff3f40"
-};
-/* ------------------------------------------------------ */
+  <script type="module">
+  /* ---------- CONFIG: replace with real secrets ---------- */
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+  const firebaseConfig = {
+    apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain:        "drfsocial-23a06.firebaseapp.com",
+    databaseURL:       "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId:         "drfsocial-23a06",
+    storageBucket:     "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId:             "1:608135115201:web:dc999df2c0c37241ff3f40"
+  };
+  /* ------------------------------------------------------ */
 
-import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, push, set }  from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
 
-/* --------- IndexedDB helpers --------- */
-function openDB(){
-  return new Promise((res,rej)=>{
-    const r = indexedDB.open("drfmedia",1);
-    r.onupgradeneeded = ()=>r.result.createObjectStore("uploads",{keyPath:"id",autoIncrement:true});
-    r.onsuccess = ()=>res(r.result);
-    r.onerror   = ()=>rej(r.error);
-  });
-}
-async function queueUpload(file,caption){
-  const db = await openDB();
-  await db.transaction("uploads","readwrite").objectStore("uploads")
-           .add({file,caption,ts:Date.now()});
-  db.close();
-}
+  /* IndexedDB helpers */
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('drfmedia', 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('uploads')) {
+          db.createObjectStore('uploads', { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => reject(req.error);
+    });
+  }
 
-/* --------- DOM --------- */
-const fileIn = document.getElementById("mediaFile");
-const capIn  = document.getElementById("caption");
-const btn    = document.getElementById("uploadBtn");
+  async function queueUpload(file, caption) {
+    const db = await openDB();
+    await db
+      .transaction('uploads', 'readwrite')
+      .objectStore('uploads')
+      .add({ file, caption, ts: Date.now() });
+    db.close();
+  }
 
-btn.onclick = async ()=>{
-  if(!fileIn.files[0])      return alert("Choose file");
-  if(capIn.value.trim().length<3) return alert("Write caption");
+  /* DOM refs */
+  const fileIn = document.getElementById('mediaFile');
+  const capIn  = document.getElementById('caption');
+  const btn    = document.getElementById('uploadBtn');
 
-  btn.disabled=true;
+  btn.onclick = async () => {
+    if (!fileIn.files[0]) return alert('Choose a file');
+    if (capIn.value.trim().length < 3) return alert('Write a caption');
 
-  try{
-    if(!navigator.onLine){
-      await queueUpload(fileIn.files[0],capIn.value.trim());
-      if("SyncManager" in window){
-        const reg = await navigator.serviceWorker.ready;
-        await reg.sync.register("upload-posts");
+    btn.disabled = true;
+    try {
+      if (!navigator.onLine) {
+        await queueUpload(fileIn.files[0], capIn.value.trim());
+        if ('SyncManager' in window) {
+          const reg = await navigator.serviceWorker.ready;
+          await reg.sync.register('upload-posts');
+        }
+        alert('📥 Queued offline. Will upload when online.');
+      } else {
+        await uploadNow(fileIn.files[0], capIn.value.trim());
+        alert('Uploaded immediately ✅');
       }
-      alert("📥 Queued offline. Will upload when online.");
-    }else{
-      await uploadNow(fileIn.files[0],capIn.value.trim());
-      alert("Uploaded immediately ✅");
+      fileIn.value = '';
+      capIn.value  = '';
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      btn.disabled = false;
     }
-    fileIn.value=\"\";capIn.value=\"\";
-  }catch(e){alert(e.message);}
-  finally{btn.disabled=false;}
-};
+  };
 
-/* immediate upload helper */
-async function uploadNow(file,caption){
-  const fd = new FormData(); fd.append(\"file\",file);
-  const up = await fetch(\"https://api.pinata.cloud/pinning/pinFileToIPFS\",{
-    method:\"POST\",headers:{Authorization:pinataJWT},body:fd});
-  if(!up.ok) throw new Error(\"Pinata upload failed\");
-  const {IpfsHash}=await up.json();
-  const newRef=push(ref(db,\"posts\"));      // public demo location
-  await set(newRef,{caption,ipfsHash:IpfsHash,timestamp:Date.now()});
-}
-</script>
+  async function uploadNow(file, caption) {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const up = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: { Authorization: pinataJWT },
+      body: fd
+    });
+    if (!up.ok) throw new Error('Pinata upload failed');
+
+    const { IpfsHash } = await up.json();
+    const newRef = push(ref(db, 'posts'));
+    await set(newRef, { caption, ipfsHash: IpfsHash, timestamp: Date.now() });
+  }
+  </script>
 </body>
 </html>
