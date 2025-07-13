@@ -18,6 +18,9 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
+/* -------------------------------------------------- */
+/* 🔧 CONFIGURATION                                    */
+/* -------------------------------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -33,6 +36,43 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+/* -------------------------------------------------- */
+/* 🌐 IPFS GATEWAYS & LAZY‑LOADER                     */
+/* -------------------------------------------------- */
+// Gateways are tried in order until one succeeds
+const GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
+  "https://cloudflare-ipfs.com/ipfs/",
+  "https://ipfs.io/ipfs/"
+];
+
+/** Build full <source> tags for every gateway */
+function buildVideoSources(hash, mime) {
+  return GATEWAYS.map(url => `<source src="${url + hash}" type="${mime || "video/mp4"}">`).join("");
+}
+
+// One global IntersectionObserver handles every video
+const videoObserver = new IntersectionObserver(
+  entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const video = entry.target;
+      if (video.dataset.loaded) return; // already processed
+
+      const hash = video.dataset.hash;
+      const mime = video.dataset.mime;
+      video.innerHTML = buildVideoSources(hash, mime);
+      video.load();
+      video.dataset.loaded = "1";
+      videoObserver.unobserve(video);
+    });
+  },
+  { rootMargin: "300px" } // start loading a bit before in‑view
+);
+
+/* -------------------------------------------------- */
+/* 🔖 DOM ELEMENTS                                    */
+/* -------------------------------------------------- */
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const uploadForm = document.getElementById("uploadForm");
@@ -43,12 +83,15 @@ const postContainer = document.getElementById("postContainer");
 let currentUser = null;
 let isAdmin = false;
 
+/* -------------------------------------------------- */
+/* 🛡️  UTILS                                          */
+/* -------------------------------------------------- */
 function escapeHTML(str) {
   return str.replace(/[&<>\"]/g, c => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
-    '"': "&quot;"
+    "\"": "&quot;"
   })[c]);
 }
 
@@ -60,6 +103,9 @@ function checkAdmin(user) {
   return user?.email?.toLowerCase() === "digitalrufiya@gmail.com";
 }
 
+/* -------------------------------------------------- */
+/* 👤 AUTH LISTENERS                                  */
+/* -------------------------------------------------- */
 onAuthStateChanged(auth, user => {
   currentUser = user;
   isAdmin = checkAdmin(user);
@@ -69,9 +115,7 @@ onAuthStateChanged(auth, user => {
     logoutBtn.style.display = "inline-block";
     uploadForm.style.display = "block";
     notify(`Welcome, ${escapeHTML(user.displayName || "User")}!`);
-
     renderPosts(); // Only load posts after login!
-
   } else {
     isAdmin = false;
     loginBtn.style.display = "inline-block";
@@ -84,6 +128,9 @@ onAuthStateChanged(auth, user => {
 loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => notify("Login failed: " + e.message));
 logoutBtn.onclick = () => signOut(auth).catch(e => notify("Logout failed: " + e.message));
 
+/* -------------------------------------------------- */
+/* ⬆️  POST UPLOAD                                    */
+/* -------------------------------------------------- */
 uploadForm.addEventListener("submit", async e => {
   e.preventDefault();
 
@@ -99,7 +146,7 @@ uploadForm.addEventListener("submit", async e => {
   try {
     const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
       method: "POST",
-      headers: { Authorization: pinataJWT },
+      headers: { Authorization: pinataJWT }, // <-- define pinataJWT globally
       body: fd
     });
 
@@ -137,7 +184,13 @@ uploadForm.addEventListener("submit", async e => {
   }
 });
 
+/* -------------------------------------------------- */
+/* 📰 RENDER POSTS                                    */
+/* -------------------------------------------------- */
 function renderPosts() {
+  // Disconnect previous observers to avoid leaks
+  videoObserver.disconnect();
+
   onValue(ref(db, "posts"), snap => {
     postContainer.innerHTML = "";
     const data = snap.val();
@@ -149,27 +202,25 @@ function renderPosts() {
     const postsArray = Object.entries(data).sort((a, b) => {
       const pa = a[1];
       const pb = b[1];
-      const scoreA = (pa.viewsCount||0) + (pa.likesCount||0)*3 + (pa.boostsCount||0)*5;
-      const scoreB = (pb.viewsCount||0) + (pb.likesCount||0)*3 + (pb.boostsCount||0)*5;
+      const scoreA = (pa.viewsCount || 0) + (pa.likesCount || 0) * 3 + (pa.boostsCount || 0) * 5;
+      const scoreB = (pb.viewsCount || 0) + (pb.likesCount || 0) * 3 + (pb.boostsCount || 0) * 5;
       return scoreB - scoreA;
     });
 
     for (const [postId, post] of postsArray) {
       const safeName = escapeHTML(post.displayName || "Anonymous");
       const safeCaption = escapeHTML(post.caption);
-      const mediaUrl = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
 
       const card = document.createElement("div");
       card.className = "post-item";
 
+      /* ---------------- MEDIA BLOCK ---------------- */
       let mediaHTML = "";
-      if(post.mediaType === "video") {
-        mediaHTML = `<video controls preload="metadata" width="100%">
-          <source src="${mediaUrl}" type="${post.mediaMimeType || 'video/mp4'}" />
-          Your browser does not support the video tag.
-        </video>`;
+      if (post.mediaType === "video") {
+        mediaHTML = `<video controls preload="metadata" width="100%" loading="lazy" poster="https://via.placeholder.com/640x360?text=Loading..." data-hash="${post.ipfsHash}" data-mime="${post.mediaMimeType || "video/mp4"}"></video>`;
       } else {
-        mediaHTML = `<img src="${mediaUrl}" alt="Uploaded image" style="max-width:100%; border-radius:6px;" />`;
+        const imgUrl = `${GATEWAYS[0]}${post.ipfsHash}`;
+        mediaHTML = `<img src="${imgUrl}" alt="Uploaded image" style="max-width:100%; border-radius:6px;" />`;
       }
 
       const likeCountId = `likeCount-${postId}`;
@@ -206,6 +257,12 @@ function renderPosts() {
 
       postContainer.appendChild(card);
 
+      // --- Attach lazy‑loading observer to any new video ---
+      if (post.mediaType === "video") {
+        const vid = card.querySelector("video[data-hash]");
+        if (vid) videoObserver.observe(vid);
+      }
+
       incrementViews(postId);
       setupLikes(postId);
       setupComments(postId);
@@ -213,28 +270,31 @@ function renderPosts() {
 
       if (isAdmin) {
         const boostBtn = document.getElementById(`boostBtn-${postId}`);
-        boostBtn.onclick = async () => {
-          const boostedByPath = `posts/${postId}/boostedBy/${currentUser.uid}`;
-          await update(ref(db, `posts/${postId}`), {
-            [`boostedBy/${currentUser.uid}`]: true,
-            boostsCount: (post.boostsCount || 0) + 1
-          });
-          notify("Post boosted!");
-          renderPosts();
-        };
+        if (boostBtn) {
+          boostBtn.onclick = async () => {
+            await update(ref(db, `posts/${postId}`), {
+              [`boostedBy/${currentUser.uid}`]: true,
+              boostsCount: (post.boostsCount || 0) + 1
+            });
+            notify("Post boosted!");
+            renderPosts();
+          };
+        }
 
         const deleteBtn = document.getElementById(`deleteBtn-${postId}`);
-        deleteBtn.onclick = async () => {
-          if (confirm("Are you sure you want to delete this post?")) {
-            await remove(ref(db, `posts/${postId}`));
-            notify("Post deleted.");
-          }
-        };
+        if (deleteBtn) {
+          deleteBtn.onclick = async () => {
+            if (confirm("Are you sure you want to delete this post?")) {
+              await remove(ref(db, `posts/${postId}`));
+              notify("Post deleted.");
+            }
+          };
+        }
       }
     }
-  }, (error) => {
+  }, error => {
     console.error("Failed to load posts:", error);
-    if (error.code === 'PERMISSION_DENIED') {
+    if (error.code === "PERMISSION_DENIED") {
       postContainer.innerHTML = "<p>Please login to view posts.</p>";
     } else {
       postContainer.innerHTML = `<p>Error loading posts: ${error.message}</p>`;
@@ -242,6 +302,9 @@ function renderPosts() {
   });
 }
 
+/* -------------------------------------------------- */
+/* 📈 VIEWS / LIKES / COMMENTS / SHARE HANDLERS        */
+/* -------------------------------------------------- */
 async function incrementViews(postId) {
   const viewsRef = ref(db, `posts/${postId}/viewsCount`);
   try {
@@ -254,104 +317,6 @@ async function incrementViews(postId) {
 function setupLikes(postId) {
   const likeBtn = document.getElementById(`likeBtn-${postId}`);
   const likeCountSpan = document.getElementById(`likeCount-${postId}`);
-  if(!likeBtn || !likeCountSpan) return;
+  if (!likeBtn || !likeCountSpan) return;
 
-  const likesRef = ref(db, `posts/${postId}/likesBy`);
-  onValue(likesRef, snap => {
-    const likesData = snap.val() || {};
-    const count = Object.keys(likesData).length;
-    likeCountSpan.textContent = count;
-
-    if(currentUser && likesData[currentUser.uid]) {
-      likeBtn.style.backgroundColor = "#0d6efd";
-      likeBtn.style.color = "#fff";
-    } else {
-      likeBtn.style.backgroundColor = "";
-      likeBtn.style.color = "";
-    }
-  });
-
-  likeBtn.onclick = async () => {
-    if(!currentUser) return notify("Please login to like posts.");
-
-    const userLikeRef = ref(db, `posts/${postId}/likesBy/${currentUser.uid}`);
-    const snap = await get(userLikeRef);
-
-    if(snap.exists()) {
-      await remove(userLikeRef);
-    } else {
-      await set(userLikeRef, true);
-    }
-  };
-}
-
-function setupComments(postId) {
-  const commentToggleBtn = document.getElementById(`commentToggleBtn-${postId}`);
-  const commentsSection = document.getElementById(`comments-${postId}`);
-  const commentListDiv = document.getElementById(`commentList-${postId}`);
-  const commentCountSpan = document.getElementById(`commentCount-${postId}`);
-  const commentInput = document.getElementById(`commentInput-${postId}`);
-  const submitCommentBtn = document.getElementById(`submitCommentBtn-${postId}`);
-
-  if (!commentToggleBtn || !commentsSection || !commentListDiv || !commentCountSpan || !commentInput || !submitCommentBtn) return;
-
-  commentToggleBtn.onclick = () => {
-    const isVisible = commentsSection.style.display === "block";
-    commentsSection.style.display = isVisible ? "none" : "block";
-    commentToggleBtn.setAttribute("aria-expanded", !isVisible);
-  };
-
-  const commentsRef = ref(db, `comments/${postId}`);
-  onValue(commentsRef, snap => {
-    const commentsData = snap.val() || {};
-    const commentsArr = Object.entries(commentsData).sort((a,b) => a[1].timestamp - b[1].timestamp);
-    commentCountSpan.textContent = commentsArr.length;
-
-    commentListDiv.innerHTML = commentsArr.map(([cid, comment]) => `
-      <div style="border-bottom:1px dashed #ccc; padding:4px 0;">
-        <strong>${escapeHTML(comment.displayName || "Anonymous")}:</strong> ${escapeHTML(comment.text)}
-        <br/><small style="color:#666; font-size:0.8em;">${new Date(comment.timestamp).toLocaleString()}</small>
-      </div>
-    `).join("");
-  });
-
-  submitCommentBtn.onclick = async () => {
-    if(!currentUser) return notify("Please login to comment.");
-    const text = commentInput.value.trim();
-    if(text.length === 0) return notify("Comment cannot be empty.");
-
-    const newCommentRef = push(ref(db, `comments/${postId}`));
-    await set(newCommentRef, {
-      userId: currentUser.uid,
-      displayName: currentUser.displayName || "Anonymous",
-      text: text,
-      timestamp: Date.now()
-    });
-
-    const commentCountRef = ref(db, `posts/${postId}/commentsCount`);
-    try {
-      await runTransaction(commentCountRef, current => (current || 0) + 1);
-    } catch(e) {
-      console.error("Failed to increment comment count:", e);
-    }
-
-    commentInput.value = "";
-  };
-}
-
-function setupShare(postId) {
-  const shareBtn = document.getElementById(`shareBtn-${postId}`);
-  if (!shareBtn) return;
-  shareBtn.onclick = () => {
-    const url = `${location.origin}${location.pathname}#${postId}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => {
-        notify("Post link copied to clipboard!");
-      }).catch(() => {
-        prompt("Copy this URL:", url);
-      });
-    } else {
-      prompt("Copy this URL:", url);
-    }
-  };
-}
+  const likesRef = ref(db, `posts/${
