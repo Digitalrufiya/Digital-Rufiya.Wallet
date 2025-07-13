@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Pro)</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007bff" />
+<style>
+/* …(same CSS tokens + layout from previous answer, omitted for brevity)… */
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="logo" width="36" height="36" />
+    <span>DRFMedia</span>
+  </div>
+  <nav id="primaryNav" style="display:none">
+    <a href="media.html">📜 Timeline</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <button id="loginBtn"  class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required>
+    <textarea id="caption" minlength="4" placeholder="Caption…" required></textarea>
+    <div id="prog" style="display:none"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider,
+         onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+import { openDB } from "./idb.js";
+import tus from "https://cdn.jsdelivr.net/npm/tus-js-client@3.0.1/+esm";
+
+const pinataKey    = "<YOUR-PINATA-JWT>";           // Bearer …
+const tusEndpoint  = "https://upload.pinata.cloud/tus";
+const firebaseCfg  = {/* …YOUR FIREBASE CONFIG… */};
+
+const app  = initializeApp(firebaseCfg);
+const db   = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+/* ---------- DOM refs ---------- */
+const $ = id=>document.getElementById(id);
+const loginBtn  = $("loginBtn");
+const logoutBtn = $("logoutBtn");
+const uploadFrm = $("uploadForm");
+const fileIn    = $("mediaFile");
+const captionIn = $("caption");
+const prog      = $("prog");
+const bar       = $("progBar");
+const nav       = $("primaryNav");
+const feed      = $("postContainer");
+const qIn       = $("searchInput");
+
+let user=null, posts=[];
+const esc=s=>s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+
+/* ---------- Service‑Worker ---------- */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/sw.js");
+}
+
+/* ---------- IndexedDB queue ---------- */
+const dbPromise = openDB("drfmedia",1,{
+  upgrade(db){ db.createObjectStore("uploads",{keyPath:"id",autoIncrement:true}); }
+});
+async function queueUpload(record){
+  const db = await dbPromise; await db.add("uploads",record);
+}
+async function flushQueue(){
+  const db = await dbPromise;
+  const tx = db.transaction("uploads","readwrite");
+  for await (const rec of tx.store){
+    try{
+      await doTusUpload(rec.file,rec.meta);
+      await tx.store.delete(rec.id);
+    }catch{ /* keep for next retry */ }
+  }
+}
+
+/* ---------- IPFS gateway helper ---------- */
+const gws=["https://gateway.pinata.cloud/ipfs/","https://cloudflare-ipfs.com/ipfs/","https://ipfs.io/ipfs/"];
+const cache=new Map();
+async function gw(cid){
+  if(cache.has(cid)) return cache.get(cid);
+  for(const g of gws){ try{ if((await fetch(g+cid,{method:"HEAD"})).ok){cache.set(cid,g+cid);return g+cid;} }catch{} }
+  return null;
+}
+
+/* ---------- Render feed ---------- */
+async function render(){
+  const term=qIn.value.trim().toLowerCase();
+  feed.innerHTML="";
+  for(const p of posts){
+    if(term && !(p.caption||"").toLowerCase().includes(term)) continue;
+    const wrap=document.createElement("article");
+    wrap.className="post-item";
+    wrap.innerHTML=`<header class="post-owner">
+        <img class="avatar" src="${p.photoURL||"https://via.placeholder.com/40"}">
+        <div><div>${esc(p.displayName||"Anon")}</div>
+        <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+          ${new Date(p.timestamp).toLocaleString()}</time></div></header>
+        <div class="post-caption">${esc(p.caption)}</div>
+        <div class="post-media" id="m-${p.id}"></div>`;
+    feed.append(wrap);
+
+    const holder=wrap.querySelector(`#m-${p.id}`);
+    if(p.mediaType==="video"){
+      const url=await gw(p.ipfsHash);
+      if(url){
+        const v=document.createElement("video");
+        v.controls=true;v.playsInline=true;v.preload="metadata";
+        v.dataset.src=url;
+        observer.observe(v);
+        holder.replaceWith(v);
+      }else holder.textContent="Video unavailable.";
+    }else{
+      const img=document.createElement("img");
+      img.src=`https://gateway.pinata.cloud/ipfs/${p.ipfsHash}`;
+      img.alt="media";img.dataset.loaded="true";
+      holder.replaceWith(img);
+    }
+  }
+}
+/* lazy video observer */
+function loadVid(v){ let r=0; const go=()=>{v.src=v.dataset.src;v.load();};
+  v.oncanplay=()=>v.dataset.loaded="true";
+  v.onerror=()=>{ if(r<3){setTimeout(go,2**++r*1e3);} };
+  go();
+}
+const observer=new IntersectionObserver(e=>e.filter(x=>x.isIntersecting)
+  .forEach(x=>{loadVid(x.target);observer.unobserve(x.target);}),{threshold:.25});
+
+/* ---------- Firebase helpers ---------- */
+async function fetchPosts(){
+  const snap=await get(ref(db,"posts"));
+  const obj=snap.val()||{};
+  posts=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+  render();
+}
+/* ---------- Auth state ---------- */
+onAuthStateChanged(auth,async u=>{
+  user=u;
+  loginBtn.style.display=u?"none":"block";
+  logoutBtn.style.display=u?"block":"none";
+  uploadFrm.style.display=u?"block":"none";
+  nav.style.display=u?"flex":"none";
+  await fetchPosts();
+  if(navigator.onLine) flushQueue();
+});
+loginBtn.onclick=()=>signInWithPopup(auth,provider);
+logoutBtn.onclick=()=>signOut(auth);
+qIn.oninput=render;
+
+/* ---------- Resumable upload ---------- */
+function doTusUpload(file,meta){
+  return new Promise((res,rej)=>{
+    new tus.Upload(file,{
+      endpoint:tusEndpoint,
+      headers:{Authorization:pinataKey},
+      metadata:{filename:file.name},
+      chunkSize:10*1024*1024,
+      retryDelays:[0,3e3,5e3,1e4],
+      onError:rej,
+      onProgress:(b,t)=>{ bar.style.width=(b/t*100)+"%"; },
+      onSuccess:function(){ res(this.url.split("/").pop()); }
+    }).start();
+  });
+}
+
+/* ---------- Form submit ---------- */
+uploadFrm.onsubmit=async e=>{
+  e.preventDefault();
+  const file=fileIn.files[0];
+  if(!file) return alert("choose file");
+  const caption=captionIn.value.trim();
+  if(caption.length<4) return alert("caption too short");
+
+  uploadFrm.querySelector("button").disabled=true;prog.style.display="block";bar.style.width="0";
+  const meta={caption,fileType:file.type,ts:Date.now()};
+  if(!navigator.onLine){
+    await queueUpload({file,meta});
+    alert("Queued offline – will upload when connected.");
+    reset();
+    return;
+  }
+  try{
+    const cid=await doTusUpload(file,meta);
+    await sendPostToDB(cid,file.type.startsWith("video")?"video":"image",caption);
+  }catch(err){ alert(err.message||err); }
+  reset();
+};
+async function sendPostToDB(cid,type,caption){
+  const newRef=push(ref(db,"posts"));
+  await set(newRef,{
+    userId:user.uid,displayName:user.displayName||"Anon",photoURL:user.photoURL||"",
+    caption,ipfsHash:cid,mediaType:type,timestamp:Date.now()
+  });
+  fetchPosts();
+}
+function reset(){ fileIn.value="";captionIn.value="";prog.style.display="none";
+                  uploadFrm.querySelector("button").disabled=false; }
+
+/* flush queue when back online */
+window.addEventListener("online",flushQueue);
+</script>
+</body>
+</html>
