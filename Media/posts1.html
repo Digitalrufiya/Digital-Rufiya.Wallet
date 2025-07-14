@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Full HTML head already included -->
+</head>
+<body>
+<!-- Full body with script included -->
+<script type="module">
+/* ... rest of your existing Firebase + Pinata upload logic ... */
+
+function toggleLike(post) {
+  const userId = currentUser?.uid;
+  if (!userId) return alert("You must be signed in to like");
+  const postRef = ref(db, `posts/${post.id}/likedBy/${userId}`);
+  get(postRef).then(snapshot => {
+    const alreadyLiked = snapshot.exists();
+    set(ref(db, `posts/${post.id}/likedBy/${userId}`), alreadyLiked ? null : true);
+    runTransaction(ref(db, `posts/${post.id}/likesCount`), count => (count || 0) + (alreadyLiked ? -1 : 1));
+  });
+}
+
+function toggleBoost(post) {
+  const userId = currentUser?.uid;
+  if (!userId) return alert("You must be signed in to boost");
+  const postRef = ref(db, `posts/${post.id}/boostedBy/${userId}`);
+  get(postRef).then(snapshot => {
+    const alreadyBoosted = snapshot.exists();
+    set(ref(db, `posts/${post.id}/boostedBy/${userId}`), alreadyBoosted ? null : true);
+    runTransaction(ref(db, `posts/${post.id}/boostsCount`), count => (count || 0) + (alreadyBoosted ? -1 : 1));
+  });
+}
+
+function deletePost(post) {
+  if (!currentUser || post.userId !== currentUser.uid) return;
+  if (!confirm("Are you sure you want to delete this post?")) return;
+  set(ref(db, `posts/${post.id}`), null);
+}
+
+function postComment(post, commentText, commentList, commentInput, commentForm) {
+  const commentId = push(ref(db, `comments/${post.id}`)).key;
+  const comment = {
+    userId: currentUser.uid,
+    displayName: currentUser.displayName || "Anon",
+    photoURL: currentUser.photoURL || "",
+    text: commentText,
+    timestamp: Date.now()
+  };
+  set(ref(db, `comments/${post.id}/${commentId}`), comment).then(() => {
+    runTransaction(ref(db, `posts/${post.id}/commentsCount`), count => (count || 0) + 1);
+    renderComments(post, commentList);
+    commentInput.value = "";
+    commentForm.style.display = "none";
+  });
+}
+
+function renderComments(post, commentList) {
+  get(ref(db, `comments/${post.id}`)).then(snapshot => {
+    const comments = snapshot.val();
+    commentList.innerHTML = "";
+    if (!comments) {
+      commentList.innerHTML = "<em>No comments yet.</em>";
+      return;
+    }
+    Object.values(comments)
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .forEach(c => {
+        const div = document.createElement("div");
+        div.style.marginBottom = ".5rem";
+        div.innerHTML = `
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img class="avatar" src="${c.photoURL || "https://via.placeholder.com/40"}" alt="avatar" style="width:1.8rem;height:1.8rem;"/>
+            <strong>${esc(c.displayName || "Anon")}</strong>
+            <time class="post-time">${new Date(c.timestamp).toLocaleString()}</time>
+          </div>
+          <div style="margin-left:2.3rem;">${esc(c.text)}</div>
+        `;
+        commentList.appendChild(div);
+      });
+  });
+}
+</script>
+</body>
+</html>
