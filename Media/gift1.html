@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Media Enhanced</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+    }
+    .card {
+      margin-bottom: 20px;
+      background-color: #222;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+    .interaction-bar button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <h2 class="text-center mb-4">📺 DRF Media</h2>
+    <div id="media-container"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const mediaContainer = document.getElementById("media-container");
+
+    db.ref("videos").on("value", snapshot => {
+      mediaContainer.innerHTML = "";
+      snapshot.forEach(child => {
+        const data = child.val();
+        const key = child.key;
+
+        const card = document.createElement("div");
+        card.className = "card p-3";
+        card.innerHTML = `
+          <video controls src="${data.url}"></video>
+          <p class="mt-2">${data.caption || "No caption"}</p>
+          <div class="interaction-bar">
+            <button class="btn btn-sm btn-light" onclick="like('${key}')">👍 Like (${data.likes || 0})</button>
+            <button class="btn btn-sm btn-light" onclick="boost('${key}')">🚀 Boost</button>
+            <button class="btn btn-sm btn-light" onclick="repost('${key}')">🔁 Repost</button>
+            <button class="btn btn-sm btn-light" onclick="donate('${key}')">💸 Donate</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteVideo('${key}')">❌ Delete</button>
+          </div>
+          <div class="mt-2">
+            <input type="text" id="comment-${key}" class="form-control form-control-sm" placeholder="Add a comment">
+            <button class="btn btn-sm btn-primary mt-1" onclick="comment('${key}')">💬 Comment</button>
+          </div>
+          <div id="comments-${key}" class="mt-2"></div>
+        `;
+
+        mediaContainer.appendChild(card);
+
+        // Load comments
+        db.ref(`comments/${key}`).on("value", commentSnap => {
+          const commentBox = document.getElementById(`comments-${key}`);
+          commentBox.innerHTML = "";
+          commentSnap.forEach(commentChild => {
+            const comment = commentChild.val();
+            commentBox.innerHTML += `<div class='text-muted'>• ${comment.text}</div>`;
+          });
+        });
+      });
+    });
+
+    function like(key) {
+      const ref = db.ref(`videos/${key}/likes`);
+      ref.transaction(current => (current || 0) + 1);
+    }
+
+    function boost(key) {
+      alert("Boost sent for video ID: " + key);
+    }
+
+    function repost(key) {
+      alert("Reposted video ID: " + key);
+    }
+
+    function donate(key) {
+      alert("Donation prompt for video ID: " + key);
+    }
+
+    function deleteVideo(key) {
+      if (confirm("Are you sure to delete this video?")) {
+        db.ref(`videos/${key}`).remove();
+        db.ref(`comments/${key}`).remove();
+      }
+    }
+
+    function comment(key) {
+      const commentInput = document.getElementById(`comment-${key}`);
+      const text = commentInput.value.trim();
+      if (text !== "") {
+        db.ref(`comments/${key}`).push({ text });
+        commentInput.value = "";
+      }
+    }
+  </script>
+</body>
+</html>
