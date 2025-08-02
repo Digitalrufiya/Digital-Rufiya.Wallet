@@ -1,100 +1,189 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Wallet — Create Payment Request</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 20px; background: #f9f9f9; }
-  input, textarea, select, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;}
-  button { background: #007bff; color: white; border: none; cursor: pointer; }
-  button:hover { background: #0056b3; }
-  .request-list { margin-top: 30px; }
-  .request-item { background: #fff; padding: 10px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 0 4px #ccc; }
-  .link-input { font-size: 0.9rem; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create DRF Payment Request</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 480px;
+      margin: auto;
+      background: #f4f9fb;
+      padding: 20px;
+      color: #222;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #007bff;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgb(0 123 255 / 0.15);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      padding: 14px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .link-container {
+      margin-top: 25px;
+      background: #e7f1ff;
+      border-left: 6px solid #007bff;
+      padding: 15px;
+      border-radius: 8px;
+      word-break: break-word;
+      font-weight: 600;
+      color: #055293;
+    }
+    .error {
+      color: #b00020;
+      background: #ffd7d7;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-weight: 600;
+      text-align: center;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-<h2>Create a Payment Request</h2>
+  <h2>Create a Payment Request</h2>
 
-<label>Amount (DRF):</label>
-<input type="number" id="amount" min="0" step="any" placeholder="e.g. 10" required />
+  <form id="requestForm" autocomplete="off">
+    <label for="token-select">Select Token</label>
+    <select id="token-select" required>
+      <option value="DRF">DRF</option>
+      <option value="USDC">USDC</option>
+      <option value="USDT">USDT</option>
+      <option value="BNB">BNB</option>
+    </select>
 
-<label>Message (optional):</label>
-<textarea id="message" rows="3" placeholder="Describe what this payment is for"></textarea>
+    <label for="amount">Amount</label>
+    <input type="number" id="amount" step="any" min="0.00000001" placeholder="0.0" required />
 
-<button id="createRequestBtn">Create Request</button>
+    <label for="wallet">Your Wallet Address (to receive payment)</label>
+    <input type="text" id="wallet" placeholder="0x..." required />
 
-<div class="request-list" id="requestsContainer">
-  <h3>Your Requests</h3>
-  <div id="requestItems"></div>
-</div>
+    <label for="message">Message (optional)</label>
+    <textarea id="message" placeholder="Write a message or payment reason"></textarea>
 
-<script>
-  const STORAGE_KEY = 'drf_payment_requests';
+    <button type="submit">Create Payment Request</button>
+    <div id="error" class="error" style="display:none;"></div>
+  </form>
 
-  function getRequests() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }
+  <div id="linkContainer" class="link-container" style="display:none;">
+    Share this payment link:<br />
+    <a href="#" id="paymentLink" target="_blank"></a>
+  </div>
 
-  function saveRequests(requests) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
-  }
+  <script>
+    const STORAGE_KEY = 'drf_payment_requests';
 
-  function renderRequests() {
-    const container = document.getElementById('requestItems');
-    container.innerHTML = '';
-    const requests = getRequests();
-    if (requests.length === 0) {
-      container.textContent = 'No requests yet.';
-      return;
+    function getRequests() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
     }
-    requests.forEach(req => {
-      const div = document.createElement('div');
-      div.className = 'request-item';
-      const link = `${location.origin}${location.pathname.replace('request.html', '')}pay.html?id=${req.id}`;
-      div.innerHTML = `
-        <strong>Amount:</strong> ${req.amount} DRF<br/>
-        <strong>Message:</strong> ${req.message || '<em>No message</em>'}<br/>
-        <label>Payment Link:</label>
-        <input type="text" readonly class="link-input" value="${link}" onclick="this.select()" />
-      `;
-      container.appendChild(div);
-    });
-  }
-
-  function generateId() {
-    return 'req_' + Math.random().toString(36).substr(2, 9);
-  }
-
-  document.getElementById('createRequestBtn').onclick = () => {
-    const amount = parseFloat(document.getElementById('amount').value);
-    const message = document.getElementById('message').value.trim();
-
-    if (!amount || amount <= 0) {
-      alert('Please enter a valid amount greater than zero.');
-      return;
+    function saveRequest(request) {
+      const all = getRequests();
+      all.push(request);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    }
+    function generateId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+    function isValidAddress(addr) {
+      try {
+        return ethers.utils.isAddress(addr);
+      } catch {
+        return false;
+      }
     }
 
-    const requests = getRequests();
-    const newRequest = {
-      id: generateId(),
-      amount,
-      message,
-      createdAt: Date.now()
+    document.getElementById('requestForm').onsubmit = function(e) {
+      e.preventDefault();
+      const errorDiv = document.getElementById('error');
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const token = document.getElementById('token-select').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const wallet = document.getElementById('wallet').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      if (isNaN(amount) || amount <= 0) {
+        errorDiv.textContent = "Please enter a valid amount greater than zero.";
+        errorDiv.style.display = 'block';
+        return;
+      }
+      if (!isValidAddress(wallet)) {
+        errorDiv.textContent = "Please enter a valid wallet address.";
+        errorDiv.style.display = 'block';
+        return;
+      }
+      if (message.length > 250) {
+        errorDiv.textContent = "Message is too long (max 250 characters).";
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const id = generateId();
+      const newRequest = {
+        id,
+        token,
+        amount,
+        wallet,
+        message,
+        createdAt: Date.now()
+      };
+
+      saveRequest(newRequest);
+
+      // Show link
+      const linkContainer = document.getElementById('linkContainer');
+      const paymentLink = document.getElementById('paymentLink');
+      const url = `${window.location.origin}/pay.html?id=${id}`;
+      paymentLink.href = url;
+      paymentLink.textContent = url;
+      linkContainer.style.display = 'block';
+
+      // Reset form
+      this.reset();
     };
-    requests.push(newRequest);
-    saveRequests(requests);
-
-    alert('Request created! You can share the link below.');
-    document.getElementById('amount').value = '';
-    document.getElementById('message').value = '';
-    renderRequests();
-  };
-
-  // Initial load
-  renderRequests();
-</script>
+  </script>
 </body>
 </html>
