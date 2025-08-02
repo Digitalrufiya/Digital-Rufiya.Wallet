@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css" />
 <meta name="color-scheme" content="light dark" />
 <style>
+/* ——— same CSS as before (unchanged) ——— */
 :root{--accent:#007bff;--accent-hover:#0056b3;--accent-muted:#3399ff;
       --bg-body:#f8f9fa;--bg-surface:#fff;--bg-surface-alt:#fafafa;
       --text-body:#212529;--text-muted:#6c757d;--radius:.5rem;
@@ -20,15 +21,18 @@ body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
      display:flex;flex-direction:column}
 a{color:inherit;text-decoration:none}
 img,video{max-width:100%}
+/* header */
 header{background:var(--accent);color:#fff;padding:.75rem 1rem;
        display:flex;align-items:center;justify-content:space-between;
        flex-wrap:wrap;gap:1rem;position:sticky;top:0;z-index:1000}
 .brand{display:flex;align-items:center;gap:.5rem;font-weight:700}
 .brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
 #primaryNav{display:none;gap:.75rem}
+/* buttons */
 .btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);
      padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
 .btn:hover{background:var(--accent-hover)}.btn:disabled{background:#adb5bd;cursor:not-allowed}
+/* layout */
 .container{width:min(100%,700px);margin:0 auto;padding:0 1rem}
 #searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;
              border:1px solid #ced4da;border-radius:var(--radius);
@@ -40,19 +44,172 @@ header{background:var(--accent);color:#fff;padding:.75rem 1rem;
 .avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc}
 .post-time{font-size:.8rem;color:var(--text-muted)}
 .post-caption{margin-top:.75rem;white-space:pre-wrap}
-video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;transition:opacity .3s}
-[data-loaded=true]{opacity:1}
+/* media */
+video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;
+          transition:opacity .3s}[data-loaded=true]{opacity:1}
+/* upload */
 #uploadForm{margin-top:1.25rem}
 #uploadForm textarea{width:100%;min-height:6rem;padding:.65rem .85rem;margin:.75rem 0;
                      border:1px solid #ced4da;border-radius:var(--radius);resize:vertical}
 #prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none}
 #progBar{height:4px;width:0;background:var(--accent)}
-.post-actions{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;font-size:0.9rem;}
-.comments-section{margin-top:10px;border-top:1px solid #ccc;padding-top:10px;display:none;}
-.comments-list{max-height:150px;overflow-y:auto;margin-bottom:8px;}
-.comment-item{margin-bottom:4px;}
-.comment-form input[type="text"]{width:calc(100% - 70px);padding:5px;border:1px solid #ccc;border-radius:4px;}
-.comment-form button{width:60px;margin-left:8px;}
+
+/* Added styles for buttons inside post-actions */
+.post-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.post-actions button, .post-actions select {
+  cursor: pointer;
+  border: none;
+  background: var(--accent);
+  color: white;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.9rem;
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+.post-actions button:hover, .post-actions select:hover {
+  background: var(--accent-hover);
+}
+.post-actions button.liked {
+  background: #28a745 !important;
+  box-shadow: 0 0 8px #28a745aa;
+}
+.post-actions button.boosted {
+  background: gold !important;
+  color: #000 !important;
+  box-shadow: 0 0 8px #ffd700cc;
+}
+.post-actions button.delete-btn {
+  background: #dc3545;
+}
+.post-actions button.delete-btn:hover {
+  background: #b02a37;
+}
+
+/* Comments container */
+.comments-container {
+  margin-top: 10px;
+  max-height: 150px;
+  overflow-y: auto;
+  border-top: 1px solid #ccc;
+  padding-top: 8px;
+  font-size: 0.9rem;
+}
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.comment .avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #eee;
+  object-fit: cover;
+}
+.comment-body {
+  background: #f5f5f5;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  flex: 1;
+  word-break: break-word;
+}
+.comment-body strong {
+  display: block;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.comment-form {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+}
+.comment-form input {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1.5px solid #ccc;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline-offset: 2px;
+  transition: border-color 0.3s;
+}
+.comment-form input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.comment-form button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s;
+}
+.comment-form button:hover {
+  background: var(--accent-hover);
+}
+
+/* Skrill Donation Modal */
+#skrillModal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+#skrillModalContent {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 28px;
+  max-width: 320px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  text-align: center;
+  font-family: Arial, sans-serif;
+}
+#skrillModalContent h2 {
+  margin-top: 0;
+  color: var(--accent);
+}
+#skrillModalContent p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+#skrillQRCode {
+  width: 180px;
+  height: 180px;
+  margin: 12px auto;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  object-fit: contain;
+}
+#skrillModalContent button {
+  margin-top: 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s;
+}
+#skrillModalContent button:hover {
+  background: var(--accent-hover);
+}
 </style>
 </head>
 
@@ -80,13 +237,33 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
   <section id="postContainer" aria-live="polite"></section>
 </main>
 
+<!-- Skrill Donation Modal -->
+<div id="skrillModal" role="dialog" aria-modal="true" aria-labelledby="skrillModalTitle" aria-describedby="skrillModalDesc">
+  <div id="skrillModalContent">
+    <h2 id="skrillModalTitle">Skrill Donation</h2>
+    <p id="skrillModalDesc">
+      Email: <strong>digitalrufiyacoin@gmail.com</strong><br />
+      Amount: $<strong id="skrillAmount">1</strong>
+    </p>
+    <img id="skrillQRCode" src="https://api.qrserver.com/v1/create-qr-code/?data=digitalrufiyacoin%40gmail.com&size=180x180" alt="Skrill QR Code" />
+    <button id="openSkrillSiteBtn" type="button">Open Skrill.com</button>
+    <button id="closeSkrillModalBtn" type="button" style="margin-top:12px; background:#ccc; color:#000;">Close</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+import {
+  getDatabase, ref, push, set, get, runTransaction, onValue, remove
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import {
+  getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-const pinataJWT = "YOUR_PINATA_JWT_HERE"; // Replace with your JWT
+/* ---------- 1)  PINATA  JWT  ---------- */
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
+/* ---------- 2)  FIREBASE CONFIG  ---------- */
 const firebaseConfig = {
   apiKey:            "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain:        "drfsocial-23a06.firebaseapp.com",
@@ -97,281 +274,287 @@ const firebaseConfig = {
   appId:             "1:608135115201:web:b3d1f368e0c09ac4400f43",
   measurementId:     "G-TBFQX80NRP"
 };
+/* (↑ copy these eight lines exactly from Firebase console > Project settings > 'Web app') */
 
+/* ---- INIT ---- */
 const app  = initializeApp(firebaseConfig);
 const db   = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-const $ = id => document.getElementById(id);
+/* ---- DOM refs ---- */
+const $ = id=>document.getElementById(id);
 const login  = $("loginBtn"), logout = $("logoutBtn");
 const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
 const prog   = $("prog"), bar=$("progBar");
 const posts  = $("postContainer"), qIn=$("searchInput"), nav=$("primaryNav");
 
-let user = null, all = [];
+/* ---- state ---- */
+let user=null, all=[];
 
-const esc = s => s.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-const gws = ["https://gateway.pinata.cloud/ipfs/","https://cloudflare-ipfs.com/ipfs/","https://ipfs.io/ipfs/"];
-const gwCache = new Map();
+/* ---- helpers ---- */
+const esc=s=>s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const gws=["https://gateway.pinata.cloud/ipfs/","https://cloudflare-ipfs.com/ipfs/","https://ipfs.io/ipfs/"];
+const gwCache=new Map();
 async function gw(cid){
   if(gwCache.has(cid)) return gwCache.get(cid);
-  for(const g of gws){
-    try {
-      if((await fetch(g+cid,{method:"HEAD"})).ok){
-        gwCache.set(cid,g+cid);
-        return g+cid;
-      }
-    } catch{}
-  }
+  for(const g of gws){ try{ if((await fetch(g+cid,{method:"HEAD"})).ok){gwCache.set(cid,g+cid);return g+cid;} }catch{} }
   return null;
 }
 
-function loadVid(v){
-  let r=0;
-  const go=()=>{v.src=v.dataset.src;v.load();}
+/* lazy video loader */
+function loadVid(v){ let r=0; const go=()=>{v.src=v.dataset.src;v.load();}
   v.oncanplay=()=>v.dataset.loaded="true";
-  v.onerror=()=>{ if(r<3) setTimeout(go, 2**++r * 1e3); };
+  v.onerror=()=>{ if(r<3) setTimeout(go,2**++r*1e3); };
   go();
 }
-const io=new IntersectionObserver(entries=>{
-  entries.filter(e=>e.isIntersecting).forEach(e=>{
-    loadVid(e.target);
-    io.unobserve(e.target);
-  }), {threshold:.25}
-);
+const io=new IntersectionObserver(es=>es.filter(e=>e.isIntersecting)
+ .forEach(e=>{loadVid(e.target);io.unobserve(e.target);}),{threshold:.25});
 
-/* --- Render posts --- */
-async function render() {
-  const term = qIn.value.trim().toLowerCase();
-  posts.innerHTML = "";
+/* render feed */
+async function render(){
+  const term=qIn.value.trim().toLowerCase();
+  posts.innerHTML="";
+  for(const p of all){
+    if(term && !(p.caption||"").toLowerCase().includes(term)) continue;
+    const isLiked = user && p.likesBy && p.likesBy[user.uid];
+    const isBoosted = user && p.boostedBy && p.boostedBy[user.uid];
 
-  const statsSnap = await get(ref(db, "postStats"));
-  const allStats = statsSnap.val() || {};
-
-  for (const p of all) {
-    if (term && !(p.caption || "").toLowerCase().includes(term)) continue;
-
-    const stats = allStats[p.id] || {};
-    const likesCount = stats.likes ? Object.keys(stats.likes).length : 0;
-    const boostsCount = stats.boosts ? Object.keys(stats.boosts).length : 0;
-    const donationsTotal = stats.donations ? Object.values(stats.donations).reduce((a,b) => a+b, 0) : 0;
-    const commentsObj = stats.comments || {};
-    const commentsCount = Object.keys(commentsObj).length;
-
-    const card = document.createElement("article");
-    card.className = "post-item";
-    card.innerHTML = `
-      <header class="post-owner">
-        <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="avatar" />
-        <div>
-          <div>${esc(p.displayName || "Anon")}</div>
-          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
-            ${new Date(p.timestamp).toLocaleString()}
-          </time>
+    const card=document.createElement("article");
+    card.className="post-item";
+    card.innerHTML=`<header class="post-owner">
+        <img class="avatar" src="${esc(p.photoURL||"https://via.placeholder.com/40")}">
+        <div><div>${esc(p.displayName||"Anon")}</div>
+        <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+          ${new Date(p.timestamp).toLocaleString()}</time></div></header>
+        <div class="post-caption">${esc(p.caption)}</div>
+        <div class="post-media" id="m-${p.id}"></div>
+        <div class="post-actions">
+          <button class="${isLiked ? "liked" : ""}" aria-pressed="${isLiked ? "true" : "false"}" aria-label="Like post" data-id="${p.id}">👍 Like (${p.likesCount||0})</button>
+          <button aria-label="Comment on post" data-id="${p.id}">💬 Comment (${p.commentsCount||0})</button>
+          <button class="${isBoosted ? "boosted" : ""}" aria-pressed="${isBoosted ? "true" : "false"}" aria-label="Boost post" data-id="${p.id}">🚀 Boost (${p.boostsCount||0})</button>
+          <select aria-label="Donate to post" data-id="${p.id}">
+            <option value="">Donate 💖</option>
+            <option value="1">1 $</option>
+            <option value="5">5 $</option>
+            <option value="10">10 $</option>
+          </select>
+          ${user && user.uid === p.userId ? `<button class="delete-btn" aria-label="Delete post" data-id="${p.id}">🗑️ Delete</button>` : ""}
         </div>
-      </header>
-      <div class="post-caption">${esc(p.caption)}</div>
-      <div class="post-media" id="m-${p.id}"></div>
-      <div class="post-actions">
-        <button class="btn btn-like" data-id="${p.id}">👍 Like (<span class="like-count">${likesCount}</span>)</button>
-        <button class="btn btn-boost" data-id="${p.id}">🚀 Boost (<span class="boost-count">${boostsCount}</span>)</button>
-        <button class="btn btn-donate" data-id="${p.id}">💰 Donate</button>
-        <button class="btn btn-comment-toggle" data-id="${p.id}">💬 Comments (<span class="comment-count">${commentsCount}</span>)</button>
-        ${user && user.uid === p.userId ? `<button class="btn btn-delete" data-id="${p.id}" style="background:#dc3545">🗑️ Delete</button>` : ""}
-      </div>
-      <div class="comments-section" id="comments-${p.id}">
-        <div class="comments-list">
-          ${Object.entries(commentsObj).map(([cid,c]) => `
-            <div class="comment-item">
-              <strong>${esc(c.displayName || "Anon")}:</strong> ${esc(c.text)}
-            </div>
-          `).join("")}
-        </div>
-        ${user ? `
+        <div class="comments-container" id="comments-${p.id}" hidden>
+          <div class="comments-list"></div>
           <form class="comment-form" data-id="${p.id}">
-            <input type="text" name="comment" placeholder="Add a comment…" required />
-            <button type="submit" class="btn">Send</button>
-          </form>` : `<em>Sign in to comment</em>`}
-      </div>
-    `;
+            <input type="text" placeholder="Write a comment…" minlength="1" required />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+        `;
+
     posts.append(card);
 
-    const holder = card.querySelector(`#m-${p.id}`);
-    if (p.mediaType === "video") {
-      const url = await gw(p.ipfsHash);
-      if (url) {
-        const v = document.createElement("video");
-        v.controls = true;
-        v.playsInline = true;
-        v.preload = "metadata";
-        v.dataset.src = url;
-        io.observe(v);
+    const holder=card.querySelector(`#m-${p.id}`);
+    if(p.mediaType==="video"){
+      const url=await gw(p.ipfsHash);
+      if(url){
+        const v=document.createElement("video");
+        v.controls=true;v.playsInline=true;v.preload="metadata";
+        v.dataset.src=url;io.observe(v);
         holder.replaceWith(v);
-      } else {
-        holder.textContent = "Video unavailable.";
-      }
-    } else {
-      const img = document.createElement("img");
-      img.src = `https://gateway.pinata.cloud/ipfs/${p.ipfsHash}`;
-      img.alt = "media";
-      img.dataset.loaded = "true";
+      }else holder.textContent="Video unavailable.";
+    }else{
+      const img=document.createElement("img");
+      img.src=`https://gateway.pinata.cloud/ipfs/${p.ipfsHash}`;
+      img.alt="media";img.dataset.loaded="true";
       holder.replaceWith(img);
     }
   }
-  attachHandlers();
+
+  attachPostEventListeners();
 }
 
-/* --- Attach event handlers --- */
-function attachHandlers() {
-  document.querySelectorAll(".btn-like").forEach(btn => {
+/* attach events for like, comment, boost, donate, delete */
+function attachPostEventListeners(){
+  // Like buttons
+  posts.querySelectorAll("button[aria-label='Like post']").forEach(btn=>{
     btn.onclick = async () => {
-      if (!user) return alert("Sign in to like");
-      const postId = btn.dataset.id;
-      const likeRef = ref(db, `postStats/${postId}/likes/${user.uid}`);
-      const snap = await get(likeRef);
-      if (snap.exists()) await remove(likeRef);
-      else await set(likeRef, true);
-      getPosts();
+      if(!user) return alert("Please sign in first.");
+      const postId = btn.getAttribute("data-id");
+      const likeRef = ref(db, `posts/${postId}/likesBy/${user.uid}`);
+      const postRef = ref(db, `posts/${postId}`);
+
+      await runTransaction(postRef, post=>{
+        if(post){
+          if(!post.likesBy) post.likesBy = {};
+          if(post.likesBy[user.uid]){
+            // Unlike
+            delete post.likesBy[user.uid];
+            post.likesCount = (post.likesCount || 1) - 1;
+            if(post.likesCount < 0) post.likesCount = 0;
+          } else {
+            // Like
+            post.likesBy[user.uid] = true;
+            post.likesCount = (post.likesCount || 0) + 1;
+          }
+        }
+        return post;
+      });
+      await getPosts(); // refresh list
     };
   });
 
-  document.querySelectorAll(".btn-boost").forEach(btn => {
+  // Boost buttons
+  posts.querySelectorAll("button[aria-label='Boost post']").forEach(btn=>{
     btn.onclick = async () => {
-      if (!user) return alert("Sign in to boost");
-      const postId = btn.dataset.id;
-      const boostRef = ref(db, `postStats/${postId}/boosts/${user.uid}`);
-      const snap = await get(boostRef);
-      if (snap.exists()) await remove(boostRef);
-      else await set(boostRef, true);
-      getPosts();
+      if(!user) return alert("Please sign in first.");
+      const postId = btn.getAttribute("data-id");
+      const postRef = ref(db, `posts/${postId}`);
+
+      await runTransaction(postRef, post=>{
+        if(post){
+          if(!post.boostedBy) post.boostedBy = {};
+          if(post.boostedBy[user.uid]){
+            // Remove boost
+            delete post.boostedBy[user.uid];
+            post.boostsCount = (post.boostsCount || 1) - 1;
+            if(post.boostsCount < 0) post.boostsCount = 0;
+          } else {
+            // Boost
+            post.boostedBy[user.uid] = true;
+            post.boostsCount = (post.boostsCount || 0) + 1;
+          }
+        }
+        return post;
+      });
+      await getPosts(); // refresh list
     };
   });
 
-  document.querySelectorAll(".btn-donate").forEach(btn => {
-    btn.onclick = async () => {
-      if (!user) return alert("Sign in to donate");
-      const postId = btn.dataset.id;
-      const amountStr = prompt("Enter donation amount:");
-      const amount = parseFloat(amountStr);
-      if (isNaN(amount) || amount <= 0) return alert("Invalid amount");
-      const donationRef = push(ref(db, `postStats/${postId}/donations`));
-      await set(donationRef, amount);
-      getPosts();
-      alert("Thanks for your donation!");
-    };
-  });
-
-  document.querySelectorAll(".btn-comment-toggle").forEach(btn => {
+  // Comment buttons (toggle comment form visibility)
+  posts.querySelectorAll("button[aria-label='Comment on post']").forEach(btn=>{
     btn.onclick = () => {
-      const postId = btn.dataset.id;
-      const section = document.getElementById(`comments-${postId}`);
-      section.style.display = section.style.display === "block" ? "none" : "block";
+      if(!user) return alert("Please sign in first.");
+      const postId = btn.getAttribute("data-id");
+      const commentsContainer = document.getElementById(`comments-${postId}`);
+      if(!commentsContainer) return;
+      commentsContainer.hidden = !commentsContainer.hidden;
+      if(!commentsContainer.hidden) loadComments(postId);
     };
   });
 
-  document.querySelectorAll(".comment-form").forEach(form => {
+  // Comment forms submit
+  posts.querySelectorAll("form.comment-form").forEach(form=>{
     form.onsubmit = async e => {
       e.preventDefault();
-      if (!user) return alert("Sign in to comment");
-      const postId = form.dataset.id;
-      const text = form.comment.value.trim();
-      if (!text) return alert("Comment is empty");
-      const newCommentRef = push(ref(db, `postStats/${postId}/comments`));
-      await set(newCommentRef, {
-        userId: user.uid,
+      if(!user) return alert("Please sign in first.");
+      const postId = form.getAttribute("data-id");
+      const input = form.querySelector("input");
+      const text = input.value.trim();
+      if(!text) return alert("Comment cannot be empty");
+
+      const commentRef = push(ref(db, `comments/${postId}`));
+      await set(commentRef, {
+        uid: user.uid,
         displayName: user.displayName || "Anon",
+        photoURL: user.photoURL || "",
         text,
         timestamp: Date.now()
       });
-      form.comment.value = "";
-      getPosts();
+      input.value = "";
+      incrementCommentsCount(postId);
+      loadComments(postId);
     };
   });
 
-  document.querySelectorAll(".btn-delete").forEach(btn => {
+  // Donate selects
+  posts.querySelectorAll("select[aria-label='Donate to post']").forEach(sel=>{
+    sel.onchange = () => {
+      if(!user) return alert("Please sign in first.");
+      const amount = sel.value;
+      if(!amount) return;
+      openSkrillModal(amount);
+      sel.value = "";
+    };
+  });
+
+  // Delete buttons
+  posts.querySelectorAll("button[aria-label='Delete post']").forEach(btn=>{
     btn.onclick = async () => {
-      if (!user) return alert("Sign in to delete");
-      const postId = btn.dataset.id;
-      if (!confirm("Delete this post?")) return;
-      await remove(ref(db, `posts/${postId}`));
-      await remove(ref(db, `postStats/${postId}`));
-      getPosts();
+      if(!user) return alert("Please sign in first.");
+      const postId = btn.getAttribute("data-id");
+      if(!confirm("Are you sure you want to delete this post?")) return;
+      try {
+        await remove(ref(db, `posts/${postId}`));
+        await remove(ref(db, `comments/${postId}`));
+        alert("Post deleted.");
+        getPosts();
+      } catch (e) {
+        alert("Delete failed: "+e.message);
+      }
     };
   });
 }
 
+/* load comments */
+async function loadComments(postId){
+  const commentsContainer = document.getElementById(`comments-${postId}`);
+  if(!commentsContainer) return;
+  const listDiv = commentsContainer.querySelector(".comments-list");
+  listDiv.innerHTML = "Loading comments...";
+  const snap = await get(ref(db, `comments/${postId}`));
+  const comments = snap.val() || {};
+  const arr = Object.entries(comments).sort((a,b) => b[1].timestamp - a[1].timestamp);
+  if(arr.length === 0){
+    listDiv.innerHTML = "<p style='font-style:italic;color:#666'>No comments yet.</p>";
+    return;
+  }
+  listDiv.innerHTML = "";
+  for(const [id, c] of arr){
+    const d = new Date(c.timestamp);
+    const timeStr = d.toLocaleString();
+    const cElem = document.createElement("div");
+    cElem.className = "comment";
+    cElem.innerHTML = `<img class="avatar" src="${esc(c.photoURL||"https://via.placeholder.com/30")}" alt="Avatar" />
+      <div class="comment-body"><strong>${esc(c.displayName||"Anon")}</strong>${esc(c.text)}<br><small style="color:#888;font-size:0.8rem">${timeStr}</small></div>`;
+    listDiv.appendChild(cElem);
+  }
+}
+
+/* increment commentsCount in post */
+async function incrementCommentsCount(postId){
+  const postRef = ref(db, `posts/${postId}`);
+  await runTransaction(postRef, post=>{
+    if(post){
+      post.commentsCount = (post.commentsCount||0) + 1;
+    }
+    return post;
+  });
+}
+
+/* fetch posts */
 async function getPosts(){
-  const snap = await get(ref(db,"posts"));
-  const obj = snap.val() || {};
-  all = Object.entries(obj).map(([id,v]) => ({id, ...v})).sort((a,b) => b.timestamp - a.timestamp);
+  const snap=await get(ref(db,"posts"));
+  const obj=snap.val()||{};
+  all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
   render();
 }
 
-/* Auth & UI */
-login.onclick = () => signInWithPopup(auth, provider);
-logout.onclick = () => signOut(auth);
-onAuthStateChanged(auth, u => {
-  user = u;
-  login.style.display = u ? "none" : "block";
-  logout.style.display = u ? "block" : "none";
-  upload.style.display = u ? "block" : "none";
-  nav.style.display = u ? "flex" : "none";
+/* auth flow */
+login.onclick = ()=>signInWithPopup(auth,provider);
+logout.onclick= ()=>signOut(auth);
+onAuthStateChanged(auth,u=>{
+  user=u;
+  login.style.display=u?"none":"block";
+  logout.style.display=u?"block":"none";
+  upload.style.display=u?"block":"none";
+  nav.style.display=u?"flex":"none";
   getPosts();
 });
-qIn.oninput = render;
+qIn.oninput=render;
 
-/* Upload */
-upload.onsubmit = async e => {
+/* upload */
+upload.onsubmit=async e=>{
   e.preventDefault();
-  if (!fileIn.files[0]) return alert("Choose a file");
-  if (capIn.value.trim().length < 4) return alert("Caption too short");
-  const file = fileIn.files[0];
-  upload.querySelector("button").disabled = true;
-  prog.style.display = "block"; bar.style.width = "0";
-
-  try {
-    const fd = new FormData();
-    fd.append("file", file);
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST","https://api.pinata.cloud/pinning/pinFileToIPFS");
-    xhr.setRequestHeader("Authorization", pinataJWT);
-    xhr.upload.onprogress = e => { if (e.lengthComputable) bar.style.width = (e.loaded / e.total * 100) + "%"; };
-    const cid = await new Promise((res, rej) => {
-      xhr.onload = () => {
-        try {
-          res(JSON.parse(xhr.responseText).IpfsHash);
-        } catch {
-          rej("Pinata error");
-        }
-      };
-      xhr.onerror = () => rej("Upload failed");
-      xhr.send(fd);
-    });
-
-    const newRef = push(ref(db,"posts"));
-    await set(newRef,{
-      userId: user.uid,
-      displayName: user.displayName || "Anon",
-      photoURL: user.photoURL || "",
-      caption: capIn.value.trim(),
-      ipfsHash: cid,
-      mediaType: file.type.startsWith("video") ? "video" : "image",
-      timestamp: Date.now()
-    });
-
-    fileIn.value = "";
-    capIn.value = "";
-    bar.style.width = "100%";
-    setTimeout(() => prog.style.display = "none", 400);
-    getPosts();
-  } catch(e) {
-    alert(e);
-    prog.style.display = "none";
-  } finally {
-    upload.querySelector("button").disabled = false;
-  }
-};
-</script>
-</body>
-</html>
+  if(!fileIn.files[0]) return alert("Choose a file");
+  if(capIn.value.trim().length<4) return alert("Caption too short");
+  const file=fileIn.files[0]; upload.querySelector("button").disabled=true;
+  prog.style.display="block";ba
