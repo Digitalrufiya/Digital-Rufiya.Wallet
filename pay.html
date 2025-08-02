@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Wallet — Pay Request</title>
+  <title>DRF Payment</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,29 +15,36 @@
     }
     h2 {
       text-align: center;
-      margin-bottom: 20px;
       color: #007bff;
+      margin-bottom: 10px;
     }
     .request-details {
       background: #fff;
-      padding: 20px;
+      padding: 15px 20px;
       border-radius: 12px;
       box-shadow: 0 4px 10px rgb(0 123 255 / 0.15);
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
-    .label {
+    .request-details p {
+      margin: 8px 0;
       font-weight: 600;
-      margin-bottom: 6px;
+    }
+    label {
       display: block;
+      margin: 12px 0 6px;
+      font-weight: 600;
       color: #333;
     }
-    .value {
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      color: #555;
-      word-wrap: break-word;
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
     }
     button {
+      margin-top: 20px;
       width: 100%;
       background-color: #007bff;
       border: none;
@@ -49,29 +56,15 @@
       font-weight: 700;
       transition: background-color 0.3s ease;
     }
-    button:disabled {
-      background-color: #a1c3ff;
-      cursor: not-allowed;
-    }
-    button:hover:not(:disabled) {
+    button:hover {
       background-color: #0056b3;
-    }
-    .message-box {
-      background-color: #e7f1ff;
-      border-left: 6px solid #007bff;
-      padding: 10px;
-      margin-bottom: 15px;
-      font-size: 0.95rem;
-      color: #055293;
-      border-radius: 6px;
-      white-space: pre-wrap;
     }
     .error {
       color: #b00020;
       background: #ffd7d7;
       padding: 10px;
       border-radius: 6px;
-      margin-bottom: 15px;
+      margin-top: 15px;
       font-weight: 600;
       text-align: center;
     }
@@ -80,152 +73,186 @@
       background: #d4edda;
       padding: 10px;
       border-radius: 6px;
-      margin-bottom: 15px;
+      margin-top: 15px;
       font-weight: 600;
       text-align: center;
+    }
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-  <h2>DRF Token Payment Request</h2>
+  <h2>Complete Payment</h2>
 
-  <div id="content">
-    <p>Loading request...</p>
+  <div id="container">
+    <p>Loading payment request...</p>
   </div>
 
   <script>
-    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6"; // Your DRF token contract
-    const DRF_ABI = [
-      "function transfer(address to, uint amount) returns (bool)",
-      "function decimals() view returns (uint8)"
-    ];
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+
     const STORAGE_KEY = 'drf_payment_requests';
 
-    // Load requests from localStorage
     function getRequests() {
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
     }
-    // Find request by id
+
     function findRequestById(id) {
-      const requests = getRequests();
-      return requests.find(r => r.id === id);
+      return getRequests().find(r => r.id === id);
     }
-    // Get query param
-    function getQueryParam(name) {
+
+    function getQueryParam(param) {
       const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(name);
+      return urlParams.get(param);
     }
 
-    async function payDRF(amount, toAddress) {
-      if (!window.ethereum) throw new Error("No Ethereum wallet found. Please install MetaMask.");
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
-      const drfContract = new ethers.Contract(DRF_ADDRESS, DRF_ABI, signer);
-      const decimals = await drfContract.decimals();
-      const amountWei = ethers.utils.parseUnits(amount.toString(), decimals);
+    async function sendPayment(request, signer, provider) {
+      try {
+        let tx;
+        const amountStr = request.amount.toString();
+        if (request.token === "BNB") {
+          tx = await signer.sendTransaction({
+            to: request.wallet,
+            value: ethers.utils.parseEther(amountStr)
+          });
+        } else {
+          const tokenAddress = 
+            request.token === "DRF" ? DRF_ADDRESS : 
+            request.token === "USDT" ? USDT_ADDRESS : 
+            request.token === "USDC" ? USDC_ADDRESS : null;
 
-      const tx = await drfContract.transfer(toAddress, amountWei);
-      return tx.wait(); // wait for transaction to be mined
-    }
+          if (!tokenAddress) throw new Error("Unsupported token");
 
-    function createElement(tag, attrs = {}, ...children) {
-      const el = document.createElement(tag);
-      for (const [k,v] of Object.entries(attrs)) {
-        if (k === "class") el.className = v;
-        else if (k === "html") el.innerHTML = v;
-        else el.setAttribute(k,v);
+          const decimals = 18; // Usually 18, but USDT/USDC often have 6 decimals on BSC (important!)
+          // For safety, USDT and USDC on BSC have 18 decimals here for example, adjust if you know differently.
+          // You can also fetch decimals dynamically if needed.
+
+          const tokenContract = new ethers.Contract(tokenAddress, ["function transfer(address,uint256) returns (bool)"], signer);
+          tx = await tokenContract.transfer(request.wallet, ethers.utils.parseUnits(amountStr, decimals));
+        }
+        return tx.wait();
+      } catch (e) {
+        throw e;
       }
-      children.forEach(c => {
-        if (typeof c === "string") el.appendChild(document.createTextNode(c));
-        else if (c) el.appendChild(c);
-      });
-      return el;
     }
 
-    async function renderRequest(request) {
-      const container = document.getElementById("content");
-      container.innerHTML = "";
+    async function main() {
+      const container = document.getElementById('container');
+      const requestId = getQueryParam('id');
 
-      // Request details box
-      const details = createElement("div", {class:"request-details"},
-        createElement("span", {class:"label"}, "Amount to Pay (DRF):"),
-        createElement("span", {class:"value"}, request.amount),
-        createElement("span", {class:"label"}, "Message:"),
-        createElement("div", {class:"message-box"}, request.message || "(No message)"),
-        createElement("span", {class:"label"}, "Pay To Wallet Address:"),
-        createElement("span", {class:"value"}, request.wallet || "Unknown")
-      );
-
-      // Connect wallet & pay button
-      const payButton = createElement("button", {}, "Connect Wallet & Pay");
-
-      let statusBox = createElement("div");
-
-      let connected = false;
-
-      async function connectWallet() {
-        try {
-          if (!window.ethereum) {
-            alert("No Ethereum wallet found. Please install MetaMask or compatible wallet.");
-            return;
-          }
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await provider.send("eth_requestAccounts", []);
-          const signer = provider.getSigner();
-          const address = await signer.getAddress();
-          if (address.toLowerCase() !== request.wallet.toLowerCase()) {
-            // No problem: payer can pay TO the request wallet address, so no conflict
-          }
-          connected = true;
-          payButton.textContent = `Pay ${request.amount} DRF`;
-          payButton.disabled = false;
-          statusBox.innerHTML = `<div class="success">Wallet connected: ${address}</div>`;
-        } catch (e) {
-          statusBox.innerHTML = `<div class="error">Wallet connection failed: ${e.message}</div>`;
-          payButton.disabled = true;
-        }
-      }
-
-      payButton.disabled = true;
-      payButton.onclick = async () => {
-        if (!connected) {
-          await connectWallet();
-          return;
-        }
-        payButton.disabled = true;
-        statusBox.innerHTML = "Sending transaction, please wait...";
-        try {
-          await payDRF(request.amount, request.wallet);
-          statusBox.innerHTML = `<div class="success">Payment successful! Thank you.</div>`;
-          payButton.style.display = "none";
-        } catch (err) {
-          statusBox.innerHTML = `<div class="error">Payment failed: ${err.message}</div>`;
-          payButton.disabled = false;
-        }
-      };
-
-      container.appendChild(details);
-      container.appendChild(payButton);
-      container.appendChild(statusBox);
-    }
-
-    window.onload = () => {
-      const id = getQueryParam("id");
-      const container = document.getElementById("content");
-      if (!id) {
-        container.innerHTML = `<div class="error">No payment request ID found in the URL.</div>`;
+      if (!requestId) {
+        container.innerHTML = `<div class="error">No payment request ID provided.</div>`;
         return;
       }
-      const request = findRequestById(id);
+
+      const request = findRequestById(requestId);
+
       if (!request) {
         container.innerHTML = `<div class="error">Payment request not found or expired.</div>`;
         return;
       }
-      renderRequest(request);
-    };
+
+      container.innerHTML = `
+        <div class="request-details">
+          <p><strong>Amount:</strong> ${request.amount} ${request.token}</p>
+          <p><strong>Pay To Wallet:</strong> ${request.wallet}</p>
+          ${request.message ? `<p><strong>Message:</strong> ${request.message}</p>` : ""}
+        </div>
+
+        <label for="payerWallet">Your Wallet Address (to pay from):</label>
+        <input type="text" id="payerWallet" placeholder="Connect your wallet address or paste here" />
+
+        <button id="payBtn">Pay ${request.amount} ${request.token}</button>
+
+        <div id="status"></div>
+      `;
+
+      const payBtn = document.getElementById('payBtn');
+      const payerWalletInput = document.getElementById('payerWallet');
+      const statusDiv = document.getElementById('status');
+
+      // Connect wallet with Metamask or fallback to manual input
+      let provider;
+      let signer;
+
+      async function connectWallet() {
+        if (window.ethereum) {
+          try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            const addr = await signer.getAddress();
+            payerWalletInput.value = addr;
+            payerWalletInput.disabled = true;
+            return true;
+          } catch (err) {
+            statusDiv.innerHTML = `<div class="error">Wallet connection rejected.</div>`;
+            return false;
+          }
+        } else {
+          statusDiv.innerHTML = `<div class="error">No Ethereum wallet detected. Please install MetaMask or similar.</div>`;
+          return false;
+        }
+      }
+
+      await connectWallet();
+
+      payBtn.onclick = async () => {
+        statusDiv.innerHTML = "";
+        payBtn.disabled = true;
+        payBtn.classList.add('loading');
+
+        // Confirm payer wallet matches signer address
+        let payerAddress;
+        if (signer) {
+          try {
+            payerAddress = await signer.getAddress();
+            if (payerAddress.toLowerCase() !== payerWalletInput.value.trim().toLowerCase()) {
+              statusDiv.innerHTML = `<div class="error">Connected wallet does not match the payer address input.</div>`;
+              payBtn.disabled = false;
+              payBtn.classList.remove('loading');
+              return;
+            }
+          } catch {
+            statusDiv.innerHTML = `<div class="error">Unable to verify connected wallet address.</div>`;
+            payBtn.disabled = false;
+            payBtn.classList.remove('loading');
+            return;
+          }
+        } else {
+          payerAddress = payerWalletInput.value.trim();
+          if (!ethers.utils.isAddress(payerAddress)) {
+            statusDiv.innerHTML = `<div class="error">Invalid payer wallet address.</div>`;
+            payBtn.disabled = false;
+            payBtn.classList.remove('loading');
+            return;
+          }
+          statusDiv.innerHTML = `<div class="error">Please connect your wallet to send payment.</div>`;
+          payBtn.disabled = false;
+          payBtn.classList.remove('loading');
+          return;
+        }
+
+        try {
+          await sendPayment(request, signer, provider);
+          statusDiv.innerHTML = `<div class="success">Payment successful! Thank you.</div>`;
+          payBtn.style.display = 'none';
+        } catch (err) {
+          statusDiv.innerHTML = `<div class="error">Payment failed: ${err.message}</div>`;
+          payBtn.disabled = false;
+          payBtn.classList.remove('loading');
+        }
+      };
+    }
+
+    window.onload = main;
   </script>
 </body>
 </html>
