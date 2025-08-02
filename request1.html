@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create DRF Payment Request</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 480px;
+      margin: auto;
+      background: #f4f9fb;
+      padding: 20px;
+      color: #222;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #007bff;
+    }
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgb(0 123 255 / 0.15);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 80px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      padding: 14px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .link-container {
+      margin-top: 25px;
+      background: #e7f1ff;
+      border-left: 6px solid #007bff;
+      padding: 15px;
+      border-radius: 8px;
+      word-break: break-word;
+      font-weight: 600;
+      color: #055293;
+    }
+    .error {
+      color: #b00020;
+      background: #ffd7d7;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-weight: 600;
+      text-align: center;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+  <h2>Create a Payment Request</h2>
+
+  <form id="requestForm" autocomplete="off">
+    <label for="token-select">Select Token</label>
+    <select id="token-select" required>
+      <option value="DRF">DRF</option>
+      <option value="USDC">USDC</option>
+      <option value="USDT">USDT</option>
+      <option value="BNB">BNB</option>
+    </select>
+
+    <label for="amount">Amount</label>
+    <input type="number" id="amount" step="any" min="0.00000001" placeholder="0.0" required />
+
+    <label for="wallet">Your Wallet Address (to receive payment)</label>
+    <input type="text" id="wallet" placeholder="0x..." required />
+
+    <label for="message">Message (optional)</label>
+    <textarea id="message" placeholder="Write a message or payment reason"></textarea>
+
+    <button type="submit">Create Payment Request</button>
+    <div id="error" class="error" style="display:none;"></div>
+  </form>
+
+  <div id="linkContainer" class="link-container" style="display:none;">
+    Share this payment link:<br />
+    <a href="#" id="paymentLink" target="_blank"></a>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'drf_payment_requests';
+
+    function getRequests() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function saveRequest(request) {
+      const all = getRequests();
+      all.push(request);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    }
+
+    function generateId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    function isValidAddress(addr) {
+      try {
+        return ethers.utils.isAddress(addr);
+      } catch {
+        return false;
+      }
+    }
+
+    document.getElementById('requestForm').onsubmit = function(e) {
+      e.preventDefault();
+      const errorDiv = document.getElementById('error');
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      const token = document.getElementById('token-select').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const wallet = document.getElementById('wallet').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      if (isNaN(amount) || amount <= 0) {
+        errorDiv.textContent = "Please enter a valid amount greater than zero.";
+        errorDiv.style.display = 'block';
+        return;
+      }
+      if (!isValidAddress(wallet)) {
+        errorDiv.textContent = "Please enter a valid wallet address.";
+        errorDiv.style.display = 'block';
+        return;
+      }
+      if (message.length > 250) {
+        errorDiv.textContent = "Message is too long (max 250 characters).";
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const id = generateId();
+      const newRequest = {
+        id,
+        token,
+        amount,
+        wallet,
+        message,
+        createdAt: Date.now()
+      };
+
+      saveRequest(newRequest);
+
+      // Smart link generation for GitHub Pages & custom domains
+      let baseURL = window.location.origin;
+      if (baseURL.includes("github.io")) {
+        baseURL += "/Digital-Rufiya.Wallet";
+      }
+
+      const url = `${baseURL}/pay.html?id=${id}`;
+
+      const linkContainer = document.getElementById('linkContainer');
+      const paymentLink = document.getElementById('paymentLink');
+      paymentLink.href = url;
+      paymentLink.textContent = url;
+      linkContainer.style.display = 'block';
+
+      this.reset();
+    };
+  </script>
+</body>
+</html>
