@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRF Wallet — Pay Request</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+</head>
+<body style="font-family: Arial, sans-serif; background:#f4f9fb; padding:20px; max-width: 500px; margin: auto;">
+  <h2>Payment Request</h2>
+  <div id="details" style="background:#fff; padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
+  <button id="payBtn" disabled style="padding: 10px; width: 100%; background: #28a745; color: white; border: none; border-radius: 5px;">Pay Now</button>
+
+  <script>
+    let userWallet;
+
+    const params = new URLSearchParams(window.location.search);
+    const to = params.get("to");
+    const amount = params.get("amount");
+    const msg = params.get("msg");
+
+    const detailsDiv = document.getElementById("details");
+    const payBtn = document.getElementById("payBtn");
+
+    if (!to || !amount || !ethers.utils.isAddress(to) || isNaN(amount) || amount <= 0) {
+      detailsDiv.innerHTML = "<p>Invalid payment request link.</p>";
+    } else {
+      detailsDiv.innerHTML = `
+        <p><strong>Recipient:</strong> ${to}</p>
+        <p><strong>Amount:</strong> ${amount}</p>
+        <p><strong>Message:</strong> ${msg ? decodeURIComponent(msg) : "(none)"}</p>
+      `;
+      payBtn.disabled = false;
+    }
+
+    async function initializeWallet() {
+      const password = prompt("Enter your wallet password to unlock:");
+      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
+      if (!encryptedWallet) {
+        alert("No wallet found. Please create one in your main wallet page first.");
+        return;
+      }
+      try {
+        const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
+        userWallet = userWallet.connect(provider);
+      } catch {
+        alert("Failed to unlock wallet. Please try again.");
+      }
+    }
+
+    payBtn.onclick = async () => {
+      if (!userWallet) {
+        await initializeWallet();
+        if (!userWallet) return;
+      }
+
+      try {
+        const tx = await userWallet.sendTransaction({
+          to: to,
+          value: ethers.utils.parseEther(amount)
+        });
+        await tx.wait();
+        alert("Payment successful! TxHash: " + tx.hash);
+      } catch (err) {
+        alert("Payment failed: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
