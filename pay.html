@@ -12,22 +12,38 @@
   <button id="payBtn" disabled style="padding: 10px; width: 100%; background: #28a745; color: white; border: none; border-radius: 5px;">Pay Now</button>
 
   <script>
+    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
+    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
+    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+
     let userWallet;
+    let tokenDecimals = 18;
 
     const params = new URLSearchParams(window.location.search);
     const to = params.get("to");
     const amount = params.get("amount");
+    const token = params.get("token") || "BNB";
     const msg = params.get("msg");
 
     const detailsDiv = document.getElementById("details");
     const payBtn = document.getElementById("payBtn");
 
-    if (!to || !amount || !ethers.utils.isAddress(to) || isNaN(amount) || amount <= 0) {
+    function isValidAddress(address) {
+      try {
+        ethers.utils.getAddress(address);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    if (!to || !amount || !isValidAddress(to) || isNaN(amount) || amount <= 0) {
       detailsDiv.innerHTML = "<p>Invalid payment request link.</p>";
     } else {
       detailsDiv.innerHTML = `
         <p><strong>Recipient:</strong> ${to}</p>
-        <p><strong>Amount:</strong> ${amount}</p>
+        <p><strong>Amount:</strong> ${amount} ${token}</p>
         <p><strong>Message:</strong> ${msg ? decodeURIComponent(msg) : "(none)"}</p>
       `;
       payBtn.disabled = false;
@@ -41,7 +57,7 @@
         return;
       }
       try {
-        const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        const provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
         userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
         userWallet = userWallet.connect(provider);
       } catch {
@@ -49,23 +65,57 @@
       }
     }
 
-    payBtn.onclick = async () => {
+    async function sendTokenPayment() {
       if (!userWallet) {
         await initializeWallet();
         if (!userWallet) return;
       }
 
       try {
-        const tx = await userWallet.sendTransaction({
-          to: to,
-          value: ethers.utils.parseEther(amount)
-        });
-        await tx.wait();
-        alert("Payment successful! TxHash: " + tx.hash);
+        if (token === "BNB") {
+          // Send BNB native token
+          const tx = await userWallet.sendTransaction({
+            to: to,
+            value: ethers.utils.parseEther(amount)
+          });
+          await tx.wait();
+          alert("BNB payment successful! TxHash: " + tx.hash);
+        } else {
+          // Send ERC20 token (DRF, USDT, USDC)
+          let tokenAddress;
+          if (token === "DRF") tokenAddress = DRF_ADDRESS;
+          else if (token === "USDT") tokenAddress = USDT_ADDRESS;
+          else if (token === "USDC") tokenAddress = USDC_ADDRESS;
+          else {
+            alert("Unsupported token.");
+            return;
+          }
+
+          // Adjust decimals if needed, USDT and USDC use 18 decimals here, adjust if needed
+          tokenDecimals = 18;
+
+          const erc20ABI = [
+            "function transfer(address to, uint amount) public returns (bool)",
+            "function decimals() view returns (uint8)"
+          ];
+
+          const contract = new ethers.Contract(tokenAddress, erc20ABI, userWallet);
+
+          // Optional: get decimals dynamically
+          try {
+            tokenDecimals = await contract.decimals();
+          } catch {}
+
+          const tx = await contract.transfer(to, ethers.utils.parseUnits(amount, tokenDecimals));
+          await tx.wait();
+          alert(`${token} payment successful! TxHash: ${tx.hash}`);
+        }
       } catch (err) {
         alert("Payment failed: " + err.message);
       }
-    };
+    }
+
+    payBtn.onclick = sendTokenPayment;
   </script>
 </body>
 </html>
