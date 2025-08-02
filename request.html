@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Wallet — Create Payment Request</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 20px; background: #f9f9f9; }
+  input, textarea, select, button { width: 100%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;}
+  button { background: #007bff; color: white; border: none; cursor: pointer; }
+  button:hover { background: #0056b3; }
+  .request-list { margin-top: 30px; }
+  .request-item { background: #fff; padding: 10px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 0 4px #ccc; }
+  .link-input { font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h2>Create a Payment Request</h2>
+
+<label>Amount (DRF):</label>
+<input type="number" id="amount" min="0" step="any" placeholder="e.g. 10" required />
+
+<label>Message (optional):</label>
+<textarea id="message" rows="3" placeholder="Describe what this payment is for"></textarea>
+
+<button id="createRequestBtn">Create Request</button>
+
+<div class="request-list" id="requestsContainer">
+  <h3>Your Requests</h3>
+  <div id="requestItems"></div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'drf_payment_requests';
+
+  function getRequests() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  function saveRequests(requests) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+  }
+
+  function renderRequests() {
+    const container = document.getElementById('requestItems');
+    container.innerHTML = '';
+    const requests = getRequests();
+    if (requests.length === 0) {
+      container.textContent = 'No requests yet.';
+      return;
+    }
+    requests.forEach(req => {
+      const div = document.createElement('div');
+      div.className = 'request-item';
+      const link = `${location.origin}${location.pathname.replace('request.html', '')}pay.html?id=${req.id}`;
+      div.innerHTML = `
+        <strong>Amount:</strong> ${req.amount} DRF<br/>
+        <strong>Message:</strong> ${req.message || '<em>No message</em>'}<br/>
+        <label>Payment Link:</label>
+        <input type="text" readonly class="link-input" value="${link}" onclick="this.select()" />
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function generateId() {
+    return 'req_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  document.getElementById('createRequestBtn').onclick = () => {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const message = document.getElementById('message').value.trim();
+
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount greater than zero.');
+      return;
+    }
+
+    const requests = getRequests();
+    const newRequest = {
+      id: generateId(),
+      amount,
+      message,
+      createdAt: Date.now()
+    };
+    requests.push(newRequest);
+    saveRequests(requests);
+
+    alert('Request created! You can share the link below.');
+    document.getElementById('amount').value = '';
+    document.getElementById('message').value = '';
+    renderRequests();
+  };
+
+  // Initial load
+  renderRequests();
+</script>
+</body>
+</html>
