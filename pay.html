@@ -1,121 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRF Wallet — Pay Request</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Wallet — Pay Request</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 20px; background: #f9f9f9; }
+  .request-details { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 6px #ccc; }
+  button { background: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; margin-top: 15px; width: 100%; }
+  button:hover { background: #1e7e34; }
+  .error { color: red; }
+</style>
 </head>
-<body style="font-family: Arial, sans-serif; background:#f4f9fb; padding:20px; max-width: 500px; margin: auto;">
-  <h2>Payment Request</h2>
-  <div id="details" style="background:#fff; padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
-  <button id="payBtn" disabled style="padding: 10px; width: 100%; background: #28a745; color: white; border: none; border-radius: 5px;">Pay Now</button>
+<body>
+<h2>Payment Request</h2>
 
-  <script>
-    const DRF_ADDRESS = "0x7788a60dbC85AB46767F413EC7d51F149AA1bec6";
-    const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
-    const USDC_ADDRESS = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d";
-    const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+<div id="content">
+  <p>Loading request...</p>
+</div>
 
-    let userWallet;
-    let tokenDecimals = 18;
+<script>
+  const STORAGE_KEY = 'drf_payment_requests';
 
-    const params = new URLSearchParams(window.location.search);
-    const to = params.get("to");
-    const amount = params.get("amount");
-    const token = params.get("token") || "BNB";
-    const msg = params.get("msg");
+  function getRequests() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
 
-    const detailsDiv = document.getElementById("details");
-    const payBtn = document.getElementById("payBtn");
+  function findRequestById(id) {
+    const requests = getRequests();
+    return requests.find(r => r.id === id);
+  }
 
-    function isValidAddress(address) {
-      try {
-        ethers.utils.getAddress(address);
-        return true;
-      } catch {
-        return false;
-      }
+  function getQueryParam(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+  function payNow(request) {
+    alert(`To pay ${request.amount} DRF, please open your DRF Wallet and send the amount to the wallet address shown there.\n\nMessage: ${request.message || 'No message'}`);
+  }
+
+  window.onload = () => {
+    const id = getQueryParam('id');
+    const contentDiv = document.getElementById('content');
+    if (!id) {
+      contentDiv.innerHTML = '<p class="error">No payment request ID found in the URL.</p>';
+      return;
     }
-
-    if (!to || !amount || !isValidAddress(to) || isNaN(amount) || amount <= 0) {
-      detailsDiv.innerHTML = "<p>Invalid payment request link.</p>";
-    } else {
-      detailsDiv.innerHTML = `
-        <p><strong>Recipient:</strong> ${to}</p>
-        <p><strong>Amount:</strong> ${amount} ${token}</p>
-        <p><strong>Message:</strong> ${msg ? decodeURIComponent(msg) : "(none)"}</p>
-      `;
-      payBtn.disabled = false;
+    const request = findRequestById(id);
+    if (!request) {
+      contentDiv.innerHTML = '<p class="error">Payment request not found or expired.</p>';
+      return;
     }
-
-    async function initializeWallet() {
-      const password = prompt("Enter your wallet password to unlock:");
-      const encryptedWallet = localStorage.getItem("drf_encrypted_wallet");
-      if (!encryptedWallet) {
-        alert("No wallet found. Please create one in your main wallet page first.");
-        return;
-      }
-      try {
-        const provider = new ethers.providers.JsonRpcProvider(BSC_RPC_URL);
-        userWallet = await ethers.Wallet.fromEncryptedJson(encryptedWallet, password);
-        userWallet = userWallet.connect(provider);
-      } catch {
-        alert("Failed to unlock wallet. Please try again.");
-      }
-    }
-
-    async function sendTokenPayment() {
-      if (!userWallet) {
-        await initializeWallet();
-        if (!userWallet) return;
-      }
-
-      try {
-        if (token === "BNB") {
-          // Send BNB native token
-          const tx = await userWallet.sendTransaction({
-            to: to,
-            value: ethers.utils.parseEther(amount)
-          });
-          await tx.wait();
-          alert("BNB payment successful! TxHash: " + tx.hash);
-        } else {
-          // Send ERC20 token (DRF, USDT, USDC)
-          let tokenAddress;
-          if (token === "DRF") tokenAddress = DRF_ADDRESS;
-          else if (token === "USDT") tokenAddress = USDT_ADDRESS;
-          else if (token === "USDC") tokenAddress = USDC_ADDRESS;
-          else {
-            alert("Unsupported token.");
-            return;
-          }
-
-          // Adjust decimals if needed, USDT and USDC use 18 decimals here, adjust if needed
-          tokenDecimals = 18;
-
-          const erc20ABI = [
-            "function transfer(address to, uint amount) public returns (bool)",
-            "function decimals() view returns (uint8)"
-          ];
-
-          const contract = new ethers.Contract(tokenAddress, erc20ABI, userWallet);
-
-          // Optional: get decimals dynamically
-          try {
-            tokenDecimals = await contract.decimals();
-          } catch {}
-
-          const tx = await contract.transfer(to, ethers.utils.parseUnits(amount, tokenDecimals));
-          await tx.wait();
-          alert(`${token} payment successful! TxHash: ${tx.hash}`);
-        }
-      } catch (err) {
-        alert("Payment failed: " + err.message);
-      }
-    }
-
-    payBtn.onclick = sendTokenPayment;
-  </script>
+    contentDiv.innerHTML = `
+      <div class="request-details">
+        <p><strong>Amount:</strong> ${request.amount} DRF</p>
+        <p><strong>Message:</strong> ${request.message || '<em>No message</em>'}</p>
+        <button onclick="payNow(request)">Pay Now</button>
+      </div>
+    `;
+  };
+</script>
 </body>
 </html>
