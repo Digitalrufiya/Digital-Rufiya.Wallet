@@ -468,152 +468,163 @@
           </div>
         </header>
         <div class="post-caption">${escapeHTML(p.caption || "")}</div>
-        <div class="post-media" id="m-${p.id}"></div>
         <div class="product-info">
-          <div><strong>Product:</strong> ${escapeHTML(p.productTitle || "")}</div>
-          <div class="product-price">Price: MVR ${
-            p.productPrice ? Number(p.productPrice).toFixed(2) : "0.00"
-          }</div>
+          <div><strong>Title:</strong> ${escapeHTML(p.productTitle || "")}</div>
+          <div class="product-price">Price: MVR ${escapeHTML(p.productPrice || "")}</div>
           ${
             p.productLocation
-              ? `<div><strong>Location:</strong> ${escapeHTML(
-                  p.productLocation
-                )}</div>`
+              ? `<div>Location: ${escapeHTML(p.productLocation)}</div>`
               : ""
           }
-          <div class="product-contact"><strong>Contact:</strong> ${escapeHTML(
-            p.productContact || ""
-          )}</div>
-        </div>
-        <div class="buttons">
-          <a href="https://wa.me/${encodeURIComponent(
-            p.productContact.replace(/[^0-9]/g, "")
-          )}" target="_blank" rel="noopener" aria-label="Contact Seller on WhatsApp">Contact Seller</a>
+          <div class="product-contact">Contact: ${escapeHTML(p.productContact || "")}</div>
           ${
             p.paymentLink
-              ? `<a href="${p.paymentLink}" target="_blank" rel="noopener" class="btn" aria-label="Pay Seller">Pay Seller</a>`
+              ? `<div><a href="${escapeHTML(
+                  p.paymentLink
+                )}" target="_blank" rel="noopener">Payment Link</a></div>`
               : ""
           }
         </div>
-      `;
-      posts.append(card);
-
-      const holder = card.querySelector(`#m-${p.id}`);
-
-      if (p.mediaType === "video") {
-        const url = await getGatewayUrl(p.ipfsHash);
-        if (url) {
-          const v = document.createElement("video");
-          v.controls = true;
-          v.playsInline = true;
-          v.preload = "metadata";
-          v.dataset.src = url;
-          observer.observe(v);
-          holder.replaceWith(v);
-        } else {
-          holder.textContent = "Video unavailable.";
+        ${
+          p.cid
+            ? (p.mediaType && p.mediaType.startsWith("video")
+              ? `<video controls preload="none" width="100%" height="auto" data-src="https://gateway.pinata.cloud/ipfs/${p.cid}"></video>`
+              : `<img src="https://gateway.pinata.cloud/ipfs/${p.cid}" alt="Product media" loading="lazy" />`)
+            : ""
         }
-      } else {
-        const img = document.createElement("img");
-        img.src = "https://gateway.pinata.cloud/ipfs/" + p.ipfsHash;
-        img.alt = "Product media";
-        holder.replaceWith(img);
+      `;
+      posts.appendChild(card);
+
+      if (p.mediaType && p.mediaType.startsWith("video")) {
+        const video = card.querySelector("video");
+        observer.observe(video);
       }
     }
   }
 
-  async function getPosts() {
-    const snap = await get(ref(db, "posts"));
-    const obj = snap.val() || {};
-    all = Object.entries(obj)
-      .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => b.timestamp - a.timestamp);
-    render();
+  async function loadPosts() {
+    try {
+      const snap = await get(ref(db, "products"));
+      if (snap.exists()) {
+        all = Object.values(snap.val());
+      } else {
+        all = [];
+      }
+      render();
+    } catch (e) {
+      console.error("Load error:", e);
+    }
   }
 
-  login.onclick = () => signInWithPopup(auth, provider);
-  logout.onclick = () => signOut(auth);
-  onAuthStateChanged(auth, (u) => {
-    user = u;
-    login.style.display = u ? "none" : "block";
-    logout.style.display = u ? "block" : "none";
-    upload.style.display = u ? "block" : "none";
-    primaryNav.style.display = u ? "flex" : "none";
-    getPosts();
-  });
-  qIn.oninput = render;
+  qIn.addEventListener("input", render);
 
-  upload.onsubmit = async (e) => {
+  upload.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!fileIn.files[0]) return alert("Choose a product image/video");
-    if (titleIn.value.trim().length < 2) return alert("Product Title too short");
-    if (!priceIn.value || Number(priceIn.value) < 0)
-      return alert("Invalid price");
-    if (contactIn.value.trim().length < 5)
-      return alert("Enter valid contact info");
-
-    const file = fileIn.files[0];
-    upload.querySelector("button").disabled = true;
-    prog.style.display = "block";
-    bar.style.width = "0";
-
-    try {
-      // Upload to Pinata IPFS
-      const fd = new FormData();
-      fd.append("file", file);
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
-      xhr.setRequestHeader("Authorization", pinataJWT);
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable)
-          bar.style.width = (e.loaded / e.total) * 100 + "%";
-      };
-      const cid = await new Promise((res, rej) => {
-        xhr.onload = () => {
-          try {
-            res(JSON.parse(xhr.responseText).IpfsHash);
-          } catch {
-            rej("Pinata error");
-          }
-        };
-        xhr.onerror = () => rej("Upload failed");
-        xhr.send(fd);
-      });
-
-      // Save post to Firebase DB
-      const newRef = push(ref(db, "posts"));
-      await set(newRef, {
-        userId: user.uid,
-        displayName: user.displayName || "Anon",
-        photoURL: user.photoURL || "",
-        caption: "", // no caption for products or keep empty
-        ipfsHash: cid,
-        mediaType: file.type.startsWith("video") ? "video" : "image",
-        timestamp: Date.now(),
-        productTitle: titleIn.value.trim(),
-        productPrice: Number(priceIn.value),
-        productLocation: locationIn.value.trim(),
-        productContact: contactIn.value.trim(),
-        paymentLink: paymentLinkIn.value.trim(),
-      });
-
-      // Reset form UI
-      fileIn.value = "";
-      titleIn.value = "";
-      priceIn.value = "";
-      locationIn.value = "";
-      contactIn.value = "";
-      paymentLinkIn.value = "";
-      bar.style.width = "100%";
-      setTimeout(() => (prog.style.display = "none"), 400);
-      getPosts();
-    } catch (e) {
-      alert(e);
-      prog.style.display = "none";
-    } finally {
-      upload.querySelector("button").disabled = false;
+    if (!fileIn.files.length) {
+      alert("Please select a file");
+      return;
     }
-  };
+    const file = fileIn.files[0];
+    const caption = "";
+    const productTitle = titleIn.value.trim();
+    const productPrice = priceIn.value.trim();
+    const productLocation = locationIn.value.trim();
+    const productContact = contactIn.value.trim();
+    const paymentLink = paymentLinkIn.value.trim();
+    const mediaType = file.type;
+
+    // Upload file to Pinata IPFS
+    prog.style.display = "block";
+    bar.style.width = "0%";
+
+    const form = new FormData();
+    form.append("file", file);
+
+    const uploadRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: pinataJWT,
+      },
+      body: form,
+    });
+
+    if (!uploadRes.ok) {
+      prog.style.display = "none";
+      alert("Failed to upload media to IPFS");
+      return;
+    }
+
+    const uploadJson = await uploadRes.json();
+    const cid = uploadJson.IpfsHash;
+
+    bar.style.width = "100%";
+
+    const productData = {
+      uid: user.uid,
+      displayName: user.displayName || "Anon",
+      photoURL: user.photoURL || null,
+      caption,
+      productTitle,
+      productPrice,
+      productLocation,
+      productContact,
+      paymentLink,
+      mediaType,
+      cid,
+      timestamp: Date.now(),
+    };
+
+    // Save product post to Firebase Realtime Database
+    try {
+      const newPostRef = push(ref(db, "products"));
+      await set(newPostRef, productData);
+      alert("Product posted successfully!");
+      upload.reset();
+      upload.style.display = "none";
+      login.style.display = "inline-block";
+      loadPosts();
+    } catch (e) {
+      alert("Failed to save product post");
+      console.error(e);
+    } finally {
+      prog.style.display = "none";
+      bar.style.width = "0%";
+    }
+  });
+
+  login.addEventListener("click", async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      user = result.user;
+    } catch (e) {
+      alert("Login failed");
+      console.error(e);
+    }
+  });
+
+  logout.addEventListener("click", async () => {
+    await signOut(auth);
+    user = null;
+    upload.style.display = "none";
+    login.style.display = "inline-block";
+    logout.style.display = "none";
+  });
+
+  onAuthStateChanged(auth, (u) => {
+    if (u) {
+      user = u;
+      login.style.display = "none";
+      logout.style.display = "inline-block";
+      upload.style.display = "block";
+    } else {
+      user = null;
+      login.style.display = "inline-block";
+      logout.style.display = "none";
+      upload.style.display = "none";
+    }
+  });
+
+  loadPosts();
 </script>
 </body>
 </html>
