@@ -243,59 +243,39 @@ img {
   opacity: 1
 }
 
-/* ==== UPLOAD FORM DESIGN FIX === */
-#uploadForm {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
+/* === UPLOAD FORM UI IMPROVEMENTS === */
+.upload-form {
   background: var(--bg-surface);
-  padding: 1rem 1rem 1.2rem;
+  padding: 1.5rem 1.25rem;
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
-  margin: 1rem 0;
-  max-width: 700px;
-  width: 100%;
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
-#uploadForm input[type="file"],
-#uploadForm input[type="text"],
-#uploadForm input[type="number"],
-#uploadForm input[type="url"] {
-  width: 100%;
-  padding: 0.6rem 0.9rem;
-  border: 1px solid #ced4da;
+
+.upload-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-body);
+}
+
+.upload-input {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #ced4da;
   border-radius: var(--radius);
   font-size: 1rem;
   background: var(--bg-surface-alt);
   color: var(--text-body);
   transition: border-color 0.2s ease;
 }
-#uploadForm input[type="file"] {
-  padding: 0.3rem 0.9rem;
-}
-#uploadForm input:focus {
+
+.upload-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 3px var(--accent-muted);
-}
-#prog {
-  margin-top: 0.5rem;
-  width: 100%;
-  height: 6px;
-  background: #e9ecef;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-#progBar {
-  height: 100%;
-  width: 0;
-  background: var(--accent);
-  transition: width 0.3s ease;
-  border-radius: var(--radius);
-}
-#uploadForm button[type="submit"] {
-  align-self: flex-start;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
+  box-shadow: 0 0 5px var(--accent-muted);
+  background: var(--bg-surface);
 }
 </style>
 </head>
@@ -319,15 +299,30 @@ img {
   <button id="loginBtn" class="btn">Sign in with Google</button>
   <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
 
-  <form id="uploadForm" style="display:none" autocomplete="off">
-    <input id="mediaFile" type="file" accept="image/*,video/*" required />
-    <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required />
-    <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required />
-    <input id="productLocation" type="text" placeholder="Location (optional)" />
-    <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required />
-    <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" />
-    <div id="prog" style="display:none"><div id="progBar"></div></div>
-    <button class="btn" type="submit">Post Product</button>
+  <form id="uploadForm" style="display:none" autocomplete="off" class="upload-form">
+    <label for="mediaFile" class="upload-label">Select Image/Video <span style="color:#007bff">*</span></label>
+    <input id="mediaFile" type="file" accept="image/*,video/*" required class="upload-input" />
+
+    <label for="productTitle" class="upload-label">Product Title <span style="color:#007bff">*</span></label>
+    <input id="productTitle" type="text" placeholder="Enter product title" minlength="2" required class="upload-input" />
+
+    <label for="productPrice" class="upload-label">Price (MVR) <span style="color:#007bff">*</span></label>
+    <input id="productPrice" type="number" min="0" step="0.01" placeholder="0.00" required class="upload-input" />
+
+    <label for="productLocation" class="upload-label">Location (Optional)</label>
+    <input id="productLocation" type="text" placeholder="Where is product located?" class="upload-input" />
+
+    <label for="productContact" class="upload-label">WhatsApp or Phone Number <span style="color:#007bff">*</span></label>
+    <input id="productContact" type="text" placeholder="Contact info" minlength="5" required class="upload-input" />
+
+    <label for="paymentLink" class="upload-label">DRF Wallet Payment Link (Optional)</label>
+    <input id="paymentLink" type="url" placeholder="https://wallet.drfmedia/..." class="upload-input" />
+
+    <div id="prog" style="display:none; margin: 10px 0; background:#e9ecef; border-radius: 0.25rem; overflow: hidden; height: 12px;">
+      <div id="progBar" style="width: 0; height: 100%; background: var(--accent); transition: width 0.3s ease;"></div>
+    </div>
+
+    <button class="btn" type="submit" style="width: 100%; font-size: 1.1rem; padding: 0.75rem;">Post Product</button>
   </form>
 
   <section id="postContainer" aria-live="polite"></section>
@@ -475,176 +470,150 @@ img {
     const term = qIn.value.trim().toLowerCase();
     posts.innerHTML = "";
     for (const p of all) {
-      if (term && !(p.caption || "").toLowerCase().includes(term) && !(p.productTitle || "").toLowerCase().includes(term) && !(p.productLocation || "").toLowerCase().includes(term))
-        continue;
+      if (term && !(p.caption || "").toLowerCase().includes(term)) continue;
 
-      const card = document.createElement("article");
-      card.className = "post-item";
-      card.innerHTML = `
-        <header class="post-owner">
-          <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" />
+      const isVideo = /\.(mp4|webm|ogg)$/i.test(p.mediaUrl);
+      const mediaHTML = isVideo
+        ? `<video controls preload="none" data-src="${p.mediaUrl}" muted playsinline loop poster="${p.thumb || ""}"></video>`
+        : `<img src="${p.mediaUrl}" alt="Product Image" loading="lazy" />`;
+
+      const locHTML = p.location ? `<div>📍 Location: ${escapeHTML(p.location)}</div>` : "";
+      const payHTML = p.paymentLink
+        ? `<div><a href="${escapeHTML(p.paymentLink)}" target="_blank" rel="noopener noreferrer" class="btn">Pay via DRF Wallet</a></div>`
+        : "";
+
+      const contactHTML = `<div class="product-contact">📱 Contact: ${escapeHTML(p.contact)}</div>`;
+
+      posts.insertAdjacentHTML(
+        "beforeend",
+        `
+      <article class="post-item" aria-label="Product posted by ${escapeHTML(p.ownerName)}">
+        <div class="post-owner">
+          <img src="${p.ownerPhoto}" alt="${escapeHTML(p.ownerName)}'s avatar" class="avatar" />
           <div>
-            <div>${escapeHTML(p.displayName || "Anon")}</div>
-            <time class="post-time" datetime="${p.createdAt}">${new Date(p.createdAt).toLocaleString()}</time>
+            <div>${escapeHTML(p.ownerName)}</div>
+            <div class="post-time">${new Date(p.createdAt).toLocaleString()}</div>
           </div>
-        </header>
-        <div class="post-caption">${escapeHTML(p.caption || "")}</div>
+        </div>
+        <div class="post-caption">${escapeHTML(p.caption)}</div>
         <div class="product-info">
-          <div><strong>Title:</strong> ${escapeHTML(p.productTitle || "")}</div>
-          <div class="product-price">Price: MVR ${p.productPrice?.toFixed(2) || "0.00"}</div>
-          ${p.productLocation ? `<div class="product-location">Location: ${escapeHTML(p.productLocation)}</div>` : ""}
-          <div class="product-contact">Contact: ${escapeHTML(p.productContact || "")}</div>
-          ${p.paymentLink ? `<div class="product-payment"><a href="${escapeHTML(p.paymentLink)}" target="_blank" rel="noopener noreferrer">Payment Link</a></div>` : ""}
+          <div class="product-price">Price: MVR ${Number(p.price).toFixed(2)}</div>
+          ${locHTML}
+          ${contactHTML}
+          ${payHTML}
         </div>
-        <div>
-          ${
-            p.mediaType === "video"
-              ? `<video preload="none" controls playsinline muted loop width="100%" data-src="${p.mediaUrl}"></video>`
-              : `<img loading="lazy" src="${p.mediaUrl}" alt="Product media" />`
-          }
-        </div>
-      `;
-      posts.appendChild(card);
-      if (p.mediaType === "video") {
-        const video = card.querySelector("video");
-        observer.observe(video);
-      }
+        <div style="margin-top:0.75rem">${mediaHTML}</div>
+      </article>`
+      );
     }
+    // Attach observer to all videos for lazy loading
+    document.querySelectorAll("video[data-src]").forEach((video) =>
+      observer.observe(video)
+    );
   }
 
-  async function loadPosts() {
-    const dbRef = ref(db, "marketplace");
-    try {
-      const snapshot = await get(dbRef);
-      if (snapshot.exists()) {
-        all = Object.values(snapshot.val()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      } else {
-        all = [];
-      }
-      await render();
-    } catch (err) {
-      console.error("Error loading posts:", err);
-    }
-  }
-
-  // Google login/logout handling
-  login.onclick = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      user = result.user;
-      login.style.display = "none";
-      logout.style.display = "inline-block";
-      upload.style.display = "flex";
-      await loadPosts();
-    } catch (err) {
-      alert("Login failed: " + err.message);
-    }
-  };
-  logout.onclick = async () => {
-    await signOut(auth);
-    user = null;
-    login.style.display = "inline-block";
-    logout.style.display = "none";
-    upload.style.display = "none";
-    posts.innerHTML = "";
-  };
-
-  onAuthStateChanged(auth, (u) => {
-    if (u) {
-      user = u;
-      login.style.display = "none";
-      logout.style.display = "inline-block";
-      upload.style.display = "flex";
-      loadPosts();
+  async function fetchPosts() {
+    const dbRef = ref(db, "products");
+    const snap = await get(dbRef);
+    if (snap.exists()) {
+      const data = snap.val();
+      all = Object.values(data).sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      render();
     } else {
-      user = null;
-      login.style.display = "inline-block";
-      logout.style.display = "none";
-      upload.style.display = "none";
-      posts.innerHTML = "";
+      all = [];
+      render();
     }
-  });
+  }
 
-  qIn.addEventListener("input", render);
-
-  upload.addEventListener("submit", async (e) => {
+  // Upload function with Pinata IPFS & Firebase DB
+  async function uploadMedia(e) {
     e.preventDefault();
-    if (!user) {
-      alert("Please sign in first.");
-      return;
-    }
+    if (!fileIn.files.length) return alert("Please select a file!");
+    if (!titleIn.value.trim()) return alert("Please enter product title!");
+    if (!priceIn.value || Number(priceIn.value) < 0) return alert("Please enter valid price!");
+    if (!contactIn.value.trim()) return alert("Please enter contact info!");
 
     const file = fileIn.files[0];
-    if (!file) {
-      alert("Please select a media file.");
-      return;
-    }
-
-    const title = titleIn.value.trim();
-    const price = parseFloat(priceIn.value);
-    const location = locationIn.value.trim();
-    const contact = contactIn.value.trim();
-    const paymentLink = paymentLinkIn.value.trim();
-
-    if (!title || isNaN(price) || price < 0 || !contact) {
-      alert("Please fill required fields properly.");
-      return;
-    }
+    const formData = new FormData();
+    formData.append("file", file);
 
     prog.style.display = "block";
     bar.style.width = "0%";
 
     try {
-      // Prepare form data for Pinata pinFileToIPFS
-      const formData = new FormData();
-      formData.append("file", file);
-
+      // Upload file to Pinata
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
+        body: formData,
         headers: {
           Authorization: pinataJWT,
         },
-        body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to upload media to IPFS");
+      if (!res.ok) throw new Error("IPFS upload failed!");
 
-      const json = await res.json();
-      const cid = json.IpfsHash;
-
-      // Try to get best gateway URL
-      let mediaUrl = await getGatewayUrl(cid);
-      if (!mediaUrl) mediaUrl = "https://gateway.pinata.cloud/ipfs/" + cid;
-
-      // Determine media type by MIME
-      const mediaType = file.type.startsWith("video") ? "video" : "image";
+      const { IpfsHash } = await res.json();
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${IpfsHash}`;
 
       // Save post metadata in Firebase Realtime Database
-      const postRef = push(ref(db, "marketplace"));
-      await set(postRef, {
-        uid: user.uid,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
+      const newPostRef = push(ref(db, "products"));
+      await set(newPostRef, {
+        mediaUrl: ipfsUrl,
+        thumb: "", // No thumb generated currently
+        caption: titleIn.value.trim(),
+        price: Number(priceIn.value).toFixed(2),
+        location: locationIn.value.trim() || "",
+        contact: contactIn.value.trim(),
+        paymentLink: paymentLinkIn.value.trim() || "",
+        ownerId: user.uid,
+        ownerName: user.displayName || "Unknown",
+        ownerPhoto: user.photoURL || "default-avatar.png",
         createdAt: new Date().toISOString(),
-        mediaUrl,
-        mediaType,
-        caption: "",
-        productTitle: title,
-        productPrice: price,
-        productLocation: location,
-        productContact: contact,
-        paymentLink,
       });
 
       alert("Product posted successfully!");
+
       upload.reset();
-      prog.style.display = "none";
-      await loadPosts();
+      upload.style.display = "none";
+      fetchPosts();
     } catch (err) {
       alert("Upload failed: " + err.message);
+    } finally {
       prog.style.display = "none";
+      bar.style.width = "0%";
+    }
+  }
+
+  // Authentication handling
+  login.addEventListener("click", () => {
+    signInWithPopup(auth, provider).catch((err) =>
+      alert("Login failed: " + err.message)
+    );
+  });
+  logout.addEventListener("click", () => {
+    signOut(auth).catch((err) => alert("Logout failed: " + err.message));
+  });
+
+  onAuthStateChanged(auth, (u) => {
+    user = u;
+    if (user) {
+      login.style.display = "none";
+      logout.style.display = "inline-block";
+      upload.style.display = "flex";
+    } else {
+      login.style.display = "inline-block";
+      logout.style.display = "none";
+      upload.style.display = "none";
     }
   });
+
+  upload.addEventListener("submit", uploadMedia);
+
+  qIn.addEventListener("input", () => render());
+
+  fetchPosts();
 </script>
 </body>
 </html>
