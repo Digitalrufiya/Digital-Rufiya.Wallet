@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DRFMedia Sell Products</title>
+<title>DRFMedia Marketplace — Buy & Sell</title>
+<meta name="color-scheme" content="light dark" />
 <style>
   :root {
     --accent: #007bff;
@@ -16,7 +17,7 @@
     --text-muted: #6c757d;
     --radius: .5rem;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
-    --shadow-md: 0 2px 4px rgba(0,0,0,.1);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.1)
   }
   @media(prefers-color-scheme:dark) {
     :root {
@@ -26,7 +27,7 @@
       --text-body: #f1f3f5;
       --text-muted: #adb5bd;
       --shadow-sm: none;
-      --shadow-md: none;
+      --shadow-md: none
     }
   }
   * {
@@ -44,6 +45,18 @@
   a {
     color: inherit;
     text-decoration: none;
+  }
+  img,
+  video {
+    max-width: 100%;
+    border-radius: var(--radius);
+    background: #000;
+    display: block;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  [data-loaded=true] {
+    opacity: 1;
   }
   header {
     background: var(--accent);
@@ -92,7 +105,7 @@
     background: transparent;
     border: none;
     color: #fff;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     cursor: pointer;
     display: none;
     user-select: none;
@@ -105,6 +118,7 @@
       background: var(--accent);
       margin-top: 0.5rem;
       border-radius: var(--radius);
+      padding: 0.5rem 0;
     }
     #primaryNav.show {
       display: flex;
@@ -112,16 +126,23 @@
     #menuToggle {
       display: block;
     }
+    #primaryNav a {
+      padding: 0.75rem 1rem;
+      font-size: 1.1rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
   }
   .btn {
     background: var(--accent);
     color: #fff;
     border: none;
     border-radius: var(--radius);
-    padding: .5rem 1rem;
+    padding: .65rem 1.2rem;
     font-weight: 600;
     cursor: pointer;
     transition: background .2s;
+    font-size: 1rem;
   }
   .btn:hover {
     background: var(--accent-hover);
@@ -133,87 +154,52 @@
   .container {
     width: min(100%, 700px);
     margin: 0 auto;
-    padding: 0 1rem 2rem;
-  }
-  #prog {
-    width: 100%;
-    height: 4px;
-    background: #e9ecef;
-    border-radius: 2px;
-    overflow: hidden;
-    display: none;
-  }
-  #progBar {
-    height: 4px;
-    width: 0;
-    background: var(--accent);
-  }
-
-  /* Enhanced mobile-friendly form styles */
-  #uploadForm {
-    margin-top: 1.5rem;
     padding: 1rem;
-    background: var(--bg-surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    flex-grow: 1;
   }
-  #uploadForm label {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--text-body);
-  }
-  #uploadForm input[type="file"],
-  #uploadForm input[type="text"],
-  #uploadForm input[type="number"],
-  #uploadForm textarea {
+  #searchInput {
     width: 100%;
-    padding: 0.85rem 1rem;
-    font-size: 1.1rem;
-    border: 1.5px solid #ced4da;
+    padding: .65rem 1rem;
+    margin: 1rem 0 1.5rem;
+    border: 1px solid #ced4da;
     border-radius: var(--radius);
-    background: var(--bg-surface-alt);
+    background: var(--bg-surface);
     color: var(--text-body);
-    transition: border-color 0.3s ease;
-  }
-  #uploadForm input[type="file"]:focus,
-  #uploadForm input[type="text"]:focus,
-  #uploadForm input[type="number"]:focus,
-  #uploadForm textarea:focus {
-    border-color: var(--accent);
-    outline: none;
-  }
-  #uploadForm button {
-    padding: 0.85rem 1rem;
-    font-size: 1.2rem;
-    font-weight: 700;
-    border-radius: var(--radius);
+    font-size: 1rem;
   }
   #uploadForm input,
-  #uploadForm textarea,
   #uploadForm button {
-    min-height: 48px;
+    width: 100%;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid #ccc;
+    box-sizing: border-box;
   }
-  #uploadForm label + input,
-  #uploadForm label + textarea {
-    margin-top: 0.35rem;
+  #uploadForm button {
+    border: none;
+    color: white;
   }
-  @media (max-width: 600px) {
-    #uploadForm {
-      padding: 1.25rem;
-      gap: 1.25rem;
-    }
+  #prog {
+    background: #eee;
+    height: 6px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1rem;
   }
-
-  /* Post item styles */
+  #progBar {
+    background: var(--accent);
+    width: 0;
+    height: 100%;
+    transition: width 0.2s ease;
+  }
   .post-item {
     background: var(--bg-surface-alt);
     border: 1px solid #dee2e6;
     border-radius: var(--radius);
     padding: 1rem;
-    margin: 1.25rem 0;
+    margin-bottom: 1.5rem;
     box-shadow: var(--shadow-sm);
   }
   .post-owner {
@@ -223,8 +209,8 @@
     font-weight: 700;
   }
   .avatar {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid #ccc;
@@ -237,18 +223,49 @@
     margin-top: .75rem;
     white-space: pre-wrap;
   }
-  video,
-  img {
-    border-radius: var(--radius);
-    background: #000;
-    display: block;
-    opacity: 0;
-    transition: opacity .3s;
-    max-width: 100%;
-    height: auto;
+  .product-info {
+    margin-top: 0.75rem;
+    font-weight: 600;
   }
-  [data-loaded=true] {
-    opacity: 1;
+  .product-price {
+    color: var(--accent);
+    font-size: 1.15rem;
+    margin-top: 0.3rem;
+  }
+  .product-contact {
+    margin-top: 0.5rem;
+  }
+  .buttons {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .buttons a,
+  .buttons button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    transition: background .2s;
+    font-size: 1rem;
+  }
+  .buttons a:hover,
+  .buttons button:hover {
+    background: var(--accent-hover);
+  }
+  .disclaimer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 1.5rem;
+    border-top: 1px solid #ccc;
+    padding-top: 1rem;
   }
 </style>
 </head>
@@ -256,78 +273,68 @@
 <header>
   <div class="brand">
     <img src="logo.png" alt="logo" />
-    <span>DRFMedia Sell</span>
+    <span>DRFMedia Marketplace</span>
   </div>
   <button id="menuToggle" aria-label="Toggle menu">☰</button>
-  <nav id="primaryNav">
-    <a href="sell.html" class="active">Sell</a>
-    <a href="media.html">Timeline</a>
+  <nav id="primaryNav" role="navigation" aria-label="Primary navigation">
+    <a href="sell.html" class="active">Marketplace</a>
+    <a href="chat.html">Chat</a>
     <a href="profile.html">Profile</a>
     <a href="gift.html">Donate Ghaza</a>
   </nav>
 </header>
 
 <main class="container">
-  <button id="loginBtn" class="btn">Sign in with Google</button>
-  <button id="logoutBtn" class="btn" style="display:none; background:#dc3545;">Logout</button>
+  <input id="searchInput" type="search" placeholder="Search products…" aria-label="Search products" />
+  <button id="loginBtn" class="btn" type="button">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" type="button" style="display:none;background:#dc3545">Logout</button>
 
-  <form id="uploadForm" style="display:none" autocomplete="off">
-    <label for="mediaFile">Product Image/Video *</label>
-    <input id="mediaFile" type="file" accept="image/*,video/*" required />
-
-    <label for="title">Product Title *</label>
-    <input id="title" type="text" minlength="2" required placeholder="Enter product title" />
-
-    <label for="price">Price in USDT *</label>
-    <input id="price" type="number" min="0" step="0.01" required placeholder="0.00" />
-
-    <label for="location">Location</label>
-    <input id="location" type="text" placeholder="City, Country" />
-
-    <label for="contact">Contact Info *</label>
-    <input id="contact" type="text" minlength="5" required placeholder="WhatsApp, Telegram, etc." />
-
-    <label for="paymentLink">DRF Wallet Payment Link (Optional)</label>
-    <input id="paymentLink" type="text" placeholder="https://drfwallet.example/payment/..." />
-
-    <div id="prog"><div id="progBar"></div></div>
+  <form id="uploadForm" style="display:none" autocomplete="off" novalidate>
+    <input id="mediaFile" type="file" accept="image/*,video/*" required aria-required="true" aria-label="Upload product image or video" />
+    <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required aria-required="true" aria-label="Product title" />
+    <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required aria-required="true" aria-label="Product price in Maldivian Rufiyaa" />
+    <input id="productLocation" type="text" placeholder="Location (optional)" aria-label="Product location" />
+    <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required aria-required="true" aria-label="Contact phone or WhatsApp number" />
+    <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" aria-label="Payment link" />
+    <div id="prog" style="display:none"><div id="progBar"></div></div>
     <button class="btn" type="submit">Post Product</button>
   </form>
 
-  <section id="postContainer" aria-live="polite"></section>
+  <section id="postContainer" aria-live="polite" aria-atomic="false"></section>
+
+  <div class="disclaimer" role="contentinfo">
+    ⚠️ DRFMedia is a marketplace platform only. We do not guarantee payment, delivery, or product authenticity. Always verify before buying or sending money.
+  </div>
 </main>
 
 <script type="module">
   const menuToggle = document.getElementById("menuToggle");
   const primaryNav = document.getElementById("primaryNav");
-  if(window.innerWidth <= 600) {
-    primaryNav.style.display = "none";
+
+  function closeMenu() {
+    if (window.innerWidth <= 600) primaryNav.classList.remove("show");
   }
-  menuToggle.addEventListener("click", () => {
-    if (primaryNav.style.display === "flex") {
-      primaryNav.style.display = "none";
-    } else {
-      primaryNav.style.display = "flex";
-    }
+  function toggleMenu() {
+    primaryNav.classList.toggle("show");
+  }
+
+  menuToggle.addEventListener("click", toggleMenu);
+  primaryNav.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", closeMenu);
   });
-  [...primaryNav.querySelectorAll("a")].forEach(a => {
-    a.addEventListener("click", () => {
-      if (window.innerWidth <= 600) {
-        primaryNav.style.display = "none";
-      }
-    });
-  });
+
   document.addEventListener("click", (e) => {
-    const target = e.target;
     if (
       window.innerWidth <= 600 &&
-      !primaryNav.contains(target) &&
-      target !== menuToggle
+      !primaryNav.contains(e.target) &&
+      e.target !== menuToggle
     ) {
-      primaryNav.style.display = "none";
+      primaryNav.classList.remove("show");
     }
   });
-  [...primaryNav.querySelectorAll("a")].forEach(a => {
+
+  // Highlight active nav link
+  [...primaryNav.querySelectorAll("a")].forEach((a) => {
     if (location.pathname.endsWith(a.getAttribute("href"))) {
       a.classList.add("active");
     } else {
@@ -362,15 +369,15 @@
     logout = $("logoutBtn");
   const upload = $("uploadForm"),
     fileIn = $("mediaFile"),
-    titleIn = $("title"),
-    priceIn = $("price"),
-    locationIn = $("location"),
-    contactIn = $("contact"),
+    titleIn = $("productTitle"),
+    priceIn = $("productPrice"),
+    locationIn = $("productLocation"),
+    contactIn = $("productContact"),
     paymentLinkIn = $("paymentLink");
   const prog = $("prog"),
     bar = $("progBar");
   const posts = $("postContainer"),
-    nav = $("primaryNav");
+    qIn = $("searchInput");
 
   let user = null,
     all = [];
@@ -406,7 +413,7 @@
       if (!video.retryCount) video.retryCount = 0;
       if (video.retryCount < 3) {
         setTimeout(() => {
-          video.src = video.dataset.src;
+          video.src = video.dataset.src; // retry loading
           video.load();
           video.retryCount++;
         }, 2 ** video.retryCount * 1000);
@@ -429,191 +436,184 @@
   );
 
   async function render() {
-    const term = $("searchInput")?.value.trim().toLowerCase() || "";
+    const term = qIn.value.trim().toLowerCase();
     posts.innerHTML = "";
     for (const p of all) {
-      if (term && !(p.productTitle || "").toLowerCase().includes(term)) continue;
+      if (
+        term &&
+        !(p.caption || "")
+          .toLowerCase()
+          .includes(term) &&
+        !(p.productTitle || "")
+          .toLowerCase()
+          .includes(term) &&
+        !(p.productLocation || "")
+          .toLowerCase()
+          .includes(term)
+      )
+        continue;
 
       const card = document.createElement("article");
       card.className = "post-item";
-
       card.innerHTML = `
         <header class="post-owner">
-          <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="Seller avatar" />
+          <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" />
           <div>
             <div>${escapeHTML(p.displayName || "Anon")}</div>
-            <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+            <time class="post-time" datetime="${new Date(
+              p.timestamp
+            ).toISOString()}">
               ${new Date(p.timestamp).toLocaleString()}
             </time>
           </div>
         </header>
-        <h2 style="margin:0.5rem 0 0.3rem;">${escapeHTML(p.productTitle || "")}</h2>
-        <div class="post-caption">Price: <strong>${p.productPrice} USDT</strong></div>
-        <div class="post-caption">Location: ${escapeHTML(p.productLocation || "N/A")}</div>
-        <div class="post-caption">Contact: ${escapeHTML(p.productContact || "")}</div>
+        <div class="post-caption">${escapeHTML(p.caption || "")}</div>
         <div class="post-media" id="m-${p.id}"></div>
-        <div style="margin-top:0.5rem;">
+        <div class="product-info">
+          <div><strong>Product:</strong> ${escapeHTML(p.productTitle || "")}</div>
+          <div class="product-price">Price: MVR ${
+            p.productPrice ? Number(p.productPrice).toFixed(2) : "0.00"
+          }</div>
           ${
-            p.paymentLink
-              ? `<a href="${p.paymentLink}" target="_blank" rel="noopener" class="btn" style="padding:0.35rem 0.75rem; font-weight:600;">Pay Seller</a>`
+            p.productLocation
+              ? `<div><strong>Location:</strong> ${escapeHTML(
+                  p.productLocation
+                )}</div>`
               : ""
           }
+          <div class="product-contact"><strong>Contact:</strong> ${escapeHTML(
+            p.productContact || ""
+          )}</div>
+        </div>
+        <div class="buttons">
+          <a href="https://wa.me/${encodeURIComponent(
+            p.productContact.replace(/[^0-9]/g, "")
+          )}" target="_blank" rel="noopener" aria-label="Contact Seller on WhatsApp">Contact Seller</a>
           ${
-            p.productContact
-              ? `<a href="https://wa.me/${encodeURIComponent(p.productContact.replace(/\D/g,''))}" target="_blank" rel="noopener" class="btn" style="padding:0.35rem 0.75rem; margin-left:0.5rem;">Chat</a>`
+            p.paymentLink
+              ? `<a href="${p.paymentLink}" target="_blank" rel="noopener" class="btn" aria-label="Pay Seller">Pay Seller</a>`
               : ""
           }
         </div>
       `;
+      posts.append(card);
 
-      posts.appendChild(card);
+      const holder = card.querySelector(`#m-${p.id}`);
 
-      // Load media (image/video)
-      const mediaDiv = card.querySelector(`#m-${p.id}`);
       if (p.mediaType === "video") {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.preload = "none";
-        video.style.maxHeight = "300px";
-        video.dataset.src = p.mediaURL;
-        mediaDiv.appendChild(video);
-        observer.observe(video);
-      } else if (p.mediaType === "image") {
+        const url = await getGatewayUrl(p.ipfsHash);
+        if (url) {
+          const v = document.createElement("video");
+          v.controls = true;
+          v.playsInline = true;
+          v.preload = "metadata";
+          v.dataset.src = url;
+          observer.observe(v);
+          holder.replaceWith(v);
+        } else {
+          holder.textContent = "Video unavailable.";
+        }
+      } else {
         const img = document.createElement("img");
-        img.src = p.mediaURL;
-        img.alt = escapeHTML(p.productTitle || "Product image");
-        img.loading = "lazy";
-        mediaDiv.appendChild(img);
+        img.src = "https://gateway.pinata.cloud/ipfs/" + p.ipfsHash;
+        img.alt = "Product media";
+        holder.replaceWith(img);
       }
     }
   }
 
-  async function uploadMedia(file) {
-    prog.style.display = "block";
-    bar.style.width = "0%";
-    const data = new FormData();
-    data.append("file", file);
-
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      body: data,
-      headers: {
-        Authorization: pinataJWT,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Upload failed");
-    }
-
-    const json = await res.json();
-    prog.style.display = "none";
-    bar.style.width = "0%";
-    return json.IpfsHash;
+  async function getPosts() {
+    const snap = await get(ref(db, "posts"));
+    const obj = snap.val() || {};
+    all = Object.entries(obj)
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => b.timestamp - a.timestamp);
+    render();
   }
 
-  async function loadPosts() {
-    const postsRef = ref(db, "products");
-    const snapshot = await get(postsRef);
-    all = [];
-    if (snapshot.exists()) {
-      snapshot.forEach((child) => {
-        const p = child.val();
-        p.id = child.key;
-        all.push(p);
-      });
-      all.sort((a, b) => b.timestamp - a.timestamp);
-    }
-    await render();
-  }
-
-  function resetForm() {
-    upload.reset();
-    prog.style.display = "none";
-    bar.style.width = "0%";
-  }
-
-  upload.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!user) {
-      alert("Please sign in first!");
-      return;
-    }
-    try {
-      const file = fileIn.files[0];
-      if (!file) {
-        alert("Please select a file!");
-        return;
-      }
-      const title = titleIn.value.trim();
-      const price = parseFloat(priceIn.value);
-      if (price < 0) {
-        alert("Price must be positive!");
-        return;
-      }
-      const contact = contactIn.value.trim();
-      if (!contact) {
-        alert("Please provide contact info!");
-        return;
-      }
-
-      upload.querySelector("button[type=submit]").disabled = true;
-
-      const ipfsHash = await uploadMedia(file);
-
-      const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-      const productData = {
-        uid: user.uid,
-        displayName: user.displayName || "Anon",
-        photoURL: user.photoURL || "",
-        mediaURL: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
-        mediaType: mediaType,
-        productTitle: title,
-        productPrice: price.toFixed(2),
-        productLocation: locationIn.value.trim(),
-        productContact: contact,
-        paymentLink: paymentLinkIn.value.trim(),
-        timestamp: Date.now(),
-      };
-
-      const postsRef = ref(db, "products");
-      await push(postsRef, productData);
-
-      alert("Product posted successfully!");
-      resetForm();
-      await loadPosts();
-    } catch (error) {
-      alert("Upload failed: " + error.message);
-    } finally {
-      upload.querySelector("button[type=submit]").disabled = false;
-    }
-  });
-
-  login.addEventListener("click", () => {
-    signInWithPopup(auth, provider).catch((e) =>
-      alert("Login failed: " + e.message)
-    );
-  });
-
-  logout.addEventListener("click", () => {
-    signOut(auth);
-  });
-
+  login.onclick = () => signInWithPopup(auth, provider);
+  logout.onclick = () => signOut(auth);
   onAuthStateChanged(auth, (u) => {
     user = u;
-    if (user) {
-      login.style.display = "none";
-      logout.style.display = "inline-block";
-      upload.style.display = "flex";
-      loadPosts();
-    } else {
-      login.style.display = "inline-block";
-      logout.style.display = "none";
-      upload.style.display = "none";
-      posts.innerHTML = "";
-    }
+    login.style.display = u ? "none" : "block";
+    logout.style.display = u ? "block" : "none";
+    upload.style.display = u ? "block" : "none";
+    primaryNav.style.display = u ? "flex" : "none";
+    getPosts();
   });
+  qIn.oninput = render;
+
+  upload.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!fileIn.files[0]) return alert("Choose a product image/video");
+    if (titleIn.value.trim().length < 2) return alert("Product Title too short");
+    if (!priceIn.value || Number(priceIn.value) < 0)
+      return alert("Invalid price");
+    if (contactIn.value.trim().length < 5)
+      return alert("Enter valid contact info");
+
+    const file = fileIn.files[0];
+    upload.querySelector("button").disabled = true;
+    prog.style.display = "block";
+    bar.style.width = "0";
+
+    try {
+      // Upload to Pinata IPFS
+      const fd = new FormData();
+      fd.append("file", file);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
+      xhr.setRequestHeader("Authorization", pinataJWT);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable)
+          bar.style.width = (e.loaded / e.total) * 100 + "%";
+      };
+      const cid = await new Promise((res, rej) => {
+        xhr.onload = () => {
+          try {
+            res(JSON.parse(xhr.responseText).IpfsHash);
+          } catch {
+            rej("Pinata error");
+          }
+        };
+        xhr.onerror = () => rej("Upload failed");
+        xhr.send(fd);
+      });
+
+      // Save post to Firebase DB
+      const newRef = push(ref(db, "posts"));
+      await set(newRef, {
+        userId: user.uid,
+        displayName: user.displayName || "Anon",
+        photoURL: user.photoURL || "",
+        caption: "", // no caption for products or keep empty
+        ipfsHash: cid,
+        mediaType: file.type.startsWith("video") ? "video" : "image",
+        timestamp: Date.now(),
+        productTitle: titleIn.value.trim(),
+        productPrice: Number(priceIn.value),
+        productLocation: locationIn.value.trim(),
+        productContact: contactIn.value.trim(),
+        paymentLink: paymentLinkIn.value.trim(),
+      });
+
+      // Reset form UI
+      fileIn.value = "";
+      titleIn.value = "";
+      priceIn.value = "";
+      locationIn.value = "";
+      contactIn.value = "";
+      paymentLinkIn.value = "";
+      bar.style.width = "100%";
+      setTimeout(() => (prog.style.display = "none"), 400);
+      getPosts();
+    } catch (e) {
+      alert(e);
+      prog.style.display = "none";
+    } finally {
+      upload.querySelector("button").disabled = false;
+    }
+  };
 </script>
 </body>
 </html>
