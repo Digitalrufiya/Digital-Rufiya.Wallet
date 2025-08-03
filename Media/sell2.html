@@ -4,269 +4,299 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DRFMedia Marketplace — Buy & Sell</title>
+<link rel="stylesheet" href="style.css" />
 <meta name="color-scheme" content="light dark" />
 <style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
   :root {
-    --accent: #007bff;
-    --accent-hover: #0056b3;
-    --accent-muted: #3399ff;
-    --bg-body: #f8f9fa;
-    --bg-surface: #fff;
-    --bg-surface-alt: #fafafa;
-    --text-body: #212529;
-    --text-muted: #6c757d;
-    --radius: .5rem;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
-    --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
   }
-  @media(prefers-color-scheme:dark) {
-    :root {
-      --bg-body: #181a1b;
-      --bg-surface: #242628;
-      --bg-surface-alt: #2b2e30;
-      --text-body: #f1f3f5;
-      --text-muted: #adb5bd;
-      --shadow-sm: none;
-      --shadow-md: none
-    }
-  }
-  * {
-    box-sizing: border-box;
-    margin: 0;
-  }
-  body {
-    font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg-body);
-    color: var(--text-body);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  a {
-    color: inherit;
-    text-decoration: none;
-  }
-  img,
-  video {
-    max-width: 100%;
-    border-radius: var(--radius);
-    background: #000;
-    display: block;
-    opacity: 0;
-    transition: opacity .3s;
-  }
-  [data-loaded=true] {
-    opacity: 1;
-  }
-  header {
-    background: var(--accent);
-    color: #fff;
-    padding: .75rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    font-weight: 700;
-  }
-  .brand img {
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: .25rem;
-    background: #fff;
-    padding: 2px;
-  }
+}
+* {
+  box-sizing: border-box;
+  margin: 0
+}
+body {
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column
+}
+a {
+  color: inherit;
+  text-decoration: none
+}
+img,
+video {
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  opacity: 0;
+  transition: opacity .3s
+}
+[data-loaded=true] {
+  opacity: 1
+}
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 700
+}
+.brand img {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .25rem;
+  background: #fff;
+  padding: 2px
+}
+#primaryNav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#primaryNav a {
+  color: #fff;
+  font-weight: 600;
+  padding: .5rem .75rem;
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+#primaryNav a:hover,
+#primaryNav a.active {
+  background-color: var(--accent-hover);
+}
+#menuToggle {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: none;
+  user-select: none;
+}
+@media (max-width: 600px) {
   #primaryNav {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  #primaryNav a {
-    color: #fff;
-    font-weight: 600;
-    padding: .5rem .75rem;
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background: var(--accent);
+    margin-top: 0.5rem;
     border-radius: var(--radius);
-    transition: background-color 0.2s ease;
   }
-  #primaryNav a:hover,
-  #primaryNav a.active {
-    background-color: var(--accent-hover);
+  #primaryNav.show {
+    display: flex;
   }
   #menuToggle {
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 1.75rem;
-    cursor: pointer;
-    display: none;
-    user-select: none;
+    display: block;
   }
-  @media (max-width: 600px) {
-    #primaryNav {
-      display: none;
-      flex-direction: column;
-      width: 100%;
-      background: var(--accent);
-      margin-top: 0.5rem;
-      border-radius: var(--radius);
-      padding: 0.5rem 0;
-    }
-    #primaryNav.show {
-      display: flex;
-    }
-    #menuToggle {
-      display: block;
-    }
-    #primaryNav a {
-      padding: 0.75rem 1rem;
-      font-size: 1.1rem;
-      width: 100%;
-      box-sizing: border-box;
-    }
-  }
-  .btn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    padding: .65rem 1.2rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background .2s;
-    font-size: 1rem;
-  }
-  .btn:hover {
-    background: var(--accent-hover);
-  }
-  .btn:disabled {
-    background: #adb5bd;
-    cursor: not-allowed;
-  }
-  .container {
-    width: min(100%, 700px);
-    margin: 0 auto;
-    padding: 1rem;
-    flex-grow: 1;
-  }
-  #searchInput {
-    width: 100%;
-    padding: .65rem 1rem;
-    margin: 1rem 0 1.5rem;
-    border: 1px solid #ced4da;
-    border-radius: var(--radius);
-    background: var(--bg-surface);
-    color: var(--text-body);
-    font-size: 1rem;
-  }
-  #uploadForm input,
-  #uploadForm button {
-    width: 100%;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-    padding: 0.6rem 1rem;
-    border-radius: var(--radius);
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-  }
-  #uploadForm button {
-    border: none;
-    color: white;
-  }
-  #prog {
-    background: #eee;
-    height: 6px;
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-  #progBar {
-    background: var(--accent);
-    width: 0;
-    height: 100%;
-    transition: width 0.2s ease;
-  }
-  .post-item {
-    background: var(--bg-surface-alt);
-    border: 1px solid #dee2e6;
-    border-radius: var(--radius);
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow-sm);
-  }
-  .post-owner {
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    font-weight: 700;
-  }
-  .avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #ccc;
-  }
-  .post-time {
-    font-size: .8rem;
-    color: var(--text-muted);
-  }
-  .post-caption {
-    margin-top: .75rem;
-    white-space: pre-wrap;
-  }
-  .product-info {
-    margin-top: 0.75rem;
-    font-weight: 600;
-  }
-  .product-price {
-    color: var(--accent);
-    font-size: 1.15rem;
-    margin-top: 0.3rem;
-  }
-  .product-contact {
-    margin-top: 0.5rem;
-  }
-  .buttons {
-    margin-top: 0.75rem;
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-  .buttons a,
-  .buttons button {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    transition: background .2s;
-    font-size: 1rem;
-  }
-  .buttons a:hover,
-  .buttons button:hover {
-    background: var(--accent-hover);
-  }
-  .disclaimer {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-top: 1.5rem;
-    border-top: 1px solid #ccc;
-    padding-top: 1rem;
-  }
+}
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: .5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s
+}
+.btn:hover {
+  background: var(--accent-hover)
+}
+.btn:disabled {
+  background: #adb5bd;
+  cursor: not-allowed
+}
+.container {
+  width: min(100%, 700px);
+  margin: 0 auto;
+  padding: 0 1rem
+}
+#searchInput {
+  width: 100%;
+  padding: .55rem .85rem;
+  margin: 1rem 0;
+  border: 1px solid #ced4da;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text-body)
+}
+.post-item {
+  background: var(--bg-surface-alt);
+  border: 1px solid #dee2e6;
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 1.25rem 0;
+  box-shadow: var(--shadow-sm)
+}
+.post-owner {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-weight: 700
+}
+.avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #ccc
+}
+.post-time {
+  font-size: .8rem;
+  color: var(--text-muted)
+}
+.post-caption {
+  margin-top: .75rem;
+  white-space: pre-wrap
+}
+.product-info {
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+.product-price {
+  color: var(--accent);
+  font-size: 1.1rem;
+  margin-top: 0.3rem;
+}
+.product-contact {
+  margin-top: 0.5rem;
+}
+.buttons {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.buttons a,
+.buttons button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  transition: background .2s;
+}
+.buttons a:hover,
+.buttons button:hover {
+  background: var(--accent-hover);
+}
+.disclaimer {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  border-top: 1px solid #ccc;
+  padding-top: 1rem;
+}
+video,
+img {
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  opacity: 0;
+  transition: opacity .3s
+}
+[data-loaded=true] {
+  opacity: 1
+}
+
+/* ==== UPLOAD FORM DESIGN FIX === */
+#uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  background: var(--bg-surface);
+  padding: 1rem 1rem 1.2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  margin: 1rem 0;
+  max-width: 700px;
+  width: 100%;
+}
+#uploadForm input[type="file"],
+#uploadForm input[type="text"],
+#uploadForm input[type="number"],
+#uploadForm input[type="url"] {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid #ced4da;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  background: var(--bg-surface-alt);
+  color: var(--text-body);
+  transition: border-color 0.2s ease;
+}
+#uploadForm input[type="file"] {
+  padding: 0.3rem 0.9rem;
+}
+#uploadForm input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 3px var(--accent-muted);
+}
+#prog {
+  margin-top: 0.5rem;
+  width: 100%;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+#progBar {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.3s ease;
+  border-radius: var(--radius);
+}
+#uploadForm button[type="submit"] {
+  align-self: flex-start;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+}
 </style>
 </head>
 <body>
@@ -276,7 +306,7 @@
     <span>DRFMedia Marketplace</span>
   </div>
   <button id="menuToggle" aria-label="Toggle menu">☰</button>
-  <nav id="primaryNav" role="navigation" aria-label="Primary navigation">
+  <nav id="primaryNav">
     <a href="sell.html" class="active">Marketplace</a>
     <a href="chat.html">Chat</a>
     <a href="profile.html">Profile</a>
@@ -285,24 +315,24 @@
 </header>
 
 <main class="container">
-  <input id="searchInput" type="search" placeholder="Search products…" aria-label="Search products" />
-  <button id="loginBtn" class="btn" type="button">Sign in with Google</button>
-  <button id="logoutBtn" class="btn" type="button" style="display:none;background:#dc3545">Logout</button>
+  <input id="searchInput" placeholder="Search products…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
 
-  <form id="uploadForm" style="display:none" autocomplete="off" novalidate>
-    <input id="mediaFile" type="file" accept="image/*,video/*" required aria-required="true" aria-label="Upload product image or video" />
-    <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required aria-required="true" aria-label="Product title" />
-    <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required aria-required="true" aria-label="Product price in Maldivian Rufiyaa" />
-    <input id="productLocation" type="text" placeholder="Location (optional)" aria-label="Product location" />
-    <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required aria-required="true" aria-label="Contact phone or WhatsApp number" />
-    <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" aria-label="Payment link" />
+  <form id="uploadForm" style="display:none" autocomplete="off">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required />
+    <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required />
+    <input id="productLocation" type="text" placeholder="Location (optional)" />
+    <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required />
+    <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" />
     <div id="prog" style="display:none"><div id="progBar"></div></div>
     <button class="btn" type="submit">Post Product</button>
   </form>
 
-  <section id="postContainer" aria-live="polite" aria-atomic="false"></section>
+  <section id="postContainer" aria-live="polite"></section>
 
-  <div class="disclaimer" role="contentinfo">
+  <div class="disclaimer">
     ⚠️ DRFMedia is a marketplace platform only. We do not guarantee payment, delivery, or product authenticity. Always verify before buying or sending money.
   </div>
 </main>
@@ -311,30 +341,35 @@
   const menuToggle = document.getElementById("menuToggle");
   const primaryNav = document.getElementById("primaryNav");
 
-  function closeMenu() {
-    if (window.innerWidth <= 600) primaryNav.classList.remove("show");
+  // Responsive menu toggle for mobile
+  if(window.innerWidth <= 600) {
+    primaryNav.style.display = "none";
   }
-  function toggleMenu() {
-    primaryNav.classList.toggle("show");
-  }
-
-  menuToggle.addEventListener("click", toggleMenu);
-  primaryNav.querySelectorAll("a").forEach((a) => {
-    a.addEventListener("click", closeMenu);
-  });
-
-  document.addEventListener("click", (e) => {
-    if (
-      window.innerWidth <= 600 &&
-      !primaryNav.contains(e.target) &&
-      e.target !== menuToggle
-    ) {
-      primaryNav.classList.remove("show");
+  menuToggle.addEventListener("click", () => {
+    if (primaryNav.style.display === "flex") {
+      primaryNav.style.display = "none";
+    } else {
+      primaryNav.style.display = "flex";
     }
   });
-
-  // Highlight active nav link
-  [...primaryNav.querySelectorAll("a")].forEach((a) => {
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
+    a.addEventListener("click", () => {
+      if (window.innerWidth <= 600) {
+        primaryNav.style.display = "none";
+      }
+    });
+  });
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (
+      window.innerWidth <= 600 &&
+      !primaryNav.contains(target) &&
+      target !== menuToggle
+    ) {
+      primaryNav.style.display = "none";
+    }
+  });
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
     if (location.pathname.endsWith(a.getAttribute("href"))) {
       a.classList.add("active");
     } else {
@@ -377,7 +412,8 @@
   const prog = $("prog"),
     bar = $("progBar");
   const posts = $("postContainer"),
-    qIn = $("searchInput");
+    qIn = $("searchInput"),
+    nav = $("primaryNav");
 
   let user = null,
     all = [];
@@ -439,18 +475,7 @@
     const term = qIn.value.trim().toLowerCase();
     posts.innerHTML = "";
     for (const p of all) {
-      if (
-        term &&
-        !(p.caption || "")
-          .toLowerCase()
-          .includes(term) &&
-        !(p.productTitle || "")
-          .toLowerCase()
-          .includes(term) &&
-        !(p.productLocation || "")
-          .toLowerCase()
-          .includes(term)
-      )
+      if (term && !(p.caption || "").toLowerCase().includes(term) && !(p.productTitle || "").toLowerCase().includes(term) && !(p.productLocation || "").toLowerCase().includes(term))
         continue;
 
       const card = document.createElement("article");
@@ -460,42 +485,27 @@
           <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" />
           <div>
             <div>${escapeHTML(p.displayName || "Anon")}</div>
-            <time class="post-time" datetime="${new Date(
-              p.timestamp
-            ).toISOString()}">
-              ${new Date(p.timestamp).toLocaleString()}
-            </time>
+            <time class="post-time" datetime="${p.createdAt}">${new Date(p.createdAt).toLocaleString()}</time>
           </div>
         </header>
         <div class="post-caption">${escapeHTML(p.caption || "")}</div>
         <div class="product-info">
           <div><strong>Title:</strong> ${escapeHTML(p.productTitle || "")}</div>
-          <div class="product-price">Price: MVR ${escapeHTML(p.productPrice || "")}</div>
-          ${
-            p.productLocation
-              ? `<div>Location: ${escapeHTML(p.productLocation)}</div>`
-              : ""
-          }
+          <div class="product-price">Price: MVR ${p.productPrice?.toFixed(2) || "0.00"}</div>
+          ${p.productLocation ? `<div class="product-location">Location: ${escapeHTML(p.productLocation)}</div>` : ""}
           <div class="product-contact">Contact: ${escapeHTML(p.productContact || "")}</div>
+          ${p.paymentLink ? `<div class="product-payment"><a href="${escapeHTML(p.paymentLink)}" target="_blank" rel="noopener noreferrer">Payment Link</a></div>` : ""}
+        </div>
+        <div>
           ${
-            p.paymentLink
-              ? `<div><a href="${escapeHTML(
-                  p.paymentLink
-                )}" target="_blank" rel="noopener">Payment Link</a></div>`
-              : ""
+            p.mediaType === "video"
+              ? `<video preload="none" controls playsinline muted loop width="100%" data-src="${p.mediaUrl}"></video>`
+              : `<img loading="lazy" src="${p.mediaUrl}" alt="Product media" />`
           }
         </div>
-        ${
-          p.cid
-            ? (p.mediaType && p.mediaType.startsWith("video")
-              ? `<video controls preload="none" width="100%" height="auto" data-src="https://gateway.pinata.cloud/ipfs/${p.cid}"></video>`
-              : `<img src="https://gateway.pinata.cloud/ipfs/${p.cid}" alt="Product media" loading="lazy" />`)
-            : ""
-        }
       `;
       posts.appendChild(card);
-
-      if (p.mediaType && p.mediaType.startsWith("video")) {
+      if (p.mediaType === "video") {
         const video = card.querySelector("video");
         observer.observe(video);
       }
@@ -503,128 +513,138 @@
   }
 
   async function loadPosts() {
+    const dbRef = ref(db, "marketplace");
     try {
-      const snap = await get(ref(db, "products"));
-      if (snap.exists()) {
-        all = Object.values(snap.val());
+      const snapshot = await get(dbRef);
+      if (snapshot.exists()) {
+        all = Object.values(snapshot.val()).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       } else {
         all = [];
       }
-      render();
-    } catch (e) {
-      console.error("Load error:", e);
+      await render();
+    } catch (err) {
+      console.error("Error loading posts:", err);
     }
   }
 
-  qIn.addEventListener("input", render);
-
-  upload.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!fileIn.files.length) {
-      alert("Please select a file");
-      return;
-    }
-    const file = fileIn.files[0];
-    const caption = "";
-    const productTitle = titleIn.value.trim();
-    const productPrice = priceIn.value.trim();
-    const productLocation = locationIn.value.trim();
-    const productContact = contactIn.value.trim();
-    const paymentLink = paymentLinkIn.value.trim();
-    const mediaType = file.type;
-
-    // Upload file to Pinata IPFS
-    prog.style.display = "block";
-    bar.style.width = "0%";
-
-    const form = new FormData();
-    form.append("file", file);
-
-    const uploadRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-      method: "POST",
-      headers: {
-        Authorization: pinataJWT,
-      },
-      body: form,
-    });
-
-    if (!uploadRes.ok) {
-      prog.style.display = "none";
-      alert("Failed to upload media to IPFS");
-      return;
-    }
-
-    const uploadJson = await uploadRes.json();
-    const cid = uploadJson.IpfsHash;
-
-    bar.style.width = "100%";
-
-    const productData = {
-      uid: user.uid,
-      displayName: user.displayName || "Anon",
-      photoURL: user.photoURL || null,
-      caption,
-      productTitle,
-      productPrice,
-      productLocation,
-      productContact,
-      paymentLink,
-      mediaType,
-      cid,
-      timestamp: Date.now(),
-    };
-
-    // Save product post to Firebase Realtime Database
-    try {
-      const newPostRef = push(ref(db, "products"));
-      await set(newPostRef, productData);
-      alert("Product posted successfully!");
-      upload.reset();
-      upload.style.display = "none";
-      login.style.display = "inline-block";
-      loadPosts();
-    } catch (e) {
-      alert("Failed to save product post");
-      console.error(e);
-    } finally {
-      prog.style.display = "none";
-      bar.style.width = "0%";
-    }
-  });
-
-  login.addEventListener("click", async () => {
+  // Google login/logout handling
+  login.onclick = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
       user = result.user;
-    } catch (e) {
-      alert("Login failed");
-      console.error(e);
+      login.style.display = "none";
+      logout.style.display = "inline-block";
+      upload.style.display = "flex";
+      await loadPosts();
+    } catch (err) {
+      alert("Login failed: " + err.message);
     }
-  });
-
-  logout.addEventListener("click", async () => {
+  };
+  logout.onclick = async () => {
     await signOut(auth);
     user = null;
-    upload.style.display = "none";
     login.style.display = "inline-block";
     logout.style.display = "none";
-  });
+    upload.style.display = "none";
+    posts.innerHTML = "";
+  };
 
   onAuthStateChanged(auth, (u) => {
     if (u) {
       user = u;
       login.style.display = "none";
       logout.style.display = "inline-block";
-      upload.style.display = "block";
+      upload.style.display = "flex";
+      loadPosts();
     } else {
       user = null;
       login.style.display = "inline-block";
       logout.style.display = "none";
       upload.style.display = "none";
+      posts.innerHTML = "";
     }
   });
 
-  loadPosts();
+  qIn.addEventListener("input", render);
+
+  upload.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Please sign in first.");
+      return;
+    }
+
+    const file = fileIn.files[0];
+    if (!file) {
+      alert("Please select a media file.");
+      return;
+    }
+
+    const title = titleIn.value.trim();
+    const price = parseFloat(priceIn.value);
+    const location = locationIn.value.trim();
+    const contact = contactIn.value.trim();
+    const paymentLink = paymentLinkIn.value.trim();
+
+    if (!title || isNaN(price) || price < 0 || !contact) {
+      alert("Please fill required fields properly.");
+      return;
+    }
+
+    prog.style.display = "block";
+    bar.style.width = "0%";
+
+    try {
+      // Prepare form data for Pinata pinFileToIPFS
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: {
+          Authorization: pinataJWT,
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to upload media to IPFS");
+
+      const json = await res.json();
+      const cid = json.IpfsHash;
+
+      // Try to get best gateway URL
+      let mediaUrl = await getGatewayUrl(cid);
+      if (!mediaUrl) mediaUrl = "https://gateway.pinata.cloud/ipfs/" + cid;
+
+      // Determine media type by MIME
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+
+      // Save post metadata in Firebase Realtime Database
+      const postRef = push(ref(db, "marketplace"));
+      await set(postRef, {
+        uid: user.uid,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        createdAt: new Date().toISOString(),
+        mediaUrl,
+        mediaType,
+        caption: "",
+        productTitle: title,
+        productPrice: price,
+        productLocation: location,
+        productContact: contact,
+        paymentLink,
+      });
+
+      alert("Product posted successfully!");
+      upload.reset();
+      prog.style.display = "none";
+      await loadPosts();
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+      prog.style.display = "none";
+    }
+  });
 </script>
 </body>
 </html>
