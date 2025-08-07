@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia Marketplace — Buy & Sell</title>
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
+  }
+}
+* {
+  box-sizing: border-box;
+  margin: 0
+}
+body {
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column
+}
+a {
+  color: inherit;
+  text-decoration: none
+}
+img,
+video {
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  opacity: 0;
+  transition: opacity .3s
+}
+[data-loaded=true] {
+  opacity: 1
+}
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 700
+}
+.brand img {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .25rem;
+  background: #fff;
+  padding: 2px
+}
+#primaryNav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#primaryNav a {
+  color: #fff;
+  font-weight: 600;
+  padding: .5rem .75rem;
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+#primaryNav a:hover,
+#primaryNav a.active {
+  background-color: var(--accent-hover);
+}
+#menuToggle {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: none;
+  user-select: none;
+}
+@media (max-width: 600px) {
+  #primaryNav {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background: var(--accent);
+    margin-top: 0.5rem;
+    border-radius: var(--radius);
+  }
+  #primaryNav.show {
+    display: flex;
+  }
+  #menuToggle {
+    display: block;
+  }
+}
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: .5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s
+}
+.btn:hover {
+  background: var(--accent-hover)
+}
+.btn:disabled {
+  background: #adb5bd;
+  cursor: not-allowed
+}
+.container {
+  width: min(100%, 700px);
+  margin: 0 auto;
+  padding: 0 1rem
+}
+#searchInput {
+  width: 100%;
+  padding: .55rem .85rem;
+  margin: 1rem 0;
+  border: 1px solid #ced4da;
+  border-radius: var(--radius);
+  background: var(--bg-surface);
+  color: var(--text-body)
+}
+.post-item {
+  background: var(--bg-surface-alt);
+  border: 1px solid #dee2e6;
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 1.25rem 0;
+  box-shadow: var(--shadow-sm)
+}
+.post-owner {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-weight: 700
+}
+.avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #ccc
+}
+.post-time {
+  font-size: .8rem;
+  color: var(--text-muted)
+}
+.post-caption {
+  margin-top: .75rem;
+  white-space: pre-wrap
+}
+.product-info {
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+.product-price {
+  color: var(--accent);
+  font-size: 1.1rem;
+  margin-top: 0.3rem;
+}
+.product-contact {
+  margin-top: 0.5rem;
+}
+.buttons {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.buttons a,
+.buttons button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  transition: background .2s;
+}
+.buttons a:hover,
+.buttons button:hover {
+  background: var(--accent-hover);
+}
+.disclaimer {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  border-top: 1px solid #ccc;
+  padding-top: 1rem;
+}
+video,
+img {
+  max-width: 100%;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  opacity: 0;
+  transition: opacity .3s
+}
+[data-loaded=true] {
+  opacity: 1
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="logo" />
+    <span>DRFMedia Marketplace</span>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">timeline</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html">Donate Ghaza</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search products…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none" autocomplete="off">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required />
+    <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required />
+    <input id="productLocation" type="text" placeholder="Location (optional)" />
+    <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required />
+    <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" />
+    <div id="prog" style="display:none"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post Product</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+
+  <div class="disclaimer">
+    ⚠️ DRFMedia is a marketplace platform only. We do not guarantee payment, delivery, or product authenticity. Always verify before buying or sending money.
+  </div>
+</main>
+
+<script type="module">
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+
+  // Responsive menu toggle for mobile
+  if(window.innerWidth <= 600) {
+    primaryNav.style.display = "none";
+  }
+  menuToggle.addEventListener("click", () => {
+    if (primaryNav.style.display === "flex") {
+      primaryNav.style.display = "none";
+    } else {
+      primaryNav.style.display = "flex";
+    }
+  });
+
+  // Firebase setup
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    query,
+    orderBy,
+    onSnapshot,
+    addDoc,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  import {
+    getStorage,
+    ref as sRef,
+    uploadBytesResumable,
+    getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    // Replace with your Firebase config
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+
+  let currentUser = null;
+  let allPosts = [];
+
+  function escapeHTML(s) {
+    return s.replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+
+  // Load posts from Firestore and listen for realtime updates
+  const postsCol = collection(db, "posts");
+  const postsQuery = query(postsCol, orderBy("timestamp", "desc"));
+
+  onSnapshot(postsQuery, (snapshot) => {
+    allPosts = [];
+    snapshot.forEach(doc => {
+      allPosts.push({ id: doc.id, ...doc.data() });
+    });
+    renderPosts();
+  });
+
+  // Render posts matching search term, always show user's posts
+  function renderPosts() {
+    const term = searchInput.value.trim().toLowerCase();
+    postContainer.innerHTML = "";
+    for (const p of allPosts) {
+      // Show post if matches search or if it belongs to current user (always visible)
+      const matchesSearch = !term || (
+        (p.caption && p.caption.toLowerCase().includes(term)) ||
+        (p.productTitle && p.productTitle.toLowerCase().includes(term)) ||
+        (p.productLocation && p.productLocation.toLowerCase().includes(term))
+      );
+      if (!matchesSearch && (!currentUser || p.uid !== currentUser.uid)) {
+        continue;
+      }
+
+      const article = document.createElement("article");
+      article.className = "post-item";
+      article.id = `post-${p.id}`;
+
+      article.innerHTML = `
+        <header class="post-owner">
+          <img class="avatar" src="${escapeHTML(p.photoURL || 'https://via.placeholder.com/40')}" alt="User avatar" />
+          <div>
+            <div>${escapeHTML(p.displayName || 'Anon')}</div>
+            <time class="post-time" datetime="${new Date(p.timestamp?.toDate ? p.timestamp.toDate() : p.timestamp).toISOString()}">
+              ${new Date(p.timestamp?.toDate ? p.timestamp.toDate() : p.timestamp).toLocaleString()}
+            </time>
+          </div>
+        </header>
+        <div class="post-caption">${escapeHTML(p.caption || '')}</div>
+        <div class="post-media" id="media-${p.id}"></div>
+        <div class="product-info">
+          <div><strong>Product:</strong> ${escapeHTML(p.productTitle || '')}</div>
+          <div class="product-price">Price: MVR ${p.productPrice ? Number(p.productPrice).toFixed(2) : '0.00'}</div>
+          ${p.productLocation ? `<div><strong>Location:</strong> ${escapeHTML(p.productLocation)}</div>` : ''}
+          <div class="product-contact"><strong>Contact:</strong> ${escapeHTML(p.productContact || '')}</div>
+        </div>
+        <div class="buttons">
+          <a href="https://wa.me/${encodeURIComponent((p.productContact || '').replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener" aria-label="Contact Seller on WhatsApp">Contact Seller</a>
+          ${p.paymentLink ? `<a href="${escapeHTML(p.paymentLink)}" target="_blank" rel="noopener" class="btn" aria-label="Pay Seller">Pay Seller</a>` : ''}
+          <button class="btn share-btn" type="button" aria-label="Share Product">Share</button>
+          ${currentUser && p.uid === currentUser.uid ? '<button class="btn delete-btn" type="button" aria-label="Delete Post" style="background:#dc3545">Delete</button>' : ''}
+        </div>
+      `;
+
+      postContainer.appendChild(article);
+
+      // Load media
+      loadMedia(p);
+
+      // Add share button listener
+      article.querySelector(".share-btn").addEventListener("click", () => {
+        const postUrl = `${window.location.origin}${window.location.pathname}#post-${p.id}`;
+        if (navigator.share) {
+          navigator.share({
+            title: p.productTitle,
+            text: `Check out this product: ${p.productTitle} for MVR ${p.productPrice.toFixed(2)}`,
+            url: postUrl
+          }).catch(console.error);
+        } else if (navigator.clipboard) {
+          navigator.clipboard.writeText(postUrl).then(() => {
+            alert("Product link copied to clipboard!");
+          }).catch(() => {
+            alert("Copy failed. Here is the link:\n" + postUrl);
+          });
+        } else {
+          prompt("Copy this product link:", postUrl);
+        }
+      });
+
+      // Add delete button listener (only if owner)
+      const deleteBtn = article.querySelector(".delete-btn");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          if (confirm("Are you sure you want to delete this post?")) {
+            try {
+              await import('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js').then(({deleteDoc, doc}) => {
+                deleteDoc(doc(db, "posts", p.id));
+              });
+              alert("Post deleted");
+            } catch(e) {
+              alert("Delete failed: " + e.message);
+            }
+          }
+        });
+      }
+    }
+  }
+
+  // Load image or video media for a post
+  function loadMedia(p) {
+    const holder = document.getElementById(`media-${p.id}`);
+    if (!holder) return;
+
+    if (p.mediaType === "video") {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+      video.src = p.mediaUrl || '';
+      video.onloadstart = () => video.dataset.loaded = "false";
+      video.onloadeddata = () => video.dataset.loaded = "true";
+      holder.replaceWith(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = p.mediaUrl || '';
+      img.alt = "Product media";
+      img.onload = () => (img.dataset.loaded = "true");
+      holder.replaceWith(img);
+    }
+  }
+
+  // Authentication state change
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      uploadForm.style.display = "block";
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      uploadForm.style.display = "none";
+    }
+    renderPosts();
+  });
+
+  loginBtn.addEventListener("click", async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    signOut(auth);
+  });
+
+  // Handle new product post upload
+  uploadForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUser) return alert("Please sign in first.");
+
+    const fileInput = document.getElementById("mediaFile");
+    const titleInput = document.getElementById("productTitle");
+    const priceInput = document.getElementById("productPrice");
+    const locationInput = document.getElementById("productLocation");
+    const contactInput = document.getElementById("productContact");
+    const paymentLinkInput = document.getElementById("paymentLink");
+
+    const file = fileInput.files[0];
+    if (!file) return alert("Please select a media file.");
+
+    // Validate inputs
+    if (!titleInput.value.trim() || !priceInput.value.trim() || !contactInput.value.trim()) {
+      return alert("Please fill in required fields.");
+    }
+
+    try {
+      // Upload file to Firebase Storage
+      const storageRef = sRef(storage, `posts/${currentUser.uid}/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      const prog = document.getElementById("prog");
+      const progBar = document.getElementById("progBar");
+      prog.style.display = "block";
+      progBar.style.width = "0%";
+
+      uploadTask.on('state_changed', (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        progBar.style.width = progress + "%";
+      });
+
+      await uploadTask;
+
+      const downloadURL = await getDownloadURL(storageRef);
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+
+      // Add post doc to Firestore
+      await addDoc(postsCol, {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL,
+        timestamp: serverTimestamp(),
+        mediaUrl: downloadURL,
+        mediaType: mediaType,
+        caption: "",
+        productTitle: titleInput.value.trim(),
+        productPrice: parseFloat(priceInput.value),
+        productLocation: locationInput.value.trim(),
+        productContact: contactInput.value.trim(),
+        paymentLink: paymentLinkInput.value.trim() || null
+      });
+
+      // Reset form
+      uploadForm.reset();
+      prog.style.display = "none";
+      alert("Product posted!");
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+      document.getElementById("prog").style.display = "none";
+    }
+  });
+
+  // Search input event
+  searchInput.addEventListener("input", () => {
+    renderPosts();
+  });
+
+</script>
+</body>
+    </html>
+    
