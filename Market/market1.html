@@ -2,171 +2,226 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>DRFMedia Marketplace — Buy & Sell</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Marketplace</title>
 <style>
-  /* Minimal styles for demo */
-  body { font-family: Arial, sans-serif; padding: 1rem; background: #f8f9fa; color: #212529; }
-  header { background:#007bff; color:#fff; padding:1rem; display:flex; align-items:center; gap:1rem; }
-  header img { width:40px; height:40px; }
-  #loginBtn, #logoutBtn, #uploadForm button { padding:0.5rem 1rem; margin:0.5rem 0; cursor:pointer; border:none; border-radius:0.25rem; }
-  #loginBtn { background:#007bff; color:#fff; }
-  #logoutBtn { background:#dc3545; color:#fff; display:none; }
-  #uploadForm { display:none; margin-top:1rem; }
-  #postContainer article { background:#fff; border:1px solid #ccc; padding:1rem; margin:1rem 0; border-radius:0.25rem; }
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 10px; background: #f7f7f7; }
+  h1 { text-align: center; }
+  form { background: white; padding: 15px; margin-bottom: 30px; border-radius: 6px; box-shadow: 0 0 8px #ccc; }
+  label { display: block; margin-top: 10px; }
+  input, textarea, select { width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
+  button { margin-top: 15px; padding: 10px 15px; font-size: 1rem; cursor: pointer; }
+  #posts { margin-top: 40px; }
+  .post { background: white; padding: 15px; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 0 6px #bbb; }
+  .post img, .post video { max-width: 100%; border-radius: 6px; margin-top: 10px; }
+  .btns { margin-top: 15px; }
+  .btns button, .btns a { margin-right: 10px; text-decoration: none; padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; }
+  .btn-whatsapp { background: #25D366; color: white; }
+  .btn-payment { background: #4CAF50; color: white; }
+  .btn-like { background: #e91e63; color: white; }
+  .btn-share { background: #2196F3; color: white; }
 </style>
 </head>
 <body>
 
-<header>
-  <img src="logo.png" alt="DRFMedia logo" />
-  <h1>DRFMedia Marketplace</h1>
-</header>
+<h1>DRF Marketplace - Sell Your Photos & Videos</h1>
 
-<button id="loginBtn">Sign in with Google</button>
-<button id="logoutBtn">Logout</button>
+<form id="postForm">
+  <label>Title *</label>
+  <input type="text" id="title" required />
 
-<form id="uploadForm" autocomplete="off">
-  <input id="mediaFile" type="file" accept="image/*,video/*" required /><br/>
-  <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required /><br/>
-  <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required /><br/>
-  <input id="productLocation" type="text" placeholder="Location (optional)" /><br/>
-  <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required /><br/>
-  <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" /><br/>
-  <button type="submit">Post Product</button>
+  <label>Description *</label>
+  <textarea id="description" rows="3" required></textarea>
+
+  <label>Country *</label>
+  <input type="text" id="country" required />
+
+  <label>City *</label>
+  <input type="text" id="city" required />
+
+  <label>WhatsApp Number (with country code, e.g. +123456789) *</label>
+  <input type="text" id="whatsapp" pattern="^\+\d{7,15}$" placeholder="+123456789" required />
+
+  <label>Payment Link (URL) *</label>
+  <input type="url" id="paymentLink" placeholder="https://..." required />
+
+  <label>Upload Photo or Video *</label>
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+
+  <button type="submit">Post Listing</button>
 </form>
 
-<section id="postContainer" aria-live="polite"></section>
+<div id="posts"></div>
 
+<!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
-  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-
-  // Use only the JWT token string here, no 'Bearer' prefix
-  const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJhNjEzMWU0MTdmNGUzOTljZDgwNiIsInNjb3BlZEtleVNlY3JldCI6ImQ4MDgwZjMzN2RjNDdhNjY1YWRlNTU3NWU2MDA0NmU4NDU0YjZkNmQ4MDcxYTY5YzBiODM2ODhiOTE2Mzg4OWYiLCJleHAiOjE3ODYyNzM3MTd9.AuOo1PiDfQEK_TodAsAcHBYiH4MkA4xwIYAtcX1Le6s";
+  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
     authDomain: "drfmarket-place.firebaseapp.com",
-    databaseURL: "https://drfmarket-place-default-rtdb.firebaseio.com", // Add this for Realtime DB
     projectId: "drfmarket-place",
     storageBucket: "drfmarket-place.appspot.com",
     messagingSenderId: "752616443115",
-    appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+    appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+    measurementId: "G-MV9JQZHLLY"
   };
 
   const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const uploadForm = document.getElementById("uploadForm");
-  const mediaFile = document.getElementById("mediaFile");
-  const productTitle = document.getElementById("productTitle");
-  const productPrice = document.getElementById("productPrice");
-  const productLocation = document.getElementById("productLocation");
-  const productContact = document.getElementById("productContact");
-  const paymentLink = document.getElementById("paymentLink");
-  const postContainer = document.getElementById("postContainer");
+  const postForm = document.getElementById('postForm');
+  const postsDiv = document.getElementById('posts');
 
-  let currentUser = null;
-
-  loginBtn.onclick = () => signInWithPopup(auth, provider);
-  logoutBtn.onclick = () => signOut(auth);
-
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    loginBtn.style.display = user ? "none" : "inline-block";
-    logoutBtn.style.display = user ? "inline-block" : "none";
-    uploadForm.style.display = user ? "block" : "none";
-    if(user) loadPosts();
-    else postContainer.innerHTML = "";
-  });
-
-  async function loadPosts() {
-    const snapshot = await get(ref(db, "posts"));
-    const postsData = snapshot.val() || {};
-    postContainer.innerHTML = "";
-    Object.entries(postsData)
-      .sort((a,b) => b[1].timestamp - a[1].timestamp)
-      .forEach(([id, post]) => {
-        const el = document.createElement("article");
-        el.innerHTML = `
-          <strong>${post.productTitle} - MVR ${post.productPrice.toFixed(2)}</strong><br/>
-          Location: ${post.productLocation || "N/A"}<br/>
-          Contact: ${post.productContact}<br/>
-          <a href="https://wa.me/${encodeURIComponent(post.productContact.replace(/\D/g,''))}" target="_blank">WhatsApp Seller</a><br/>
-          <small>${new Date(post.timestamp).toLocaleString()}</small>
-        `;
-        postContainer.appendChild(el);
-      });
-  }
-
-  uploadForm.onsubmit = async (e) => {
+  // Submit form handler
+  postForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!mediaFile.files[0]) return alert("Please select a file");
-    if (productTitle.value.trim().length < 2) return alert("Product title too short");
-    if (!productPrice.value || Number(productPrice.value) < 0) return alert("Invalid price");
-    if (productContact.value.trim().length < 5) return alert("Enter valid contact info");
+    const title = postForm.title.value.trim();
+    const description = postForm.description.value.trim();
+    const country = postForm.country.value.trim();
+    const city = postForm.city.value.trim();
+    const whatsapp = postForm.whatsapp.value.trim();
+    const paymentLink = postForm.paymentLink.value.trim();
+    const fileInput = postForm.mediaFile;
+    const file = fileInput.files[0];
 
-    const file = mediaFile.files[0];
-    uploadForm.querySelector("button").disabled = true;
-
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-
-      // Pinata upload using XMLHttpRequest with proper Authorization header
-      const cid = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
-        xhr.setRequestHeader("Authorization", "Bearer " + pinataJWT);
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            try {
-              const res = JSON.parse(xhr.responseText);
-              resolve(res.IpfsHash);
-            } catch {
-              reject("Invalid Pinata response");
-            }
-          } else {
-            reject("Pinata upload failed: " + xhr.status);
-          }
-        };
-        xhr.onerror = () => reject("Pinata upload error");
-        xhr.send(fd);
-      });
-
-      // Save post to Firebase
-      const newPostRef = push(ref(db, "posts"));
-      await set(newPostRef, {
-        userId: currentUser.uid,
-        displayName: currentUser.displayName || "Anon",
-        photoURL: currentUser.photoURL || "",
-        ipfsHash: cid,
-        mediaType: file.type.startsWith("video") ? "video" : "image",
-        timestamp: Date.now(),
-        productTitle: productTitle.value.trim(),
-        productPrice: Number(productPrice.value),
-        productLocation: productLocation.value.trim(),
-        productContact: productContact.value.trim(),
-        paymentLink: paymentLink.value.trim(),
-      });
-
-      alert("Product posted successfully!");
-      uploadForm.reset();
-      loadPosts();
-
-    } catch (err) {
-      alert("Upload failed: " + err);
-    } finally {
-      uploadForm.querySelector("button").disabled = false;
+    if (!file) {
+      alert('Please upload a photo or video file.');
+      return;
     }
-  };
+
+    // Upload file to Firebase Storage
+    const storageRef = ref(storage, `marketplace_media/${Date.now()}_${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed',
+      null,
+      (error) => alert('Upload failed: ' + error.message),
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+        // Add post to Firestore
+        try {
+          await addDoc(collection(db, 'marketplace_posts'), {
+            title,
+            description,
+            country,
+            city,
+            whatsapp,
+            paymentLink,
+            mediaURL: downloadURL,
+            mediaType: file.type.startsWith('video') ? 'video' : 'image',
+            likes: 0,
+            timestamp: Date.now()
+          });
+          alert('Post uploaded successfully!');
+          postForm.reset();
+        } catch (err) {
+          alert('Error saving post: ' + err.message);
+        }
+      }
+    );
+  });
+
+  // Listen for posts realtime and display
+  const q = query(collection(db, 'marketplace_posts'), orderBy('timestamp', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    postsDiv.innerHTML = '';
+    snapshot.forEach(docSnap => {
+      const post = docSnap.data();
+      const id = docSnap.id;
+
+      const postEl = document.createElement('div');
+      postEl.className = 'post';
+
+      // Title & desc
+      postEl.innerHTML = `
+        <h3>${escapeHTML(post.title)}</h3>
+        <p>${escapeHTML(post.description)}</p>
+        <p><b>Location:</b> ${escapeHTML(post.city)}, ${escapeHTML(post.country)}</p>
+      `;
+
+      // Media
+      if(post.mediaType === 'video') {
+        const video = document.createElement('video');
+        video.src = post.mediaURL;
+        video.controls = true;
+        video.style.maxWidth = '100%';
+        postEl.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = post.mediaURL;
+        img.alt = post.title;
+        postEl.appendChild(img);
+      }
+
+      // WhatsApp & Payment buttons
+      const btnsDiv = document.createElement('div');
+      btnsDiv.className = 'btns';
+
+      const whatsappBtn = document.createElement('a');
+      whatsappBtn.href = `https://wa.me/${post.whatsapp.replace(/\D/g, '')}`;
+      whatsappBtn.target = '_blank';
+      whatsappBtn.rel = 'noopener noreferrer';
+      whatsappBtn.className = 'btn-whatsapp';
+      whatsappBtn.textContent = 'WhatsApp Seller';
+
+      const paymentBtn = document.createElement('a');
+      paymentBtn.href = post.paymentLink;
+      paymentBtn.target = '_blank';
+      paymentBtn.rel = 'noopener noreferrer';
+      paymentBtn.className = 'btn-payment';
+      paymentBtn.textContent = 'Pay Now';
+
+      btnsDiv.appendChild(whatsappBtn);
+      btnsDiv.appendChild(paymentBtn);
+
+      // Like button
+      const likeBtn = document.createElement('button');
+      likeBtn.className = 'btn-like';
+      likeBtn.textContent = `👍 Like (${post.likes || 0})`;
+      likeBtn.onclick = async () => {
+        try {
+          const postRef = doc(db, 'marketplace_posts', id);
+          await updateDoc(postRef, { likes: (post.likes || 0) + 1 });
+        } catch (e) {
+          alert('Error liking post: ' + e.message);
+        }
+      };
+      btnsDiv.appendChild(likeBtn);
+
+      // Share button
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'btn-share';
+      shareBtn.textContent = 'Share';
+      shareBtn.onclick = () => {
+        if (navigator.share) {
+          navigator.share({
+            title: post.title,
+            text: post.description,
+            url: window.location.href + '#post-' + id,
+          }).catch(console.error);
+        } else {
+          alert('Share API not supported in this browser.');
+        }
+      };
+      btnsDiv.appendChild(shareBtn);
+
+      postEl.appendChild(btnsDiv);
+      postEl.id = 'post-' + id;
+
+      postsDiv.appendChild(postEl);
+    });
+  });
+
+  // Simple HTML escape to prevent injection
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 </script>
 
 </body>
