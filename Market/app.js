@@ -1,16 +1,10 @@
-// app.js
+// app.js (or inside your <script type="module">)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
-import {
-  getAuth,
-  signInWithPopup,
-  signOut,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-const pinataJWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI1MTNlNTlkNmE3NmY2YmE5NTY3MyIsInNjb3BlZEtleVNlY3JldCI6ImFkZTE0YWI1ODRlYzQyZWIzMjBkZWMxMGQzYWMxYzcxODkxN2QzM2Q2ZmRkNmM1NzA0OWRiM2RjY2U3ZWIzNzciLCJleHAiOjE3ODYyNjcyNjd9.mDau-cuVEKe9j-USepb4ju6NdVBY3y78hZaHfiKJZM0";
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI1MTNlNTlkNmE3NmY2YmE5NTY3MyIsInNjb3BlZEtleVNlY3JldCI6ImFkZTE0YWI1ODRlYzQyZWIzMjBkZWMxMGQzYWMxYzcxODkxN2QzM2Q2ZmRkNmM1NzA0OWRiM2RjY2U3ZWIzNzciLCJleHAiOjE3ODYyNjcyNjd9.mDau-cuVEKe9j-USepb4ju6NdVBY3y78hZaHfiKJZM0";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
@@ -19,7 +13,7 @@ const firebaseConfig = {
   storageBucket: "drfmarket-place.firebasestorage.app",
   messagingSenderId: "752616443115",
   appId: "1:752616443115:web:73b71924daf66ae9c882ae",
-  measurementId: "G-MV9JQZHLLY",
+  measurementId: "G-MV9JQZHLLY"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -28,82 +22,46 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 const $ = (id) => document.getElementById(id);
+const login = $("loginBtn"),
+  logout = $("logoutBtn");
+const upload = $("uploadForm"),
+  fileIn = $("mediaFile"),
+  titleIn = $("productTitle"),
+  priceIn = $("productPrice"),
+  locationIn = $("productLocation"),
+  contactIn = $("productContact"),
+  paymentLinkIn = $("paymentLink");
+const prog = $("prog"),
+  bar = $("progBar");
+const posts = $("postContainer"),
+  qIn = $("searchInput"),
+  nav = $("primaryNav");
 
-const loginBtn = $("loginBtn");
-const logoutBtn = $("logoutBtn");
+let user = null,
+  all = [];
 
-const uploadForm = $("uploadForm");
-const fileInput = $("mediaFile");
-const titleInput = $("productTitle");
-const priceInput = $("productPrice");
-const locationInput = $("productLocation");
-const contactInput = $("productContact");
-const paymentLinkInput = $("paymentLink");
-
-const progressContainer = $("prog");
-const progressBar = $("progBar");
-
-const postContainer = $("postContainer");
-const searchInput = $("searchInput");
-
-const menuToggle = document.getElementById("menuToggle");
-const primaryNav = document.getElementById("primaryNav");
-
-let currentUser = null;
-let postsData = [];
-
-function escapeHTML(str) {
-  return str.replace(/[&<>"']/g, (m) => ({
+const escapeHTML = (s) =>
+  s.replace(/[&<>"']/g, (m) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
     '"': "&quot;",
     "'": "&#39;",
   }[m]));
-}
 
-function toggleMenu() {
-  if (primaryNav.style.display === "flex") {
-    primaryNav.style.display = "none";
-  } else {
-    primaryNav.style.display = "flex";
+async function getGatewayUrl(cid) {
+  const gateways = [
+    "https://gateway.pinata.cloud/ipfs/",
+    "https://cloudflare-ipfs.com/ipfs/",
+    "https://ipfs.io/ipfs/",
+  ];
+  for (const g of gateways) {
+    try {
+      const res = await fetch(g + cid, { method: "HEAD" });
+      if (res.ok) return g + cid;
+    } catch {}
   }
-}
-
-function initResponsiveMenu() {
-  if (window.innerWidth <= 600) {
-    primaryNav.style.display = "none";
-  }
-  menuToggle.addEventListener("click", toggleMenu);
-
-  [...primaryNav.querySelectorAll("a")].forEach((a) => {
-    a.addEventListener("click", () => {
-      if (window.innerWidth <= 600) {
-        primaryNav.style.display = "none";
-      }
-    });
-  });
-
-  document.addEventListener("click", (e) => {
-    const target = e.target;
-    if (
-      window.innerWidth <= 600 &&
-      !primaryNav.contains(target) &&
-      target !== menuToggle
-    ) {
-      primaryNav.style.display = "none";
-    }
-  });
-}
-
-function setActiveNavLink() {
-  [...primaryNav.querySelectorAll("a")].forEach((a) => {
-    if (location.pathname.endsWith(a.getAttribute("href"))) {
-      a.classList.add("active");
-    } else {
-      a.classList.remove("active");
-    }
-  });
+  return null;
 }
 
 function lazyLoadVideo(video) {
@@ -123,7 +81,7 @@ function lazyLoadVideo(video) {
   video.load();
 }
 
-const videoObserver = new IntersectionObserver(
+const observer = new IntersectionObserver(
   (entries, obs) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
@@ -135,240 +93,186 @@ const videoObserver = new IntersectionObserver(
   { threshold: 0.25 }
 );
 
-async function shareProduct(product) {
+async function shareProduct(p) {
   if (navigator.share) {
     try {
       await navigator.share({
-        title: product.productTitle || "DRFMedia product",
-        text: `Check out this product: ${product.productTitle}`,
-        url: location.origin + "/media.html#" + product.id,
+        title: p.productTitle || 'DRFMedia product',
+        text: `Check out this product: ${p.productTitle}`,
+        url: location.origin + '/media.html#' + p.id
       });
-    } catch {
-      alert("Share cancelled or failed");
+    } catch (err) {
+      alert('Share cancelled or failed');
     }
   } else {
-    const shareUrl = location.origin + "/media.html#" + product.id;
+    const shareUrl = location.origin + '/media.html#' + p.id;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      alert("Link copied to clipboard:\n" + shareUrl);
+      alert('Link copied to clipboard:\n' + shareUrl);
     } catch {
-      alert("Sharing not supported on this browser");
+      alert('Sharing not supported on this browser');
     }
   }
 }
 
-function renderPosts() {
-  const term = searchInput.value.trim().toLowerCase();
-  postContainer.innerHTML = "";
-
-  for (const post of postsData) {
-    const captionMatch = (post.caption || "").toLowerCase().includes(term);
-    const titleMatch = (post.productTitle || "").toLowerCase().includes(term);
-    const locationMatch = (post.productLocation || "").toLowerCase().includes(term);
-
-    if (term && !captionMatch && !titleMatch && !locationMatch) {
+async function render() {
+  const term = qIn.value.trim().toLowerCase();
+  posts.innerHTML = "";
+  for (const p of all) {
+    if (term && !(p.caption || "").toLowerCase().includes(term) && !(p.productTitle || "").toLowerCase().includes(term) && !(p.productLocation || "").toLowerCase().includes(term))
       continue;
-    }
 
-    const article = document.createElement("article");
-    article.className = "post-item";
-    article.innerHTML = `
+    const card = document.createElement("article");
+    card.className = "post-item";
+    card.innerHTML = `
       <header class="post-owner">
-        <img class="avatar" src="${post.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" />
+        <img class="avatar" src="${p.photoURL || "https://via.placeholder.com/40"}" alt="User avatar" />
         <div>
-          <div>${escapeHTML(post.displayName || "Anon")}</div>
-          <time class="post-time" datetime="${new Date(post.timestamp).toISOString()}">
-            ${new Date(post.timestamp).toLocaleString()}
+          <div>${escapeHTML(p.displayName || "Anon")}</div>
+          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+            ${new Date(p.timestamp).toLocaleString()}
           </time>
         </div>
       </header>
-      <div class="post-caption">${escapeHTML(post.caption || "")}</div>
-      <div class="post-media" id="media-${post.id}"></div>
+      <div class="post-caption">${escapeHTML(p.caption || "")}</div>
+      <div class="post-media" id="m-${p.id}"></div>
       <div class="product-info">
-        <div><strong>Product:</strong> ${escapeHTML(post.productTitle || "")}</div>
-        <div class="product-price">Price: MVR ${post.productPrice ? Number(post.productPrice).toFixed(2) : "0.00"}</div>
-        ${
-          post.productLocation
-            ? `<div><strong>Location:</strong> ${escapeHTML(post.productLocation)}</div>`
-            : ""
-        }
-        <div class="product-contact"><strong>Contact:</strong> ${escapeHTML(post.productContact || "")}</div>
+        <div><strong>Product:</strong> ${escapeHTML(p.productTitle || "")}</div>
+        <div class="product-price">Price: MVR ${p.productPrice ? Number(p.productPrice).toFixed(2) : "0.00"}</div>
+        ${p.productLocation ? `<div><strong>Location:</strong> ${escapeHTML(p.productLocation)}</div>` : ""}
+        <div class="product-contact"><strong>Contact:</strong> ${escapeHTML(p.productContact || "")}</div>
       </div>
       <div class="buttons">
-        <a href="https://wa.me/${encodeURIComponent(post.productContact.replace(/[^0-9]/g, ""))}" target="_blank" rel="noopener" aria-label="Contact Seller on WhatsApp">Contact Seller</a>
-        ${
-          post.paymentLink
-            ? `<a href="${post.paymentLink}" target="_blank" rel="noopener" class="btn" style="background:#28a745">Pay Now</a>`
-            : ""
-        }
-        <button class="btn" style="background:#17a2b8">Share</button>
+        <a href="https://wa.me/${encodeURIComponent(p.productContact.replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener" aria-label="Contact Seller on WhatsApp">Contact Seller</a>
+        ${p.paymentLink ? `<a href="${p.paymentLink}" target="_blank" rel="noopener" class="btn" aria-label="Pay Seller">Pay Seller</a>` : ""}
+        <button class="btn" type="button" aria-label="Share product" data-id="${p.id}">Share</button>
       </div>
     `;
+    posts.append(card);
 
-    const mediaContainer = article.querySelector(`#media-${post.id}`);
-    if (post.type && post.cid) {
-      const url = "https://gateway.pinata.cloud/ipfs/" + post.cid;
-      if (post.type.startsWith("video/")) {
-        const video = document.createElement("video");
-        video.controls = true;
-        video.dataset.src = url;
-        video.preload = "none";
-        mediaContainer.appendChild(video);
-        videoObserver.observe(video);
-      } else if (post.type.startsWith("image/")) {
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = post.productTitle || "Product image";
-        img.onload = () => (img.dataset.loaded = "true");
-        mediaContainer.appendChild(img);
+    const holder = card.querySelector(`#m-${p.id}`);
+
+    if (p.mediaType === "video") {
+      const url = await getGatewayUrl(p.ipfsHash);
+      if (url) {
+        const v = document.createElement("video");
+        v.controls = true;
+        v.playsInline = true;
+        v.preload = "metadata";
+        v.dataset.src = url;
+        observer.observe(v);
+        holder.replaceWith(v);
+      } else {
+        holder.textContent = "Video unavailable.";
       }
+    } else {
+      const img = document.createElement("img");
+      img.src = "https://gateway.pinata.cloud/ipfs/" + p.ipfsHash;
+      img.alt = "Product media";
+      holder.replaceWith(img);
     }
-
-    article.querySelector("button.btn").onclick = () => shareProduct(post);
-
-    postContainer.appendChild(article);
   }
+
+  posts.querySelectorAll(".buttons button.btn").forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.getAttribute("data-id");
+      const post = all.find(x => x.id === id);
+      if (post) shareProduct(post);
+    };
+  });
 }
 
-searchInput.addEventListener("input", renderPosts);
+async function getPosts() {
+  const snap = await get(ref(db, "posts"));
+  const obj = snap.val() || {};
+  all = Object.entries(obj)
+    .map(([id, v]) => ({ id, ...v }))
+    .sort((a, b) => b.timestamp - a.timestamp);
+  render();
+}
 
-loginBtn.onclick = () => {
-  signInWithPopup(auth, provider).catch((e) =>
-    alert("Google sign-in failed: " + e.message)
-  );
-};
-
-logoutBtn.onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-  if (user) {
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    uploadForm.style.display = "block";
-  } else {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    uploadForm.style.display = "none";
-  }
+login.onclick = () => signInWithPopup(auth, provider);
+logout.onclick = () => signOut(auth);
+onAuthStateChanged(auth, (u) => {
+  user = u;
+  login.style.display = u ? "none" : "block";
+  logout.style.display = u ? "block" : "none";
+  upload.style.display = u ? "block" : "none";
+  primaryNav.style.display = u ? "flex" : "none";
+  getPosts();
 });
+qIn.oninput = render;
 
-uploadForm.onsubmit = async (e) => {
+upload.onsubmit = async (e) => {
   e.preventDefault();
-  if (!currentUser) {
-    alert("Please sign in first");
-    return;
-  }
+  if (!fileIn.files[0]) return alert("Choose a product image/video");
+  if (titleIn.value.trim().length < 2) return alert("Product Title too short");
+  if (!priceIn.value || Number(priceIn.value) < 0) return alert("Invalid price");
+  if (contactIn.value.trim().length < 5) return alert("Enter valid contact info");
 
-  const file = fileInput.files[0];
-  if (!file) {
-    alert("Select a media file");
-    return;
-  }
-  if (titleInput.value.trim().length < 2) {
-    alert("Product title must be at least 2 characters");
-    return;
-  }
-  if (!priceInput.value || Number(priceInput.value) < 0) {
-    alert("Enter a valid price");
-    return;
-  }
-  if (!contactInput.value.trim() || contactInput.value.trim().length < 5) {
-    alert("Enter valid WhatsApp or phone contact");
-    return;
-  }
-
-  progressContainer.style.display = "block";
-  progressBar.style.width = "0%";
+  const file = fileIn.files[0];
+  upload.querySelector("button").disabled = true;
+  prog.style.display = "block";
+  bar.style.width = "0";
 
   try {
-    // Prepare upload to Pinata
-    const data = new FormData();
-    data.append("file", file);
-
-    const metadata = {
-      name: file.name,
-      keyvalues: {
-        uploadedBy: currentUser.uid,
-        productTitle: titleInput.value.trim(),
-      },
-    };
-    data.append("pinataMetadata", JSON.stringify(metadata));
-
+    // Upload to Pinata IPFS
+    const fd = new FormData();
+    fd.append("file", file);
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
     xhr.setRequestHeader("Authorization", "Bearer " + pinataJWT);
-
-    xhr.upload.onprogress = (evt) => {
-      if (evt.lengthComputable) {
-        const percent = (evt.loaded / evt.total) * 100;
-        progressBar.style.width = percent.toFixed(2) + "%";
-      }
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) bar.style.width = (e.loaded / e.total) * 100 + "%";
     };
-
-    const uploadPromise = new Promise((resolve, reject) => {
+    const cid = await new Promise((res, rej) => {
       xhr.onload = () => {
-        if (xhr.status === 200) {
-          resolve(JSON.parse(xhr.responseText));
-        } else {
-          reject(new Error("Pinata upload failed: " + xhr.statusText));
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response && response.IpfsHash) {
+            res(response.IpfsHash);
+          } else {
+            rej("Pinata upload failed: No IpfsHash returned");
+          }
+        } catch {
+          rej("Pinata upload failed: Invalid response");
         }
       };
-      xhr.onerror = () => reject(new Error("Pinata upload failed"));
+      xhr.onerror = () => rej("Pinata upload failed: Network error");
+      xhr.send(fd);
     });
 
-    xhr.send(data);
-
-    const pinataResp = await uploadPromise;
-    const cid = pinataResp.IpfsHash;
-
-    // Save post metadata to Firebase Realtime DB
-    const postsRef = ref(db, "posts");
-    const newPostRef = push(postsRef);
-    await set(newPostRef, {
-      uid: currentUser.uid,
-      displayName: currentUser.displayName || "Anon",
-      photoURL: currentUser.photoURL || "",
+    // Save post to Firebase DB
+    const newRef = push(ref(db, "posts"));
+    await set(newRef, {
+      userId: user.uid,
+      displayName: user.displayName || "Anon",
+      photoURL: user.photoURL || "",
+      caption: "",
+      ipfsHash: cid,
+      mediaType: file.type.startsWith("video") ? "video" : "image",
       timestamp: Date.now(),
-      caption: escapeHTML(titleInput.value.trim()),
-      productTitle: escapeHTML(titleInput.value.trim()),
-      productPrice: Number(priceInput.value),
-      productLocation: escapeHTML(locationInput.value.trim()),
-      productContact: escapeHTML(contactInput.value.trim()),
-      paymentLink: paymentLinkInput.value.trim() || null,
-      type: file.type,
-      cid,
-      id: newPostRef.key,
+      productTitle: titleIn.value.trim(),
+      productPrice: Number(priceIn.value),
+      productLocation: locationIn.value.trim(),
+      productContact: contactIn.value.trim(),
+      paymentLink: paymentLinkIn.value.trim(),
     });
 
-    uploadForm.reset();
-    progressContainer.style.display = "none";
-    progressBar.style.width = "0%";
-
-    alert("Product posted successfully!");
-    await fetchPosts();
-  } catch (error) {
-    alert("Upload failed: " + error.message);
-    progressContainer.style.display = "none";
-    progressBar.style.width = "0%";
+    // Reset form UI
+    fileIn.value = "";
+    titleIn.value = "";
+    priceIn.value = "";
+    locationIn.value = "";
+    contactIn.value = "";
+    paymentLinkIn.value = "";
+    bar.style.width = "100%";
+    setTimeout(() => (prog.style.display = "none"), 400);
+    getPosts();
+  } catch (e) {
+    alert(e);
+    prog.style.display = "none";
+  } finally {
+    upload.querySelector("button").disabled = false;
   }
 };
-
-async function fetchPosts() {
-  const postsRef = ref(db, "posts");
-  const snapshot = await get(postsRef);
-  if (!snapshot.exists()) {
-    postsData = [];
-    renderPosts();
-    return;
-  }
-  postsData = Object.values(snapshot.val());
-  postsData.sort((a, b) => b.timestamp - a.timestamp);
-  renderPosts();
-}
-
-window.addEventListener("load", () => {
-  initResponsiveMenu();
-  setActiveNavLink();
-  fetchPosts();
-});
