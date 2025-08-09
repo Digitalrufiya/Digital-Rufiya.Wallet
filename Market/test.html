@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8" /><title>Pinata Test Upload</title></head>
+<head><meta charset="UTF-8" /><title>Pinata Upload Test</title></head>
 <body>
   <input type="file" id="fileInput" />
   <button id="uploadBtn">Upload to Pinata</button>
   <pre id="output"></pre>
 
 <script>
-const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIwMDhlNTA2NWJkZGIyZDJkMmIzIiwic2NvcGVLZXlTZWNyZXQiOiI0ZDdkYmRlN2Q0MTc5ZWUyMTZkZDEzNzNiZjY2ZDUwNWRlZWY2N2MzYjRiMjM2N2VhYjQxMWU1YzFhYWM4ZTQ4IiwiZXhwIjoxNzg2Mjc0MzkyfQ.QqAoU9Lc0StPunmPREujoNnAriNnItbe61xNbrU5sRg";
+const pinataJWT = "YOUR_JWT_TOKEN_HERE"; // replace with your actual JWT
 
 const fileInput = document.getElementById("fileInput");
 const uploadBtn = document.getElementById("uploadBtn");
 const output = document.getElementById("output");
 
-uploadBtn.onclick = () => {
+uploadBtn.onclick = async () => {
   const file = fileInput.files[0];
   if (!file) {
     output.textContent = "Please select a file first.";
@@ -22,26 +22,43 @@ uploadBtn.onclick = () => {
 
   const formData = new FormData();
   formData.append("file", file);
-
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
-
-  xhr.setRequestHeader("Authorization", "Bearer " + pinataJWT);
-
-  xhr.onload = () => {
-    if (xhr.status === 200) {
-      const res = JSON.parse(xhr.responseText);
-      output.textContent = "Upload successful! IPFS Hash: " + res.IpfsHash;
-    } else {
-      output.textContent = `Upload failed: ${xhr.status} ${xhr.statusText}\n${xhr.responseText}`;
+  
+  // Optional metadata
+  const metadata = JSON.stringify({
+    name: file.name,
+    keyvalues: {
+      uploadedBy: "user"
     }
-  };
+  });
+  formData.append("pinataMetadata", metadata);
 
-  xhr.onerror = () => {
-    output.textContent = "Upload failed: Network error or CORS issue.";
-  };
+  // Optional pinata options
+  const options = JSON.stringify({
+    cidVersion: 1,
+    wrapWithDirectory: false
+  });
+  formData.append("pinataOptions", options);
 
-  xhr.send(formData);
+  try {
+    const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + pinataJWT
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      output.textContent = `Upload failed: ${response.status} ${response.statusText}\n${errorText}`;
+      return;
+    }
+
+    const data = await response.json();
+    output.textContent = "Upload successful! IPFS Hash: " + data.IpfsHash;
+  } catch (error) {
+    output.textContent = "Upload failed: " + error.message;
+  }
 };
 </script>
 </body>
