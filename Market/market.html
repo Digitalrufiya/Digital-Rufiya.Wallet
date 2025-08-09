@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DRFMedia — Pay $1 USDC for 30-day Access</title>
-
   <style>
     :root{
       --bg:#0b1220; --card:#0f1724; --accent:#f59e0b; --muted:#93c5fd;
@@ -12,7 +11,8 @@
     }
     body{
       margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
-      background: linear-gradient(180deg, #071028 0%, #07182b 100%); color:#e6eef8;
+      background: linear-gradient(180deg, #071028 0%, #07182b 100%);
+      color:#e6eef8;
       -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
       display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px;
     }
@@ -67,7 +67,7 @@
         <pre id="recipient" style="font-weight:600; font-size:13px; background:transparent; border:0;">0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C</pre>
 
         <label>Token Contract (USDC BEP-20)</label>
-        <input id="tokenAddr" type="text" placeholder="Paste USDC (BEP-20) contract address here" />
+        <input id="tokenAddr" type="text" placeholder="Paste USDC (BEP-20) contract address here" value="0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" />
 
         <label>Amount (USD)</label>
         <input id="amount" type="text" value="1" />
@@ -79,7 +79,7 @@
 
         <div id="log" class="status" aria-live="polite" style="margin-top:12px;">
           <div class="muted">Status: <span id="statusText">Not connected</span></div>
-          <div id="extra" style="margin-top:6px"></div>
+          <div id="extra" style="margin-top:6px; white-space: pre-wrap;"></div>
         </div>
 
         <div style="margin-top:12px">
@@ -111,258 +111,254 @@
     <footer>DRFMedia • Use responsibly • On-chain payments recorded by user wallets</footer>
   </div>
 
-  <!-- Ethers.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.min.js" integrity="" crossorigin="anonymous"></script>
+  <!-- Ethers v5 UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
   <script>
-    (function(){
-      // ========== CONFIG ===========
-      const RECEIVER = '0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C'; // your wallet
-      const REQUIRED_CHAIN_ID = 56; // BSC Mainnet (change if you want testnet)
-      // IMPORTANT: set TOKEN_CONTRACT to the actual USDC (BEP-20) contract on BSC.
-      // If you don't set it, user will be prompted to paste in the token address.
-      // Example USDC (on BSC) addresses vary by issuer — replace with the one you want to accept.
-      const DEFAULT_TOKEN_CONTRACT = ''; // <-- PUT USDC token contract here if you have it
-      // default decimals (will be read from token contract when possible)
-      const DEFAULT_DECIMALS = 18;
-      // Key used in localStorage for tracking access
-      const STORAGE_KEY = 'drfmedia_access_v1';
+  (function(){
+    // ========== CONFIG ===========
+    const RECEIVER = '0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C'; // your wallet address
+    const REQUIRED_CHAIN_ID = 56; // BSC Mainnet chainId
+    const DEFAULT_DECIMALS = 18;
+    const STORAGE_KEY = 'drfmedia_access_v1';
 
-      // Minimal ERC-20 ABI (ethers v6)
-      const ERC20_ABI = [
-        "function decimals() view returns (uint8)",
-        "function transfer(address to, uint256 amount) returns (bool)",
-        "function balanceOf(address owner) view returns (uint256)"
-      ];
+    // Minimal ERC20 ABI
+    const ERC20_ABI = [
+      "function decimals() view returns (uint8)",
+      "function transfer(address to, uint256 amount) returns (bool)",
+      "function balanceOf(address owner) view returns (uint256)"
+    ];
 
-      // ========== UI ELEMENTS ==========
-      const connectBtn = document.getElementById('connectBtn');
-      const payBtn = document.getElementById('payBtn');
-      const verifyBtn = document.getElementById('verifyBtn');
-      const tokenAddrInput = document.getElementById('tokenAddr');
-      const amountInput = document.getElementById('amount');
-      const statusText = document.getElementById('statusText');
-      const extraDiv = document.getElementById('extra');
-      const accountPre = document.getElementById('account');
-      const networkPre = document.getElementById('network');
-      const accessInfo = document.getElementById('accessInfo');
-      const logoutBtn = document.getElementById('logoutBtn');
+    // UI elements
+    const connectBtn = document.getElementById('connectBtn');
+    const payBtn = document.getElementById('payBtn');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const tokenAddrInput = document.getElementById('tokenAddr');
+    const amountInput = document.getElementById('amount');
+    const statusText = document.getElementById('statusText');
+    const extraDiv = document.getElementById('extra');
+    const accountPre = document.getElementById('account');
+    const networkPre = document.getElementById('network');
+    const accessInfo = document.getElementById('accessInfo');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-      // populate default token contract if provided
-      if (DEFAULT_TOKEN_CONTRACT) tokenAddrInput.value = DEFAULT_TOKEN_CONTRACT;
+    // State
+    let provider = null;
+    let signer = null;
+    let userAddress = null;
+    let chainId = null;
 
-      // ========== STATE ==========
-      let provider = null;
-      let signer = null;
-      let userAddress = null;
-      let chainId = null;
+    // Helpers
+    function setStatus(text, extra='') {
+      statusText.textContent = text;
+      extraDiv.textContent = extra;
+    }
 
-      // helpers
-      function setStatus(s, extra='') {
-        statusText.textContent = s;
-        extraDiv.textContent = extra;
-      }
+    function humanDate(ms) {
+      return new Date(ms).toLocaleString();
+    }
 
-      function humanDate(ms) {
-        const d = new Date(ms);
-        return d.toLocaleString();
-      }
-
-      function saveAccessFor(addr) {
-        const now = Date.now();
-        const expiry = now + (30 * 24 * 60 * 60 * 1000); // 30 days
-        const payload = { address: addr, grantedAt: now, expiry };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        updateAccessUI();
-      }
-
-      function clearAccess() {
-        localStorage.removeItem(STORAGE_KEY);
-        updateAccessUI();
-      }
-
-      function getAccess() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        try {
-          return JSON.parse(raw);
-        } catch(e){ return null; }
-      }
-
-      function updateAccessUI() {
-        const acc = getAccess();
-        if (!acc) {
-          accessInfo.textContent = 'No active access for this browser.';
-          return;
-        }
-        const now = Date.now();
-        if (now > acc.expiry) {
-          accessInfo.textContent = `Access expired on ${humanDate(acc.expiry)}.`;
-        } else {
-          accessInfo.textContent = `Access valid until ${humanDate(acc.expiry)} (granted to ${acc.address}).`;
-        }
-      }
-
-      // ========== WALLET CONNECT ==========
-      async function connectWallet() {
-        if (!window.ethereum) {
-          alert('MetaMask (or compatible wallet) not found. Please install MetaMask.');
-          return;
-        }
-        try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          // request account access
-          await provider.send("eth_requestAccounts", []);
-          signer = await provider.getSigner();
-          userAddress = await signer.getAddress();
-          const network = await provider.getNetwork();
-          chainId = network.chainId;
-          accountPre.textContent = userAddress;
-          networkPre.textContent = `${network.name || 'unknown'} (chainId ${chainId})`;
-          setStatus('Connected', userAddress);
-          connectBtn.textContent = 'Connected';
-          connectBtn.disabled = true;
-          updateAccessUI();
-          // listen to accounts/network changes
-          window.ethereum.on && window.ethereum.on('accountsChanged', handleAccountsChanged);
-          window.ethereum.on && window.ethereum.on('chainChanged', handleChainChanged);
-        } catch (err) {
-          console.error(err);
-          setStatus('Connection failed', err.message || '');
-        }
-      }
-
-      async function handleAccountsChanged(accounts) {
-        if (accounts.length === 0) {
-          setStatus('Disconnected');
-          userAddress = null;
-          signer = null;
-          accountPre.textContent = '-';
-          connectBtn.textContent = 'Connect Wallet';
-          connectBtn.disabled = false;
-        } else {
-          userAddress = accounts[0];
-          signer = await provider.getSigner();
-          accountPre.textContent = userAddress;
-          setStatus('Connected', userAddress);
-        }
-      }
-
-      async function handleChainChanged(_chainIdHex) {
-        // force reload for simplicity
-        location.reload();
-      }
-
-      // ========== PAY FLOW ==========
-      async function payFlow() {
-        if (!signer) {
-          return alert('Connect your wallet first');
-        }
-        // check chain id
-        const network = await provider.getNetwork();
-        if (network.chainId !== REQUIRED_CHAIN_ID) {
-          // attempt to switch network
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x' + REQUIRED_CHAIN_ID.toString(16) }]
-            });
-            // refresh provider & signer
-            provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-          } catch (switchErr) {
-            return alert('Please switch your wallet to the BSC Mainnet (or the configured network).');
-          }
-        }
-
-        const tokenAddr = (tokenAddrInput.value || '').trim();
-        if (!tokenAddr) {
-          return alert('Please paste the USDC (BEP-20) token contract address in the Token Contract field.');
-        }
-
-        const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-        // get token decimals (fallback to default)
-        let decimals = DEFAULT_DECIMALS;
-        try {
-          decimals = Number(await tokenContract.decimals());
-        } catch (e) {
-          console.warn('Could not read token decimals, using default', DEFAULT_DECIMALS);
-        }
-
-        // amount (1 USD nominal)
-        const rawAmount = amountInput.value || '1';
-        // convert to BigInt smallest units
-        let amountWei;
-        try {
-          // using ethers FixedNumber/parseUnits
-          amountWei = ethers.parseUnits(rawAmount, decimals);
-        } catch (err) {
-          console.error(err);
-          return alert('Invalid amount or decimals.');
-        }
-
-        // send token transfer transaction from user's wallet to receiver
-        setStatus('Prompting transfer in wallet…', `Sending ${rawAmount} tokens to ${RECEIVER}`);
-        try {
-          const tx = await tokenContract.transfer(RECEIVER, amountWei);
-          setStatus('Transaction sent', `Tx hash: ${tx.hash}\nWaiting for confirmation...`);
-          // wait for 1 confirmation
-          const receipt = await tx.wait(1);
-          if (receipt && receipt.status === 1) {
-            setStatus('Payment confirmed', `Tx: ${tx.hash}`);
-            // store access in localStorage
-            saveAccessFor(userAddress);
-            alert('Payment successful — 30 days access granted.');
-            updateAccessUI();
-          } else {
-            setStatus('Transaction failed', `Receipt: ${JSON.stringify(receipt)}`);
-            alert('Transaction failed or was reverted.');
-          }
-        } catch (err) {
-          console.error(err);
-          setStatus('Payment error', err.message || String(err));
-          alert('Payment failed: ' + (err.message || err));
-        }
-      }
-
-      // ========== VERIFY (client-side) ==========
-      function verifyAccess() {
-        const acc = getAccess();
-        if (!acc) return alert('No access recorded for this browser.');
-        const now = Date.now();
-        if (now > acc.expiry) {
-          alert('Access has expired on ' + humanDate(acc.expiry));
-        } else {
-          alert('Access valid until ' + humanDate(acc.expiry));
-        }
-        updateAccessUI();
-      }
-
-      // ========== INIT UI ==========
-      connectBtn.addEventListener('click', connectWallet);
-      payBtn.addEventListener('click', payFlow);
-      verifyBtn.addEventListener('click', verifyAccess);
-      logoutBtn.addEventListener('click', () => {
-        if (confirm('Clear local access for this browser?')) { clearAccess(); alert('Local access cleared.'); }
-      });
-
-      // On load, show any stored access & set receiver field
-      document.getElementById('recipient').textContent = RECEIVER;
+    function saveAccessFor(addr) {
+      const now = Date.now();
+      const expiry = now + 30*24*60*60*1000; // 30 days
+      const payload = { address: addr, grantedAt: now, expiry };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       updateAccessUI();
+    }
 
-      // show initial connection state if wallet already connected
-      (async function tryAutoConnect(){ 
-        if (!window.ethereum) return;
+    function clearAccess() {
+      localStorage.removeItem(STORAGE_KEY);
+      updateAccessUI();
+    }
+
+    function getAccess() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      try { return JSON.parse(raw); }
+      catch(e){ return null; }
+    }
+
+    function updateAccessUI() {
+      const acc = getAccess();
+      if (!acc) {
+        accessInfo.textContent = 'No active access for this browser.';
+        return;
+      }
+      const now = Date.now();
+      if (now > acc.expiry) {
+        accessInfo.textContent = `Access expired on ${humanDate(acc.expiry)}.`;
+      } else {
+        accessInfo.textContent = `Access valid until ${humanDate(acc.expiry)} (granted to ${acc.address}).`;
+      }
+    }
+
+    // Wallet connect
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert('MetaMask (or compatible wallet) not found. Please install MetaMask.');
+        return;
+      }
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        const network = await provider.getNetwork();
+        chainId = network.chainId;
+
+        accountPre.textContent = userAddress;
+        networkPre.textContent = `${network.name || 'unknown'} (chainId ${chainId})`;
+        setStatus('Connected', userAddress);
+
+        connectBtn.textContent = 'Connected';
+        connectBtn.disabled = true;
+
+        updateAccessUI();
+
+        // Listen for changes
+        window.ethereum.on && window.ethereum.on('accountsChanged', handleAccountsChanged);
+        window.ethereum.on && window.ethereum.on('chainChanged', handleChainChanged);
+      } catch(e) {
+        console.error(e);
+        setStatus('Connection failed', e.message || '');
+        alert('Failed to connect wallet: ' + (e.message || e));
+      }
+    }
+
+    async function handleAccountsChanged(accounts) {
+      if (accounts.length === 0) {
+        setStatus('Disconnected');
+        userAddress = null;
+        signer = null;
+        accountPre.textContent = '-';
+        connectBtn.textContent = 'Connect Wallet';
+        connectBtn.disabled = false;
+      } else {
+        userAddress = accounts[0];
+        signer = provider.getSigner();
+        accountPre.textContent = userAddress;
+        setStatus('Connected', userAddress);
+      }
+    }
+
+    async function handleChainChanged(_chainIdHex) {
+      location.reload();
+    }
+
+    // Payment flow
+    async function payFlow() {
+      if (!signer) {
+        alert('Connect your wallet first');
+        return;
+      }
+
+      const network = await provider.getNetwork();
+      if (network.chainId !== REQUIRED_CHAIN_ID) {
         try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          const accounts = await provider.send("eth_accounts", []);
-          if (accounts && accounts.length > 0) {
-            await connectWallet();
-          }
-        } catch(e){}
-      })();
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x' + REQUIRED_CHAIN_ID.toString(16) }]
+          });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+        } catch (switchError) {
+          alert('Please switch your wallet to the Binance Smart Chain mainnet.');
+          return;
+        }
+      }
 
+      const tokenAddr = tokenAddrInput.value.trim();
+      if (!tokenAddr) {
+        alert('Please enter the USDC (BEP-20) token contract address.');
+        return;
+      }
+
+      const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+
+      let decimals = DEFAULT_DECIMALS;
+      try {
+        decimals = await tokenContract.decimals();
+      } catch {
+        console.warn('Cannot read token decimals, using default', DEFAULT_DECIMALS);
+      }
+
+      let amountRaw = amountInput.value || '1';
+      let amountWei;
+      try {
+        amountWei = ethers.utils.parseUnits(amountRaw, decimals);
+      } catch (e) {
+        alert('Invalid amount.');
+        return;
+      }
+
+      setStatus('Prompting transfer in wallet…', `Sending ${amountRaw} tokens to ${RECEIVER}`);
+
+      try {
+        const tx = await tokenContract.transfer(RECEIVER, amountWei);
+        setStatus('Transaction sent', `Tx hash: ${tx.hash}\nWaiting for confirmation...`);
+
+        const receipt = await tx.wait(1);
+        if (receipt && receipt.status === 1) {
+          setStatus('Payment confirmed', `Tx: ${tx.hash}`);
+          saveAccessFor(userAddress);
+          alert('Payment successful — 30 days access granted.');
+          updateAccessUI();
+        } else {
+          setStatus('Transaction failed', `Receipt: ${JSON.stringify(receipt)}`);
+          alert('Transaction failed or reverted.');
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus('Payment error', err.message || String(err));
+        alert('Payment failed: ' + (err.message || err));
+      }
+    }
+
+    // Verify local access
+    function verifyAccess() {
+      const acc = getAccess();
+      if (!acc) {
+        alert('No access recorded for this browser.');
+        return;
+      }
+      const now = Date.now();
+      if (now > acc.expiry) {
+        alert('Access expired on ' + humanDate(acc.expiry));
+      } else {
+        alert('Access valid until ' + humanDate(acc.expiry));
+      }
+      updateAccessUI();
+    }
+
+    // Clear access
+    function clearLocalAccess() {
+      if (confirm('Clear local access for this browser?')) {
+        clearAccess();
+        alert('Local access cleared.');
+      }
+    }
+
+    // Init UI events
+    connectBtn.addEventListener('click', connectWallet);
+    payBtn.addEventListener('click', payFlow);
+    verifyBtn.addEventListener('click', verifyAccess);
+    logoutBtn.addEventListener('click', clearLocalAccess);
+
+    // Initialize
+    document.getElementById('recipient').textContent = RECEIVER;
+    updateAccessUI();
+
+    // Auto-connect if wallet already connected
+    (async function tryAutoConnect() {
+      if (!window.ethereum) return;
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      const accounts = await provider.listAccounts();
+      if (accounts.length > 0) {
+        await connectWallet();
+      }
     })();
+
+  })();
   </script>
 </body>
 </html>
