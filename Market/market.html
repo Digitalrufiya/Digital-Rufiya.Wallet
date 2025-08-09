@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DRFMedia — Pay $1 USDC for 30-day Access</title>
+
+  <style>
+    :root{
+      --bg:#0b1220; --card:#0f1724; --accent:#f59e0b; --muted:#93c5fd;
+      --glass: rgba(255,255,255,0.03);
+    }
+    body{
+      margin:0; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background: linear-gradient(180deg, #071028 0%, #07182b 100%); color:#e6eef8;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px;
+    }
+    .card{
+      width:100%; max-width:880px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.04); border-radius:12px; padding:22px; box-shadow:0 8px 30px rgba(2,6,23,0.6);
+    }
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;}
+    .logo{font-weight:700; color:var(--accent); font-size:18px;}
+    .small{font-size:13px; color:#9fb7df;}
+    .columns{display:grid; grid-template-columns: 1fr 360px; gap:18px;}
+    .box{background:var(--card); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.02);}
+    .btn{
+      background:var(--accent); color:#071022; padding:10px 14px; border-radius:8px; border:none; cursor:pointer;
+      font-weight:600; box-shadow: 0 6px 18px rgba(245,158,11,0.15);
+    }
+    .btn-ghost{background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04);}
+    label{display:block; font-size:13px; color:#9fb7df; margin-bottom:6px;}
+    input[type=text]{width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit;}
+    .muted{color:#9fb7df; font-size:13px;}
+    .status{padding:10px; border-radius:8px; background:rgba(255,255,255,0.02); margin-top:10px;}
+    .center{display:flex; justify-content:center; align-items:center; gap:10px;}
+    footer{margin-top:14px; text-align:center; color:#8faeea; font-size:13px;}
+    pre{white-space:pre-wrap; word-break:break-word; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px;}
+    @media(max-width:880px){ .columns{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <header>
+      <div>
+        <div class="logo">DRFMedia Marketplace</div>
+        <div class="small">Pay $1 USDC (BEP-20) for 30 days access</div>
+      </div>
+      <div>
+        <button id="connectBtn" class="btn">Connect Wallet</button>
+      </div>
+    </header>
+
+    <div class="columns">
+      <div class="box">
+        <h3>How it works</h3>
+        <ol class="muted">
+          <li>Connect your MetaMask wallet.</li>
+          <li>Click <strong>Pay $1 USDC</strong> — MetaMask will prompt the USDC transfer.</li>
+          <li>After confirmation, you'll get 30 days access saved in your browser.</li>
+        </ol>
+
+        <hr style="margin:12px 0; border-top:1px solid rgba(255,255,255,0.03)">
+
+        <label>Recipient (DRFMedia) — your wallet</label>
+        <pre id="recipient" style="font-weight:600; font-size:13px; background:transparent; border:0;">0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C</pre>
+
+        <label>Token Contract (USDC BEP-20)</label>
+        <input id="tokenAddr" type="text" placeholder="Paste USDC (BEP-20) contract address here" />
+
+        <label>Amount (USD)</label>
+        <input id="amount" type="text" value="1" />
+
+        <div style="margin-top:12px" class="center">
+          <button id="payBtn" class="btn">Pay $1 USDC</button>
+          <button id="verifyBtn" class="btn-ghost">Check Access</button>
+        </div>
+
+        <div id="log" class="status" aria-live="polite" style="margin-top:12px;">
+          <div class="muted">Status: <span id="statusText">Not connected</span></div>
+          <div id="extra" style="margin-top:6px"></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label class="muted">Raw info / Notes</label>
+          <pre id="notes">
+- Make sure token contract is correct (USDC BEP-20).
+- Users need some BNB for gas.
+- This example grants access client-side (localStorage).
+          </pre>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3>Access & Logs</h3>
+        <div id="accessInfo" class="muted">No access yet.</div>
+        <div style="margin-top:12px">
+          <label class="muted">Connected account</label>
+          <pre id="account">-</pre>
+          <label class="muted">Network</label>
+          <pre id="network">-</pre>
+        </div>
+
+        <div style="margin-top:12px">
+          <button id="logoutBtn" class="btn-ghost">Clear Local Access (for this browser)</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>DRFMedia • Use responsibly • On-chain payments recorded by user wallets</footer>
+  </div>
+
+  <!-- Ethers.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.min.js" integrity="" crossorigin="anonymous"></script>
+
+  <script>
+    (function(){
+      // ========== CONFIG ===========
+      const RECEIVER = '0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C'; // your wallet
+      const REQUIRED_CHAIN_ID = 56; // BSC Mainnet (change if you want testnet)
+      // IMPORTANT: set TOKEN_CONTRACT to the actual USDC (BEP-20) contract on BSC.
+      // If you don't set it, user will be prompted to paste in the token address.
+      // Example USDC (on BSC) addresses vary by issuer — replace with the one you want to accept.
+      const DEFAULT_TOKEN_CONTRACT = ''; // <-- PUT USDC token contract here if you have it
+      // default decimals (will be read from token contract when possible)
+      const DEFAULT_DECIMALS = 18;
+      // Key used in localStorage for tracking access
+      const STORAGE_KEY = 'drfmedia_access_v1';
+
+      // Minimal ERC-20 ABI (ethers v6)
+      const ERC20_ABI = [
+        "function decimals() view returns (uint8)",
+        "function transfer(address to, uint256 amount) returns (bool)",
+        "function balanceOf(address owner) view returns (uint256)"
+      ];
+
+      // ========== UI ELEMENTS ==========
+      const connectBtn = document.getElementById('connectBtn');
+      const payBtn = document.getElementById('payBtn');
+      const verifyBtn = document.getElementById('verifyBtn');
+      const tokenAddrInput = document.getElementById('tokenAddr');
+      const amountInput = document.getElementById('amount');
+      const statusText = document.getElementById('statusText');
+      const extraDiv = document.getElementById('extra');
+      const accountPre = document.getElementById('account');
+      const networkPre = document.getElementById('network');
+      const accessInfo = document.getElementById('accessInfo');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      // populate default token contract if provided
+      if (DEFAULT_TOKEN_CONTRACT) tokenAddrInput.value = DEFAULT_TOKEN_CONTRACT;
+
+      // ========== STATE ==========
+      let provider = null;
+      let signer = null;
+      let userAddress = null;
+      let chainId = null;
+
+      // helpers
+      function setStatus(s, extra='') {
+        statusText.textContent = s;
+        extraDiv.textContent = extra;
+      }
+
+      function humanDate(ms) {
+        const d = new Date(ms);
+        return d.toLocaleString();
+      }
+
+      function saveAccessFor(addr) {
+        const now = Date.now();
+        const expiry = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+        const payload = { address: addr, grantedAt: now, expiry };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        updateAccessUI();
+      }
+
+      function clearAccess() {
+        localStorage.removeItem(STORAGE_KEY);
+        updateAccessUI();
+      }
+
+      function getAccess() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw);
+        } catch(e){ return null; }
+      }
+
+      function updateAccessUI() {
+        const acc = getAccess();
+        if (!acc) {
+          accessInfo.textContent = 'No active access for this browser.';
+          return;
+        }
+        const now = Date.now();
+        if (now > acc.expiry) {
+          accessInfo.textContent = `Access expired on ${humanDate(acc.expiry)}.`;
+        } else {
+          accessInfo.textContent = `Access valid until ${humanDate(acc.expiry)} (granted to ${acc.address}).`;
+        }
+      }
+
+      // ========== WALLET CONNECT ==========
+      async function connectWallet() {
+        if (!window.ethereum) {
+          alert('MetaMask (or compatible wallet) not found. Please install MetaMask.');
+          return;
+        }
+        try {
+          provider = new ethers.BrowserProvider(window.ethereum);
+          // request account access
+          await provider.send("eth_requestAccounts", []);
+          signer = await provider.getSigner();
+          userAddress = await signer.getAddress();
+          const network = await provider.getNetwork();
+          chainId = network.chainId;
+          accountPre.textContent = userAddress;
+          networkPre.textContent = `${network.name || 'unknown'} (chainId ${chainId})`;
+          setStatus('Connected', userAddress);
+          connectBtn.textContent = 'Connected';
+          connectBtn.disabled = true;
+          updateAccessUI();
+          // listen to accounts/network changes
+          window.ethereum.on && window.ethereum.on('accountsChanged', handleAccountsChanged);
+          window.ethereum.on && window.ethereum.on('chainChanged', handleChainChanged);
+        } catch (err) {
+          console.error(err);
+          setStatus('Connection failed', err.message || '');
+        }
+      }
+
+      async function handleAccountsChanged(accounts) {
+        if (accounts.length === 0) {
+          setStatus('Disconnected');
+          userAddress = null;
+          signer = null;
+          accountPre.textContent = '-';
+          connectBtn.textContent = 'Connect Wallet';
+          connectBtn.disabled = false;
+        } else {
+          userAddress = accounts[0];
+          signer = await provider.getSigner();
+          accountPre.textContent = userAddress;
+          setStatus('Connected', userAddress);
+        }
+      }
+
+      async function handleChainChanged(_chainIdHex) {
+        // force reload for simplicity
+        location.reload();
+      }
+
+      // ========== PAY FLOW ==========
+      async function payFlow() {
+        if (!signer) {
+          return alert('Connect your wallet first');
+        }
+        // check chain id
+        const network = await provider.getNetwork();
+        if (network.chainId !== REQUIRED_CHAIN_ID) {
+          // attempt to switch network
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x' + REQUIRED_CHAIN_ID.toString(16) }]
+            });
+            // refresh provider & signer
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+          } catch (switchErr) {
+            return alert('Please switch your wallet to the BSC Mainnet (or the configured network).');
+          }
+        }
+
+        const tokenAddr = (tokenAddrInput.value || '').trim();
+        if (!tokenAddr) {
+          return alert('Please paste the USDC (BEP-20) token contract address in the Token Contract field.');
+        }
+
+        const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+        // get token decimals (fallback to default)
+        let decimals = DEFAULT_DECIMALS;
+        try {
+          decimals = Number(await tokenContract.decimals());
+        } catch (e) {
+          console.warn('Could not read token decimals, using default', DEFAULT_DECIMALS);
+        }
+
+        // amount (1 USD nominal)
+        const rawAmount = amountInput.value || '1';
+        // convert to BigInt smallest units
+        let amountWei;
+        try {
+          // using ethers FixedNumber/parseUnits
+          amountWei = ethers.parseUnits(rawAmount, decimals);
+        } catch (err) {
+          console.error(err);
+          return alert('Invalid amount or decimals.');
+        }
+
+        // send token transfer transaction from user's wallet to receiver
+        setStatus('Prompting transfer in wallet…', `Sending ${rawAmount} tokens to ${RECEIVER}`);
+        try {
+          const tx = await tokenContract.transfer(RECEIVER, amountWei);
+          setStatus('Transaction sent', `Tx hash: ${tx.hash}\nWaiting for confirmation...`);
+          // wait for 1 confirmation
+          const receipt = await tx.wait(1);
+          if (receipt && receipt.status === 1) {
+            setStatus('Payment confirmed', `Tx: ${tx.hash}`);
+            // store access in localStorage
+            saveAccessFor(userAddress);
+            alert('Payment successful — 30 days access granted.');
+            updateAccessUI();
+          } else {
+            setStatus('Transaction failed', `Receipt: ${JSON.stringify(receipt)}`);
+            alert('Transaction failed or was reverted.');
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus('Payment error', err.message || String(err));
+          alert('Payment failed: ' + (err.message || err));
+        }
+      }
+
+      // ========== VERIFY (client-side) ==========
+      function verifyAccess() {
+        const acc = getAccess();
+        if (!acc) return alert('No access recorded for this browser.');
+        const now = Date.now();
+        if (now > acc.expiry) {
+          alert('Access has expired on ' + humanDate(acc.expiry));
+        } else {
+          alert('Access valid until ' + humanDate(acc.expiry));
+        }
+        updateAccessUI();
+      }
+
+      // ========== INIT UI ==========
+      connectBtn.addEventListener('click', connectWallet);
+      payBtn.addEventListener('click', payFlow);
+      verifyBtn.addEventListener('click', verifyAccess);
+      logoutBtn.addEventListener('click', () => {
+        if (confirm('Clear local access for this browser?')) { clearAccess(); alert('Local access cleared.'); }
+      });
+
+      // On load, show any stored access & set receiver field
+      document.getElementById('recipient').textContent = RECEIVER;
+      updateAccessUI();
+
+      // show initial connection state if wallet already connected
+      (async function tryAutoConnect(){ 
+        if (!window.ethereum) return;
+        try {
+          provider = new ethers.BrowserProvider(window.ethereum);
+          const accounts = await provider.send("eth_accounts", []);
+          if (accounts && accounts.length > 0) {
+            await connectWallet();
+          }
+        } catch(e){}
+      })();
+
+    })();
+  </script>
+</body>
+</html>
