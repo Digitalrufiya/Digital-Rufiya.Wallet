@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia Marketplace — Buy & Sell</title>
+<style>
+  /* Minimal styles for demo */
+  body { font-family: Arial, sans-serif; padding: 1rem; background: #f8f9fa; color: #212529; }
+  header { background:#007bff; color:#fff; padding:1rem; display:flex; align-items:center; gap:1rem; }
+  header img { width:40px; height:40px; }
+  #loginBtn, #logoutBtn, #uploadForm button { padding:0.5rem 1rem; margin:0.5rem 0; cursor:pointer; border:none; border-radius:0.25rem; }
+  #loginBtn { background:#007bff; color:#fff; }
+  #logoutBtn { background:#dc3545; color:#fff; display:none; }
+  #uploadForm { display:none; margin-top:1rem; }
+  #postContainer article { background:#fff; border:1px solid #ccc; padding:1rem; margin:1rem 0; border-radius:0.25rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="DRFMedia logo" />
+  <h1>DRFMedia Marketplace</h1>
+</header>
+
+<button id="loginBtn">Sign in with Google</button>
+<button id="logoutBtn">Logout</button>
+
+<form id="uploadForm" autocomplete="off">
+  <input id="mediaFile" type="file" accept="image/*,video/*" required /><br/>
+  <input id="productTitle" type="text" placeholder="Product Title" minlength="2" required /><br/>
+  <input id="productPrice" type="number" min="0" step="0.01" placeholder="Price (MVR)" required /><br/>
+  <input id="productLocation" type="text" placeholder="Location (optional)" /><br/>
+  <input id="productContact" type="text" placeholder="WhatsApp or Phone Number" minlength="5" required /><br/>
+  <input id="paymentLink" type="url" placeholder="DRF Wallet Payment Link (optional)" /><br/>
+  <button type="submit">Post Product</button>
+</form>
+
+<section id="postContainer" aria-live="polite"></section>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+  // Use only the JWT token string here, no 'Bearer' prefix
+  const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI1MTNlNTlkNmE3NmY2YmE5NTY3MyIsInNjb3BlZEtleVNlY3JldCI6ImFkZTE0YWI1ODRlYzQyZWIzMjBkZWMxMGQzYWMxYzcxODkxN2QzM2Q2ZmRkNmM1NzA0OWRiM2RjY2U3ZWIzNzciLCJleHAiOjE3ODYyNjcyNjd9.mDau-cuVEKe9j-USepb4ju6NdVBY3y78hZaHfiKJZM0";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+    authDomain: "drfmarket-place.firebaseapp.com",
+    databaseURL: "https://drfmarket-place-default-rtdb.firebaseio.com", // Add this for Realtime DB
+    projectId: "drfmarket-place",
+    storageBucket: "drfmarket-place.appspot.com",
+    messagingSenderId: "752616443115",
+    appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const mediaFile = document.getElementById("mediaFile");
+  const productTitle = document.getElementById("productTitle");
+  const productPrice = document.getElementById("productPrice");
+  const productLocation = document.getElementById("productLocation");
+  const productContact = document.getElementById("productContact");
+  const paymentLink = document.getElementById("paymentLink");
+  const postContainer = document.getElementById("postContainer");
+
+  let currentUser = null;
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider);
+  logoutBtn.onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    loginBtn.style.display = user ? "none" : "inline-block";
+    logoutBtn.style.display = user ? "inline-block" : "none";
+    uploadForm.style.display = user ? "block" : "none";
+    if(user) loadPosts();
+    else postContainer.innerHTML = "";
+  });
+
+  async function loadPosts() {
+    const snapshot = await get(ref(db, "posts"));
+    const postsData = snapshot.val() || {};
+    postContainer.innerHTML = "";
+    Object.entries(postsData)
+      .sort((a,b) => b[1].timestamp - a[1].timestamp)
+      .forEach(([id, post]) => {
+        const el = document.createElement("article");
+        el.innerHTML = `
+          <strong>${post.productTitle} - MVR ${post.productPrice.toFixed(2)}</strong><br/>
+          Location: ${post.productLocation || "N/A"}<br/>
+          Contact: ${post.productContact}<br/>
+          <a href="https://wa.me/${encodeURIComponent(post.productContact.replace(/\D/g,''))}" target="_blank">WhatsApp Seller</a><br/>
+          <small>${new Date(post.timestamp).toLocaleString()}</small>
+        `;
+        postContainer.appendChild(el);
+      });
+  }
+
+  uploadForm.onsubmit = async (e) => {
+    e.preventDefault();
+
+    if (!mediaFile.files[0]) return alert("Please select a file");
+    if (productTitle.value.trim().length < 2) return alert("Product title too short");
+    if (!productPrice.value || Number(productPrice.value) < 0) return alert("Invalid price");
+    if (productContact.value.trim().length < 5) return alert("Enter valid contact info");
+
+    const file = mediaFile.files[0];
+    uploadForm.querySelector("button").disabled = true;
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      // Pinata upload using XMLHttpRequest with proper Authorization header
+      const cid = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://api.pinata.cloud/pinning/pinFileToIPFS");
+        xhr.setRequestHeader("Authorization", "Bearer " + pinataJWT);
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              resolve(res.IpfsHash);
+            } catch {
+              reject("Invalid Pinata response");
+            }
+          } else {
+            reject("Pinata upload failed: " + xhr.status);
+          }
+        };
+        xhr.onerror = () => reject("Pinata upload error");
+        xhr.send(fd);
+      });
+
+      // Save post to Firebase
+      const newPostRef = push(ref(db, "posts"));
+      await set(newPostRef, {
+        userId: currentUser.uid,
+        displayName: currentUser.displayName || "Anon",
+        photoURL: currentUser.photoURL || "",
+        ipfsHash: cid,
+        mediaType: file.type.startsWith("video") ? "video" : "image",
+        timestamp: Date.now(),
+        productTitle: productTitle.value.trim(),
+        productPrice: Number(productPrice.value),
+        productLocation: productLocation.value.trim(),
+        productContact: productContact.value.trim(),
+        paymentLink: paymentLink.value.trim(),
+      });
+
+      alert("Product posted successfully!");
+      uploadForm.reset();
+      loadPosts();
+
+    } catch (err) {
+      alert("Upload failed: " + err);
+    } finally {
+      uploadForm.querySelector("button").disabled = false;
+    }
+  };
+</script>
+
+</body>
+</html>
