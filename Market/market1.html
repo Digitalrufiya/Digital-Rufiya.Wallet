@@ -1,228 +1,281 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Marketplace</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 10px; background: #f7f7f7; }
-  h1 { text-align: center; }
-  form { background: white; padding: 15px; margin-bottom: 30px; border-radius: 6px; box-shadow: 0 0 8px #ccc; }
-  label { display: block; margin-top: 10px; }
-  input, textarea, select { width: 100%; padding: 8px; margin-top: 4px; border-radius: 4px; border: 1px solid #ccc; }
-  button { margin-top: 15px; padding: 10px 15px; font-size: 1rem; cursor: pointer; }
-  #posts { margin-top: 40px; }
-  .post { background: white; padding: 15px; margin-bottom: 20px; border-radius: 6px; box-shadow: 0 0 6px #bbb; }
-  .post img, .post video { max-width: 100%; border-radius: 6px; margin-top: 10px; }
-  .btns { margin-top: 15px; }
-  .btns button, .btns a { margin-right: 10px; text-decoration: none; padding: 8px 12px; border-radius: 5px; border: none; cursor: pointer; }
-  .btn-whatsapp { background: #25D366; color: white; }
-  .btn-payment { background: #4CAF50; color: white; }
-  .btn-like { background: #e91e63; color: white; }
-  .btn-share { background: #2196F3; color: white; }
-</style>
+  <meta charset="UTF-8" />
+  <title>DRF Marketplace</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+    input, textarea, select, button { display: block; margin: 10px 0; padding: 8px; width: 100%; max-width: 400px; }
+    .post { border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+    .post img, .post video { max-width: 100%; height: auto; border-radius: 5px; }
+    .buttons { margin-top: 10px; }
+    .buttons button, .buttons a { margin-right: 10px; }
+    #logoutBtn { margin-bottom: 20px; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
+  <h1>DRF Marketplace</h1>
 
-<h1>DRF Marketplace - Sell Your Photos & Videos</h1>
+  <div id="authDiv">
+    <h3>Login / Register</h3>
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <p id="authStatus"></p>
+  </div>
 
-<form id="postForm">
-  <label>Title *</label>
-  <input type="text" id="title" required />
+  <div id="appDiv" class="hidden">
+    <button id="logoutBtn">Logout</button>
 
-  <label>Description *</label>
-  <textarea id="description" rows="3" required></textarea>
+    <h3>Post New Item</h3>
+    <input type="file" id="fileInput" accept="image/*,video/*" />
+    <input id="productTitle" type="text" placeholder="Title" maxlength="100" />
+    <textarea id="productDescription" placeholder="Description"></textarea>
+    <input id="country" type="text" placeholder="Country" />
+    <input id="city" type="text" placeholder="City" />
+    <input id="whatsapp" type="text" placeholder="WhatsApp Number" />
+    <input id="paymentLink" type="url" placeholder="Payment Link (URL)" />
+    <button id="postBtn">Post Item</button>
+    <p id="postStatus"></p>
 
-  <label>Country *</label>
-  <input type="text" id="country" required />
+    <h3>Marketplace Posts</h3>
+    <div id="postsList"></div>
+  </div>
 
-  <label>City *</label>
-  <input type="text" id="city" required />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-  <label>WhatsApp Number (with country code, e.g. +123456789) *</label>
-  <input type="text" id="whatsapp" pattern="^\+\d{7,15}$" placeholder="+123456789" required />
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+      authDomain: "drfmarket-place.firebaseapp.com",
+      projectId: "drfmarket-place",
+      storageBucket: "drfmarket-place.appspot.com",
+      messagingSenderId: "752616443115",
+      appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+      measurementId: "G-MV9JQZHLLY"
+    };
 
-  <label>Payment Link (URL) *</label>
-  <input type="url" id="paymentLink" placeholder="https://..." required />
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
 
-  <label>Upload Photo or Video *</label>
-  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+    const authDiv = document.getElementById('authDiv');
+    const appDiv = document.getElementById('appDiv');
+    const authStatus = document.getElementById('authStatus');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
 
-  <button type="submit">Post Listing</button>
-</form>
+    const fileInput = document.getElementById('fileInput');
+    const productTitle = document.getElementById('productTitle');
+    const productDescription = document.getElementById('productDescription');
+    const country = document.getElementById('country');
+    const city = document.getElementById('city');
+    const whatsapp = document.getElementById('whatsapp');
+    const paymentLink = document.getElementById('paymentLink');
+    const postBtn = document.getElementById('postBtn');
+    const postStatus = document.getElementById('postStatus');
+    const postsList = document.getElementById('postsList');
 
-<div id="posts"></div>
+    let currentUser = null;
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+    // Auth handlers
+    loginBtn.onclick = () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        authStatus.textContent = 'Enter email and password.';
+        return;
+      }
+      signInWithEmailAndPassword(auth, email, password)
+        .catch(e => authStatus.textContent = 'Login failed: ' + e.message);
+    };
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
-    authDomain: "drfmarket-place.firebaseapp.com",
-    projectId: "drfmarket-place",
-    storageBucket: "drfmarket-place.appspot.com",
-    messagingSenderId: "752616443115",
-    appId: "1:752616443115:web:73b71924daf66ae9c882ae",
-    measurementId: "G-MV9JQZHLLY"
-  };
+    registerBtn.onclick = () => {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
+      if (!email || !password) {
+        authStatus.textContent = 'Enter email and password.';
+        return;
+      }
+      createUserWithEmailAndPassword(auth, email, password)
+        .catch(e => authStatus.textContent = 'Register failed: ' + e.message);
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+    logoutBtn.onclick = () => {
+      signOut(auth);
+    };
 
-  const postForm = document.getElementById('postForm');
-  const postsDiv = document.getElementById('posts');
+    onAuthStateChanged(auth, user => {
+      if(user) {
+        currentUser = user;
+        authStatus.textContent = 'Logged in as: ' + user.email;
+        authDiv.classList.add('hidden');
+        appDiv.classList.remove('hidden');
+        loadPosts();
+      } else {
+        currentUser = null;
+        authStatus.textContent = 'Please login or register.';
+        authDiv.classList.remove('hidden');
+        appDiv.classList.add('hidden');
+        postsList.innerHTML = '';
+      }
+    });
 
-  // Submit form handler
-  postForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    // Upload and post
+    postBtn.onclick = async () => {
+      postStatus.textContent = '';
+      if (!currentUser) {
+        postStatus.textContent = 'You must be logged in.';
+        return;
+      }
+      if (!fileInput.files[0]) {
+        postStatus.textContent = 'Please select an image or video file.';
+        return;
+      }
+      if (!productTitle.value.trim()) {
+        postStatus.textContent = 'Enter product title.';
+        return;
+      }
+      // Other validations can be added here...
 
-    const title = postForm.title.value.trim();
-    const description = postForm.description.value.trim();
-    const country = postForm.country.value.trim();
-    const city = postForm.city.value.trim();
-    const whatsapp = postForm.whatsapp.value.trim();
-    const paymentLink = postForm.paymentLink.value.trim();
-    const fileInput = postForm.mediaFile;
-    const file = fileInput.files[0];
+      const file = fileInput.files[0];
+      const storageRef = ref(storage, `marketplace_media/${Date.now()}_${file.name}`);
 
-    if (!file) {
-      alert('Please upload a photo or video file.');
-      return;
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          postStatus.textContent = `Upload is ${progress.toFixed(0)}% done`;
+        },
+        (error) => {
+          postStatus.textContent = 'Upload failed: ' + error.message;
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          try {
+            await addDoc(collection(db, 'posts'), {
+              userId: currentUser.uid,
+              productTitle: productTitle.value.trim(),
+              productDescription: productDescription.value.trim(),
+              country: country.value.trim(),
+              city: city.value.trim(),
+              whatsapp: whatsapp.value.trim(),
+              paymentLink: paymentLink.value.trim(),
+              mediaURL: downloadURL,
+              mediaType: file.type.startsWith('video') ? 'video' : 'image',
+              likes: 0,
+              timestamp: serverTimestamp()
+            });
+            postStatus.textContent = 'Post created successfully!';
+            // Clear form
+            fileInput.value = '';
+            productTitle.value = '';
+            productDescription.value = '';
+            country.value = '';
+            city.value = '';
+            whatsapp.value = '';
+            paymentLink.value = '';
+          } catch(e) {
+            postStatus.textContent = 'Error saving post: ' + e.message;
+          }
+        }
+      );
+    };
+
+    // Load posts and listen for real-time updates
+    function loadPosts() {
+      postsList.innerHTML = 'Loading posts...';
+      const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+      onSnapshot(q, snapshot => {
+        postsList.innerHTML = '';
+        if (snapshot.empty) {
+          postsList.textContent = 'No posts yet.';
+          return;
+        }
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const postEl = document.createElement('div');
+          postEl.className = 'post';
+
+          let mediaHTML = '';
+          if (data.mediaType === 'video') {
+            mediaHTML = `<video controls src="${data.mediaURL}"></video>`;
+          } else {
+            mediaHTML = `<img src="${data.mediaURL}" alt="Post media" />`;
+          }
+
+          postEl.innerHTML = `
+            <strong>${escapeHTML(data.productTitle)}</strong><br />
+            <em>${escapeHTML(data.productDescription)}</em><br />
+            <small>${escapeHTML(data.city)}, ${escapeHTML(data.country)}</small><br />
+            ${mediaHTML}
+            <div class="buttons">
+              <a href="https://wa.me/${encodeURIComponent(data.whatsapp)}" target="_blank">
+                <button>WhatsApp</button>
+              </a>
+              <a href="${escapeHTML(data.paymentLink)}" target="_blank">
+                <button>Payment Link</button>
+              </a>
+              <button class="likeBtn">Like (${data.likes || 0})</button>
+              <button class="shareBtn">Share</button>
+            </div>
+          `;
+
+          // Like button logic
+          const likeBtn = postEl.querySelector('.likeBtn');
+          likeBtn.onclick = async () => {
+            // Simple like increment without user checks (can improve later)
+            try {
+              await updateDoc(doc(db, 'posts', docSnap.id), {
+                likes: (data.likes || 0) + 1
+              });
+            } catch(e) {
+              alert('Failed to like: ' + e.message);
+            }
+          };
+
+          // Share button logic
+          const shareBtn = postEl.querySelector('.shareBtn');
+          shareBtn.onclick = () => {
+            if (navigator.share) {
+              navigator.share({
+                title: data.productTitle,
+                text: data.productDescription,
+                url: window.location.href
+              }).catch(console.error);
+            } else {
+              alert('Share not supported on this browser.');
+            }
+          };
+
+          postsList.appendChild(postEl);
+        });
+      }, err => {
+        postsList.textContent = 'Failed to load posts: ' + err.message;
+      });
     }
 
-    // Upload file to Firebase Storage
-    const storageRef = ref(storage, `marketplace_media/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
-
-    uploadTask.on('state_changed',
-      null,
-      (error) => alert('Upload failed: ' + error.message),
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-        // Add post to Firestore
-        try {
-          await addDoc(collection(db, 'marketplace_posts'), {
-            title,
-            description,
-            country,
-            city,
-            whatsapp,
-            paymentLink,
-            mediaURL: downloadURL,
-            mediaType: file.type.startsWith('video') ? 'video' : 'image',
-            likes: 0,
-            timestamp: Date.now()
-          });
-          alert('Post uploaded successfully!');
-          postForm.reset();
-        } catch (err) {
-          alert('Error saving post: ' + err.message);
-        }
-      }
-    );
-  });
-
-  // Listen for posts realtime and display
-  const q = query(collection(db, 'marketplace_posts'), orderBy('timestamp', 'desc'));
-  onSnapshot(q, (snapshot) => {
-    postsDiv.innerHTML = '';
-    snapshot.forEach(docSnap => {
-      const post = docSnap.data();
-      const id = docSnap.id;
-
-      const postEl = document.createElement('div');
-      postEl.className = 'post';
-
-      // Title & desc
-      postEl.innerHTML = `
-        <h3>${escapeHTML(post.title)}</h3>
-        <p>${escapeHTML(post.description)}</p>
-        <p><b>Location:</b> ${escapeHTML(post.city)}, ${escapeHTML(post.country)}</p>
-      `;
-
-      // Media
-      if(post.mediaType === 'video') {
-        const video = document.createElement('video');
-        video.src = post.mediaURL;
-        video.controls = true;
-        video.style.maxWidth = '100%';
-        postEl.appendChild(video);
-      } else {
-        const img = document.createElement('img');
-        img.src = post.mediaURL;
-        img.alt = post.title;
-        postEl.appendChild(img);
-      }
-
-      // WhatsApp & Payment buttons
-      const btnsDiv = document.createElement('div');
-      btnsDiv.className = 'btns';
-
-      const whatsappBtn = document.createElement('a');
-      whatsappBtn.href = `https://wa.me/${post.whatsapp.replace(/\D/g, '')}`;
-      whatsappBtn.target = '_blank';
-      whatsappBtn.rel = 'noopener noreferrer';
-      whatsappBtn.className = 'btn-whatsapp';
-      whatsappBtn.textContent = 'WhatsApp Seller';
-
-      const paymentBtn = document.createElement('a');
-      paymentBtn.href = post.paymentLink;
-      paymentBtn.target = '_blank';
-      paymentBtn.rel = 'noopener noreferrer';
-      paymentBtn.className = 'btn-payment';
-      paymentBtn.textContent = 'Pay Now';
-
-      btnsDiv.appendChild(whatsappBtn);
-      btnsDiv.appendChild(paymentBtn);
-
-      // Like button
-      const likeBtn = document.createElement('button');
-      likeBtn.className = 'btn-like';
-      likeBtn.textContent = `👍 Like (${post.likes || 0})`;
-      likeBtn.onclick = async () => {
-        try {
-          const postRef = doc(db, 'marketplace_posts', id);
-          await updateDoc(postRef, { likes: (post.likes || 0) + 1 });
-        } catch (e) {
-          alert('Error liking post: ' + e.message);
-        }
-      };
-      btnsDiv.appendChild(likeBtn);
-
-      // Share button
-      const shareBtn = document.createElement('button');
-      shareBtn.className = 'btn-share';
-      shareBtn.textContent = 'Share';
-      shareBtn.onclick = () => {
-        if (navigator.share) {
-          navigator.share({
-            title: post.title,
-            text: post.description,
-            url: window.location.href + '#post-' + id,
-          }).catch(console.error);
-        } else {
-          alert('Share API not supported in this browser.');
-        }
-      };
-      btnsDiv.appendChild(shareBtn);
-
-      postEl.appendChild(btnsDiv);
-      postEl.id = 'post-' + id;
-
-      postsDiv.appendChild(postEl);
-    });
-  });
-
-  // Simple HTML escape to prevent injection
-  function escapeHTML(str) {
-    return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
-</script>
-
+    // Basic XSS prevention for text display
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m]);
+    }
+  </script>
 </body>
 </html>
