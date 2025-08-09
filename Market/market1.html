@@ -6,265 +6,40 @@
   <title>DRFMedia — Pay $1 USDC for 30-day Access</title>
 
   <style>
-    /* ... your existing CSS unchanged ... */
+    body { font-family: Arial, sans-serif; background: #071028; color: #e6eef8; padding: 20px; }
+    .card { max-width: 700px; margin: auto; background: #0f1724; padding: 20px; border-radius: 12px; }
+    button { padding: 10px 14px; border-radius: 8px; border: none; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="card" role="main">
-    <!-- ... your existing HTML unchanged ... -->
     <header>
       <div>
-        <div class="logo">DRFMedia Marketplace</div>
-        <div class="small">Pay $1 USDC (BEP-20) for 30 days access</div>
+        <div class="logo" style="color:#f59e0b; font-weight:bold; font-size:18px;">DRFMedia Marketplace</div>
+        <div class="small" style="font-size:14px; margin-bottom:10px;">Pay $1 USDC (BEP-20) for 30 days access</div>
       </div>
       <div>
         <button id="connectBtn" class="btn">Connect Wallet</button>
       </div>
     </header>
 
-    <!-- ... rest of HTML unchanged ... -->
-
+    <div id="mainContent" style="margin-top:20px;">
+      <p>This is the main content section.</p>
+      <button id="payBtn">Pay $1 USDC</button>
+      <button id="verifyBtn">Check Access</button>
+    </div>
   </div>
 
-  <!-- Ethers.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.min.js"></script>
-
   <script>
-    (function() {
-      const RECEIVER = '0xd7D2802D433eEcE757Be13Ab06D09b3E7AbC390C';
-      const REQUIRED_CHAIN_ID = 56; // BSC mainnet
-      const DEFAULT_DECIMALS = 18;
-      const STORAGE_KEY = 'drfmedia_access_v1';
-
-      const ERC20_ABI = [
-        "function decimals() view returns (uint8)",
-        "function transfer(address to, uint256 amount) returns (bool)",
-        "function balanceOf(address owner) view returns (uint256)"
-      ];
-
-      const connectBtn = document.getElementById('connectBtn');
-      const payBtn = document.getElementById('payBtn');
-      const verifyBtn = document.getElementById('verifyBtn');
-      const tokenAddrInput = document.getElementById('tokenAddr');
-      const amountInput = document.getElementById('amount');
-      const statusText = document.getElementById('statusText');
-      const extraDiv = document.getElementById('extra');
-      const accountPre = document.getElementById('account');
-      const networkPre = document.getElementById('network');
-      const accessInfo = document.getElementById('accessInfo');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      if (tokenAddrInput.value.trim() === '') {
-        // USDC BSC token address (example) — you can change to your preferred USDC BEP-20 address
-        tokenAddrInput.value = '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d'; 
-      }
-
-      let provider = null;
-      let signer = null;
-      let userAddress = null;
-
-      function setStatus(msg, extra='') {
-        statusText.textContent = msg;
-        extraDiv.textContent = extra;
-      }
-
-      function humanDate(ms) {
-        return new Date(ms).toLocaleString();
-      }
-
-      function saveAccessFor(addr) {
-        const now = Date.now();
-        const expiry = now + 30 * 24 * 60 * 60 * 1000; // 30 days
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ address: addr, grantedAt: now, expiry }));
-        updateAccessUI();
-      }
-
-      function clearAccess() {
-        localStorage.removeItem(STORAGE_KEY);
-        updateAccessUI();
-      }
-
-      function getAccess() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        try { return JSON.parse(raw); } catch { return null; }
-      }
-
-      function updateAccessUI() {
-        const acc = getAccess();
-        if (!acc) {
-          accessInfo.textContent = 'No active access for this browser.';
-          return;
-        }
-        const now = Date.now();
-        if (now > acc.expiry) {
-          accessInfo.textContent = `Access expired on ${humanDate(acc.expiry)}.`;
-        } else {
-          accessInfo.textContent = `Access valid until ${humanDate(acc.expiry)} (granted to ${acc.address}).`;
-        }
-      }
-
-      async function connectWallet() {
-        if (!window.ethereum) {
-          alert('MetaMask or compatible wallet not found. Please install MetaMask.');
-          return;
-        }
-        try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          // Request accounts
-          const accounts = await provider.send("eth_requestAccounts", []);
-          if (accounts.length === 0) throw new Error('No account found');
-
-          signer = await provider.getSigner();
-          userAddress = await signer.getAddress();
-
-          const network = await provider.getNetwork();
-          accountPre.textContent = userAddress;
-          networkPre.textContent = `${network.name} (chainId ${network.chainId})`;
-
-          setStatus('Connected', userAddress);
-          connectBtn.textContent = 'Connected';
-          connectBtn.disabled = true;
-
-          updateAccessUI();
-
-          // Listen for account and network changes
-          if (window.ethereum.on) {
-            window.ethereum.on('accountsChanged', handleAccountsChanged);
-            window.ethereum.on('chainChanged', () => location.reload());
-          }
-
-        } catch (error) {
-          console.error(error);
-          setStatus('Connection failed', error.message);
-        }
-      }
-
-      async function handleAccountsChanged(accounts) {
-        if (accounts.length === 0) {
-          setStatus('Disconnected');
-          userAddress = null;
-          signer = null;
-          accountPre.textContent = '-';
-          connectBtn.textContent = 'Connect Wallet';
-          connectBtn.disabled = false;
-        } else {
-          userAddress = accounts[0];
-          signer = await provider.getSigner();
-          accountPre.textContent = userAddress;
-          setStatus('Connected', userAddress);
-        }
-      }
-
-      async function payFlow() {
-        if (!signer) {
-          alert('Please connect your wallet first.');
-          return;
-        }
-
-        const network = await provider.getNetwork();
-        if (network.chainId !== REQUIRED_CHAIN_ID) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x' + REQUIRED_CHAIN_ID.toString(16) }]
-            });
-            // Update provider and signer after network switch
-            provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-          } catch (switchError) {
-            alert('Please switch your wallet to BSC Mainnet.');
-            return;
-          }
-        }
-
-        const tokenAddr = tokenAddrInput.value.trim();
-        if (!tokenAddr) {
-          alert('Please enter USDC (BEP-20) token contract address.');
-          return;
-        }
-
-        const tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-        let decimals = DEFAULT_DECIMALS;
-        try {
-          decimals = await tokenContract.decimals();
-        } catch {
-          console.warn('Failed to get decimals, using default:', DEFAULT_DECIMALS);
-        }
-
-        const rawAmount = amountInput.value || '1';
-        let amountWei;
-        try {
-          amountWei = ethers.parseUnits(rawAmount, decimals);
-        } catch (e) {
-          alert('Invalid amount entered.');
-          return;
-        }
-
-        setStatus('Waiting for wallet confirmation...', `Sending ${rawAmount} tokens to ${RECEIVER}`);
-
-        try {
-          const tx = await tokenContract.transfer(RECEIVER, amountWei);
-          setStatus('Transaction sent, waiting for confirmation...', `Tx hash: ${tx.hash}`);
-          const receipt = await tx.wait(1);
-          if (receipt.status === 1) {
-            setStatus('Payment confirmed', `Tx: ${tx.hash}`);
-            saveAccessFor(userAddress);
-            alert('Payment successful — 30 days access granted.');
-            updateAccessUI();
-          } else {
-            setStatus('Transaction failed', '');
-            alert('Transaction failed or was reverted.');
-          }
-        } catch (err) {
-          console.error(err);
-          setStatus('Payment error', err.message || String(err));
-          alert('Payment failed: ' + (err.message || err));
-        }
-      }
-
-      function verifyAccess() {
-        const acc = getAccess();
-        if (!acc) {
-          alert('No access recorded for this browser.');
-          return;
-        }
-        const now = Date.now();
-        if (now > acc.expiry) {
-          alert(`Access expired on ${humanDate(acc.expiry)}`);
-        } else {
-          alert(`Access valid until ${humanDate(acc.expiry)}`);
-        }
-        updateAccessUI();
-      }
-
-      connectBtn.addEventListener('click', connectWallet);
-      payBtn.addEventListener('click', payFlow);
-      verifyBtn.addEventListener('click', verifyAccess);
-      logoutBtn.addEventListener('click', () => {
-        if (confirm('Clear local access for this browser?')) {
-          clearAccess();
-          alert('Local access cleared.');
-        }
-      });
-
-      document.getElementById('recipient').textContent = RECEIVER;
-      updateAccessUI();
-
-      // Try auto-connect if already connected
-      (async function tryAutoConnect() {
-        if (!window.ethereum) return;
-        try {
-          provider = new ethers.BrowserProvider(window.ethereum);
-          const accounts = await provider.send("eth_accounts", []);
-          if (accounts.length > 0) {
-            await connectWallet();
-          }
-        } catch (e) {
-          // ignore errors here
-        }
-      })();
-    })();
+    document.getElementById('connectBtn').addEventListener('click', () => {
+      alert('Connect Wallet button clicked!');
+    });
+    document.getElementById('payBtn').addEventListener('click', () => {
+      alert('Pay button clicked!');
+    });
+    document.getElementById('verifyBtn').addEventListener('click', () => {
+      alert('Verify Access button clicked!');
+    });
   </script>
 </body>
 </html>
