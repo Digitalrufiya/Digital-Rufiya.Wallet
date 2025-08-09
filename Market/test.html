@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8" /><title>Pinata Upload Test</title></head>
+<head>
+  <meta charset="UTF-8" />
+  <title>Pinata Upload Test</title>
+</head>
 <body>
+  <h2>Pinata File Upload Test</h2>
   <input type="file" id="fileInput" />
   <button id="uploadBtn">Upload to Pinata</button>
   <pre id="output"></pre>
 
 <script>
-const pinataJWT = "YOUR_JWT_TOKEN_HERE"; // replace with your actual JWT
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
 
 const fileInput = document.getElementById("fileInput");
 const uploadBtn = document.getElementById("uploadBtn");
@@ -22,22 +26,6 @@ uploadBtn.onclick = async () => {
 
   const formData = new FormData();
   formData.append("file", file);
-  
-  // Optional metadata
-  const metadata = JSON.stringify({
-    name: file.name,
-    keyvalues: {
-      uploadedBy: "user"
-    }
-  });
-  formData.append("pinataMetadata", metadata);
-
-  // Optional pinata options
-  const options = JSON.stringify({
-    cidVersion: 1,
-    wrapWithDirectory: false
-  });
-  formData.append("pinataOptions", options);
 
   try {
     const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
