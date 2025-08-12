@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marketplace Posts with Pinata IPFS</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 10px; }
+  .post { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+  img, video { max-width: 100%; height: auto; }
+  form > * { display: block; margin: 10px 0; width: 100%; }
+</style>
+</head>
+<body>
+
+<h2>Marketplace Upload (Pinata IPFS)</h2>
+
+<div id="auth">
+  <button id="loginBtn">Login with Google</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
+  <p id="userInfo"></p>
+</div>
+
+<form id="uploadForm">
+  <input type="file" id="fileIn" accept="image/*,video/*" required />
+  <input type="text" id="titleIn" placeholder="Product Title" required />
+  <input type="number" id="priceIn" placeholder="Price" min="0" required />
+  <input type="text" id="locationIn" placeholder="Location" required />
+  <input type="text" id="contactIn" placeholder="Contact Info" required />
+  <input type="url" id="paymentLinkIn" placeholder="Payment Link (optional)" />
+  <button type="submit">Upload Product</button>
+</form>
+
+<hr />
+
+<input type="search" id="qIn" placeholder="Search marketplace posts..." />
+
+<div id="posts"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // --- Firebase Config - Replace with your own ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+    measurementId: "G-TBFQX80NRP"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const postsRef = db.ref("posts");
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const userInfo = document.getElementById("userInfo");
+  const uploadForm = document.getElementById("uploadForm");
+  const fileIn = document.getElementById("fileIn");
+  const titleIn = document.getElementById("titleIn");
+  const priceIn = document.getElementById("priceIn");
+  const locationIn = document.getElementById("locationIn");
+  const contactIn = document.getElementById("contactIn");
+  const paymentLinkIn = document.getElementById("paymentLinkIn");
+  const postsDiv = document.getElementById("posts");
+  const qIn = document.getElementById("qIn");
+
+  let user = null;
+  let allPosts = [];
+
+  // Pinata JWT here (replace with your real token)
+  
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+
+  // Login
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  };
+
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  auth.onAuthStateChanged((u) => {
+    user = u;
+    if (user) {
+      userInfo.textContent = `Logged in as: ${user.displayName}`;
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+    } else {
+      userInfo.textContent = "";
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+    }
+  });
+
+  // Upload file to Pinata
+  async function uploadToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Pinata upload failed: ${errorText}`);
+    }
+
+    const data = await res.json();
+    return data.IpfsHash;
+  }
+
+  uploadForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Please login first!");
+      return;
+    }
+
+    const file = fileIn.files[0];
+    const title = titleIn.value.trim();
+    const price = Number(priceIn.value);
+    const location = locationIn.value.trim();
+    const contact = contactIn.value.trim();
+    const paymentLink = paymentLinkIn.value.trim();
+
+    if (!file || !title || !price || !location || !contact) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      // Upload file to Pinata IPFS
+      const ipfsHash = await uploadToPinata(file);
+
+      // Detect media type
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+
+      // Save to Firebase
+      const newRef = postsRef.push();
+      await newRef.set({
+        userId: user.uid,
+        displayName: user.displayName || "Anon",
+        photoURL: user.photoURL || "",
+        caption: "",
+        ipfsHash: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+        mediaType: mediaType,
+        timestamp: Date.now(),
+
+        productTitle: title,
+        productPrice: price,
+        productLocation: location,
+        productContact: contact,
+        paymentLink: paymentLink,
+
+        isMarketplace: true
+      });
+
+      alert("Product uploaded and pinned to IPFS via Pinata!");
+      uploadForm.reset();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Fetch posts and render
+  postsRef.on("value", (snapshot) => {
+    const data = snapshot.val() || {};
+    allPosts = Object.values(data);
+    render();
+  });
+
+  // Render marketplace posts filtered by search term
+  function render() {
+    const term = qIn.value.trim().toLowerCase();
+    postsDiv.innerHTML = "";
+
+    const filtered = allPosts.filter(p => {
+      if (!p.isMarketplace) return false;
+      if (!term) return true;
+
+      return (p.productTitle?.toLowerCase().includes(term) ||
+              p.productLocation?.toLowerCase().includes(term) ||
+              p.productContact?.toLowerCase().includes(term));
+    });
+
+    if (filtered.length === 0) {
+      postsDiv.textContent = "No marketplace posts found.";
+      return;
+    }
+
+    for (const p of filtered) {
+      const div = document.createElement("div");
+      div.className = "post";
+
+      div.innerHTML = `
+        <h3>${p.productTitle}</h3>
+        <p><strong>Price:</strong> $${p.productPrice}</p>
+        <p><strong>Location:</strong> ${p.productLocation}</p>
+        <p><strong>Contact:</strong> ${p.productContact}</p>
+        ${p.paymentLink ? `<p><a href="${p.paymentLink}" target="_blank" rel="noopener">Payment Link</a></p>` : ""}
+        ${p.mediaType === "video" ?
+          `<video src="${p.ipfsHash}" controls></video>` :
+          `<img src="${p.ipfsHash}" alt="${p.productTitle}" />`
+        }
+        <small>Posted by ${p.displayName}</small>
+      `;
+
+      postsDiv.appendChild(div);
+    }
+  }
+
+  qIn.addEventListener("input", render);
+</script>
+
+</body>
+</html>
