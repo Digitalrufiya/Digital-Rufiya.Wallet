@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DRF Marketplace</title>
+<title>DRF Marketplace with Likes</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; }
   #upload-section { background: white; padding: 15px; margin: 15px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -16,6 +16,7 @@
   .post video, .post img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
   .buttons { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
   .buttons button { flex: 1; }
+  .like-btn.liked { background-color: #e0245e; }
   #loading { text-align: center; padding: 20px; font-size: 18px; color: #555; }
 </style>
 </head>
@@ -40,7 +41,7 @@
 <!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocs, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -65,6 +66,7 @@ const loadingEl = document.getElementById("loading");
 
 let currentUser = null;
 
+// Upload to Pinata helper
 async function uploadToPinata(file) {
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
   const data = new FormData();
@@ -83,6 +85,7 @@ async function uploadToPinata(file) {
   return result.IpfsHash;
 }
 
+// Create post DOM element with real-time like count and like button
 function createPostElement(postData, postId) {
   const div = document.createElement("div");
   div.classList.add("post");
@@ -105,15 +108,21 @@ function createPostElement(postData, postId) {
       <button class="payBtn">Pay</button>
       <button class="whatsappBtn">Contact Seller</button>
       <button class="shareBtn">Share</button>
+      <button class="like-btn">❤️ Like <span class="like-count">0</span></button>
     </div>
   `;
 
+  // Pay button
   div.querySelector(".payBtn").onclick = () => {
     window.open(postData.paymentLink, "_blank");
   };
+
+  // WhatsApp button
   div.querySelector(".whatsappBtn").onclick = () => {
     window.open(`https://wa.me/${postData.whatsapp}`, "_blank");
   };
+
+  // Share button
   div.querySelector(".shareBtn").onclick = () => {
     if (navigator.share) {
       navigator.share({
@@ -126,60 +135,118 @@ function createPostElement(postData, postId) {
     }
   };
 
+  // Like button
+  const likeBtn = div.querySelector(".like-btn");
+  const likeCountSpan = div.querySelector(".like-count");
+
+  // Subscribe to likes real-time updates for this post
+  const postDocRef = doc(db, "posts", postId);
+  const unsubscribe = onSnapshot(postDocRef, (docSnap) => {
+    if (!docSnap.exists()) return;
+    const data = docSnap.data();
+    const likes = data.likes || [];
+    likeCountSpan.textContent = likes.length;
+
+    if (currentUser) {
+      if (likes.includes(currentUser.uid)) {
+        likeBtn.classList.add("liked");
+        likeBtn.textContent = `❤️ Liked (${likes.length})`;
+      } else {
+        likeBtn.classList.remove("liked");
+        likeBtn.textContent = `❤️ Like (${likes.length})`;
+      }
+    } else {
+      likeBtn.classList.remove("liked");
+      likeBtn.textContent = `❤️ Like (${likes.length})`;
+    }
+  });
+
+  likeBtn.onclick = async () => {
+    if (!currentUser) {
+      alert("You must be signed in to like.");
+      return;
+    }
+
+    try {
+      const docSnap = await getDocs(query(collection(db, "posts"), orderBy("createdAt", "desc")));
+      const postSnap = await doc(postDocRef);
+      const postDoc = await getDocs(postDocRef);
+
+      const postData = (await postDocRef.get()).data();
+      const likes = postData.likes || [];
+      if (likes.includes(currentUser.uid)) {
+        // Remove like
+        await updateDoc(postDocRef, {
+          likes: arrayRemove(currentUser.uid)
+        });
+      } else {
+        // Add like
+        await updateDoc(postDocRef, {
+          likes: arrayUnion(currentUser.uid)
+        });
+      }
+    } catch (error) {
+      console.error("Error updating like: ", error);
+    }
+  };
+
   return div;
 }
 
+// Load posts with pagination (5 per load)
 async function loadPosts() {
   if (loadingPosts) return;
   loadingPosts = true;
   loadingEl.style.display = "block";
 
   let q;
-  if (!lastVisible) {
-    q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(5));
-  } else {
+  if (lastVisible) {
     q = query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(5));
+  } else {
+    q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(5));
   }
 
-  const snapshot = await getDocs(q);
-  if (snapshot.docs.length > 0) {
-    lastVisible = snapshot.docs[snapshot.docs.length - 1];
-    snapshot.docs.forEach(docSnap => {
-      const postData = docSnap.data();
-      const postEl = createPostElement(postData, docSnap.id);
-      postsContainer.appendChild(postEl);
-    });
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
+    loadingEl.textContent = "No more posts";
+    loadingPosts = false;
+    return;
   }
-  loadingEl.style.display = "none";
-  loadingPosts = false;
-  setupVideoAutoPlay();
-}
 
-function setupVideoAutoPlay() {
-  const videos = document.querySelectorAll("video");
-  videos.forEach(video => {
-    video.pause();
+  lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
+
+  querySnapshot.forEach(docSnap => {
+    const post = createPostElement(docSnap.data(), docSnap.id);
+    postsContainer.appendChild(post);
   });
 
-  const centerX = window.innerWidth / 2;
-  let closestVideo = null;
-  let closestDistance = Infinity;
+  loadingEl.style.display = "none";
+  loadingPosts = false;
+}
+
+// Smooth video autoplay logic - play only fully visible video closest to screen center
+function setupVideoAutoPlay() {
+  const videos = document.querySelectorAll("video");
+  let foundToPlay = false;
 
   videos.forEach(video => {
     const rect = video.getBoundingClientRect();
-    const videoCenterX = rect.left + rect.width / 2;
-    const distance = Math.abs(centerX - videoCenterX);
-    if (distance < closestDistance && rect.top >= 0 && rect.bottom <= window.innerHeight) {
-      closestVideo = video;
-      closestDistance = distance;
+    if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+      if (!foundToPlay) {
+        if (video.paused) video.play().catch(() => {});
+        foundToPlay = true;
+      } else {
+        video.pause();
+      }
+    } else {
+      video.pause();
     }
   });
-
-  if (closestVideo) closestVideo.play();
 }
 
+// Event listeners
 window.addEventListener("scroll", () => {
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 150) {
     loadPosts();
   }
   setupVideoAutoPlay();
@@ -187,6 +254,7 @@ window.addEventListener("scroll", () => {
 
 window.addEventListener("resize", setupVideoAutoPlay);
 
+// Upload handler
 document.getElementById("uploadBtn").onclick = async () => {
   const fileInput = document.getElementById("mediaInput");
   const titleInput = document.getElementById("titleInput");
@@ -223,7 +291,8 @@ document.getElementById("uploadBtn").onclick = async () => {
       paymentLink: paymentLinkInput.value.trim(),
       ipfsHash,
       mediaType,
-      createdAt: new Date()
+      createdAt: new Date(),
+      likes: []
     });
 
     uploadStatus.textContent = "Listing uploaded!";
@@ -235,7 +304,6 @@ document.getElementById("uploadBtn").onclick = async () => {
     whatsappInput.value = "";
     paymentLinkInput.value = "";
 
-    // Reload posts to show the new listing at top
     postsContainer.innerHTML = "";
     lastVisible = null;
     loadPosts();
@@ -244,16 +312,16 @@ document.getElementById("uploadBtn").onclick = async () => {
   }
 };
 
-// Authenticate anonymously so Firestore rules can work (if needed)
+// Firebase auth anon sign-in
 signInAnonymously(auth).catch(console.error);
 
 onAuthStateChanged(auth, (user) => {
-  if (user) currentUser = user;
-  else currentUser = null;
+  currentUser = user;
 });
 
 // Initial load
 loadPosts();
+setupVideoAutoPlay();
 </script>
 
 </body>
