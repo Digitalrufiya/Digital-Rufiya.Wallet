@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Marketplace</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 10px; background: #f5f5f5;}
+  h1 { text-align: center; }
+  form { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+  input, textarea, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+  button { background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  .post { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+  .media { max-width: 100%; max-height: 300px; margin-bottom: 10px; }
+  .desc { margin-bottom: 8px; }
+  .btn-group button { width: auto; margin-right: 10px; }
+  .uploading { color: green; font-weight: bold; }
+  .share-btn { cursor: pointer; color: #007bff; text-decoration: underline; background: none; border: none; padding: 0; font-size: 1em; }
+</style>
+</head>
+<body>
+
+<h1>DRF Marketplace</h1>
+
+<form id="postForm">
+  <input type="text" id="title" placeholder="Title" required />
+  <textarea id="description" rows="3" placeholder="Description" required></textarea>
+  <input type="number" id="price" placeholder="Price" required min="0" step="any" />
+  <input type="text" id="location" placeholder="Location" required />
+  <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+  <input type="url" id="paymentLink" placeholder="Payment Link (URL)" required />
+  <input type="file" id="mediaFile" accept="image/*,video/*" required />
+  <button type="submit">Post</button>
+  <div id="uploadStatus"></div>
+</form>
+
+<div id="postsContainer"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+    authDomain: "drfmarket-place.firebaseapp.com",
+    projectId: "drfmarket-place",
+    storageBucket: "drfmarket-place.firebasestorage.app",
+    messagingSenderId: "752616443115",
+    appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+    measurementId: "G-MV9JQZHLLY"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Pinata JWT
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
+
+  // Elements
+  const postForm = document.getElementById('postForm');
+  const uploadStatus = document.getElementById('uploadStatus');
+  const postsContainer = document.getElementById('postsContainer');
+
+  // Upload file to Pinata
+  async function uploadFileToPinata(file) {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pinata upload failed: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.IpfsHash;
+  }
+
+  // Load posts from Firestore
+  async function loadPosts() {
+    postsContainer.innerHTML = 'Loading posts...';
+    try {
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      const querySnapshot = await getDocs(q);
+      postsContainer.innerHTML = '';
+      if (querySnapshot.empty) {
+        postsContainer.innerHTML = '<p>No posts yet.</p>';
+        return;
+      }
+      querySnapshot.forEach(doc => {
+        const post = doc.data();
+        postsContainer.appendChild(createPostElement(doc.id, post));
+      });
+    } catch (err) {
+      postsContainer.innerHTML = `<p>Error loading posts: ${err.message}</p>`;
+    }
+  }
+
+  // Create post element
+  function createPostElement(id, post) {
+    const div = document.createElement('div');
+    div.className = 'post';
+
+    // Media: image or video depending on file type
+    let mediaElement;
+    if (post.mediaType.startsWith('image/')) {
+      mediaElement = document.createElement('img');
+      mediaElement.src = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+      mediaElement.alt = post.title;
+      mediaElement.className = 'media';
+    } else if (post.mediaType.startsWith('video/')) {
+      mediaElement = document.createElement('video');
+      mediaElement.src = `https://gateway.pinata.cloud/ipfs/${post.ipfsHash}`;
+      mediaElement.controls = true;
+      mediaElement.className = 'media';
+    } else {
+      mediaElement = document.createElement('p');
+      mediaElement.textContent = "Unsupported media";
+    }
+    div.appendChild(mediaElement);
+
+    // Title
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = post.title;
+    div.appendChild(titleEl);
+
+    // Description
+    const descEl = document.createElement('p');
+    descEl.className = 'desc';
+    descEl.textContent = post.description;
+    div.appendChild(descEl);
+
+    // Price, Location
+    const detailsEl = document.createElement('p');
+    detailsEl.innerHTML = `<strong>Price:</strong> ${post.price} <br> <strong>Location:</strong> ${post.location}`;
+    div.appendChild(detailsEl);
+
+    // WhatsApp button
+    const whatsappBtn = document.createElement('button');
+    whatsappBtn.textContent = "Contact Seller (WhatsApp)";
+    whatsappBtn.onclick = () => {
+      const waNumber = post.whatsapp.replace(/\D/g,''); // sanitize digits only
+      window.open(`https://wa.me/${waNumber}`, '_blank');
+    };
+
+    // Payment button
+    const paymentBtn = document.createElement('button');
+    paymentBtn.textContent = "Pay Now";
+    paymentBtn.onclick = () => {
+      window.open(post.paymentLink, '_blank');
+    };
+
+    // Share button
+    const shareBtn = document.createElement('button');
+    shareBtn.textContent = "Share Post";
+    shareBtn.className = 'share-btn';
+    shareBtn.onclick = () => {
+      const shareUrl = `${location.origin}${location.pathname}?postId=${id}`;
+      if (navigator.share) {
+        navigator.share({
+          title: post.title,
+          text: post.description,
+          url: shareUrl,
+        }).catch(console.error);
+      } else {
+        prompt("Copy and share this URL:", shareUrl);
+      }
+    };
+
+    // Button container
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'btn-group';
+    btnGroup.appendChild(whatsappBtn);
+    btnGroup.appendChild(paymentBtn);
+    btnGroup.appendChild(shareBtn);
+    div.appendChild(btnGroup);
+
+    return div;
+  }
+
+  // Handle form submission
+  postForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    uploadStatus.textContent = '';
+    const title = postForm.title.value.trim();
+    const description = postForm.description.value.trim();
+    const price = postForm.price.value.trim();
+    const locationValue = postForm.location.value.trim();
+    const whatsapp = postForm.whatsapp.value.trim();
+    const paymentLink = postForm.paymentLink.value.trim();
+    const file = postForm.mediaFile.files[0];
+
+    if (!file) {
+      alert("Please select a media file");
+      return;
+    }
+
+    try {
+      // Show uploading status
+      uploadStatus.textContent = "Uploading media to IPFS via Pinata...";
+      postForm.querySelector('button[type=submit]').disabled = true;
+
+      const ipfsHash = await uploadFileToPinata(file);
+
+      uploadStatus.textContent = "Saving post data to Firebase...";
+
+      // Save post in Firestore
+      await addDoc(collection(db, "posts"), {
+        title,
+        description,
+        price,
+        location: locationValue,
+        whatsapp,
+        paymentLink,
+        ipfsHash,
+        mediaType: file.type,
+        timestamp: Date.now()
+      });
+
+      uploadStatus.textContent = "Post uploaded successfully!";
+
+      // Reset form
+      postForm.reset();
+      loadPosts();
+
+    } catch (err) {
+      uploadStatus.textContent = "Error: " + err.message;
+    } finally {
+      postForm.querySelector('button[type=submit]').disabled = false;
+      setTimeout(() => { uploadStatus.textContent = ''; }, 4000);
+    }
+  });
+
+  // On page load, check if sharing a single post by URL param ?postId=
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  async function loadSinglePost(postId) {
+    if (!postId) return false;
+    const docRef = collection(db, "posts");
+    try {
+      // Firestore doesn't allow getDoc by id from collection directly in this context,
+      // so workaround with getDocs + filter or redesign needed.
+      // We'll get all and find:
+      const q = query(collection(db, "posts"));
+      const querySnapshot = await getDocs(q);
+      let found = null;
+      querySnapshot.forEach(doc => {
+        if (doc.id === postId) {
+          found = doc;
+        }
+      });
+      if (!found) return false;
+      postsContainer.innerHTML = '';
+      postsContainer.appendChild(createPostElement(found.id, found.data()));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  window.onload = async () => {
+    const postId = getQueryParam('postId');
+    if (postId) {
+      const found = await loadSinglePost(postId);
+      if (!found) {
+        postsContainer.innerHTML = '<p>Post not found.</p>';
+      }
+    } else {
+      loadPosts();
+    }
+  };
+</script>
+
+</body>
+</html>
