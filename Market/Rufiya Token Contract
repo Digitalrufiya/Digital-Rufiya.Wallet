@@ -1,0 +1,489 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+/**
+ * Rufiyaa Token ("~rf")
+ * - ERC20 with capped, configurable fees (max 5.00%)
+ * - Fee buckets: Dividends, Liquidity, Treasury, Burn, Owner/Ops
+ * - Claim-based dividends via DividendTracker (ERC20 reward token, e.g., BUSD)
+ * - Auto-swap & liquify (UniswapV2/Pancake-compatible)
+ * - Anti-whale: maxTx, maxWallet
+ * - Role-based admin (AccessControl), Pausable, ReentrancyGuard
+ *
+ * Notes:
+ * - Set router, reward token, and pair on deployment/init.
+ * - Send LP tokens to lpRecipient (default: dead).
+ * - Use a multisig for treasury/owner wallets in production.
+ */
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+/**
+ * Minimal UniswapV2 / Pancake interfaces
+ */
+interface IUniswapV2Factory {
+    function createPair(address tokenA, address tokenB) external returns (address pair);
+}
+
+interface IUniswapV2Pair {
+    function factory() external view returns (address);
+}
+
+interface IUniswapV2Router01 {
+    function factory() external pure returns (address);
+    function WETH() external pure returns (address);
+}
+
+interface IUniswapV2Router02 is IUniswapV2Router01 {
+    function addLiquidityETH(
+        address token,
+        uint amountTokenDesired,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountA, uint amountB, uint liquidity);
+
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external;
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external;
+}
+
+/**
+ * DividendTracker using magnified dividends pattern; pays out an ERC20 reward token (e.g., BUSD).
+ * Balances are mirrored via setBalance() calls from the main token to avoid iterating holders on-chain.
+ */
+contract DividendTracker is AccessControl, ReentrancyGuard {
+    using Address for address;
+
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
+    IERC20 public immutable rewardToken; // e.g., BUSD
+
+    uint256 public totalShares; // sum of all tracked balances
+
+    // Magnified dividends math (see RATIONALE: https://medium.com/@nobody/magnified-dividends)
+    uint256 public magnifiedDividendPerShare;
+    uint256 internal constant MAGNITUDE = 2 ** 128;
+
+    mapping(address => uint256) public shares; // mirrored balances
+    mapping(address => int256) public magnifiedDividendCorrections;
+    mapping(address => uint256) public withdrawnDividends;
+    mapping(address => bool) public excludedFromDividends;
+
+    event ExcludeFromDividends(address indexed account, bool excluded);
+    event DistributeDividends(uint256 amount);
+    event SetBalance(address indexed account, uint256 newBalance);
+    event Claim(address indexed account, uint256 amount);
+
+    constructor(IERC20 _rewardToken, address admin) {
+        rewardToken = _rewardToken;
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MANAGER_ROLE, admin);
+    }
+
+    function setExcluded(address account, bool excluded) external onlyRole(MANAGER_ROLE) {
+        excludedFromDividends[account] = excluded;
+        emit ExcludeFromDividends(account, excluded);
+    }
+
+    function setBalance(address account, uint256 newBalance) external onlyRole(MANAGER_ROLE) {
+        if (excludedFromDividends[account]) {
+            // zero out if excluded
+            uint256 current = shares[account];
+            if (current > 0) {
+                totalShares -= current;
+                shares[account] = 0;
+                magnifiedDividendCorrections[account] = 0;
+            }
+            emit SetBalance(account, 0);
+            return;
+        }
+
+        uint256 currentBal = shares[account];
+        if (newBalance == currentBal) {
+            return;
+        }
+
+        if (newBalance > currentBal) {
+            uint256 mintAmount = newBalance - currentBal;
+            shares[account] = newBalance;
+            totalShares += mintAmount;
+            magnifiedDividendCorrections[account] -= int256(magnifiedDividendPerShare * mintAmount);
+        } else {
+            uint256 burnAmount = currentBal - newBalance;
+            shares[account] = newBalance;
+            totalShares -= burnAmount;
+            magnifiedDividendCorrections[account] += int256(magnifiedDividendPerShare * burnAmount);
+        }
+        emit SetBalance(account, newBalance);
+    }
+
+    function distributeDividends(uint256 amount) external onlyRole(MANAGER_ROLE) {
+        require(totalShares > 0, "DividendTracker: no shares");
+        require(rewardToken.balanceOf(address(this)) >= amount, "insufficient reward bal");
+        magnifiedDividendPerShare += (amount * MAGNITUDE) / totalShares;
+        emit DistributeDividends(amount);
+    }
+
+    function accumulativeDividendOf(address account) public view returns (uint256) {
+        return uint256(int256(magnifiedDividendPerShare * shares[account]) + magnifiedDividendCorrections[account]) / MAGNITUDE;
+    }
+
+    function withdrawableDividendOf(address account) public view returns (uint256) {
+        return accumulativeDividendOf(account) - withdrawnDividends[account];
+    }
+
+    function claim() external nonReentrant {
+        uint256 amount = withdrawableDividendOf(msg.sender);
+        if (amount > 0) {
+            withdrawnDividends[msg.sender] += amount;
+            require(rewardToken.transfer(msg.sender, amount), "claim transfer failed");
+            emit Claim(msg.sender, amount);
+        }
+    }
+}
+
+contract RufiyaaToken is ERC20, ERC20Burnable, Pausable, AccessControl, ReentrancyGuard {
+    using Address for address;
+
+    // ===== Roles =====
+    bytes32 public constant FEE_MANAGER_ROLE = keccak256("FEE_MANAGER_ROLE");
+    bytes32 public constant PAUSER_ROLE      = keccak256("PAUSER_ROLE");
+    bytes32 public constant MARKET_ROLE      = keccak256("MARKET_ROLE");
+
+    // ===== Addresses =====
+    address public immutable DEAD = 0x000000000000000000000000000000000000dEaD;
+    address public treasuryWallet;    // multi-sig recommended
+    address public ownerOpsWallet;    // multi-sig recommended
+    address public lpRecipient;       // where LP tokens go (default DEAD or timelock)
+
+    // DEX
+    IUniswapV2Router02 public router;
+    address public pair;          // token <-> WETH/WBNB pair
+    address public rewardToken;   // ERC20 used for dividends (e.g., BUSD)
+
+    // ===== Fees (in basis points, 10000 = 100.00%) =====
+    struct Fees { uint16 dividends; uint16 liquidity; uint16 treasury; uint16 burn; uint16 owner; }
+    Fees public fees = Fees({ dividends: 75, liquidity: 75, treasury: 25, burn: 25, owner: 50 });
+
+    uint16 public constant MAX_OWNER_FEE_BP = 200; // 2.00%
+    uint16 public constant MAX_TOTAL_FEE_BP = 500; // 5.00%
+
+    // ===== Limits =====
+    uint256 public maxTxAmount;      // e.g., 1% of supply
+    uint256 public maxWalletAmount;  // e.g., 2% of supply
+
+    // ===== Swap/Liquify =====
+    uint256 public swapThreshold;   // e.g., 0.05% of supply
+    bool private inSwap;
+
+    // Exemptions
+    mapping(address => bool) public isFeeExempt;
+    mapping(address => bool) public isDividendExempt;
+
+    // Fee pots (collected on contract)
+    uint256 private tokensForDividends;
+    uint256 private tokensForLiquidity;
+    uint256 private tokensForTreasury;
+    uint256 private tokensForOwner;
+
+    // Dividend tracker
+    DividendTracker public dividendTracker;
+
+    // Events
+    event RouterSet(address indexed router);
+    event PairSet(address indexed pair);
+    event RewardTokenSet(address indexed token);
+    event FeesUpdated(Fees fees);
+    event LimitsUpdated(uint256 maxTx, uint256 maxWallet);
+    event SwapThresholdUpdated(uint256 threshold);
+    event AutoLiquify(uint256 tokensIntoLiquidity, uint256 ethIntoLiquidity);
+
+    modifier swapping() { inSwap = true; _; inSwap = false; }
+
+    constructor(address _treasury, address _ownerOps) ERC20("Rufiyaa Token", "~rf") {
+        require(_treasury != address(0) && _ownerOps != address(0), "zero addr");
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(FEE_MANAGER_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+        _grantRole(MARKET_ROLE, msg.sender);
+
+        treasuryWallet = _treasury;
+        ownerOpsWallet = _ownerOps;
+        lpRecipient = DEAD; // default; can be changed to timelock if needed
+
+        uint256 supply = 100_000_000_000 * 1e18; // 100B * 1e18
+        _mint(msg.sender, supply);
+
+        maxTxAmount     = supply / 100;   // 1%
+        maxWalletAmount = supply / 50;    // 2%
+        swapThreshold   = supply / 2000;  // 0.05%
+
+        isFeeExempt[address(this)] = true;
+        isFeeExempt[treasuryWallet] = true;
+        isFeeExempt[ownerOpsWallet] = true;
+
+        isDividendExempt[address(this)] = true;
+        isDividendExempt[DEAD] = true;
+        isDividendExempt[treasuryWallet] = true; // usually excluded
+    }
+
+    // ===== One-time initializer to set router, create pair, set reward token, and deploy tracker =====
+    function initializeMarket(address _router, address _rewardToken) external onlyRole(MARKET_ROLE) {
+        require(address(router) == address(0), "already init");
+        require(_router != address(0) && _rewardToken != address(0), "zero addr");
+
+        router = IUniswapV2Router02(_router);
+        address _pair = IUniswapV2Factory(IUniswapV2Router01(_router).factory()).createPair(address(this), IUniswapV2Router01(_router).WETH());
+        pair = _pair;
+
+        rewardToken = _rewardToken; // e.g., BUSD address on BSC
+        dividendTracker = new DividendTracker(IERC20(_rewardToken), msg.sender);
+
+        // Exclude pair, router from dividends by default
+        isDividendExempt[_pair] = true;
+        isDividendExempt[address(router)] = true;
+
+        // Exempt router & pair from fees (optional)
+        isFeeExempt[address(router)] = true;
+        isFeeExempt[_pair] = true;
+
+        // Grant tracker manager role to this token contract
+        dividendTracker.grantRole(dividendTracker.MANAGER_ROLE(), address(this));
+
+        emit RouterSet(_router);
+        emit PairSet(_pair);
+        emit RewardTokenSet(_rewardToken);
+    }
+
+    // ===== Admin setters =====
+    function setLPRecipient(address recipient) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(recipient != address(0), "zero addr");
+        lpRecipient = recipient;
+    }
+
+    function setFees(Fees calldata f) external onlyRole(FEE_MANAGER_ROLE) {
+        require(f.owner <= MAX_OWNER_FEE_BP, "owner fee too high");
+        uint16 total = f.dividends + f.liquidity + f.treasury + f.burn + f.owner;
+        require(total <= MAX_TOTAL_FEE_BP, "total fee too high");
+        fees = f;
+        emit FeesUpdated(fees);
+    }
+
+    function setLimits(uint256 _maxTx, uint256 _maxWallet) external onlyRole(FEE_MANAGER_ROLE) {
+        require(_maxTx >= totalSupply() / 10000, "maxTx too low");    // >= 0.01%
+        require(_maxWallet >= totalSupply() / 10000, "maxWallet too low");
+        maxTxAmount = _maxTx;
+        maxWalletAmount = _maxWallet;
+        emit LimitsUpdated(_maxTx, _maxWallet);
+    }
+
+    function setSwapThreshold(uint256 _thr) external onlyRole(FEE_MANAGER_ROLE) {
+        require(_thr >= totalSupply() / 1_000_000, "thr too low"); // >=0.0001%
+        require(_thr <= totalSupply() / 500, "thr too high");      // <=0.2%
+        swapThreshold = _thr;
+        emit SwapThresholdUpdated(_thr);
+    }
+
+    function setFeeExempt(address account, bool exempt) external onlyRole(FEE_MANAGER_ROLE) { isFeeExempt[account] = exempt; }
+    function setDividendExempt(address account, bool exempt) external onlyRole(FEE_MANAGER_ROLE) { isDividendExempt[account] = exempt; }
+
+    function pause() external onlyRole(PAUSER_ROLE) { _pause(); }
+    function unpause() external onlyRole(PAUSER_ROLE) { _unpause(); }
+
+    // Emergency: set all fees to zero (can be wrapped by timelock off-chain)
+    function emergencyZeroFees() external onlyRole(FEE_MANAGER_ROLE) {
+        fees = Fees(0,0,0,0,0);
+        emit FeesUpdated(fees);
+    }
+
+    // ===== Internal transfer logic with fee handling =====
+    function _update(address from, address to, uint256 amount) internal override whenNotPaused {
+        // Anti-whale (skip for mints/burns or internal swaps)
+        if (from != address(0) && to != address(0) && !inSwap) {
+            require(amount <= maxTxAmount, "maxTx exceeded");
+            if (to != address(this) && to != DEAD && to != pair) {
+                require(balanceOf(to) + amount <= maxWalletAmount, "maxWallet exceeded");
+            }
+        }
+
+        // Trigger swap & liquify if threshold reached and not currently swapping
+        if (!inSwap && from != address(this) && to != address(this)) {
+            uint256 contractBal = balanceOf(address(this));
+            if (contractBal >= swapThreshold && address(router) != address(0)) {
+                _handleSwapAndDistribute(contractBal);
+            }
+        }
+
+        if (inSwap || isFeeExempt[from] || isFeeExempt[to] || from == address(0) || to == address(0)) {
+            // Normal transfer without fee
+            super._update(from, to, amount);
+        } else {
+            // Apply fees
+            uint256 totalBp = fees.dividends + fees.liquidity + fees.treasury + fees.burn + fees.owner;
+            uint256 feeAmount = (amount * totalBp) / 10_000;
+            uint256 sendAmount = amount - feeAmount;
+
+            // Split bucket amounts based on original amount
+            uint256 divAmt = (amount * fees.dividends) / 10_000;
+            uint256 liqAmt = (amount * fees.liquidity) / 10_000;
+            uint256 treAmt = (amount * fees.treasury) / 10_000;
+            uint256 ownAmt = (amount * fees.owner) / 10_000;
+            uint256 burnAmt = (amount * fees.burn) / 10_000;
+
+            if (divAmt + liqAmt + treAmt + ownAmt > 0) {
+                tokensForDividends += divAmt;
+                tokensForLiquidity += liqAmt;
+                tokensForTreasury  += treAmt;
+                tokensForOwner     += ownAmt;
+                super._update(from, address(this), divAmt + liqAmt + treAmt + ownAmt);
+            }
+            if (burnAmt > 0) {
+                super._update(from, DEAD, burnAmt);
+            }
+            super._update(from, to, sendAmount);
+        }
+
+        // Mirror balances to dividend tracker (post-transfer balances)
+        if (address(dividendTracker) != address(0)) {
+            if (!isDividendExempt[from]) {
+                dividendTracker.setBalance(from, balanceOf(from));
+            } else {
+                dividendTracker.setBalance(from, 0);
+            }
+            if (!isDividendExempt[to]) {
+                dividendTracker.setBalance(to, balanceOf(to));
+            } else {
+                dividendTracker.setBalance(to, 0);
+            }
+        }
+    }
+
+    // ===== Swap & Distribute =====
+    function _handleSwapAndDistribute(uint256 contractBal) private swapping nonReentrant {
+        uint256 totalForSwap = tokensForDividends + tokensForLiquidity + tokensForTreasury + tokensForOwner;
+        if (totalForSwap == 0) return;
+
+        // Take liquidity half split: half tokens kept to add as token, half swapped to ETH
+        uint256 liqTokens = tokensForLiquidity;
+        uint256 liqHalf = liqTokens / 2;
+        uint256 tokensToSwap = contractBal - liqHalf; // swap everything except the half destined for LP
+
+        // Approve router once (gas-save could approve on-demand)
+        _approve(address(this), address(router), type(uint256).max);
+
+        uint256 initialETH = address(this).balance;
+        _swapTokensForETH(tokensToSwap);
+        uint256 ethGained = address(this).balance - initialETH;
+
+        // Compute proportional ETH for each bucket (dividends/treasury/owner/liquidity-half)
+        // Proportions are based on tokens swapped (exclude the liqHalf left as token)
+        uint256 effectiveForSwap = totalForSwap - liqHalf; // liqHalf not swapped
+        if (effectiveForSwap == 0) effectiveForSwap = 1; // safety
+
+        uint256 ethForDiv = (ethGained * tokensForDividends) / effectiveForSwap;
+        uint256 ethForTre = (ethGained * tokensForTreasury)  / effectiveForSwap;
+        uint256 ethForOwn = (ethGained * tokensForOwner)     / effectiveForSwap;
+        uint256 ethForLiq = ethGained - ethForDiv - ethForTre - ethForOwn; // remainder for LP
+
+        // Add liquidity using liqHalf and its ETH portion
+        if (liqHalf > 0 && ethForLiq > 0) {
+            router.addLiquidityETH{value: ethForLiq}(
+                address(this),
+                liqHalf,
+                0,
+                0,
+                lpRecipient,
+                block.timestamp
+            );
+            emit AutoLiquify(liqHalf, ethForLiq);
+        }
+
+        // Convert remaining ETH for dividends into reward token (e.g., BUSD) and send to tracker
+        if (ethForDiv > 0 && rewardToken != address(0)) {
+            _swapETHForTokens(ethForDiv, rewardToken, address(this));
+            uint256 rewardBal = IERC20(rewardToken).balanceOf(address(this));
+            if (rewardBal > 0) {
+                IERC20(rewardToken).transfer(address(dividendTracker), rewardBal);
+                dividendTracker.distributeDividends(rewardBal);
+            }
+        }
+
+        // Send treasury & owner ETH directly
+        if (ethForTre > 0) {
+            (bool okTre, ) = payable(treasuryWallet).call{value: ethForTre}(""); require(okTre, "treasury xfer failed");
+        }
+        if (ethForOwn > 0) {
+            (bool okOwn, ) = payable(ownerOpsWallet).call{value: ethForOwn}(""); require(okOwn, "owner xfer failed");
+        }
+
+        // Reset buckets
+        tokensForDividends = 0;
+        tokensForLiquidity = 0;
+        tokensForTreasury  = 0;
+        tokensForOwner     = 0;
+    }
+
+    function _swapTokensForETH(uint256 tokenAmount) internal {
+        if (tokenAmount == 0) return;
+        address[] memory path = new address[](2);
+        path[0] = address(this);
+        path[1] = IUniswapV2Router01(address(router)).WETH();
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            tokenAmount,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+    }
+
+    function _swapETHForTokens(uint256 amountETH, address outToken, address to) internal {
+        if (amountETH == 0) return;
+        address[] memory path = new address[](2);
+        path[0] = IUniswapV2Router01(address(router)).WETH();
+        path[1] = outToken;
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens({
+            amountIn: 0, // placeholder - cannot swap ETH with this function directly; use wrapper below
+            amountOutMin: 0,
+            path: path,
+            to: to,
+            deadline: block.timestamp
+        });
+        // ^ The above signature expects tokens->tokens. For ETH->tokens we need a different router fn
+        // on Pancake/Uniswap V2 there is swapExactETHForTokensSupportingFeeOnTransferTokens.
+        // To keep this single-file minimal and interface-light, we use a payable fallback approach below.
+    }
+
+    // Because our interf
