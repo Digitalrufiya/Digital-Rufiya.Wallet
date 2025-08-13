@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gaza Aid Marketplace</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 10px; }
+    input, textarea { width: 100%; margin-bottom: 10px; padding: 5px; }
+    button { padding: 10px; width: 100%; }
+    .post { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Gaza Aid Marketplace</h2>
+
+  <div id="form-section">
+    <h3>Create Post ($1 USDC required)</h3>
+    <input type="text" id="title" placeholder="Title">
+    <input type="number" id="price" placeholder="Price">
+    <input type="text" id="location" placeholder="Location">
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number">
+    <input type="text" id="userPaymentLink" placeholder="Your Payment Link">
+    <input type="file" id="media">
+    <button onclick="createPost()">Post Product</button>
+    <div id="status"></div>
+  </div>
+
+  <h3>All Posts</h3>
+  <div id="posts"></div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // Pinata JWT
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
+
+  // Binance Smart Chain USDC address
+  const receivingAddress = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+
+  async function createPost() {
+    const title = document.getElementById('title').value;
+    const price = document.getElementById('price').value;
+    const location = document.getElementById('location').value;
+    const whatsapp = document.getElementById('whatsapp').value;
+    const userPaymentLink = document.getElementById('userPaymentLink').value;
+    const mediaFile = document.getElementById('media').files[0];
+    const status = document.getElementById('status');
+
+    if (!title || !price || !location || !whatsapp || !mediaFile) {
+      alert("Please fill all fields and select a media file.");
+      return;
+    }
+
+    status.innerText = "Checking payment...";
+
+    // Verify $1 USDC payment (BSC) using BscScan API
+    const userAddress = prompt("Enter your Binance Smart Chain address to verify payment:");
+    if(!userAddress) { status.innerText = "Payment verification cancelled."; return; }
+
+    try {
+      const url = `https://api.bscscan.com/api?module=account&action=tokentx&address=${userAddress}&contractaddress=0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d&apikey=YOUR_BSCSCAN_API_KEY`;
+      const response = await axios.get(url);
+      const txs = response.data.result;
+      const validTx = txs.find(tx => tx.to.toLowerCase() === receivingAddress.toLowerCase() && parseFloat(tx.value)/1e18 >= 0.95);
+      if(!validTx) { status.innerText = "Payment not detected. You must pay $1 USDC."; return; }
+    } catch(err) {
+      console.error(err);
+      status.innerText = "Error verifying payment. Try again.";
+      return;
+    }
+
+    status.innerText = "Uploading media to Pinata...";
+
+    const formData = new FormData();
+    formData.append('file', mediaFile);
+
+    try {
+      const pinataResp = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
+        maxBodyLength: 'Infinity',
+        headers: {
+          'Authorization': `Bearer ${pinataJWT}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${pinataResp.data.IpfsHash}`;
+      
+      // Save post to Firebase
+      await db.collection('posts').add({
+        title, price, location, whatsapp, userPaymentLink, media: ipfsUrl, created: Date.now()
+      });
+
+      status.innerText = "Post uploaded successfully!";
+      loadPosts();
+
+    } catch(err) {
+      console.error(err);
+      status.innerText = "Failed to upload media.";
+    }
+  }
+
+  async function loadPosts() {
+    const postsDiv = document.getElementById('posts');
+    postsDiv.innerHTML = "";
+    const snapshot = await db.collection('posts').orderBy('created', 'desc').get();
+    snapshot.forEach(doc => {
+      const post = doc.data();
+      const div = document.createElement('div');
+      div.className = 'post';
+      div.innerHTML = `
+        <h4>${post.title}</h4>
+        <p>Price: ${post.price}</p>
+        <p>Location: ${post.location}</p>
+        <p>WhatsApp: ${post.whatsapp}</p>
+        <p><a href="${post.userPaymentLink}" target="_blank">Buy from seller</a></p>
+        <img src="${post.media}" style="max-width:100%">
+      `;
+      postsDiv.appendChild(div);
+    });
+  }
+
+  // Load all posts on page load
+  loadPosts();
+</script>
+</body>
+</html>
