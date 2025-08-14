@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View</title>
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
+  }
+}
+* { box-sizing: border-box; margin: 0 }
+body {
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column
+}
+a { color: inherit; text-decoration: none }
+img, video { max-width: 100% }
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1000
+}
+.brand { display: flex; align-items: center; gap: .5rem; font-weight: 700 }
+.brand img {
+  width: 2.25rem; height: 2.25rem; border-radius: .25rem;
+  background: #fff; padding: 2px
+}
+#primaryNav { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap }
+#primaryNav a {
+  color: #fff; font-weight: 600;
+  padding: .5rem .75rem; border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+#primaryNav a:hover, #primaryNav a.active { background-color: var(--accent-hover) }
+#menuToggle {
+  background: transparent; border: none; color: #fff;
+  font-size: 1.5rem; cursor: pointer; display: none; user-select: none;
+}
+@media (max-width: 600px) {
+  #primaryNav { display: none; flex-direction: column; width: 100%; background: var(--accent); margin-top: 0.5rem; border-radius: var(--radius); }
+  #primaryNav.show { display: flex; }
+  #menuToggle { display: block; }
+}
+.btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius); padding: .5rem 1rem;
+  font-weight: 600; cursor: pointer; transition: background .2s
+}
+.btn:hover { background: var(--accent-hover) }
+.btn:disabled { background: #adb5bd; cursor: not-allowed }
+.container { width: min(100%, 700px); margin: 0 auto; padding: 0 1rem }
+#searchInput { width: 100%; padding: .55rem .85rem; margin: 1rem 0; border: 1px solid #ced4da; border-radius: var(--radius); background: var(--bg-surface); color: var(--text-body) }
+.post-item { background: var(--bg-surface-alt); border: 1px solid #dee2e6; border-radius: var(--radius); padding: 1rem; margin: 1.25rem 0; box-shadow: var(--shadow-sm) }
+.post-owner { display: flex; align-items: center; gap: .6rem; font-weight: 700 }
+.avatar { width: 2.25rem; height: 2.25rem; border-radius: 50%; object-fit: cover; border: 1px solid #ccc }
+.post-time { font-size: .8rem; color: var(--text-muted) }
+.post-caption { margin-top: .75rem; white-space: pre-wrap }
+video, img { border-radius: var(--radius); background: #000; display: block; opacity: 0; transition: opacity .3s }
+[data-loaded=true] { opacity: 1 }
+#uploadForm { margin-top: 1.25rem }
+#uploadForm textarea { width: 100%; min-height: 6rem; padding: .65rem .85rem; margin: .75rem 0; border: 1px solid #ced4da; border-radius: var(--radius); resize: vertical }
+#prog { width: 100%; height: 4px; background: #e9ecef; border-radius: 2px; overflow: hidden; display: none }
+#progBar { height: 4px; width: 0; background: var(--accent) }
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="logo" />
+    <span>DRFMedia</span>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">Posts</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html">Timelines</a>
+    <a href="market1.html">Market Place</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <textarea id="caption" minlength="4" placeholder="Write your caption…" required></textarea>
+    <div id="prog"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+</main>
+
+<script type="module">
+  // Menu toggle logic
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  if(window.innerWidth <= 600) primaryNav.style.display = "none";
+  menuToggle.addEventListener("click", () => primaryNav.style.display = (primaryNav.style.display === "flex") ? "none" : "flex");
+  [...primaryNav.querySelectorAll("a")].forEach(a => a.addEventListener("click", () => { if(window.innerWidth<=600) primaryNav.style.display="none" }));
+
+  // Highlight active menu
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
+    if(location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("active");
+    else a.classList.remove("active");
+  });
+
+  // Firebase & Pinata setup
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+    measurementId: "G-TBFQX80NRP"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const uploadForm = document.getElementById("uploadForm");
+  const fileInput = document.getElementById("mediaFile");
+  const capInput = document.getElementById("caption");
+  const prog = document.getElementById("prog");
+  const progBar = document.getElementById("progBar");
+  const postContainer = document.getElementById("postContainer");
+  const searchInput = document.getElementById("searchInput");
+
+  loginBtn.onclick = () => signInWithPopup(auth, provider);
+  logoutBtn.onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, user => {
+    if(user) { 
+      loginBtn.style.display="none";
+      logoutBtn.style.display="inline-block";
+      uploadForm.style.display="block";
+      window.currentUser = user;
+      getPosts();
+    } else {
+      loginBtn.style.display="inline-block";
+      logoutBtn.style.display="none";
+      uploadForm.style.display="none";
+      postContainer.innerHTML = "";
+    }
+  });
+
+  async function uploadToPinata(file){
+    return new Promise((res, rej) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST","https://api.pinata.cloud/pinning/pinFileToIPFS");
+      xhr.setRequestHeader("Authorization", pinataJWT);
+      xhr.upload.onprogress = e => { if(e.lengthComputable) progBar.style.width = ((e.loaded/e.total)*100)+"%"; };
+      xhr.onload = () => xhr.status>=200&&xhr.status<300 ? res(JSON.parse(xhr.responseText).IpfsHash) : rej(new Error("Pinata upload failed"));
+      xhr.onerror = () => rej(new Error("Network error"));
+      xhr.send(fd);
+    });
+  }
+
+  uploadForm.onsubmit = async e => {
+    e.preventDefault();
+    const file = fileInput.files[0], cap = capInput.value.trim();
+    if(!file || !cap) return alert("Provide file and caption");
+    prog.style.display = "block"; progBar.style.width="0";
+    try {
+      const cid = await uploadToPinata(file);
+      const postRef = push(ref(db,"posts"));
+      await set(postRef, {
+        uid: window.currentUser.uid,
+        displayName: window.currentUser.displayName,
+        photoURL: window.currentUser.photoURL || "https://via.placeholder.com/40",
+        caption: cap,
+        mediaType: file.type.startsWith("video") ? "video" : "image",
+        ipfsHash: cid,
+        timestamp: Date.now()
+      });
+      fileInput.value=""; capInput.value=""; prog.style.display="none";
+      getPosts();
+    } catch(err){ alert(err.message); prog.style.display="none"; }
+  };
+
+  async function getPosts(){
+    const snapshot = await get(ref(db,"posts"));
+    postContainer.innerHTML="";
+    const posts = snapshot.exists() ? Object.values(snapshot.val()).sort((a,b)=>b.timestamp-a.timestamp) : [];
+    const filter = searchInput.value.toLowerCase();
+    posts.forEach(post=>{
+      if(!post.caption.toLowerCase().includes(filter)) return;
+      const div = document.createElement("div");
+      div.className="post-item";
+      div.innerHTML = `
+        <div class="post-owner"><img class="avatar" src="${post.photoURL}" /><span>${post.displayName}</span></div>
+        <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
+        <div class="post-caption">${post.caption}</div>
+        ${post.mediaType==="video" ? `<video data-src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" controls></video>` : `<img data-src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}">`}
+      `;
+      postContainer.appendChild(div);
+    });
+    lazyLoadMedia();
+  }
+
+  searchInput.addEventListener("input", getPosts);
+
+  function lazyLoadMedia(){
+    const media = postContainer.querySelectorAll("img[data-src], video[data-src]");
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          const el = entry.target;
+          el.src = el.dataset.src;
+          el.onload = () => el.setAttribute("data-loaded","true");
+          entry.target.removeAttribute("data-src");
+          io.unobserve(el);
+        }
+      });
+    }, { rootMargin: "50px" });
+    media.forEach(m=>io.observe(m));
+  }
+</script>
+</body>
+</html>
