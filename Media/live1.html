@@ -2,101 +2,135 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Go Live with Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFMedia Live</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: #111;
-      color: white;
-    }
-    video {
-      width: 80%;
-      max-width: 800px;
-      margin: 10px 0;
-      background: black;
-      border: 2px solid #00ff88;
-      border-radius: 12px;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #00ff88;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; margin:0; padding:0; }
+    h1 { margin-top: 20px; }
+    video { width: 90%; max-width: 600px; border-radius: 10px; margin: 10px 0; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+    .start { background: #28a745; color: #fff; }
+    .stop { background: #dc3545; color: #fff; }
+    #engagement { max-width: 600px; margin: 20px auto; text-align: left; }
+    #comments { max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+    input[type="text"] { width: 70%; padding: 8px; border-radius: 8px; border: none; margin-right:5px; }
+    .like-btn { background: #ff2d55; color: #fff; border-radius: 8px; padding: 6px 12px; border:none; cursor:pointer;}
+    #viewer-count { margin-left: 10px; }
   </style>
 </head>
 <body>
-  <h1>📡 DRF Live Stream</h1>
+  <h1>🎥 DRFMedia Live</h1>
 
-  <!-- Local preview -->
-  <video id="localVideo" autoplay muted playsinline></video>
-  <button id="startBtn">Go Live</button>
+  <video id="preview" autoplay muted playsinline></video><br>
+  <button class="start" id="startBtn">Go Live</button>
+  <button class="stop" id="stopBtn" disabled>Stop Live</button>
+  <p id="status">🔴 Not Live</p>
 
-  <!-- Playback -->
-  <h2>🎥 Live Playback</h2>
-  <video id="playback" controls autoplay></video>
+  <h2>📺 Live Playback</h2>
+  <video id="livePlayer" controls playsinline></video>
+  <p>Viewers: <span id="viewerCount">0</span> ❤ Likes: <span id="likeCount">0</span></p>
 
-  <script>
-    const startBtn = document.getElementById("startBtn");
-    const localVideo = document.getElementById("localVideo");
-    const playback = document.getElementById("playback");
+  <div id="engagement">
+    <div id="comments"></div>
+    <input type="text" id="commentInput" placeholder="Say something..." />
+    <button id="sendComment">Send</button>
+    <button class="like-btn" id="sendLike">❤ Like</button>
+  </div>
 
-    const PLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
-    const STREAM_KEY = "71f6-vu4y-y16x-3e3p";
-    const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
+  <script type="module">
+    // Firebase initialization
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
-    // Show playback
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(PLAYBACK_URL);
-      hls.attachMedia(playback);
-    } else if (playback.canPlayType("application/vnd.apple.mpegurl")) {
-      playback.src = PLAYBACK_URL;
-    }
-
-    // Start local preview & push to Livepeer
-    startBtn.onclick = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideo.srcObject = stream;
-
-        // Push stream to Livepeer via WebRTC
-        const pc = new RTCPeerConnection();
-        stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        const res = await fetch("https://livepeer.studio/webrtc/ingest", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + LIVEPEER_API_KEY,
-            "Content-Type": "application/sdp"
-          },
-          body: offer.sdp
-        });
-
-        const answer = {
-          type: "answer",
-          sdp: await res.text()
-        };
-        await pc.setRemoteDescription(answer);
-
-        alert("✅ You are LIVE now!");
-      } catch (err) {
-        alert("❌ Error: " + err.message);
-      }
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
     };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Livepeer playback URL
+    const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+
+    // Camera preview
+    const preview = document.getElementById("preview");
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => { preview.srcObject = stream; })
+      .catch(err => alert("Camera/Mic error: " + err));
+
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const status = document.getElementById("status");
+    const livePlayer = document.getElementById("livePlayer");
+
+    startBtn.onclick = () => {
+      status.innerText = "🟢 Live Now! Use OBS or mobile to stream to Livepeer.";
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      // Show live player
+      livePlayer.src = playbackUrl;
+      livePlayer.load();
+      livePlayer.play();
+    };
+
+    stopBtn.onclick = () => {
+      status.innerText = "🔴 Stopped";
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      livePlayer.pause();
+      livePlayer.src = "";
+    };
+
+    // Likes & comments
+    const likeBtn = document.getElementById("sendLike");
+    const commentInput = document.getElementById("commentInput");
+    const sendCommentBtn = document.getElementById("sendComment");
+    const likeCountEl = document.getElementById("likeCount");
+    const viewerCountEl = document.getElementById("viewerCount");
+    const commentsDiv = document.getElementById("comments");
+
+    const roomRef = ref(db, "drf_live_room"); // single room example
+
+    // Likes
+    const likesRef = ref(db, "drf_live_room/likes");
+    onValue(likesRef, snapshot => {
+      likeCountEl.innerText = snapshot.val() || 0;
+    });
+
+    likeBtn.onclick = async () => {
+      const likesSnapshot = await new Promise(res => onValue(likesRef, snap => res(snap.val()), { onlyOnce:true }));
+      await set(likesRef, (likesSnapshot || 0) + 1);
+    };
+
+    // Comments
+    const commentsRef = ref(db, "drf_live_room/comments");
+    onValue(commentsRef, snapshot => {
+      const val = snapshot.val() || {};
+      commentsDiv.innerHTML = Object.values(val).map(c => `<b>${c.name || "User"}:</b> ${c.text}`).join("<br>");
+    });
+
+    sendCommentBtn.onclick = async () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      const newCommentRef = push(commentsRef);
+      await set(newCommentRef, { text, name: "User" });
+      commentInput.value = "";
+    };
+
+    // Viewer count simulation (can increment when user opens the page)
+    const viewersRef = ref(db, "drf_live_room/viewers");
+    const myViewerRef = push(viewersRef);
+    set(myViewerRef, true);
+    window.addEventListener("beforeunload", () => { myViewerRef.remove(); });
+    onValue(viewersRef, snapshot => { viewerCountEl.innerText = Object.keys(snapshot.val()||{}).length; });
+
   </script>
 </body>
 </html>
