@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRFMedia Live - Browser Stream</title>
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#000; color:#fff; }
+header { padding:10px; text-align:center; font-size:1.5rem; background:#111; }
+#live-feed { display:flex; flex-direction:column; gap:15px; padding:10px; }
+.stream-card { position:relative; background:#111; border-radius:12px; overflow:hidden; }
+video { width:100%; height:auto; border-radius:12px; }
+.overlay { position:absolute; bottom:10px; left:10px; display:flex; gap:10px; align-items:center; color:#fff; }
+.like-btn, .comment-btn { background:rgba(255,255,255,0.2); border:none; padding:5px 10px; border-radius:6px; cursor:pointer; color:#fff; font-weight:bold; }
+.go-live-container { text-align:center; padding:10px; }
+.go-live-btn { background:#ff5722; border:none; padding:10px 20px; font-size:1rem; border-radius:8px; cursor:pointer; color:#fff; font-weight:bold; }
+.comments-list { max-height:120px; overflow-y:auto; margin-top:5px; font-size:0.9rem; }
+.comment-item { margin-bottom:3px; }
+</style>
+</head>
+<body>
+<header>DRFMedia Live Stream</header>
+<div class="go-live-container">
+  <button class="go-live-btn" id="goLiveBtn">🎥 Go Live</button>
+</div>
+<div id="live-feed"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+
+// ---------- FIREBASE CONFIG ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.firebasestorage.app",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+  measurementId: "G-W6VHMP77YR"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ---------- LIVEPEER CONFIG ----------
+const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
+const liveFeed = document.getElementById("live-feed");
+const goLiveBtn = document.getElementById("goLiveBtn");
+
+let userStream = null;
+let userId = Math.random().toString(36).slice(2,10);
+let streamRef = null;
+
+// -------- UTILITY --------
+function rid(){ return Math.random().toString(36).slice(2,10); }
+
+// ---------- CREATE LIVEPEER STREAM ----------
+async function createLivepeerStream() {
+  const response = await fetch("https://livepeer.studio/api/stream", {
+    method:"POST",
+    headers:{
+      "Authorization":`Bearer ${LIVEPEER_API_KEY}`,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      name:`DRFUser_${rid()}`,
+      profiles:[{name:"720p", bitrate:2000000, fps:30, width:1280, height:720}],
+      type:"webcam"
+    })
+  });
+  return await response.json();
+}
+
+// ---------- GO LIVE ----------
+goLiveBtn.onclick = async () => {
+  try {
+    userStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    const streamData = await createLivepeerStream();
+    const streamId = streamData.id;
+    const playbackId = streamData.playbackId;
+
+    // Save in Firebase
+    streamRef = push(ref(db,"liveStreams"));
+    await set(streamRef,{
+      streamId,
+      playbackId,
+      userName:`User_${rid()}`,
+      likes:0,
+      comments:{},
+      timestamp:Date.now()
+    });
+
+    // Show local preview
+    const card = document.createElement("div");
+    card.className="stream-card";
+    const video = document.createElement("video");
+    video.autoplay=true;
+    video.muted=true;
+    video.playsInline=true;
+    video.srcObject=userStream;
+    card.appendChild(video);
+    liveFeed.prepend(card);
+
+    alert("✅ Stream created! Your camera is live. Your feed is automatically sent to Livepeer.");
+
+    // ---------- WHIP / WebRTC for Browser Streaming ----------
+    const whipUrl = `https://livepeer.studio/api/stream/${streamId}/webRTC?apiKey=${LIVEPEER_API_KEY}`;
+    const pc = new RTCPeerConnection();
+    userStream.getTracks().forEach(track => pc.addTrack(track, userStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const sdpResponse = await fetch(whipUrl, {
+      method:"POST",
+      headers: {"Content-Type":"application/sdp"},
+      body:offer.sdp
+    });
+    const answerSDP = await sdpResponse.text();
+    await pc.setRemoteDescription({ type:"answer", sdp: answerSDP });
+
+  } catch(e){
+    console.error(e);
+    alert("⚠️ Error creating live stream. Check camera permissions or API key.");
+  }
+};
+
+// ---------- WATCH LIVE STREAMS ----------
+const liveStreamsRef = ref(db,"liveStreams");
+onValue(liveStreamsRef,(snapshot)=>{
+  const streams = snapshot.val();
+  liveFeed.innerHTML="";
+  if(!streams) return;
+  Object.values(streams).forEach((stream)=>{
+    const card = document.createElement("div");
+    card.className="stream-card";
+
+    const video = document.createElement("video");
+    video.controls=true;
+    video.autoplay=true;
+    video.playsInline=true;
+    video.src=`https://cdn.livepeer.com/hls/${stream.playbackId}/index.m3u8`;
+    card.appendChild(video);
+
+    // overlay likes/comments
+    const overlay = document.createElement("div");
+    overlay.className="overlay";
+    const likeBtn = document.createElement("button");
+    likeBtn.className="like-btn";
+    likeBtn.textContent = `❤ ${stream.likes||0}`;
+    likeBtn.onclick = async ()=>{
+      const likesRef = ref(db,`liveStreams/${stream.streamId}/likes`);
+      await set(likesRef,(stream.likes||0)+1);
+    };
+    const commentBtn = document.createElement("button");
+    commentBtn.className="comment-btn";
+    commentBtn.textContent="💬";
+    commentBtn.onclick = ()=>{
+      const comment = prompt("Enter comment:");
+      if(comment){
+        const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
+        const cRef = push(commentsRef);
+        set(cRef,{ text:comment, timestamp:Date.now() });
+      }
+    };
+    overlay.appendChild(likeBtn);
+    overlay.appendChild(commentBtn);
+    card.appendChild(overlay);
+
+    // comments list
+    const commentsList = document.createElement("div");
+    commentsList.className="comments-list";
+    const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
+    onValue(commentsRef,(snap)=>{
+      commentsList.innerHTML="";
+      const data = snap.val();
+      if(!data) return;
+      Object.values(data).forEach(c=>{
+        const item = document.createElement("div");
+        item.className="comment-item";
+        item.textContent=c.text;
+        commentsList.appendChild(item);
+      });
+    });
+    card.appendChild(commentsList);
+
+    liveFeed.appendChild(card);
+  });
+});
+</script>
+</body>
+</html>
