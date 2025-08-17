@@ -7,7 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; margin:0; padding:0; }
     h1 { margin-top: 20px; }
-    video { width: 90%; max-width: 600px; border-radius: 10px; margin: 10px 0; background:#000; }
+    video { width: 90%; max-width: 600px; border-radius: 10px; margin: 10px 0; }
     button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
     .start { background: #28a745; color: #fff; }
     .stop { background: #dc3545; color: #fff; }
@@ -21,11 +21,13 @@
 <body>
   <h1>🎥 DRFMedia Live</h1>
 
+  <!-- Local camera preview -->
   <video id="preview" autoplay muted playsinline></video><br>
   <button class="start" id="startBtn">Go Live</button>
   <button class="stop" id="stopBtn" disabled>Stop Live</button>
   <p id="status">🔴 Not Live</p>
 
+  <!-- Live playback -->
   <h2>📺 Live Playback</h2>
   <video id="livePlayer" controls playsinline></video>
   <p>Viewers: <span id="viewerCount">0</span> ❤ Likes: <span id="likeCount">0</span></p>
@@ -38,7 +40,7 @@
   </div>
 
   <script type="module">
-    // Firebase initialization
+    // Firebase setup
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
@@ -58,8 +60,6 @@
 
     // Livepeer playback URL
     const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
-    const streamKey = "71f6-vu4y-y16x-3e3p";
-    const livepeerApiKey = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
 
     // Camera preview
     const preview = document.getElementById("preview");
@@ -72,37 +72,15 @@
     const status = document.getElementById("status");
     const livePlayer = document.getElementById("livePlayer");
 
-    // Start live stream (WebRTC ingest)
-    startBtn.onclick = async () => {
-      status.innerText = "🟢 Going Live...";
+    // Start live playback
+    startBtn.onclick = () => {
+      status.innerText = "🟢 Live playback ready. Use OBS or mobile app to stream to Livepeer.";
       startBtn.disabled = true;
       stopBtn.disabled = false;
 
-      try {
-        const res = await fetch("https://livepeer.studio/api/ingest/webrtc", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + livepeerApiKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ streamKey: streamKey })
-        });
-        const data = await res.json();
-        if (data.error) {
-          status.innerText = "❌ Error: " + data.error.message;
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
-          return;
-        }
-        status.innerText = "🟢 Live Now! Share your playback URL.";
-        livePlayer.src = playbackUrl;
-        livePlayer.load();
-        livePlayer.play();
-      } catch(err) {
-        status.innerText = "❌ Error starting live: " + err;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
-      }
+      livePlayer.src = playbackUrl;
+      livePlayer.load();
+      livePlayer.play().catch(()=>{}); // autoplay may require user interaction
     };
 
     stopBtn.onclick = () => {
@@ -111,10 +89,9 @@
       stopBtn.disabled = true;
       livePlayer.pause();
       livePlayer.src = "";
-      preview.srcObject.getTracks().forEach(track => track.stop());
     };
 
-    // Likes & comments
+    // Firebase: Likes & comments
     const likeBtn = document.getElementById("sendLike");
     const commentInput = document.getElementById("commentInput");
     const sendCommentBtn = document.getElementById("sendComment");
@@ -122,22 +99,22 @@
     const viewerCountEl = document.getElementById("viewerCount");
     const commentsDiv = document.getElementById("comments");
 
-    const roomRef = ref(db, "drf_live_room");
-
-    // Likes
     const likesRef = ref(db, "drf_live_room/likes");
-    onValue(likesRef, snapshot => { likeCountEl.innerText = snapshot.val() || 0; });
+    onValue(likesRef, snapshot => {
+      likeCountEl.innerText = snapshot.val() || 0;
+    });
+
     likeBtn.onclick = async () => {
       const likesSnapshot = await new Promise(res => onValue(likesRef, snap => res(snap.val()), { onlyOnce:true }));
       await set(likesRef, (likesSnapshot || 0) + 1);
     };
 
-    // Comments
     const commentsRef = ref(db, "drf_live_room/comments");
     onValue(commentsRef, snapshot => {
       const val = snapshot.val() || {};
       commentsDiv.innerHTML = Object.values(val).map(c => `<b>${c.name || "User"}:</b> ${c.text}`).join("<br>");
     });
+
     sendCommentBtn.onclick = async () => {
       const text = commentInput.value.trim();
       if (!text) return;
@@ -146,7 +123,7 @@
       commentInput.value = "";
     };
 
-    // Viewer count simulation
+    // Viewer count
     const viewersRef = ref(db, "drf_live_room/viewers");
     const myViewerRef = push(viewersRef);
     set(myViewerRef, true);
