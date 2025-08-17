@@ -2,94 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Go Live - DRF Social</title>
+  <title>Go Live with Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; }
-    video { width: 80%; margin-top: 20px; border: 2px solid #0f0; border-radius: 10px; }
-    button { margin: 15px; padding: 10px 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
-    .start { background: #28a745; color: #fff; }
-    .stop { background: #dc3545; color: #fff; }
-    .player-section { margin-top: 50px; }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #111;
+      color: white;
+    }
+    video {
+      width: 80%;
+      max-width: 800px;
+      margin: 10px 0;
+      background: black;
+      border: 2px solid #00ff88;
+      border-radius: 12px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #00ff88;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>🎥 Go Live</h1>
-  <video id="preview" autoplay muted playsinline></video><br>
-  <button class="start" id="startBtn">Go Live</button>
-  <button class="stop" id="stopBtn" disabled>Stop Live</button>
-  <p id="status">🔴 Not Live</p>
-  
-  <script type="module">
-    // Livepeer RTMP details
-    const streamKey = "71f6-vu4y-y16x-3e3p"; 
-    const rtmpUrl = "rtmp://rtmp.livepeer.com/live";
+  <h1>📡 DRF Live Stream</h1>
 
-    // Get camera preview
-    const video = document.getElementById("preview");
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => { video.srcObject = stream; })
-      .catch(err => alert("Camera/Mic error: " + err));
+  <!-- Local preview -->
+  <video id="localVideo" autoplay muted playsinline></video>
+  <button id="startBtn">Go Live</button>
 
-    // Start streaming (WebRTC → Livepeer)
-    document.getElementById("startBtn").onclick = async () => {
-      document.getElementById("status").innerText = "🟢 Going Live...";
-      
-      // Use Livepeer WebRTC ingest
-      const res = await fetch("https://livepeer.studio/api/ingest/webrtc", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer 86690d89-ff4d-4e5e-abeb-68c2d7582b35", // replace with your key
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          streamKey: streamKey
-        })
-      });
-
-      const data = await res.json();
-      if (data.error) {
-        document.getElementById("status").innerText = "❌ Error: " + data.error.message;
-        return;
-      }
-
-      document.getElementById("status").innerText = "🟢 Live Now! Share your playback URL.";
-      document.getElementById("stopBtn").disabled = false;
-      document.getElementById("startBtn").disabled = true;
-    };
-
-    // Stop streaming
-    document.getElementById("stopBtn").onclick = () => {
-      video.srcObject.getTracks().forEach(track => track.stop());
-      document.getElementById("status").innerText = "🔴 Stopped";
-      document.getElementById("stopBtn").disabled = true;
-      document.getElementById("startBtn").disabled = false;
-    };
-  </script>
-
-  <!-- ================= Live Playback Player ================= -->
-  <div class="player-section">
-    <h2>📡 Live Playback</h2>
-    <video
-      id="live-video"
-      class="video-js vjs-default-skin"
-      controls
-      autoplay
-      playsinline
-      width="80%"
-      style="margin:20px auto; border:2px solid #0af; border-radius:10px;"
-    ></video>
-  </div>
-
-  <!-- Video.js CSS + JS -->
-  <link href="https://vjs.zencdn.net/7.20.3/video-js.css" rel="stylesheet" />
-  <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+  <!-- Playback -->
+  <h2>🎥 Live Playback</h2>
+  <video id="playback" controls autoplay></video>
 
   <script>
-    var player = videojs('live-video');
-    player.src({
-      src: "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8", // your Playback URL
-      type: "application/x-mpegURL"
-    });
+    const startBtn = document.getElementById("startBtn");
+    const localVideo = document.getElementById("localVideo");
+    const playback = document.getElementById("playback");
+
+    const PLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+    const STREAM_KEY = "71f6-vu4y-y16x-3e3p";
+    const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
+
+    // Show playback
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(PLAYBACK_URL);
+      hls.attachMedia(playback);
+    } else if (playback.canPlayType("application/vnd.apple.mpegurl")) {
+      playback.src = PLAYBACK_URL;
+    }
+
+    // Start local preview & push to Livepeer
+    startBtn.onclick = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = stream;
+
+        // Push stream to Livepeer via WebRTC
+        const pc = new RTCPeerConnection();
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        const res = await fetch("https://livepeer.studio/webrtc/ingest", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + LIVEPEER_API_KEY,
+            "Content-Type": "application/sdp"
+          },
+          body: offer.sdp
+        });
+
+        const answer = {
+          type: "answer",
+          sdp: await res.text()
+        };
+        await pc.setRemoteDescription(answer);
+
+        alert("✅ You are LIVE now!");
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+    };
   </script>
 </body>
 </html>
