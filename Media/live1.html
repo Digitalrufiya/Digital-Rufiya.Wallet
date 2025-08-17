@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Live Channel</title>
+  <style>
+    body {
+      background: #0d0d0d;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 2rem;
+    }
+    video {
+      width: 100%;
+      max-width: 800px;
+      border-radius: 12px;
+      box-shadow: 0px 0px 20px rgba(0,0,0,0.7);
+      margin-bottom: 20px;
+    }
+    #status {
+      font-size: 1rem;
+      margin-top: 10px;
+      color: #0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>📺 DRF Live Channel</h1>
+  <video id="live-video" controls autoplay playsinline></video>
+  <div id="status">🔴 Waiting for live stream...</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById('live-video');
+    const statusDiv = document.getElementById('status');
+
+    // 👉 Fixed playback URL for your channel
+    const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+
+    function loadVideo() {
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(playbackUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          statusDiv.textContent = "✅ Stream ready (go live from OBS)";
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = playbackUrl;
+      }
+    }
+
+    loadVideo();
+  </script>
+</body>
+</html>
