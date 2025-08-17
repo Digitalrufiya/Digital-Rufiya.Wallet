@@ -1,86 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Go Live - DRF Social</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Go Live - DRF Stream</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
-    video { width: 80%; max-width: 600px; margin: 20px auto; display: block; border: 2px solid #00ffcc; border-radius: 10px; }
-    button { padding: 10px 20px; margin: 10px; font-size: 18px; cursor: pointer; border-radius: 8px; }
-    #status { margin-top: 15px; font-weight: bold; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    video {
+      width: 90%;
+      max-width: 600px;
+      margin-top: 20px;
+      border: 2px solid #0f0;
+      border-radius: 12px;
+    }
+    button {
+      background: #0f0;
+      color: #111;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
-  <h1>🎥 Go Live on DRF Social</h1>
-  <video id="preview" autoplay playsinline muted></video>
-  <br>
-  <button id="startBtn">Go Live</button>
-  <button id="stopBtn" disabled>Stop Live</button>
-  <p id="status">Not Live</p>
+  <h2>🎥 DRFChain Go Live</h2>
+  <video id="preview" autoplay muted playsinline></video><br>
+  <button id="startBtn">Start Live</button>
+  <button id="stopBtn">Stop Live</button>
 
   <script>
-    const API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // replace with real Livepeer API key
-    const preview = document.getElementById("preview");
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const statusEl = document.getElementById("status");
-    let pc;
+    const streamKey = "71f6-vu4y-y16x-3e3p"; // Your Livepeer stream key
+    const rtmpUrl = "rtmp://rtmp.livepeer.com/live";
 
-    async function createStream() {
-      const res = await fetch("https://livepeer.studio/api/stream", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ name: "drf-social-live" })
-      });
-      return res.json();
-    }
+    let mediaRecorder;
+    let ws;
 
-    async function goLive() {
+    async function startLive() {
+      const videoEl = document.getElementById("preview");
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      preview.srcObject = stream;
+      videoEl.srcObject = stream;
 
-      const livepeerStream = await createStream();
-      const playbackId = livepeerStream.playbackId;
-      const streamId = livepeerStream.id;
-      console.log("Stream created:", livepeerStream);
+      // Connect WebSocket to Livepeer (experimental)
+      ws = new WebSocket("wss://livepeer.com/rtc");
 
-      pc = new RTCPeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      ws.onopen = () => {
+        console.log("Connected to Livepeer RTC");
+        ws.send(JSON.stringify({
+          streamKey: streamKey,
+          rtmp: rtmpUrl
+        }));
+      };
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      const res = await fetch(`https://livepeer.studio/api/stream/${streamId}/ingest`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Content-Type": "application/sdp"
-        },
-        body: offer.sdp
-      });
-
-      const answer = await res.text();
-      await pc.setRemoteDescription({ type: "answer", sdp: answer });
-
-      statusEl.innerText = "✅ You are LIVE!";
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
-
-      alert(`🎬 Stream is LIVE!\nWatch here: https://lvpr.tv/?v=${playbackId}`);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8,opus" });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+          ws.send(e.data);
+        }
+      };
+      mediaRecorder.start(1000);
     }
 
     function stopLive() {
-      pc && pc.close();
-      statusEl.innerText = "Stopped Live";
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
+      if (mediaRecorder) mediaRecorder.stop();
+      if (ws) ws.close();
+      alert("Live stopped!");
     }
 
-    startBtn.onclick = goLive;
-    stopBtn.onclick = stopLive;
+    document.getElementById("startBtn").onclick = startLive;
+    document.getElementById("stopBtn").onclick = stopLive;
   </script>
 </body>
 </html>
