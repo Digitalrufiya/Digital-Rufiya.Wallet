@@ -1,64 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DRFMedia Live Stream</title>
-<style>
-  body {
-    margin:0; padding:0; font-family: Arial,sans-serif; background:#111; color:#fff;
-    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh;
-  }
-  #live-container {
-    width:100%; max-width:480px; margin-top:10px; position:relative;
-  }
-  video, canvas {
-    width:100%; border-radius:12px; background:#000;
-  }
-  #controls {
-    display:flex; justify-content:space-around; margin-top:10px; width:100%;
-  }
-  button {
-    background:#ff5722; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;
-    font-size:1rem;
-  }
-  button:hover { background:#e64a19; }
-  #engagement {
-    margin-top:10px; width:100%; max-width:480px;
-  }
-  #comments { max-height:200px; overflow-y:auto; border-top:1px solid #444; padding-top:5px; }
-  .comment { padding:5px 0; border-bottom:1px solid #222; font-size:0.9rem; }
-  input[type=text] { width:70%; padding:5px; border-radius:5px; border:none; margin-right:5px; }
-</style>
-</head>
-<body>
-
-<h1>📺 DRFMedia Live</h1>
-
-<div id="live-container">
-  <video id="liveVideo" autoplay playsinline muted></video>
-</div>
-
-<div id="controls">
-  <button id="goLiveBtn">Go Live</button>
-  <button id="stopLiveBtn" disabled>Stop Live</button>
-  <button id="likeBtn">❤ Like (<span id="likeCount">0</span>)</button>
-</div>
-
-<div id="engagement">
-  <div>Viewers: <span id="viewerCount">0</span></div>
-  <div id="comments"></div>
-  <div style="margin-top:5px;">
-    <input type="text" id="commentInput" placeholder="Say something…">
-    <button id="sendCommentBtn">Send</button>
-  </div>
-</div>
-
 <script type="module">
+  // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getDatabase, ref, push, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
 
-  // ---------- Firebase config ----------
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
     authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -66,103 +14,11 @@
     projectId: "drfsocial-23a06",
     storageBucket: "drfsocial-23a06.firebasestorage.app",
     messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-    measurementId: "G-W6VHMP77YR"
+    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+    measurementId: "G-TPT7QMWDYE"
   };
 
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // ---------- Variables ----------
-  const liveVideo = document.getElementById("liveVideo");
-  const goLiveBtn = document.getElementById("goLiveBtn");
-  const stopLiveBtn = document.getElementById("stopLiveBtn");
-  const likeBtn = document.getElementById("likeBtn");
-  const likeCountEl = document.getElementById("likeCount");
-  const viewerCountEl = document.getElementById("viewerCount");
-  const commentsEl = document.getElementById("comments");
-  const commentInput = document.getElementById("commentInput");
-  const sendCommentBtn = document.getElementById("sendCommentBtn");
-
-  let localStream = null;
-  let streamId = null;
-  let playbackId = null;
-  let viewerRef = null;
-
-  // ---------- Helper ----------
-  const rid = () => Math.random().toString(36).slice(2,10);
-
-  // ---------- Likes ----------
-  const likeRef = ref(db, 'live/likes');
-  onValue(likeRef, snap => {
-    likeCountEl.textContent = snap.val() || 0;
-  });
-
-  likeBtn.onclick = async () => {
-    const cur = (await (await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js")).get(likeRef)).val() || 0;
-    await set(likeRef, cur+1);
-  };
-
-  // ---------- Comments ----------
-  const commentsRef = ref(db, 'live/comments');
-  onValue(commentsRef, snap => {
-    commentsEl.innerHTML = '';
-    const val = snap.val() || {};
-    Object.values(val).forEach(c => {
-      const div = document.createElement('div');
-      div.className = 'comment';
-      div.textContent = `${c.name}: ${c.text}`;
-      commentsEl.appendChild(div);
-    });
-  });
-
-  sendCommentBtn.onclick = async () => {
-    const text = commentInput.value.trim();
-    if(!text) return;
-    await set(push(commentsRef), {name:'User_'+rid(), text, ts:Date.now()});
-    commentInput.value = '';
-  };
-
-  // ---------- Go Live ----------
-  goLiveBtn.onclick = async () => {
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-      liveVideo.srcObject = localStream;
-
-      // 1) Create stream via Firebase (serverless workaround)
-      const streamRef = ref(db, 'live/current');
-      streamId = 'drf_'+rid();
-      playbackId = 'YOUR_LIVEPEER_PLAYBACKID'; // Optional pre-created or fixed ID
-      await set(streamRef, {streamId, playbackId, host:'User_'+rid()});
-
-      // 2) Track viewers
-      viewerRef = push(ref(db, 'live/viewers'));
-      await set(viewerRef, {name:'User_'+rid(), ts:Date.now()});
-      onDisconnect(viewerRef).remove();
-      const viewersRef = ref(db, 'live/viewers');
-      onValue(viewersRef, snap => viewerCountEl.textContent = Object.keys(snap.val()||{}).length);
-
-      goLiveBtn.disabled = true;
-      stopLiveBtn.disabled = false;
-
-      alert('✅ You are live! Use OBS or WHIP to broadcast to Livepeer with your playback ID.');
-    } catch(e) {
-      console.error(e);
-      alert('⚠️ Failed to go live. Check camera/mic permission.');
-    }
-  };
-
-  stopLiveBtn.onclick = async () => {
-    if(localStream){
-      localStream.getTracks().forEach(t=>t.stop());
-      liveVideo.srcObject = null;
-    }
-    if(viewerRef) await remove(viewerRef);
-    goLiveBtn.disabled = false;
-    stopLiveBtn.disabled = true;
-  };
-
+  const analytics = getAnalytics(app);
 </script>
-
-</body>
-</html>
