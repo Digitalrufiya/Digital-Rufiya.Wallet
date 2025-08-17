@@ -1,109 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Livepeer Channel</title>
-  <style>
-    body {
-      background: #0d0d0d;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 20px;
-      font-size: 2rem;
-    }
-    video {
-      width: 100%;
-      max-width: 800px;
-      border-radius: 12px;
-      box-shadow: 0px 0px 20px rgba(0,0,0,0.7);
-      margin-bottom: 20px;
-    }
-    #status {
-      font-size: 1rem;
-      margin-top: 10px;
-      color: #0f0;
-    }
-    button {
-      background: #ff5722;
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #e64a19;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRFMedia Live Stream</title>
+<style>
+  body {
+    margin:0; padding:0; font-family: Arial,sans-serif; background:#111; color:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh;
+  }
+  #live-container {
+    width:100%; max-width:480px; margin-top:10px; position:relative;
+  }
+  video, canvas {
+    width:100%; border-radius:12px; background:#000;
+  }
+  #controls {
+    display:flex; justify-content:space-around; margin-top:10px; width:100%;
+  }
+  button {
+    background:#ff5722; color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;
+    font-size:1rem;
+  }
+  button:hover { background:#e64a19; }
+  #engagement {
+    margin-top:10px; width:100%; max-width:480px;
+  }
+  #comments { max-height:200px; overflow-y:auto; border-top:1px solid #444; padding-top:5px; }
+  .comment { padding:5px 0; border-bottom:1px solid #222; font-size:0.9rem; }
+  input[type=text] { width:70%; padding:5px; border-radius:5px; border:none; margin-right:5px; }
+</style>
 </head>
 <body>
-  <h1>📺 My Live Stream</h1>
-  <video id="live-video" controls autoplay playsinline></video>
-  <div id="status">🔄 Creating stream…</div>
-  <button onclick="reloadStream()">🔄 Reload Stream</button>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    const API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // your API key
-    const video = document.getElementById('live-video');
-    const statusDiv = document.getElementById('status');
-    let playbackUrl = "";
+<h1>📺 DRFMedia Live</h1>
 
-    async function createStream() {
-      try {
-        const response = await fetch("https://livepeer.studio/api/stream", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ name: "MyDRFChannel" })
-        });
+<div id="live-container">
+  <video id="liveVideo" autoplay playsinline muted></video>
+</div>
 
-        const data = await response.json();
-        console.log(data);
+<div id="controls">
+  <button id="goLiveBtn">Go Live</button>
+  <button id="stopLiveBtn" disabled>Stop Live</button>
+  <button id="likeBtn">❤ Like (<span id="likeCount">0</span>)</button>
+</div>
 
-        if (data.playbackId) {
-          playbackUrl = `https://cdn.livepeer.com/hls/${data.playbackId}/index.m3u8`;
-          statusDiv.textContent = "✅ Stream created! Configure OBS and start streaming.";
-          loadVideo();
-        } else {
-          statusDiv.textContent = "❌ Failed to create stream.";
-        }
-      } catch (err) {
-        console.error(err);
-        statusDiv.textContent = "⚠️ Error creating stream.";
-      }
+<div id="engagement">
+  <div>Viewers: <span id="viewerCount">0</span></div>
+  <div id="comments"></div>
+  <div style="margin-top:5px;">
+    <input type="text" id="commentInput" placeholder="Say something…">
+    <button id="sendCommentBtn">Send</button>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getDatabase, ref, push, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+
+  // ---------- Firebase config ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.firebasestorage.app",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+    measurementId: "G-W6VHMP77YR"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ---------- Variables ----------
+  const liveVideo = document.getElementById("liveVideo");
+  const goLiveBtn = document.getElementById("goLiveBtn");
+  const stopLiveBtn = document.getElementById("stopLiveBtn");
+  const likeBtn = document.getElementById("likeBtn");
+  const likeCountEl = document.getElementById("likeCount");
+  const viewerCountEl = document.getElementById("viewerCount");
+  const commentsEl = document.getElementById("comments");
+  const commentInput = document.getElementById("commentInput");
+  const sendCommentBtn = document.getElementById("sendCommentBtn");
+
+  let localStream = null;
+  let streamId = null;
+  let playbackId = null;
+  let viewerRef = null;
+
+  // ---------- Helper ----------
+  const rid = () => Math.random().toString(36).slice(2,10);
+
+  // ---------- Likes ----------
+  const likeRef = ref(db, 'live/likes');
+  onValue(likeRef, snap => {
+    likeCountEl.textContent = snap.val() || 0;
+  });
+
+  likeBtn.onclick = async () => {
+    const cur = (await (await import("https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js")).get(likeRef)).val() || 0;
+    await set(likeRef, cur+1);
+  };
+
+  // ---------- Comments ----------
+  const commentsRef = ref(db, 'live/comments');
+  onValue(commentsRef, snap => {
+    commentsEl.innerHTML = '';
+    const val = snap.val() || {};
+    Object.values(val).forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'comment';
+      div.textContent = `${c.name}: ${c.text}`;
+      commentsEl.appendChild(div);
+    });
+  });
+
+  sendCommentBtn.onclick = async () => {
+    const text = commentInput.value.trim();
+    if(!text) return;
+    await set(push(commentsRef), {name:'User_'+rid(), text, ts:Date.now()});
+    commentInput.value = '';
+  };
+
+  // ---------- Go Live ----------
+  goLiveBtn.onclick = async () => {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+      liveVideo.srcObject = localStream;
+
+      // 1) Create stream via Firebase (serverless workaround)
+      const streamRef = ref(db, 'live/current');
+      streamId = 'drf_'+rid();
+      playbackId = 'YOUR_LIVEPEER_PLAYBACKID'; // Optional pre-created or fixed ID
+      await set(streamRef, {streamId, playbackId, host:'User_'+rid()});
+
+      // 2) Track viewers
+      viewerRef = push(ref(db, 'live/viewers'));
+      await set(viewerRef, {name:'User_'+rid(), ts:Date.now()});
+      onDisconnect(viewerRef).remove();
+      const viewersRef = ref(db, 'live/viewers');
+      onValue(viewersRef, snap => viewerCountEl.textContent = Object.keys(snap.val()||{}).length);
+
+      goLiveBtn.disabled = true;
+      stopLiveBtn.disabled = false;
+
+      alert('✅ You are live! Use OBS or WHIP to broadcast to Livepeer with your playback ID.');
+    } catch(e) {
+      console.error(e);
+      alert('⚠️ Failed to go live. Check camera/mic permission.');
     }
+  };
 
-    function loadVideo() {
-      if (!playbackUrl) return;
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(playbackUrl);
-        hls.attachMedia(video);
-      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = playbackUrl;
-      }
+  stopLiveBtn.onclick = async () => {
+    if(localStream){
+      localStream.getTracks().forEach(t=>t.stop());
+      liveVideo.srcObject = null;
     }
+    if(viewerRef) await remove(viewerRef);
+    goLiveBtn.disabled = false;
+    stopLiveBtn.disabled = true;
+  };
 
-    function reloadStream() {
-      if (playbackUrl) {
-        loadVideo();
-        statusDiv.textContent = "🔄 Reloaded stream!";
-      } else {
-        statusDiv.textContent = "⚠️ No stream available yet.";
-      }
-    }
+</script>
 
-    createStream();
-  </script>
 </body>
 </html>
