@@ -1,48 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRFMedia Live</title>
-  <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #000; color: #fff; overflow: hidden; }
-    #live-container { position: relative; width: 100%; height: 100vh; display: flex; justify-content: center; align-items: center; }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-    #chat { position: absolute; bottom: 20px; left: 10px; max-height: 50%; overflow-y: auto; width: 40%; }
-    .chat-message { margin-bottom: 5px; }
-    #controls { position: absolute; bottom: 20px; right: 20px; pointer-events: auto; display: flex; flex-direction: column; gap: 10px; }
-    button { padding: 10px 20px; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; }
-    #hearts { position: absolute; bottom: 0; right: 20px; pointer-events: none; }
-    .heart { position: absolute; font-size: 24px; animation: floatUp 1s linear forwards; }
-    @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-150px); opacity: 0; } }
-    #viewerCount { position: absolute; top: 20px; left: 20px; font-size: 18px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 8px; }
-    #liveBadge { position: absolute; top: 20px; right: 20px; font-size: 18px; background: red; padding: 5px 10px; border-radius: 8px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRFMedia TikTok Live</title>
+<style>
+  body { margin:0; font-family:Arial,sans-serif; background:#000; color:#fff; }
+  header { padding:10px; text-align:center; font-size:1.5rem; background:#111; }
+  #live-feed { display:flex; flex-direction:column; gap:15px; padding:10px; }
+  .stream-card { position:relative; background:#111; border-radius:12px; overflow:hidden; }
+  video { width:100%; height:auto; border-radius:12px; }
+  .overlay { position:absolute; bottom:10px; left:10px; display:flex; gap:10px; align-items:center; color:#fff; }
+  .like-btn, .comment-btn { background:rgba(255,255,255,0.2); border:none; padding:5px 10px; border-radius:6px; cursor:pointer; color:#fff; font-weight:bold; }
+  .go-live-container { text-align:center; padding:10px; }
+  .go-live-btn { background:#ff5722; border:none; padding:10px 20px; font-size:1rem; border-radius:8px; cursor:pointer; color:#fff; font-weight:bold; }
+  .comments-list { max-height:120px; overflow-y:auto; margin-top:5px; font-size:0.9rem; }
+  .comment-item { margin-bottom:3px; }
+</style>
 </head>
 <body>
-
-<div id="live-container">
-  <video id="live-video" autoplay playsinline></video>
-  <div id="overlay">
-    <div id="viewerCount">👁 0</div>
-    <div id="liveBadge">LIVE</div>
-    <div id="chat"></div>
-    <div id="hearts"></div>
-    <div id="controls">
-      <button id="btnGoLive">Go Live</button>
-      <button id="btnLike">❤️ Like</button>
-      <input id="commentInput" placeholder="Say something nice…" style="padding:8px;border-radius:10px;border:none;width:200px;">
-      <button id="btnComment">Send</button>
-    </div>
-  </div>
+<header>DRFMedia Live Stream</header>
+<div class="go-live-container">
+  <button class="go-live-btn" id="goLiveBtn">🎥 Go Live</button>
 </div>
+<div id="live-feed"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+import { getDatabase, ref, set, push, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
-// Your Firebase config
+// --------- FIREBASE CONFIG ----------
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -53,101 +40,138 @@ const firebaseConfig = {
   appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
   measurementId: "G-W6VHMP77YR"
 };
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Livepeer playback URL
-const LIVEPLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+// --------- LIVEPEER CONFIG ----------
+const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
 
-const video = document.getElementById('live-video');
-const btnGoLive = document.getElementById('btnGoLive');
-const btnLike = document.getElementById('btnLike');
-const btnComment = document.getElementById('btnComment');
-const commentInput = document.getElementById('commentInput');
-const chat = document.getElementById('chat');
-const hearts = document.getElementById('hearts');
-const viewerCountDiv = document.getElementById('viewerCount');
+const liveFeed = document.getElementById("live-feed");
+const goLiveBtn = document.getElementById("goLiveBtn");
 
-let userId = 'user_' + Math.random().toString(36).substring(2,10);
-let streamId = 'main_stream';
+let userStream = null;
+let userId = Math.random().toString(36).slice(2,10);
+let streamRef = null;
 
-// Load HLS video for viewers
-if(Hls.isSupported()){
-  const hlsScript = document.createElement('script');
-  hlsScript.src = "https://cdn.jsdelivr.net/npm/hls.js@latest";
-  hlsScript.onload = () => {
-    const hls = new Hls();
-    hls.loadSource(LIVEPLAYBACK_URL);
-    hls.attachMedia(video);
-  };
-  document.body.appendChild(hlsScript);
-} else {
-  video.src = LIVEPLAYBACK_URL;
+// --------- UTILITY ---------
+function rid(){ return Math.random().toString(36).slice(2,10); }
+
+// --------- CREATE LIVEPEER STREAM ---------
+async function createLivepeerStream() {
+  const response = await fetch("https://livepeer.studio/api/stream", {
+    method:"POST",
+    headers:{
+      "Authorization":`Bearer ${LIVEPEER_API_KEY}`,
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({ name:`DRFUser_${rid()}`, profiles:[{name:"720p", bitrate:2000000, fps:30, width:1280, height:720}] })
+  });
+  return await response.json();
 }
 
-// Realtime viewers count
-const viewersRef = ref(db, `live/${streamId}/viewers`);
-const meRef = push(viewersRef);
-set(meRef, true);
-onDisconnect(meRef).remove();
-onValue(viewersRef, snap => {
-  const val = snap.val() || {};
-  viewerCountDiv.textContent = `👁 ${Object.keys(val).length}`;
-});
+// --------- GO LIVE ---------
+goLiveBtn.onclick = async () => {
+  try {
+    userStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
 
-// Likes system
-const likesRef = ref(db, `live/${streamId}/likes`);
-btnLike.addEventListener('click', async () => {
-  const myLikeRef = ref(db, `live/${streamId}/likes/${userId}`);
-  await set(myLikeRef, true);
-  spawnHeart();
-});
-onValue(likesRef, snap => {
-  // Optionally display total likes somewhere
-});
+    const streamData = await createLivepeerStream();
+    const playbackId = streamData.playbackId;
+    const streamId = streamData.id;
 
-// Comments system
-const commentsRef = ref(db, `live/${streamId}/comments`);
-btnComment.addEventListener('click', async () => {
-  const text = commentInput.value.trim();
-  if(!text) return;
-  const commentRef = push(commentsRef);
-  await set(commentRef, { userId, text, ts: Date.now() });
-  commentInput.value = '';
-});
-onValue(commentsRef, snap => {
-  chat.innerHTML = '';
-  const val = snap.val() || {};
-  Object.values(val).forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'chat-message';
-    div.textContent = `${c.userId}: ${c.text}`;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
+    // Add to Firebase
+    streamRef = push(ref(db,"liveStreams"));
+    await set(streamRef,{
+      streamId,
+      playbackId,
+      userName:`User_${rid()}`,
+      likes:0,
+      comments:{},
+      timestamp:Date.now()
+    });
+
+    // show local camera in feed
+    const card = document.createElement("div");
+    card.className="stream-card";
+    const video = document.createElement("video");
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = userStream;
+    card.appendChild(video);
+    liveFeed.prepend(card);
+
+    alert("✅ Stream created! Your camera is live. Streaming to Livepeer via WHIP/WebRTC coming soon.");
+
+  } catch(e){
+    console.error(e);
+    alert("⚠️ Error accessing camera or creating stream.");
+  }
+};
+
+// --------- WATCH LIVE STREAMS ---------
+const liveStreamsRef = ref(db,"liveStreams");
+onValue(liveStreamsRef,(snapshot)=>{
+  const streams = snapshot.val();
+  liveFeed.innerHTML = ""; // reset
+  if(!streams) return;
+  Object.values(streams).forEach((stream)=>{
+    const card = document.createElement("div");
+    card.className="stream-card";
+
+    const video = document.createElement("video");
+    video.controls=true;
+    video.autoplay=true;
+    video.playsInline=true;
+    video.src = `https://cdn.livepeer.com/hls/${stream.playbackId}/index.m3u8`;
+    card.appendChild(video);
+
+    // overlay
+    const overlay = document.createElement("div");
+    overlay.className="overlay";
+    const likeBtn = document.createElement("button");
+    likeBtn.className="like-btn";
+    likeBtn.textContent = `❤ ${stream.likes||0}`;
+    likeBtn.onclick = async ()=>{
+      const likesRef = ref(db,`liveStreams/${stream.streamId}/likes`);
+      await set(likesRef,(stream.likes||0)+1);
+    };
+
+    const commentBtn = document.createElement("button");
+    commentBtn.className="comment-btn";
+    commentBtn.textContent = "💬";
+    commentBtn.onclick = ()=>{
+      const comment = prompt("Enter comment:");
+      if(comment){
+        const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
+        const cRef = push(commentsRef);
+        set(cRef,{ text: comment, timestamp:Date.now() });
+      }
+    };
+
+    overlay.appendChild(likeBtn);
+    overlay.appendChild(commentBtn);
+    card.appendChild(overlay);
+
+    // comments list
+    const commentsList = document.createElement("div");
+    commentsList.className="comments-list";
+    const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
+    onValue(commentsRef,(snap)=>{
+      commentsList.innerHTML="";
+      const data = snap.val();
+      if(!data) return;
+      Object.values(data).forEach(c=>{
+        const item = document.createElement("div");
+        item.className="comment-item";
+        item.textContent=c.text;
+        commentsList.appendChild(item);
+      });
+    });
+    card.appendChild(commentsList);
+
+    liveFeed.appendChild(card);
   });
 });
-
-// Floating hearts
-function spawnHeart(){
-  const h = document.createElement('div');
-  h.className = 'heart';
-  h.textContent = '❤️';
-  h.style.right = Math.random()*50 + 'px';
-  hearts.appendChild(h);
-  setTimeout(()=>hearts.removeChild(h), 1000);
-}
-
-// Go Live (Host mode)
-btnGoLive.addEventListener('click', async () => {
-  const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-  video.srcObject = stream;
-  video.play();
-  alert("You are live! Stream via OBS or WHIP to Livepeer using your stream key for broadcasting to viewers.");
-});
-
 </script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </body>
 </html>
