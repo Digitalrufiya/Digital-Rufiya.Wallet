@@ -1,189 +1,613 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Live Channel</title>
-  <style>
-    body {
-      background: #0d0d0d;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    header {
-      background: #111;
-      width: 100%;
-      padding: 15px;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: #ff5722;
-    }
-    main {
-      max-width: 900px;
-      width: 100%;
-      padding: 20px;
-    }
-    video {
-      width: 100%;
-      border-radius: 12px;
-      background: #000;
-      box-shadow: 0px 0px 15px rgba(0,0,0,0.7);
-    }
-    #status {
-      font-size: 1rem;
-      margin: 10px 0;
-      text-align: center;
-    }
-    .stats {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 15px 0;
-      padding: 10px;
-      background: #1c1c1c;
-      border-radius: 8px;
-    }
-    .stats span {
-      font-size: 1rem;
-    }
-    button.like-btn {
-      background: #ff5722;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 6px;
-      color: #fff;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: 0.3s;
-    }
-    button.like-btn:hover {
-      background: #e64a19;
-    }
-    .comments {
-      margin-top: 20px;
-      background: #1c1c1c;
-      border-radius: 10px;
-      padding: 15px;
-    }
-    .comments h2 {
-      margin: 0 0 10px;
-    }
-    .comment-box {
-      display: flex;
-      margin-bottom: 10px;
-    }
-    .comment-box input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      margin-right: 10px;
-    }
-    .comment-box button {
-      background: #2196f3;
-      color: #fff;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .comment-box button:hover {
-      background: #1976d2;
-    }
-    .comment-list {
-      max-height: 200px;
-      overflow-y: auto;
-      padding-top: 10px;
-    }
-    .comment {
-      padding: 8px;
-      margin-bottom: 8px;
-      background: #2a2a2a;
-      border-radius: 6px;
-      text-align: left;
-    }
-  </style>
-</head>
-<body>
-  <header>📺 DRF Live Channel</header>
-  <main>
-    <video id="live-video" controls autoplay playsinline poster="offline.jpg"></video>
-    <div id="status">🔴 Currently Offline</div>
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-    <div class="stats">
-      <span id="views">👁️ Views: 0</span>
-      <button class="like-btn" onclick="addLike()">👍 Like <span id="likes">0</span></button>
-    </div>
+/**
+ * DRF TikTok‑Style Live
+ * ------------------------------------------------------------
+ * Features
+ * - Viewer mode: low-latency watch (HLS via Livepeer playback URL)
+ * - Host mode: approve join requests; compose split‑screen with guest
+ * - Realtime comments & likes & viewers count (Firebase Realtime DB)
+ * - "Request to Join Live" flow (guest ↔ host) using Firebase for signaling
+ * - Professional UI (Tailwind + subtle animations)
+ *
+ * IMPORTANT STREAMING NOTE
+ * ------------------------------------------------------------
+ * Broadcasting the composed host+guest video to Livepeer:
+ *  - Easiest & most reliable today:
+ *      Use OBS to stream to Livepeer RTMP using your stream key.
+ *      Host keeps this page open; OBS captures the browser window (or Display Capture)
+ *      showing the split‑screen canvas. This gives you TikTok‑style co‑host live.
+ *  - (Advanced) If you want to push from the browser without OBS, use Livepeer's WHIP/WebRTC ingest.
+ *      That requires your Livepeer Studio WHIP endpoint (not included here). The UI is ready
+ *      for it — see the TODO inside `startBrowserBroadcastViaWHIP`.
+ *
+ * SETUP
+ * ------------------------------------------------------------
+ * 1) Put your Livepeer playback URL below.
+ * 2) Create a Firebase project (Realtime Database) and paste config below.
+ * 3) Deploy this as a single React page (e.g., Vite + React or Next.js client page).
+ * 4) As HOST: open page, toggle Host Mode, approve requests, open OBS and go live to Livepeer.
+ * 5) As GUEST: open same page, click Request to Join. When approved, you'll appear on host's split view.
+ */
 
-    <div class="comments">
-      <h2>💬 Live Chat</h2>
-      <div class="comment-box">
-        <input type="text" id="commentInput" placeholder="Type your message...">
-        <button onclick="addComment()">Send</button>
-      </div>
-      <div class="comment-list" id="commentList"></div>
-    </div>
-  </main>
+/******************** 1) LIVEPEER CONFIG *********************/
+const LIVEPEER_PLAYBACK_URL =
+  "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8"; // <- Your fixed playback URL
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    const video = document.getElementById('live-video');
-    const statusDiv = document.getElementById('status');
+/******************** 2) FIREBASE CONFIG *********************/
+// Create a Firebase web app, enable Realtime Database (in test mode to start), then paste your config here.
+// You can keep these public on the client; secure rules will prevent abuse.
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
 
-    // 👉 Fixed playback URL (your permanent Livepeer stream)
-    const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+/******************** 3) SIMPLE ID HELPER *********************/
+const rid = () => Math.random().toString(36).slice(2, 10);
 
-    // --- Video Player ---
-    function loadVideo() {
+/******************** 4) UI ICONS *********************/
+const LiveBadge = () => (
+  <span className="inline-flex items-center gap-2 rounded-full bg-red-600/90 px-3 py-1 text-sm font-semibold shadow">
+    <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> LIVE
+  </span>
+);
+
+export default function App() {
+  /******************** STATE *********************/
+  const [isHost, setIsHost] = useState(false);
+  const [roomId] = useState("drf-main-room"); // single room id (you can make this dynamic)
+  const [displayName, setDisplayName] = useState(() => `user_${rid()}`);
+
+  // Engagement
+  const [likeCount, setLikeCount] = useState(0);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [comments, setComments] = useState([]); // {id, name, text, ts}
+
+  // Join Requests (for host)
+  const [requests, setRequests] = useState([]); // {id, name}
+
+  // Local media & composition
+  const hostCamRef = useRef(null);
+  const guestCamRef = useRef(null);
+  const canvasRef = useRef(null);
+  const composeTimerRef = useRef(null);
+
+  // HLS player element for viewers
+  const videoRef = useRef(null);
+
+  // WebRTC signaling + presence (Firebase)
+  const fb = useMemo(() => ({ app: null, db: null }), []);
+
+  /******************** INIT FIREBASE *********************/
+  useEffect(() => {
+    (async () => {
+      const { initializeApp } = await import("firebase/app");
+      const { getDatabase, ref, onValue, push, set, remove, serverTimestamp, onDisconnect } = await import(
+        "firebase/database"
+      );
+
+      fb.app = initializeApp(FIREBASE_CONFIG);
+      fb.db = getDatabase();
+
+      // Presence: track viewers count
+      const viewersRef = ref(fb.db, `rooms/${roomId}/presence/viewers`);
+      const meRef = push(viewersRef);
+      await set(meRef, { name: displayName, ts: Date.now() });
+      onDisconnect(meRef).remove();
+
+      // Count viewers
+      onValue(viewersRef, (snap) => {
+        const val = snap.val() || {};
+        setViewerCount(Object.keys(val).length);
+      });
+
+      // Likes
+      const likesRef = ref(fb.db, `rooms/${roomId}/likes`);
+      onValue(likesRef, (snap) => setLikeCount(snap.val() || 0));
+
+      // Comments
+      const commentsRef = ref(fb.db, `rooms/${roomId}/comments`);
+      onValue(commentsRef, (snap) => {
+        const val = snap.val() || {};
+        const arr = Object.values(val).sort((a, b) => (a.ts || 0) - (b.ts || 0));
+        setComments(arr);
+      });
+
+      // Join requests (host only listener, harmless if non-host)
+      const reqRef = ref(fb.db, `rooms/${roomId}/joinRequests`);
+      onValue(reqRef, (snap) => {
+        const val = snap.val() || {};
+        setRequests(Object.values(val));
+      });
+    })();
+  }, [displayName, fb, roomId]);
+
+  /******************** ENGAGEMENT ACTIONS *********************/
+  const sendLike = async () => {
+    const { ref, get, set } = await import("firebase/database");
+    const likesRef = ref(fb.db, `rooms/${roomId}/likes`);
+    const cur = (await (await import("firebase/database")).get(likesRef)).val() || 0;
+    await set(likesRef, cur + 1);
+    // float heart animation
+    floatHeart();
+  };
+
+  const sendComment = async (text) => {
+    if (!text?.trim()) return;
+    const { ref, push, set, serverTimestamp } = await import("firebase/database");
+    const commentsRef = ref(fb.db, `rooms/${roomId}/comments`);
+    const id = rid();
+    await set(push(commentsRef), {
+      id,
+      name: displayName,
+      text: text.trim(),
+      ts: Date.now(),
+    });
+  };
+
+  /******************** JOIN REQUESTS (Guest → Host) *********************/
+  const requestToJoin = async () => {
+    const { ref, push, set } = await import("firebase/database");
+    const joinRef = ref(fb.db, `rooms/${roomId}/joinRequests`);
+    const req = { id: rid(), name: displayName };
+    await set(push(joinRef), req);
+    alert("Join request sent. Please wait for host approval.");
+  };
+
+  const approveRequest = async (req) => {
+    const { ref, remove, set } = await import("firebase/database");
+    // Signal approval: write a flag for the guest id
+    await set(ref(fb.db, `rooms/${roomId}/approvals/${req.name}`), { approved: true, ts: Date.now() });
+
+    // Remove request from queue (optional cleanup)
+    await remove(
+      ref(fb.db, `rooms/${roomId}/joinRequests`)
+    );
+  };
+
+  /******************** WEBRTC (Guest ↔ Host) via Firebase Signaling *********************/
+  const pcRef = useRef(null);
+
+  const startGuestWebcam = async () => {
+    // Guests wait for approval, then start sending their camera to host (P2P)
+    const { ref, onValue, set } = await import("firebase/database");
+    const approvalRef = ref(fb.db, `rooms/${roomId}/approvals/${displayName}`);
+    onValue(approvalRef, async (snap) => {
+      const val = snap.val();
+      if (val?.approved && !pcRef.current) {
+        // Start P2P to host
+        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+        pcRef.current = pc;
+
+        // Local cam
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
+        // Create offer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        // Send offer to host
+        await set(ref(fb.db, `rooms/${roomId}/webrtc/offers/${displayName}`), {
+          name: displayName,
+          sdp: offer.sdp,
+          type: offer.type,
+        });
+
+        // Listen for host answer
+        const ansRef = ref(fb.db, `rooms/${roomId}/webrtc/answers/${displayName}`);
+        onValue(ansRef, async (ansSnap) => {
+          const a = ansSnap.val();
+          if (a?.sdp && pc.signalingState === "have-local-offer") {
+            await pc.setRemoteDescription(new RTCSessionDescription(a));
+          }
+        });
+
+        // ICE (guest → host)
+        pc.onicecandidate = async (e) => {
+          if (e.candidate) {
+            await set(
+              ref(fb.db, `rooms/${roomId}/webrtc/iceGuests/${displayName}/${rid()}`),
+              e.candidate.toJSON()
+            );
+          }
+        };
+      }
+    });
+  };
+
+  const startHostReceiver = async () => {
+    // Host listens for guest offers, creates answer, and renders guest stream
+    const { ref, onValue, set } = await import("firebase/database");
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    pcRef.current = pc;
+
+    pc.ontrack = (e) => {
+      const [stream] = e.streams;
+      if (guestCamRef.current) guestCamRef.current.srcObject = stream;
+    };
+
+    // Host cam (for monitoring & composition)
+    const hostStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    if (hostCamRef.current) hostCamRef.current.srcObject = hostStream;
+
+    // Listen for offers from any guest (simplified single guest)
+    const offersRef = ref(fb.db, `rooms/${roomId}/webrtc/offers`);
+    onValue(offersRef, async (snap) => {
+      const val = snap.val();
+      if (!val) return;
+      const firstKey = Object.keys(val)[0];
+      const offer = val[firstKey];
+      if (offer?.sdp) {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await set(ref(fb.db, `rooms/${roomId}/webrtc/answers/${offer.name}`), {
+          sdp: answer.sdp,
+          type: answer.type,
+        });
+      }
+    });
+
+    // ICE (host ↔ guest)
+    pc.onicecandidate = async (e) => {
+      if (e.candidate) {
+        const { ref, set } = await import("firebase/database");
+        await set(ref(fb.db, `rooms/${roomId}/webrtc/iceHosts/${rid()}`), e.candidate.toJSON());
+      }
+    };
+  };
+
+  // (Optional) You can wire ICE exchange both ways by also listening to iceGuests on host and adding candidates.
+  useEffect(() => {
+    (async () => {
+      const { ref, onValue } = await import("firebase/database");
+      if (!fb.db) return;
+      // Host consumes guest ICE
+      const iceGuestsRef = ref(fb.db, `rooms/${roomId}/webrtc/iceGuests`);
+      onValue(iceGuestsRef, (snap) => {
+        const val = snap.val() || {};
+        const all = Object.values(val).flatMap((x) => Object.values(x));
+        all.forEach(async (cand) => {
+          try {
+            if (pcRef.current && cand) {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(cand));
+            }
+          } catch {}
+        });
+      });
+    })();
+  }, [fb.db, roomId]);
+
+  /******************** SPLIT‑SCREEN COMPOSITION *********************/
+  const startComposition = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const draw = () => {
+      const hostVideo = hostCamRef.current;
+      const guestVideo = guestCamRef.current;
+      const W = (canvas.width = 1280);
+      const H = (canvas.height = 720);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+
+      // If guest present: split screen, else full host
+      if (guestVideo && guestVideo.srcObject) {
+        // Host left, Guest right
+        drawVideoCover(ctx, hostVideo, 0, 0, W / 2, H);
+        drawVideoCover(ctx, guestVideo, W / 2, 0, W / 2, H);
+      } else {
+        drawVideoCover(ctx, hostVideo, 0, 0, W, H);
+      }
+
+      // Overlay: LIVE badge, counts
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillRect(20, 20, 200, 60);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 20px Inter, Arial";
+      ctx.fillText("LIVE", 35, 55);
+      ctx.fillText(`👁 ${viewerCount}  ❤ ${likeCount}`, 100, 55);
+    };
+
+    if (composeTimerRef.current) cancelAnimationFrame(composeTimerRef.current);
+
+    const loop = () => {
+      draw();
+      composeTimerRef.current = requestAnimationFrame(loop);
+    };
+    loop();
+  };
+
+  const drawVideoCover = (ctx, videoEl, x, y, w, h) => {
+    if (!videoEl) return;
+    try {
+      const vw = videoEl.videoWidth || 16;
+      const vh = videoEl.videoHeight || 9;
+      const vr = vw / vh;
+      const r = w / h;
+      let dw = w, dh = h, dx = x, dy = y;
+      if (vr > r) {
+        // video wider, crop width
+        dh = h;
+        dw = h * vr;
+        dx = x - (dw - w) / 2;
+      } else {
+        // video taller, crop height
+        dw = w;
+        dh = w / vr;
+        dy = y - (dh - h) / 2;
+      }
+      ctx.drawImage(videoEl, dx, dy, dw, dh);
+    } catch {}
+  };
+
+  /******************** OPTIONAL: Browser → Livepeer via WHIP (Advanced) *********************/
+  const startBrowserBroadcastViaWHIP = async () => {
+    alert(
+      "TODO: For pure in‑browser broadcasting to Livepeer, configure a WHIP/WebRTC ingest endpoint from Livepeer Studio and wire it here. For now, use OBS to stream the composed canvas or window."
+    );
+  };
+
+  /******************** FLOATING HEARTS UI *********************/
+  const heartsRef = useRef(null);
+  const floatHeart = () => {
+    const container = heartsRef.current;
+    if (!container) return;
+    const el = document.createElement("div");
+    el.className = "absolute bottom-0 right-2 text-2xl select-none";
+    el.textContent = "❤️";
+    el.style.transform = `translateY(0px)`;
+    el.style.opacity = "1";
+    container.appendChild(el);
+    const start = performance.now();
+    const duration = 1200;
+    const anim = (t) => {
+      const p = Math.min(1, (t - start) / duration);
+      el.style.transform = `translateY(-${p * 120}px)`;
+      el.style.opacity = `${1 - p}`;
+      if (p < 1) requestAnimationFrame(anim);
+      else container.removeChild(el);
+    };
+    requestAnimationFrame(anim);
+  };
+
+  /******************** VIEWER HLS PLAYER *********************/
+  useEffect(() => {
+    (async () => {
+      if (!videoRef.current) return;
+      const Hls = (await import("hls.js")).default;
       if (Hls.isSupported()) {
         const hls = new Hls();
-        hls.loadSource(playbackUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          statusDiv.textContent = "✅ Live Now";
-        });
-      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = playbackUrl;
+        hls.loadSource(LIVEPEER_PLAYBACK_URL);
+        hls.attachMedia(videoRef.current);
+      } else if (videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
+        videoRef.current.src = LIVEPEER_PLAYBACK_URL;
       }
-    }
-    loadVideo();
+    })();
+  }, []);
 
-    // --- Views Counter (local demo, increments on load) ---
-    let views = localStorage.getItem("views") || 0;
-    views++;
-    localStorage.setItem("views", views);
-    document.getElementById("views").innerText = "👁️ Views: " + views;
-
-    // --- Likes ---
-    let likes = localStorage.getItem("likes") || 0;
-    document.getElementById("likes").innerText = likes;
-    function addLike() {
-      likes++;
-      localStorage.setItem("likes", likes);
-      document.getElementById("likes").innerText = likes;
+  /******************** EFFECT: Start Host Receiver + Composition when Host Mode toggles *********************/
+  useEffect(() => {
+    if (isHost) {
+      startHostReceiver();
+      startComposition();
     }
+  }, [isHost]);
 
-    // --- Comments (local demo, no backend) ---
-    function addComment() {
-      const input = document.getElementById("commentInput");
-      const comment = input.value.trim();
-      if (comment) {
-        const commentList = document.getElementById("commentList");
-        const div = document.createElement("div");
-        div.className = "comment";
-        div.textContent = comment;
-        commentList.appendChild(div);
-        input.value = "";
-        commentList.scrollTop = commentList.scrollHeight;
-      }
-    }
-  </script>
-</body>
-</html>
+  /******************** RENDER *********************/
+  return (
+    <div className="min-h-screen w-full bg-neutral-950 text-neutral-50">
+      <header className="sticky top-0 z-10 w-full border-b border-white/10 bg-neutral-900/60 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <LiveBadge />
+            <span className="text-lg font-semibold">DRF Live</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              className="rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="your name"
+            />
+            <button
+              onClick={() => setIsHost((v) => !v)}
+              className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold shadow hover:bg-emerald-500"
+            >
+              {isHost ? "Switch to Viewer" : "I am Host"}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-4 md:grid-cols-3">
+        {/* Left: Video / Canvas */}
+        <section className="md:col-span-2">
+          <div className="relative overflow-hidden rounded-3xl bg-black shadow-2xl">
+            {/* Viewer HLS player */}
+            {!isHost && (
+              <video
+                ref={videoRef}
+                className="aspect-video w-full"
+                controls
+                autoPlay
+                playsInline
+                poster="/offline.jpg"
+              />
+            )}
+
+            {/* Host composition canvas */}
+            {isHost && (
+              <div className="relative">
+                <canvas ref={canvasRef} className="aspect-video w-full" />
+
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute left-4 top-4 flex items-center gap-3">
+                    <LiveBadge />
+                    <span className="rounded-full bg-black/50 px-3 py-1 text-sm">👁 {viewerCount}</span>
+                    <span className="rounded-full bg-black/50 px-3 py-1 text-sm">❤ {likeCount}</span>
+                  </div>
+                </div>
+
+                {/* Hidden video elements used for drawing */}
+                <video ref={hostCamRef} autoPlay playsInline muted className="hidden" />
+                <video ref={guestCamRef} autoPlay playsInline className="hidden" />
+              </div>
+            )}
+          </div>
+
+          {/* Host controls */}
+          {isHost && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                onClick={startHostReceiver}
+                className="rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold shadow hover:bg-indigo-500"
+              >
+                Start Host Receiver
+              </button>
+              <button
+                onClick={startBrowserBroadcastViaWHIP}
+                className="rounded-2xl bg-fuchsia-600 px-4 py-2 text-sm font-semibold shadow hover:bg-fuchsia-500"
+              >
+                Go Live from Browser (WHIP)
+              </button>
+              <a
+                href="https://obsproject.com/download"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-2xl bg-neutral-800 px-4 py-2 text-sm font-semibold text-neutral-200 hover:bg-neutral-700"
+              >
+                Use OBS to Stream to Livepeer
+              </a>
+            </div>
+          )}
+        </section>
+
+        {/* Right: Likes / Chat / Join Requests */}
+        <aside className="flex flex-col gap-4">
+          {/* Likes & Hearts */}
+          <div className="relative rounded-3xl bg-neutral-900 p-4 shadow-xl">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Engagement</h3>
+              <span className="text-sm text-neutral-400">Room: {roomId}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={sendLike}
+                className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold shadow hover:bg-rose-500"
+              >
+                ❤ Like
+              </button>
+              <span className="text-sm text-neutral-300">Likes: {likeCount}</span>
+              <span className="text-sm text-neutral-300">Viewers: {viewerCount}</span>
+            </div>
+            <div ref={heartsRef} className="pointer-events-none absolute inset-0" />
+          </div>
+
+          {/* Comments */}
+          <div className="rounded-3xl bg-neutral-900 p-4 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold">Live Chat</h3>
+            <div className="mb-3 max-h-64 overflow-y-auto rounded-xl border border-white/10 p-3">
+              {comments.length === 0 && (
+                <div className="text-sm text-neutral-400">No messages yet. Be the first!</div>
+              )}
+              {comments.map((c) => (
+                <div key={c.id} className="mb-2 rounded-lg bg-neutral-800 px-3 py-2 text-sm">
+                  <span className="font-semibold text-emerald-300">{c.name}</span>{" "}
+                  <span className="text-neutral-200">{c.text}</span>
+                </div>
+              ))}
+            </div>
+            <CommentInput onSend={sendComment} />
+          </div>
+
+          {/* Join / Host queue */}
+          {!isHost && (
+            <div className="rounded-3xl bg-neutral-900 p-4 shadow-xl">
+              <h3 className="mb-2 text-lg font-semibold">Go Live with Host</h3>
+              <p className="mb-3 text-sm text-neutral-300">
+                Request to join the live. If approved, your camera will be added.
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={requestToJoin}
+                  className="rounded-2xl bg-amber-600 px-4 py-2 text-sm font-semibold shadow hover:bg-amber-500"
+                >
+                  Request to Join
+                </button>
+                <button
+                  onClick={startGuestWebcam}
+                  className="rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold shadow hover:bg-indigo-500"
+                >
+                  Start My Camera (after approved)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isHost && (
+            <div className="rounded-3xl bg-neutral-900 p-4 shadow-xl">
+              <h3 className="mb-2 text-lg font-semibold">Join Requests</h3>
+              {requests.length === 0 && (
+                <div className="text-sm text-neutral-400">No requests yet.</div>
+              )}
+              <div className="flex flex-col gap-2">
+                {requests.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-xl bg-neutral-800 px-3 py-2">
+                    <div className="text-sm">{r.name}</div>
+                    <button
+                      onClick={() => approveRequest(r)}
+                      className="rounded-xl bg-emerald-600 px-3 py-1 text-sm font-semibold hover:bg-emerald-500"
+                    >
+                      Approve
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
+      </main>
+
+      <footer className="mx-auto max-w-6xl px-4 pb-8 pt-2 text-center text-xs text-neutral-500">
+        Powered by Livepeer (video), Firebase (realtime), and OBS (broadcast). UI by DRF.
+      </footer>
+    </div>
+  );
+}
+
+function CommentInput({ onSend }) {
+  const [text, setText] = useState("");
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            onSend(text);
+            setText("");
+          }
+        }}
+        className="w-full rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none"
+        placeholder="Say something nice…"
+      />
+      <button
+        onClick={() => {
+          onSend(text);
+          setText("");
+        }}
+        className="rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold shadow hover:bg-blue-500"
+      >
+        Send
+      </button>
+    </div>
+  );
+}
