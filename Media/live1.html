@@ -1,310 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>DRFMedia — Go Live</title>
-<style>
-  :root { --bg:#0b0b0c; --card:#151518; --muted:#9aa0a6; --accent:#ff5722; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, Arial, sans-serif; background:var(--bg); color:#fff; }
-  header { padding:14px 16px; text-align:center; font-weight:700; background:#111; }
-  main { max-width:640px; margin:0 auto; padding:14px; display:flex; flex-direction:column; gap:14px; }
-  .card { background:var(--card); border:1px solid #222; border-radius:14px; padding:14px; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .btn { background:var(--accent); border:none; color:#fff; padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer; }
-  .btn.secondary { background:#2a2a2f; }
-  .muted { color:var(--muted); font-size:14px; }
-  input, textarea { width:100%; padding:10px; border-radius:12px; border:1px solid #2a2a2f; background:#0f0f12; color:#fff; outline:none; }
-  label { font-size:13px; color:#c9cacc; margin-bottom:6px; display:block; }
-  video { width:100%; border-radius:12px; background:#000; }
-  .overlayRow { display:flex; justify-content:space-between; margin:6px 0; }
-  .chip { background:#1d1e23; padding:6px 10px; border-radius:999px; font-size:13px; }
-  .stack { display:flex; flex-direction:column; gap:6px; }
-  .comment { padding:8px 10px; background:#111216; border:1px solid #23242a; border-radius:10px; }
-  .hearts { position:relative; height:0; }
-  .heart { position:absolute; right:8px; bottom:-8px; font-size:22px; animation:float 1.2s ease-out forwards; }
-  @keyframes float { 0%{ transform:translateY(0); opacity:1;} 100%{ transform:translateY(-120px); opacity:0;} }
-  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  @media (max-width:520px){ .grid2 { grid-template-columns:1fr; } }
-</style>
+  <meta charset="UTF-8">
+  <title>Go Live - DRF Social</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #111; color: #fff; }
+    video { width: 80%; max-width: 600px; margin: 20px auto; display: block; border: 2px solid #00ffcc; border-radius: 10px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 18px; cursor: pointer; border-radius: 8px; }
+    #status { margin-top: 15px; font-weight: bold; }
+  </style>
 </head>
 <body>
-<header>DRFMedia — Live</header>
-<main>
+  <h1>🎥 Go Live on DRF Social</h1>
+  <video id="preview" autoplay playsinline muted></video>
+  <br>
+  <button id="startBtn">Go Live</button>
+  <button id="stopBtn" disabled>Stop Live</button>
+  <p id="status">Not Live</p>
 
-  <!-- WATCH LIVE -->
-  <section class="card">
-    <div class="row" style="justify-content:space-between;">
-      <h3 style="margin:0;">Watch Live</h3>
-      <span class="chip" id="liveStatus">offline</span>
-    </div>
-    <video id="player" controls playsinline></video>
-    <div class="overlayRow">
-      <span class="chip">👁 <span id="viewerCount">0</span></span>
-      <span class="chip">❤ <span id="likeCount">0</span></span>
-    </div>
-    <div class="stack">
-      <div class="grid2">
-        <div class="stack">
-          <label for="playbackUrl">Playback URL (HLS)</label>
-          <!-- Default to your known playback; you can overwrite -->
-          <input id="playbackUrl" value="https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8"/>
-        </div>
-        <div class="stack">
-          <label>&nbsp;</label>
-          <button class="btn secondary" id="loadPlayback">Load Stream</button>
-        </div>
-      </div>
-      <div class="stack">
-        <label>Comments</label>
-        <div id="comments" class="stack"></div>
-        <div class="row">
-          <input id="commentInput" placeholder="Say something nice…"/>
-          <button class="btn secondary" id="sendComment">Send</button>
-          <button class="btn" id="likeBtn">❤️ Like</button>
-        </div>
-        <div class="hearts" id="hearts"></div>
-      </div>
-    </div>
-  </section>
+  <script>
+    const API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // replace with real Livepeer API key
+    const preview = document.getElementById("preview");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusEl = document.getElementById("status");
+    let pc;
 
-  <!-- GO LIVE (RTMP) -->
-  <section class="card">
-    <h3 style="margin:0 0 8px;">Go Live (OBS / Mobile App)</h3>
-    <p class="muted" style="margin:6px 0 12px;">
-      Most reliable: stream with OBS (desktop) or Larix Broadcaster (mobile).
-    </p>
-    <div class="grid2">
-      <div class="stack">
-        <label>RTMP Ingest</label>
-        <input value="rtmp://rtmp.livepeer.com/live" readonly/>
-      </div>
-      <div class="stack">
-        <label>Stream Key</label>
-        <input value="71f6-vu4y-y16x-3e3p" readonly/>
-      </div>
-    </div>
-    <div class="stack" style="margin-top:8px;">
-      <div class="row">
-        <button class="btn secondary" id="openObsHelp">OBS Setup</button>
-        <button class="btn secondary" id="openLarix">Open Larix (Android)</button>
-      </div>
-      <p class="muted">Once you start streaming, set the Playback URL above and press “Load Stream”.</p>
-    </div>
-  </section>
-
-  <!-- EXPERIMENTAL: BROWSER GO LIVE (WHIP) -->
-  <section class="card">
-    <h3 style="margin:0 0 8px;">Experimental — Go Live from Browser (WHIP)</h3>
-    <p class="muted" style="margin:6px 0 12px;">
-      If your Livepeer dashboard gives you a WHIP/WebRTC ingest URL, paste it here and go live from your camera without OBS.
-    </p>
-    <div class="stack">
-      <label>WHIP Ingest URL (from Livepeer)</label>
-      <input id="whipUrl" placeholder="e.g. https://livepeer.studio/api/whip/stream/XXXX?token=YYYY" />
-      <div class="row">
-        <button class="btn" id="startWhip">🎥 Start Camera & Go Live</button>
-        <button class="btn secondary" id="stopWhip" disabled>Stop</button>
-      </div>
-      <video id="localPreview" playsinline muted></video>
-      <p class="muted" id="whipNote">Note: If this fails, use RTMP section above (OBS/Larix). WHIP requires a valid ingest URL from your Livepeer project.</p>
-    </div>
-  </section>
-
-</main>
-
-<!-- HLS.js for playback -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
-<!-- Firebase (Realtime Database only) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getDatabase, ref, set, push, onValue, onDisconnect, get, child } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
-
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-    authDomain: "drfsocial-23a06.firebaseapp.com",
-    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-    projectId: "drfsocial-23a06",
-    storageBucket: "drfsocial-23a06.firebasestorage.app",
-    messagingSenderId: "608135115201",
-    appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-    measurementId: "G-TPT7QMWDYE"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // ----- UI refs
-  const player = document.getElementById('player');
-  const playbackUrlInput = document.getElementById('playbackUrl');
-  const loadPlaybackBtn = document.getElementById('loadPlayback');
-  const liveStatus = document.getElementById('liveStatus');
-
-  const commentsBox = document.getElementById('comments');
-  const commentInput = document.getElementById('commentInput');
-  const sendCommentBtn = document.getElementById('sendComment');
-  const likeBtn = document.getElementById('likeBtn');
-  const likeCountEl = document.getElementById('likeCount');
-  const viewerCountEl = document.getElementById('viewerCount');
-  const hearts = document.getElementById('hearts');
-
-  // Presence / engagement paths (room can be static or dynamic)
-  const ROOM = 'drfmedia-live-main';
-
-  // ----- Viewer presence
-  const viewerId = 'v_' + Math.random().toString(36).slice(2, 10);
-  const myViewerRef = ref(db, `rooms/${ROOM}/viewers/${viewerId}`);
-  await set(myViewerRef, { ts: Date.now() });
-  onDisconnect(myViewerRef).remove();
-
-  onValue(ref(db, `rooms/${ROOM}/viewers`), snap => {
-    const v = snap.val() || {};
-    viewerCountEl.textContent = Object.keys(v).length;
-  });
-
-  // ----- Likes
-  const likesRef = ref(db, `rooms/${ROOM}/likes`);
-  onValue(likesRef, snap => likeCountEl.textContent = (snap.val() || 0));
-  likeBtn.addEventListener('click', async () => {
-    // Optimistic heart
-    const el = document.createElement('div');
-    el.className = 'heart';
-    el.textContent = '❤️';
-    hearts.appendChild(el);
-    setTimeout(() => el.remove(), 1200);
-
-    const cur = (await get(likesRef)).val() || 0;
-    await set(likesRef, cur + 1);
-  });
-
-  // ----- Comments
-  const commentsRef = ref(db, `rooms/${ROOM}/comments`);
-  onValue(commentsRef, snap => {
-    commentsBox.innerHTML = '';
-    const data = snap.val() || {};
-    Object.values(data)
-      .sort((a,b)=> (a.ts||0) - (b.ts||0))
-      .forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'comment';
-        div.textContent = `${c.name || 'user'}: ${c.text}`;
-        commentsBox.appendChild(div);
+    async function createStream() {
+      const res = await fetch("https://livepeer.studio/api/stream", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name: "drf-social-live" })
       });
-    commentsBox.scrollTop = commentsBox.scrollHeight;
-  });
-
-  sendCommentBtn.addEventListener('click', async () => {
-    const text = commentInput.value.trim();
-    if(!text) return;
-    await set(push(commentsRef), { name: 'user_'+viewerId.slice(-4), text, ts: Date.now() });
-    commentInput.value = '';
-  });
-
-  // ----- Load/Play HLS
-  function loadHls(url) {
-    if (!url) return;
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(player);
-      liveStatus.textContent = 'loading…';
-      hls.on(Hls.Events.LEVEL_LOADED, () => liveStatus.textContent = 'live');
-      hls.on(Hls.Events.ERROR, () => liveStatus.textContent = 'offline');
-    } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-      player.src = url;
-      liveStatus.textContent = 'live';
-    } else {
-      alert('HLS not supported on this browser.');
+      return res.json();
     }
-  }
 
-  loadPlaybackBtn.addEventListener('click', () => loadHls(playbackUrlInput.value));
+    async function goLive() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      preview.srcObject = stream;
 
-  // Auto-load on page open
-  loadHls(playbackUrlInput.value);
+      const livepeerStream = await createStream();
+      const playbackId = livepeerStream.playbackId;
+      const streamId = livepeerStream.id;
+      console.log("Stream created:", livepeerStream);
 
-  // =======================
-  // EXPERIMENTAL WHIP MODE
-  // =======================
-  const whipUrlInput = document.getElementById('whipUrl');
-  const startWhipBtn = document.getElementById('startWhip');
-  const stopWhipBtn = document.getElementById('stopWhip');
-  const localPreview = document.getElementById('localPreview');
-
-  let pc = null;
-  let localStream = null;
-
-  startWhipBtn.addEventListener('click', async () => {
-    try {
-      const whipUrl = whipUrlInput.value.trim();
-      if (!whipUrl) {
-        alert('Enter your WHIP ingest URL from Livepeer.');
-        return;
-      }
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localPreview.srcObject = localStream;
-      await localPreview.play();
-
-      pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      pc = new RTCPeerConnection();
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // POST SDP Offer to WHIP endpoint
-      const resp = await fetch(whipUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/sdp' },
+      const res = await fetch(`https://livepeer.studio/api/stream/${streamId}/ingest`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/sdp"
+        },
         body: offer.sdp
       });
 
-      if (!resp.ok) {
-        throw new Error('WHIP ingest refused. Check the URL/token in Livepeer.');
-      }
+      const answer = await res.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answer });
 
-      const answerSdp = await resp.text();
-      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+      statusEl.innerText = "✅ You are LIVE!";
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
 
-      startWhipBtn.disabled = true;
-      stopWhipBtn.disabled = false;
-      whipNote.textContent = 'Streaming… (it can take ~10–30s for HLS to appear)';
-    } catch (err) {
-      console.error(err);
-      alert('Failed to start browser live. Use RTMP (OBS/Larix) or verify WHIP URL.');
+      alert(`🎬 Stream is LIVE!\nWatch here: https://lvpr.tv/?v=${playbackId}`);
     }
-  });
 
-  stopWhipBtn.addEventListener('click', () => {
-    try {
-      if (pc) { pc.getSenders().forEach(s => s.track && s.track.stop()); pc.close(); }
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
-    } catch {}
-    localPreview.srcObject = null;
-    startWhipBtn.disabled = false;
-    stopWhipBtn.disabled = true;
-    whipNote.textContent = 'Stopped.';
-  });
+    function stopLive() {
+      pc && pc.close();
+      statusEl.innerText = "Stopped Live";
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
 
-  // ----- Helpers / external app shortcuts
-  document.getElementById('openObsHelp').addEventListener('click', () => {
-    alert(
-`OBS Setup:
-1) Settings → Stream → Service: Custom
-2) Server (RTMP): rtmp://rtmp.livepeer.com/live
-3) Stream Key: 71f6-vu4y-y16x-3e3p
-4) Start Streaming
-Then paste the HLS Playback URL above and press "Load Stream".`
-    );
-  });
-
-  // Larix URL scheme (may not open on iOS). User still needs to paste server/key inside app.
-  document.getElementById('openLarix').addEventListener('click', () => {
-    // Fallback: open Play Store page
-    window.open('https://play.google.com/store/apps/details?id=com.wmspanel.larix_broadcaster', '_blank');
-  });
-</script>
+    startBtn.onclick = goLive;
+    stopBtn.onclick = stopLive;
+  </script>
 </body>
 </html>
