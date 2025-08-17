@@ -2,163 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRFMedia Live Stream</title>
+  <title>Go Live - DRF Social</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0d1117;
-      color: #fff;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 10px;
-    }
-    video {
-      width: 100%;
-      max-width: 600px;
-      border-radius: 10px;
-      border: 2px solid #444;
-      margin: 10px 0;
-    }
-    button {
-      background: #1db954;
-      border: none;
-      padding: 12px 25px;
-      margin: 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-      color: white;
-    }
-    button:hover {
-      background: #1aa34a;
-    }
-    #status {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #ffcc00;
-    }
-    .hidden { display: none; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; }
+    video { width: 80%; margin-top: 20px; border: 2px solid #0f0; border-radius: 10px; }
+    button { margin: 15px; padding: 10px 20px; font-size: 18px; border: none; border-radius: 8px; cursor: pointer; }
+    .start { background: #28a745; color: #fff; }
+    .stop { background: #dc3545; color: #fff; }
   </style>
 </head>
 <body>
-  <h1>🎥 DRFMedia Live Stream</h1>
-  <video id="preview" autoplay playsinline muted></video>
-  <br>
-  <button id="startBtn">Go Live</button>
-  <button id="stopBtn" class="hidden">Stop Live</button>
-  <p id="status">Not Live</p>
-
-  <h3>🔴 Live Viewer</h3>
-  <video id="player" controls autoplay class="hidden"></video>
-
-  <!-- Firebase -->
+  <h1>🎥 Go Live</h1>
+  <video id="preview" autoplay muted playsinline></video><br>
+  <button class="start" id="startBtn">Go Live</button>
+  <button class="stop" id="stopBtn" disabled>Stop Live</button>
+  <p id="status">🔴 Not Live</p>
+  
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+    // Livepeer RTMP details
+    const streamKey = "71f6-vu4y-y16x-3e3p"; 
+    const rtmpUrl = "rtmp://rtmp.livepeer.com/live";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
-    };
+    // Get camera preview
+    const video = document.getElementById("preview");
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => { video.srcObject = stream; })
+      .catch(err => alert("Camera/Mic error: " + err));
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    // Livepeer API Key
-    const LIVEPEER_API = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
-
-    const preview = document.getElementById("preview");
-    const player = document.getElementById("player");
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const statusEl = document.getElementById("status");
-
-    let streamId = null;
-    let playbackId = null;
-
-    // Access Camera
-    async function initCamera() {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        preview.srcObject = mediaStream;
-      } catch (err) {
-        alert("Camera/Microphone access denied: " + err);
-      }
-    }
-    initCamera();
-
-    // Create Live Stream on Livepeer
-    async function createLiveStream() {
-      const res = await fetch("https://livepeer.studio/api/stream", {
+    // Start streaming (WebRTC → Livepeer)
+    document.getElementById("startBtn").onclick = async () => {
+      document.getElementById("status").innerText = "🟢 Going Live...";
+      
+      // Use Livepeer WebRTC ingest
+      const res = await fetch("https://livepeer.studio/api/ingest/webrtc", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${LIVEPEER_API}`,
+          "Authorization": "Bearer YOUR_LIVEPEER_API_KEY", // replace with your key
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          name: "drfmedia-stream",
-          profiles: [{ name: "720p", bitrate: 2000000, fps: 30, width: 1280, height: 720 }]
+          streamKey: streamKey
         })
       });
-      return res.json();
-    }
 
-    startBtn.onclick = async () => {
-      statusEl.innerText = "Starting Live...";
-      try {
-        const streamData = await createLiveStream();
-        console.log(streamData);
-        streamId = streamData.id;
-        playbackId = streamData.playbackId;
-
-        // Save playbackId to Firebase (so viewers can fetch it)
-        await set(ref(db, "liveStream"), { playbackId });
-
-        statusEl.innerText = "🔴 Live Started!";
-        startBtn.classList.add("hidden");
-        stopBtn.classList.remove("hidden");
-
-        // Show live stream playback for preview
-        player.src = `https://lp-playback.com/hls/${playbackId}/index.m3u8`;
-        player.classList.remove("hidden");
-
-      } catch (err) {
-        console.error(err);
-        alert("Failed to go live. Check API key.");
-        statusEl.innerText = "❌ Failed to start live.";
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById("status").innerText = "❌ Error: " + data.error.message;
+        return;
       }
+
+      document.getElementById("status").innerText = "🟢 Live Now! Share your playback URL.";
+      document.getElementById("stopBtn").disabled = false;
+      document.getElementById("startBtn").disabled = true;
     };
 
-    stopBtn.onclick = async () => {
-      await set(ref(db, "liveStream"), { playbackId: null });
-      statusEl.innerText = "🛑 Live Stopped";
-      startBtn.classList.remove("hidden");
-      stopBtn.classList.add("hidden");
-      player.classList.add("hidden");
+    // Stop streaming
+    document.getElementById("stopBtn").onclick = () => {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      document.getElementById("status").innerText = "🔴 Stopped";
+      document.getElementById("stopBtn").disabled = true;
+      document.getElementById("startBtn").disabled = false;
     };
-
-    // Viewer Auto-Update
-    onValue(ref(db, "liveStream"), (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.playbackId) {
-        player.src = `https://lp-playback.com/hls/${data.playbackId}/index.m3u8`;
-        player.classList.remove("hidden");
-        statusEl.innerText = "🔴 Streaming Live!";
-      } else {
-        player.classList.add("hidden");
-        statusEl.innerText = "Not Live";
-      }
-    });
   </script>
 </body>
 </html>
