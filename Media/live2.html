@@ -1,177 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DRFMedia TikTok Live</title>
-<style>
-  body { margin:0; font-family:Arial,sans-serif; background:#000; color:#fff; }
-  header { padding:10px; text-align:center; font-size:1.5rem; background:#111; }
-  #live-feed { display:flex; flex-direction:column; gap:15px; padding:10px; }
-  .stream-card { position:relative; background:#111; border-radius:12px; overflow:hidden; }
-  video { width:100%; height:auto; border-radius:12px; }
-  .overlay { position:absolute; bottom:10px; left:10px; display:flex; gap:10px; align-items:center; color:#fff; }
-  .like-btn, .comment-btn { background:rgba(255,255,255,0.2); border:none; padding:5px 10px; border-radius:6px; cursor:pointer; color:#fff; font-weight:bold; }
-  .go-live-container { text-align:center; padding:10px; }
-  .go-live-btn { background:#ff5722; border:none; padding:10px 20px; font-size:1rem; border-radius:8px; cursor:pointer; color:#fff; font-weight:bold; }
-  .comments-list { max-height:120px; overflow-y:auto; margin-top:5px; font-size:0.9rem; }
-  .comment-item { margin-bottom:3px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFMedia Live</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; margin:0; padding:0; }
+    h1 { margin-top: 20px; }
+    video { width: 90%; max-width: 600px; border-radius: 10px; margin: 10px 0; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+    .start { background: #28a745; color: #fff; }
+    .stop { background: #dc3545; color: #fff; }
+    #engagement { max-width: 600px; margin: 20px auto; text-align: left; }
+    #comments { max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+    input[type="text"] { width: 70%; padding: 8px; border-radius: 8px; border: none; margin-right:5px; }
+    .like-btn { background: #ff2d55; color: #fff; border-radius: 8px; padding: 6px 12px; border:none; cursor:pointer;}
+    #viewer-count { margin-left: 10px; }
+  </style>
 </head>
 <body>
-<header>DRFMedia Live Stream</header>
-<div class="go-live-container">
-  <button class="go-live-btn" id="goLiveBtn">🎥 Go Live</button>
-</div>
-<div id="live-feed"></div>
+  <h1>🎥 DRFMedia Live</h1>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getDatabase, ref, set, push, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+  <video id="preview" autoplay muted playsinline></video><br>
+  <button class="start" id="startBtn">Go Live</button>
+  <button class="stop" id="stopBtn" disabled>Stop Live</button>
+  <p id="status">🔴 Not Live</p>
 
-// --------- FIREBASE CONFIG ----------
-const firebaseConfig = {
-  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.firebasestorage.app",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
-  measurementId: "G-W6VHMP77YR"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+  <h2>📺 Live Playback</h2>
+  <video id="livePlayer" controls playsinline></video>
+  <p>Viewers: <span id="viewerCount">0</span> ❤ Likes: <span id="likeCount">0</span></p>
 
-// --------- LIVEPEER CONFIG ----------
-const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35";
+  <div id="engagement">
+    <div id="comments"></div>
+    <input type="text" id="commentInput" placeholder="Say something..." />
+    <button id="sendComment">Send</button>
+    <button class="like-btn" id="sendLike">❤ Like</button>
+  </div>
 
-const liveFeed = document.getElementById("live-feed");
-const goLiveBtn = document.getElementById("goLiveBtn");
+  <!-- hls.js for reliable playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-let userStream = null;
-let userId = Math.random().toString(36).slice(2,10);
-let streamRef = null;
+  <script type="module">
+    // Firebase initialization
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
 
-// --------- UTILITY ---------
-function rid(){ return Math.random().toString(36).slice(2,10); }
-
-// --------- CREATE LIVEPEER STREAM ---------
-async function createLivepeerStream() {
-  const response = await fetch("https://livepeer.studio/api/stream", {
-    method:"POST",
-    headers:{
-      "Authorization":`Bearer ${LIVEPEER_API_KEY}`,
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({ name:`DRFUser_${rid()}`, profiles:[{name:"720p", bitrate:2000000, fps:30, width:1280, height:720}] })
-  });
-  return await response.json();
-}
-
-// --------- GO LIVE ---------
-goLiveBtn.onclick = async () => {
-  try {
-    userStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-
-    const streamData = await createLivepeerStream();
-    const playbackId = streamData.playbackId;
-    const streamId = streamData.id;
-
-    // Add to Firebase
-    streamRef = push(ref(db,"liveStreams"));
-    await set(streamRef,{
-      streamId,
-      playbackId,
-      userName:`User_${rid()}`,
-      likes:0,
-      comments:{},
-      timestamp:Date.now()
-    });
-
-    // show local camera in feed
-    const card = document.createElement("div");
-    card.className="stream-card";
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.srcObject = userStream;
-    card.appendChild(video);
-    liveFeed.prepend(card);
-
-    alert("✅ Stream created! Your camera is live. Streaming to Livepeer via WHIP/WebRTC coming soon.");
-
-  } catch(e){
-    console.error(e);
-    alert("⚠️ Error accessing camera or creating stream.");
-  }
-};
-
-// --------- WATCH LIVE STREAMS ---------
-const liveStreamsRef = ref(db,"liveStreams");
-onValue(liveStreamsRef,(snapshot)=>{
-  const streams = snapshot.val();
-  liveFeed.innerHTML = ""; // reset
-  if(!streams) return;
-  Object.values(streams).forEach((stream)=>{
-    const card = document.createElement("div");
-    card.className="stream-card";
-
-    const video = document.createElement("video");
-    video.controls=true;
-    video.autoplay=true;
-    video.playsInline=true;
-    video.src = `https://cdn.livepeer.com/hls/${stream.playbackId}/index.m3u8`;
-    card.appendChild(video);
-
-    // overlay
-    const overlay = document.createElement("div");
-    overlay.className="overlay";
-    const likeBtn = document.createElement("button");
-    likeBtn.className="like-btn";
-    likeBtn.textContent = `❤ ${stream.likes||0}`;
-    likeBtn.onclick = async ()=>{
-      const likesRef = ref(db,`liveStreams/${stream.streamId}/likes`);
-      await set(likesRef,(stream.likes||0)+1);
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
     };
 
-    const commentBtn = document.createElement("button");
-    commentBtn.className="comment-btn";
-    commentBtn.textContent = "💬";
-    commentBtn.onclick = ()=>{
-      const comment = prompt("Enter comment:");
-      if(comment){
-        const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
-        const cRef = push(commentsRef);
-        set(cRef,{ text: comment, timestamp:Date.now() });
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Livepeer playback URL
+    const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+
+    // Camera preview
+    const preview = document.getElementById("preview");
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => { preview.srcObject = stream; })
+      .catch(err => alert("Camera/Mic error: " + err));
+
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const status = document.getElementById("status");
+    const livePlayer = document.getElementById("livePlayer");
+
+    startBtn.onclick = () => {
+      status.innerText = "🟢 Live Now! Use OBS or mobile to stream to Livepeer.";
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      // HLS playback using hls.js
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(playbackUrl);
+        hls.attachMedia(livePlayer);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() { livePlayer.play(); });
+      } else if (livePlayer.canPlayType('application/vnd.apple.mpegurl')) {
+        livePlayer.src = playbackUrl;
+        livePlayer.addEventListener('loadedmetadata', function() { livePlayer.play(); });
       }
     };
 
-    overlay.appendChild(likeBtn);
-    overlay.appendChild(commentBtn);
-    card.appendChild(overlay);
+    stopBtn.onclick = () => {
+      status.innerText = "🔴 Stopped";
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      livePlayer.pause();
+      livePlayer.src = "";
+    };
 
-    // comments list
-    const commentsList = document.createElement("div");
-    commentsList.className="comments-list";
-    const commentsRef = ref(db,`liveStreams/${stream.streamId}/comments`);
-    onValue(commentsRef,(snap)=>{
-      commentsList.innerHTML="";
-      const data = snap.val();
-      if(!data) return;
-      Object.values(data).forEach(c=>{
-        const item = document.createElement("div");
-        item.className="comment-item";
-        item.textContent=c.text;
-        commentsList.appendChild(item);
-      });
+    // Likes & comments
+    const likeBtn = document.getElementById("sendLike");
+    const commentInput = document.getElementById("commentInput");
+    const sendCommentBtn = document.getElementById("sendComment");
+    const likeCountEl = document.getElementById("likeCount");
+    const viewerCountEl = document.getElementById("viewerCount");
+    const commentsDiv = document.getElementById("comments");
+
+    const roomRef = ref(db, "drf_live_room"); // single room example
+
+    // Likes
+    const likesRef = ref(db, "drf_live_room/likes");
+    onValue(likesRef, snapshot => { likeCountEl.innerText = snapshot.val() || 0; });
+    likeBtn.onclick = async () => {
+      const likesSnapshot = await new Promise(res => onValue(likesRef, snap => res(snap.val()), { onlyOnce:true }));
+      await set(likesRef, (likesSnapshot || 0) + 1);
+    };
+
+    // Comments
+    const commentsRef = ref(db, "drf_live_room/comments");
+    onValue(commentsRef, snapshot => {
+      const val = snapshot.val() || {};
+      commentsDiv.innerHTML = Object.values(val).map(c => `<b>${c.name || "User"}:</b> ${c.text}`).join("<br>");
     });
-    card.appendChild(commentsList);
+    sendCommentBtn.onclick = async () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      const newCommentRef = push(commentsRef);
+      await set(newCommentRef, { text, name: "User" });
+      commentInput.value = "";
+    };
 
-    liveFeed.appendChild(card);
-  });
-});
-</script>
+    // Viewer count simulation
+    const viewersRef = ref(db, "drf_live_room/viewers");
+    const myViewerRef = push(viewersRef);
+    set(myViewerRef, true);
+    window.addEventListener("beforeunload", () => { myViewerRef.remove(); });
+    onValue(viewersRef, snapshot => { viewerCountEl.innerText = Object.keys(snapshot.val()||{}).length; });
+
+  </script>
 </body>
 </html>
