@@ -1,323 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFChain – WebRTC Live</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFChain Media - Go Live</title>
   <style>
-    :root {
-      color-scheme: dark;
-    }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0b0b0b; color:#f5f5f5; margin:0; }
-    header { padding: 16px 20px; border-bottom: 1px solid #222; display:flex; align-items:center; justify-content:space-between; }
-    h1 { font-size: 18px; margin:0; }
-    main { max-width: 1000px; margin: 0 auto; padding: 20px; }
-    .grid { display:grid; gap:20px; grid-template-columns: 1fr; }
-    @media(min-width: 980px) { .grid { grid-template-columns: 1fr 1fr; } }
-
-    .card { background:#121212; border:1px solid #222; border-radius:16px; padding:16px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
-    .title { font-weight: 700; font-size: 16px; margin-bottom: 12px; }
-    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-    .row > * { flex: 1 1 auto; }
-    label { display:block; font-size:12px; color:#aaa; margin-bottom:6px; }
-    input, select { width:100%; padding:10px 12px; border-radius:12px; background:#1a1a1a; color:#eee; border:1px solid #2a2a2a; }
-    button { padding: 10px 14px; border-radius: 12px; border:1px solid #2a2a2a; background:#1f7aef; color:white; cursor:pointer; font-weight:600; }
-    button.secondary { background:#242424; color:#eee; }
-    button.danger { background:#c03540; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-
-    video { width:100%; border-radius:16px; background:#000; display:block; }
-
-    .offline { padding:16px; background:#191919; border:1px dashed #333; border-radius:12px; color:#bbb; text-align:center; }
-    .ok { color:#5ef28f; }
-    .bad { color:#ff6b6b; }
-    .muted { color:#aaa; font-size:12px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-
-    .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; border:1px solid #2a2a2a; background:#161616; }
-    .pill.live { border-color:#2a2a2a; background:#1b1313; color:#ff6666; }
+    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 20px; }
+    video { width: 90%; max-width: 600px; border-radius: 12px; margin-top: 20px; background: #000; }
+    button { margin: 15px; padding: 12px 24px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; }
+    #goLiveBtn { background: #28a745; color: white; }
+    #stopBtn { background: #dc3545; color: white; }
+    #status { margin-top: 15px; font-weight: bold; }
+    a.playback { color: #1e90ff; display: block; margin-top: 20px; }
   </style>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+      measurementId: "G-TPT7QMWDYE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const functions = getFunctions(app);
+
+    // Expose functions globally
+    window.firebaseFunctions = functions;
+  </script>
 </head>
 <body>
-  <header>
-    <h1>🎥 DRFChain WebRTC Live</h1>
-    <div id="livePill" class="pill">Idle</div>
-  </header>
+  <h1>🎥 DRFChain Media - Go Live</h1>
+  <video id="preview" autoplay muted playsinline></video><br>
+  <button id="goLiveBtn">🚀 Go Live</button>
+  <button id="stopBtn" disabled>⏹ Stop</button>
+  <p id="status">Not live</p>
+  <a id="playbackLink" class="playback" href="#" target="_blank"></a>
 
-  <main class="grid">
-    <!-- Left: Publisher (WebRTC) -->
-    <section class="card">
-      <div class="title">Go Live from this Browser (WebRTC → Livepeer)</div>
+  <!-- Livepeer WebRTC SDK -->
+  <script src="https://unpkg.com/@livepeer/webrtmp-sdk"></script>
 
-      <div class="row" style="gap:16px">
-        <div style="flex:1 1 100%">
-          <label>WHIP Publish URL (from Livepeer Studio)</label>
-          <input id="whipUrl" placeholder="e.g. https://.../webrtc/whip/STREAM_ID" />
-        </div>
-        <div style="flex:1 1 100%">
-          <label>Publish Token / Bearer (from Livepeer Studio)</label>
-          <input id="whipToken" placeholder="Paste token here" />
-        </div>
-      </div>
+  <script type="module">
+    const goLiveBtn = document.getElementById("goLiveBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const statusEl = document.getElementById("status");
+    const preview = document.getElementById("preview");
+    const playbackLink = document.getElementById("playbackLink");
 
-      <div class="row" style="margin-top:8px">
-        <div>
-          <label>Camera & Mic</label>
-          <div class="row">
-            <button id="selectCam" class="secondary">Select camera/mic</button>
-            <button id="toggleMute" class="secondary">Mute</button>
-            <button id="toggleVideo" class="secondary">Video Off</button>
-          </div>
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <div class="row">
-            <button id="startLive">Go Live</button>
-            <button id="stopLive" class="danger" disabled>Stop</button>
-          </div>
-        </div>
-      </div>
+    // Your Livepeer stream info
+    const STREAM_ID = "71f601e4-3d7b-4428-9bc5-23c1049d9e61";
+    const PLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
 
-      <div style="margin-top:12px">
-        <video id="localPreview" autoplay playsinline muted></video>
-        <div class="muted">Local preview (muted)</div>
-      </div>
+    let session;
+    let mediaStream;
 
-      <div class="muted" style="margin-top:8px">
-        Tip: Get <span class="mono">WHIP URL</span> and <span class="mono">Publish Token</span> from your Livepeer stream's WebRTC/WHIP section.
-      </div>
-
-      <div id="pubLog" class="muted" style="margin-top:10px; white-space:pre-wrap"></div>
-    </section>
-
-    <!-- Right: Playback (HLS) -->
-    <section class="card">
-      <div class="title">Live Playback (HLS)</div>
-
-      <div class="row" style="gap:16px">
-        <div style="flex:1 1 100%">
-          <label>Playback HLS URL</label>
-          <input id="playbackUrl" placeholder="https://livepeercdn.studio/hls/PLAYBACK_ID/index.m3u8" />
-        </div>
-        <div style="width: auto">
-          <label>&nbsp;</label>
-          <button id="loadPlayback" class="secondary">Load Playback</button>
-        </div>
-      </div>
-
-      <div id="offlineBox" class="offline" style="margin-top:10px">🔴 Stream offline. Start broadcasting to enable playback.</div>
-      <video id="player" controls playsinline style="margin-top:10px; display:none"></video>
-      <div id="pbLog" class="muted" style="margin-top:10px; white-space:pre-wrap"></div>
-    </section>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script>
-    // ------ Publisher (WHIP) ------
-    const localPreview = document.getElementById('localPreview');
-    const startBtn = document.getElementById('startLive');
-    const stopBtn = document.getElementById('stopLive');
-    const selectCamBtn = document.getElementById('selectCam');
-    const toggleMuteBtn = document.getElementById('toggleMute');
-    const toggleVideoBtn = document.getElementById('toggleVideo');
-    const whipUrlEl = document.getElementById('whipUrl');
-    const whipTokenEl = document.getElementById('whipToken');
-    const pubLog = document.getElementById('pubLog');
-    const livePill = document.getElementById('livePill');
-
-    let pc = null;
-    let localStream = null;
-    let resourceURL = null; // WHIP resource URL for stopping
-    let audioEnabled = true;
-    let videoEnabled = true;
-
-    function logPub(msg){ pubLog.textContent += `\n${msg}`; }
-    function setLiveState(isLive){
-      if(isLive){
-        livePill.textContent = 'LIVE';
-        livePill.classList.add('live');
-      } else {
-        livePill.textContent = 'Idle';
-        livePill.classList.remove('live');
-      }
-    }
-
-    async function ensureMedia(){
-      if(localStream) return localStream;
-      localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-      localPreview.srcObject = localStream;
-      return localStream;
-    }
-
-    selectCamBtn.addEventListener('click', async () => {
-      try { await ensureMedia(); logPub('Camera & mic ready.'); }
-      catch(e){ alert('Media error: '+e.message); }
-    });
-
-    toggleMuteBtn.addEventListener('click', () => {
-      if(!localStream) return;
-      audioEnabled = !audioEnabled;
-      localStream.getAudioTracks().forEach(t => t.enabled = audioEnabled);
-      toggleMuteBtn.textContent = audioEnabled ? 'Mute' : 'Unmute';
-    });
-
-    toggleVideoBtn.addEventListener('click', () => {
-      if(!localStream) return;
-      videoEnabled = !videoEnabled;
-      localStream.getVideoTracks().forEach(t => t.enabled = videoEnabled);
-      toggleVideoBtn.textContent = videoEnabled ? 'Video Off' : 'Video On';
-    });
-
-    async function startPublishing(){
-      const whipURL = whipUrlEl.value.trim();
-      const token = whipTokenEl.value.trim();
-      if(!whipURL || !token){
-        alert('Paste your WHIP URL and Publish Token from Livepeer.');
-        return;
-      }
+    async function startLive() {
       try {
-        await ensureMedia();
+        statusEl.innerText = "Requesting camera/mic...";
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        preview.srcObject = mediaStream;
 
-        pc = new RTCPeerConnection({
-          sdpSemantics: 'unified-plan',
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
-          ]
-        });
+        statusEl.innerText = "Fetching Livepeer token...";
+        // Call Firebase Cloud Function to get temporary token
+        const getToken = httpsCallable(window.firebaseFunctions, 'getLivepeerToken');
+        const res = await getToken({ streamId: STREAM_ID });
+        const token = res.data.token;
 
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        statusEl.innerText = "Starting live stream...";
 
-        // Wait for ICE gathering complete before sending WHIP offer (common pattern for WHIP)
-        const waitForIceGatheringComplete = new Promise(resolve => {
-          if (pc.iceGatheringState === 'complete') {
-            resolve();
-          } else {
-            function checkState() {
-              if (pc.iceGatheringState === 'complete') {
-                pc.removeEventListener('icegatheringstatechange', checkState);
-                resolve();
-              }
-            }
-            pc.addEventListener('icegatheringstatechange', checkState);
-          }
-        });
+        const client = new Livepeer.WebRTMP.Client({ token });
+        session = client.cast(mediaStream, { streamKey: STREAM_ID });
+        await session.start();
 
-        const offer = await pc.createOffer({ offerToReceiveAudio: false, offerToReceiveVideo: false });
-        await pc.setLocalDescription(offer);
-        await waitForIceGatheringComplete;
-
-        logPub('Sending WHIP offer...');
-        const res = await fetch(whipURL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/sdp',
-            'Authorization': 'Bearer ' + token
-          },
-          body: pc.localDescription.sdp
-        });
-
-        if(!res.ok){
-          const text = await res.text();
-          throw new Error('WHIP POST failed: ' + res.status + ' ' + text);
-        }
-
-        resourceURL = res.headers.get('location'); // For DELETE when stopping
-        const answerSDP = await res.text();
-        await pc.setRemoteDescription({ type: 'answer', sdp: answerSDP });
-
-        startBtn.disabled = true;
+        statusEl.innerText = "✅ You are LIVE!";
+        playbackLink.href = PLAYBACK_URL;
+        playbackLink.innerText = "📺 Watch playback here";
+        goLiveBtn.disabled = true;
         stopBtn.disabled = false;
-        setLiveState(true);
-        logPub('Publishing started.');
-      } catch(err){
-        console.error(err);
-        logPub('Error: ' + err.message);
-        alert('Publish error: ' + err.message);
-        await stopPublishing();
+      } catch (err) {
+        console.error("Failed to start live stream:", err);
+        statusEl.innerText = "❌ Failed to start live stream. Check console.";
       }
     }
 
-    async function stopPublishing(){
-      try{
-        if(resourceURL){
-          try { await fetch(resourceURL, { method: 'DELETE' }); } catch(e){}
-        }
-        if(pc){ pc.getSenders().forEach(s=>{ try{ s.track && s.track.stop(); }catch(e){} }); pc.close(); }
-        if(localPreview.srcObject){ localPreview.srcObject.getTracks().forEach(t=>t.stop()); }
-      } finally {
-        pc = null; resourceURL = null; localStream = null;
-        startBtn.disabled = false; stopBtn.disabled = true; setLiveState(false);
-        logPub('Publishing stopped.');
+    function stopLive() {
+      if (session) {
+        session.close();
+        session = null;
       }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        preview.srcObject = null;
+      }
+      statusEl.innerText = "Stopped";
+      goLiveBtn.disabled = false;
+      stopBtn.disabled = true;
     }
 
-    startBtn.addEventListener('click', startPublishing);
-    stopBtn.addEventListener('click', stopPublishing);
-
-    // Auto prepare media for quick start (without forcing permissions early on iOS)
-    (async () => { try { await ensureMedia(); } catch(e){} })();
-
-    // ------ Playback (HLS) ------
-    const player = document.getElementById('player');
-    const playbackUrlEl = document.getElementById('playbackUrl');
-    const offlineBox = document.getElementById('offlineBox');
-    const loadBtn = document.getElementById('loadPlayback');
-    const pbLog = document.getElementById('pbLog');
-    function logPb(msg){ pbLog.textContent += `\n${msg}`; }
-
-    async function isOnlineHLS(url){
-      try {
-        const res = await fetch(url, { method:'GET', cache:'no-store' });
-        if(!res.ok) return false;
-        const text = await res.text();
-        // naive check for m3u8 content
-        return text.includes('#EXTM3U');
-      } catch { return false; }
-    }
-
-    async function loadPlayback(){
-      const url = playbackUrlEl.value.trim();
-      if(!url){ alert('Paste your HLS playback URL'); return; }
-
-      const online = await isOnlineHLS(url);
-      if(!online){
-        offlineBox.style.display = 'block';
-        player.style.display = 'none';
-        logPb('Stream appears offline (m3u8 not available yet).');
-        return;
-      }
-
-      if (Hls.isSupported()) {
-        const hls = new Hls({ maxBufferLength: 10 });
-        hls.loadSource(url);
-        hls.attachMedia(player);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => { player.play().catch(()=>{}); });
-        hls.on(Hls.Events.ERROR, (_, data) => { logPb('HLS error: ' + data.type + ' ' + (data.details||'')); });
-      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = url;
-        player.addEventListener('loadedmetadata', () => player.play().catch(()=>{}));
-      } else {
-        logPb('HLS not supported in this browser.');
-        alert('HLS not supported in this browser. Try Chrome or Safari.');
-        return;
-      }
-
-      offlineBox.style.display = 'none';
-      player.style.display = 'block';
-    }
-
-    loadBtn.addEventListener('click', loadPlayback);
-
-    // Optional: auto-retry playback every 10s until online
-    setInterval(async () => {
-      const url = playbackUrlEl.value.trim();
-      if(!url) return;
-      const online = await isOnlineHLS(url);
-      if(online && player.style.display === 'none'){
-        loadPlayback();
-      }
-    }, 10000);
+    goLiveBtn.addEventListener("click", startLive);
+    stopBtn.addEventListener("click", stopLive);
   </script>
 </body>
 </html>
