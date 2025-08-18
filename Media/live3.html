@@ -1,134 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRFMedia Live</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRFChain Media - Go Live Test</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; margin:0; padding:0; }
-    h1 { margin-top: 20px; }
-    video { width: 90%; max-width: 600px; border-radius: 10px; margin: 10px 0; }
-    button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
-    .start { background: #28a745; color: #fff; }
-    .stop { background: #dc3545; color: #fff; }
-    #engagement { max-width: 600px; margin: 20px auto; text-align: left; }
-    #comments { max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
-    input[type="text"] { width: 70%; padding: 8px; border-radius: 8px; border: none; margin-right:5px; }
-    .like-btn { background: #ff2d55; color: #fff; border-radius: 8px; padding: 6px 12px; border:none; cursor:pointer;}
-    #viewer-count { margin-left: 10px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    video {
+      width: 100%;
+      max-width: 600px;
+      border-radius: 12px;
+      margin-top: 20px;
+      background: #000;
+    }
+    button {
+      margin: 15px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #startBtn { background: #28a745; color: white; }
+    #stopBtn { background: #dc3545; color: white; }
   </style>
 </head>
 <body>
-  <h1>🎥 DRFMedia Live</h1>
+  <h1>🎥 DRFChain Media - Go Live Test</h1>
+  <p>Stream directly from your browser using WebRTC + Livepeer</p>
 
-  <!-- Local camera preview -->
-  <video id="preview" autoplay muted playsinline></video><br>
-  <button class="start" id="startBtn">Go Live</button>
-  <button class="stop" id="stopBtn" disabled>Stop Live</button>
-  <p id="status">🔴 Not Live</p>
+  <video id="localVideo" autoplay muted playsinline></video>
 
-  <!-- Live playback -->
-  <h2>📺 Live Playback</h2>
-  <video id="livePlayer" controls playsinline></video>
-  <p>Viewers: <span id="viewerCount">0</span> ❤ Likes: <span id="likeCount">0</span></p>
-
-  <div id="engagement">
-    <div id="comments"></div>
-    <input type="text" id="commentInput" placeholder="Say something..." />
-    <button id="sendComment">Send</button>
-    <button class="like-btn" id="sendLike">❤ Like</button>
+  <div>
+    <button id="startBtn">Go Live</button>
+    <button id="stopBtn" disabled>Stop</button>
   </div>
 
-  <script type="module">
-    // Firebase setup
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+  <script>
+    const streamKey = "71f6-vu4y-y16x-3e3p"; // your Livepeer stream key
+    const livepeerBroadcastUrl = `https://livepeer.studio/webrtc/rtmp/${streamKey}`;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
-    };
+    let pc;
+    let localStream;
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    async function startBroadcast() {
+      try {
+        // Get camera + mic
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("localVideo").srcObject = localStream;
 
-    // Livepeer playback URL
-    const playbackUrl = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+        // Create PeerConnection
+        pc = new RTCPeerConnection();
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-    // Camera preview
-    const preview = document.getElementById("preview");
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => { preview.srcObject = stream; })
-      .catch(err => alert("Camera/Mic error: " + err));
+        // Connect to Livepeer
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const status = document.getElementById("status");
-    const livePlayer = document.getElementById("livePlayer");
+        const res = await fetch(livepeerBroadcastUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/sdp" },
+          body: offer.sdp
+        });
 
-    // Start live playback
-    startBtn.onclick = () => {
-      status.innerText = "🟢 Live playback ready. Use OBS or mobile app to stream to Livepeer.";
-      startBtn.disabled = true;
-      stopBtn.disabled = false;
+        const answer = { type: "answer", sdp: await res.text() };
+        await pc.setRemoteDescription(answer);
 
-      livePlayer.src = playbackUrl;
-      livePlayer.load();
-      livePlayer.play().catch(()=>{}); // autoplay may require user interaction
-    };
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("stopBtn").disabled = false;
 
-    stopBtn.onclick = () => {
-      status.innerText = "🔴 Stopped";
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-      livePlayer.pause();
-      livePlayer.src = "";
-    };
+        alert("✅ You are now LIVE on DRFChain Media!");
+      } catch (err) {
+        console.error("Broadcast error:", err);
+        alert("Failed to start live stream. Check console.");
+      }
+    }
 
-    // Firebase: Likes & comments
-    const likeBtn = document.getElementById("sendLike");
-    const commentInput = document.getElementById("commentInput");
-    const sendCommentBtn = document.getElementById("sendComment");
-    const likeCountEl = document.getElementById("likeCount");
-    const viewerCountEl = document.getElementById("viewerCount");
-    const commentsDiv = document.getElementById("comments");
+    function stopBroadcast() {
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      document.getElementById("localVideo").srcObject = null;
 
-    const likesRef = ref(db, "drf_live_room/likes");
-    onValue(likesRef, snapshot => {
-      likeCountEl.innerText = snapshot.val() || 0;
-    });
+      document.getElementById("startBtn").disabled = false;
+      document.getElementById("stopBtn").disabled = true;
 
-    likeBtn.onclick = async () => {
-      const likesSnapshot = await new Promise(res => onValue(likesRef, snap => res(snap.val()), { onlyOnce:true }));
-      await set(likesRef, (likesSnapshot || 0) + 1);
-    };
+      alert("⏹ Live stream stopped.");
+    }
 
-    const commentsRef = ref(db, "drf_live_room/comments");
-    onValue(commentsRef, snapshot => {
-      const val = snapshot.val() || {};
-      commentsDiv.innerHTML = Object.values(val).map(c => `<b>${c.name || "User"}:</b> ${c.text}`).join("<br>");
-    });
-
-    sendCommentBtn.onclick = async () => {
-      const text = commentInput.value.trim();
-      if (!text) return;
-      const newCommentRef = push(commentsRef);
-      await set(newCommentRef, { text, name: "User" });
-      commentInput.value = "";
-    };
-
-    // Viewer count
-    const viewersRef = ref(db, "drf_live_room/viewers");
-    const myViewerRef = push(viewersRef);
-    set(myViewerRef, true);
-    window.addEventListener("beforeunload", () => { myViewerRef.remove(); });
-    onValue(viewersRef, snapshot => { viewerCountEl.innerText = Object.keys(snapshot.val()||{}).length; });
+    document.getElementById("startBtn").addEventListener("click", startBroadcast);
+    document.getElementById("stopBtn").addEventListener("click", stopBroadcast);
   </script>
 </body>
 </html>
