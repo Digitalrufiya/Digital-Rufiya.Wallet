@@ -3,44 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Go Live Test</title>
+  <title>DRFChain Media Go Live</title>
 </head>
-<body>
-  <h2>Livepeer Go Live Test</h2>
+<body style="font-family: Arial; padding:20px;">
+
+  <h2>🎥 DRFChain Media - Go Live</h2>
   <button id="goLiveBtn">Go Live</button>
 
-  <pre id="output"></pre>
+  <h3>🔑 Stream Info:</h3>
+  <pre id="output">Not live yet...</pre>
 
   <script>
-    const LIVEPEER_API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // 🔑 replace with your Livepeer API key
+    const goLiveBtn = document.getElementById("goLiveBtn");
+    const output = document.getElementById("output");
 
-    document.getElementById("goLiveBtn").addEventListener("click", async () => {
+    goLiveBtn.addEventListener("click", async () => {
+      output.textContent = "⏳ Creating live stream...";
       try {
-        const response = await fetch("https://livepeer.studio/api/stream", {
+        const response = await fetch("live.php", {  // call your backend PHP file
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${LIVEPEER_API_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: "My Test Stream"
-          })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "DRFChain Live Stream" })
         });
 
         const data = await response.json();
-        console.log(data);
-        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        console.log("Livepeer response:", data);
 
         if (data.streamKey) {
-          alert("✅ Stream Created! Use this streamKey in OBS or browser capture: " + data.streamKey);
+          output.textContent = JSON.stringify(data, null, 2);
+          alert("✅ Stream created! Use the streamKey in OBS or Larix to start streaming.");
         } else {
-          alert("❌ Failed, check console");
+          output.textContent = "❌ Failed to create stream. Check console.";
         }
-      } catch (error) {
-        console.error(error);
-        alert("❌ Error: " + error.message);
+      } catch (err) {
+        console.error(err);
+        output.textContent = "❌ Error: " + err.message;
       }
     });
   </script>
+
 </body>
 </html>
