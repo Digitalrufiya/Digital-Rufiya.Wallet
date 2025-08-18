@@ -1,106 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DRFChain Media - Go Live Test</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      text-align: center;
-      padding: 20px;
-    }
-    video {
-      width: 100%;
-      max-width: 600px;
-      border-radius: 12px;
-      margin-top: 20px;
-      background: #000;
-    }
-    button {
-      margin: 15px;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    #startBtn { background: #28a745; color: white; }
-    #stopBtn { background: #dc3545; color: white; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DRFChain Media - Go Live</title>
 </head>
-<body>
-  <h1>🎥 DRFChain Media - Go Live Test</h1>
-  <p>Stream directly from your browser using WebRTC + Livepeer</p>
+<body style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
+  <h2>🎥 DRFChain Media - Test Live Stream</h2>
+  <video id="preview" autoplay muted playsinline style="width: 80%; border:1px solid #ccc; border-radius:8px;"></video>
+  <br><br>
+  <button id="goLiveBtn" style="padding: 12px 24px; font-size:16px; cursor:pointer;">🚀 Go Live</button>
+  <p id="status"></p>
 
-  <video id="localVideo" autoplay muted playsinline></video>
-
-  <div>
-    <button id="startBtn">Go Live</button>
-    <button id="stopBtn" disabled>Stop</button>
-  </div>
-
+  <script src="https://unpkg.com/@livepeer/webrtmp-sdk"></script>
   <script>
-    const streamKey = "71f6-vu4y-y16x-3e3p"; // your Livepeer stream key
-    const livepeerBroadcastUrl = `https://livepeer.studio/webrtc/rtmp/${streamKey}`;
+    const goLiveBtn = document.getElementById("goLiveBtn");
+    const videoEl = document.getElementById("preview");
+    const statusEl = document.getElementById("status");
 
-    let pc;
-    let localStream;
+    // ⚠️ Replace with your REAL signed token from backend
+    // This one is just placeholder - won’t work forever
+    const JWT_TOKEN = "PASTE_YOUR_SIGNED_JWT_HERE";
 
-    async function startBroadcast() {
+    // Replace with your Livepeer Stream Key
+    const STREAM_KEY = "71f6-vu4y-y16x-3e3p";
+
+    goLiveBtn.onclick = async () => {
       try {
-        // Get camera + mic
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById("localVideo").srcObject = localStream;
+        statusEl.innerText = "Requesting camera...";
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        videoEl.srcObject = mediaStream;
 
-        // Create PeerConnection
-        pc = new RTCPeerConnection();
-        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+        statusEl.innerText = "Connecting to Livepeer...";
 
-        // Connect to Livepeer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
+        const client = new Livepeer.WebRTMP.Client({ token: JWT_TOKEN });
+        const session = client.cast(mediaStream, { streamKey: STREAM_KEY });
 
-        const res = await fetch(livepeerBroadcastUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/sdp" },
-          body: offer.sdp
-        });
-
-        const answer = { type: "answer", sdp: await res.text() };
-        await pc.setRemoteDescription(answer);
-
-        document.getElementById("startBtn").disabled = true;
-        document.getElementById("stopBtn").disabled = false;
-
-        alert("✅ You are now LIVE on DRFChain Media!");
+        await session.start();
+        statusEl.innerText = "✅ Live stream started!";
       } catch (err) {
-        console.error("Broadcast error:", err);
-        alert("Failed to start live stream. Check console.");
+        console.error("❌ Failed to Start live Stream", err);
+        statusEl.innerText = "❌ Failed to Start live Stream. Check console.";
       }
-    }
-
-    function stopBroadcast() {
-      if (pc) {
-        pc.close();
-        pc = null;
-      }
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-      document.getElementById("localVideo").srcObject = null;
-
-      document.getElementById("startBtn").disabled = false;
-      document.getElementById("stopBtn").disabled = true;
-
-      alert("⏹ Live stream stopped.");
-    }
-
-    document.getElementById("startBtn").addEventListener("click", startBroadcast);
-    document.getElementById("stopBtn").addEventListener("click", stopBroadcast);
+    };
   </script>
 </body>
 </html>
