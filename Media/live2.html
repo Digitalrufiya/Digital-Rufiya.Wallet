@@ -1,54 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Livepeer Test Stream</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Live Test</title>
 </head>
-<body style="font-family: Arial; padding:20px;">
+<body>
+  <h2>Livepeer Go Live Test</h2>
+  <button id="goLiveBtn">Go Live</button>
 
-  <h2>🎥 Livepeer Test Stream</h2>
-  <button onclick="createStream()">Create New Stream</button>
-
-  <h3>🔑 Stream Key:</h3>
-  <p id="streamKey">--</p>
-
-  <h3>▶️ Playback URL:</h3>
-  <p>
-    https://lp-playback.com/hls/<span id="playbackId">--</span>/index.m3u8
-  </p>
+  <pre id="output"></pre>
 
   <script>
-    async function createStream() {
-      const API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // ⚠️ Your API key is public here
-      const response = await fetch("https://livepeer.studio/api/stream", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          name: "MyTestStream",
-          profiles: [
-            { name: "720p", bitrate: 2000000, fps: 30, width: 1280, height: 720 },
-            { name: "480p", bitrate: 1000000, fps: 30, width: 854, height: 480 },
-            { name: "360p", bitrate: 500000, fps: 30, width: 640, height: 360 }
-          ]
-        })
-      });
+    const LIVEPEER_API_KEY = "YOUR_API_KEY_HERE"; // 🔑 replace with your Livepeer API key
 
-      const data = await response.json();
-      console.log("Stream created:", data);
+    document.getElementById("goLiveBtn").addEventListener("click", async () => {
+      try {
+        const response = await fetch("https://livepeer.studio/api/stream", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${LIVEPEER_API_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: "My Test Stream"
+          })
+        });
 
-      if (data.streamKey) {
-        document.getElementById("streamKey").innerText = data.streamKey;
-        document.getElementById("playbackId").innerText = data.playbackId;
-        alert("✅ Stream Created! Use the Stream Key in OBS or MUX app.");
-      } else {
-        alert("❌ Error creating stream. Check console.");
+        const data = await response.json();
+        console.log(data);
+        document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+
+        if (data.streamKey) {
+          alert("✅ Stream Created! Use this streamKey in OBS or browser capture: " + data.streamKey);
+        } else {
+          alert("❌ Failed, check console");
+        }
+      } catch (error) {
+        console.error(error);
+        alert("❌ Error: " + error.message);
       }
-    }
+    });
   </script>
-
 </body>
 </html>
