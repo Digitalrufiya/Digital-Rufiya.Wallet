@@ -1,101 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRFChain Media - Go Live</title>
-  <style>
-    body { font-family: Arial; text-align: center; background:#111; color:#fff; padding:20px; }
-    video { width:90%; max-width:600px; margin-top:20px; border-radius:12px; background:#000; }
-    button { padding:12px 24px; margin:10px; border:none; border-radius:8px; cursor:pointer; font-size:16px; }
-    #goLiveBtn { background:#28a745; color:white; }
-    #stopBtn { background:#dc3545; color:white; }
-    #status { margin-top:15px; font-weight:bold; }
-    a.playback { color:#1e90ff; display:block; margin-top:20px; }
-  </style>
-  
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-functions.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-      authDomain: "drfsocial-23a06.firebaseapp.com",
-      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-      projectId: "drfsocial-23a06",
-      storageBucket: "drfsocial-23a06.firebasestorage.app",
-      messagingSenderId: "608135115201",
-      appId: "1:608135115201:web:b37dffeb550941ffff3f40",
-      measurementId: "G-TPT7QMWDYE"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const functions = getFunctions(app, "us-central1"); // replace region if different
-    window.firebaseFunctions = functions;
-  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Livepeer Test Stream</title>
 </head>
-<body>
-  <h1>🎥 DRFChain Media - Go Live</h1>
-  <video id="preview" autoplay muted playsinline></video><br>
-  <button id="goLiveBtn">🚀 Go Live</button>
-  <button id="stopBtn" disabled>⏹ Stop</button>
-  <p id="status">Not live</p>
-  <a id="playbackLink" class="playback" href="#" target="_blank"></a>
+<body style="font-family: Arial; padding:20px;">
 
-  <script src="https://unpkg.com/@livepeer/webrtmp-sdk"></script>
+  <h2>🎥 Livepeer Test Stream</h2>
+  <button onclick="createStream()">Create New Stream</button>
 
-  <script type="module">
-    const goLiveBtn = document.getElementById("goLiveBtn");
-    const stopBtn = document.getElementById("stopBtn");
-    const statusEl = document.getElementById("status");
-    const preview = document.getElementById("preview");
-    const playbackLink = document.getElementById("playbackLink");
+  <h3>🔑 Stream Key:</h3>
+  <p id="streamKey">--</p>
 
-    const STREAM_ID = "71f601e4-3d7b-4428-9bc5-23c1049d9e61";
-    const PLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
+  <h3>▶️ Playback URL:</h3>
+  <p>
+    https://lp-playback.com/hls/<span id="playbackId">--</span>/index.m3u8
+  </p>
 
-    let session;
-    let mediaStream;
+  <script>
+    async function createStream() {
+      const API_KEY = "86690d89-ff4d-4e5e-abeb-68c2d7582b35"; // ⚠️ Your API key is public here
+      const response = await fetch("https://livepeer.studio/api/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          name: "MyTestStream",
+          profiles: [
+            { name: "720p", bitrate: 2000000, fps: 30, width: 1280, height: 720 },
+            { name: "480p", bitrate: 1000000, fps: 30, width: 854, height: 480 },
+            { name: "360p", bitrate: 500000, fps: 30, width: 640, height: 360 }
+          ]
+        })
+      });
 
-    async function startLive() {
-      try {
-        statusEl.innerText = "Requesting camera/mic...";
-        mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-        preview.srcObject = mediaStream;
+      const data = await response.json();
+      console.log("Stream created:", data);
 
-        statusEl.innerText = "Fetching Livepeer token...";
-        const getToken = httpsCallable(window.firebaseFunctions, 'getLivepeerToken');
-        const res = await getToken({ streamId: STREAM_ID });
-        if(res.data.error){ throw new Error(res.data.error); }
-        const token = res.data.token;
-
-        statusEl.innerText = "Starting live stream...";
-        const client = new Livepeer.WebRTMP.Client({ token });
-        session = client.cast(mediaStream, { streamKey: STREAM_ID });
-        await session.start();
-
-        statusEl.innerText = "✅ You are LIVE!";
-        playbackLink.href = PLAYBACK_URL;
-        playbackLink.innerText = "📺 Watch playback here";
-        goLiveBtn.disabled = true;
-        stopBtn.disabled = false;
-      } catch(err) {
-        console.error("Failed to start live stream:", err);
-        statusEl.innerText = "❌ Failed to start live stream. Check console.";
+      if (data.streamKey) {
+        document.getElementById("streamKey").innerText = data.streamKey;
+        document.getElementById("playbackId").innerText = data.playbackId;
+        alert("✅ Stream Created! Use the Stream Key in OBS or MUX app.");
+      } else {
+        alert("❌ Error creating stream. Check console.");
       }
     }
-
-    function stopLive() {
-      if(session){ session.close(); session=null; }
-      if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); preview.srcObject=null; }
-      statusEl.innerText="Stopped";
-      goLiveBtn.disabled=false;
-      stopBtn.disabled=true;
-    }
-
-    goLiveBtn.addEventListener("click", startLive);
-    stopBtn.addEventListener("click", stopLive);
   </script>
+
 </body>
 </html>
