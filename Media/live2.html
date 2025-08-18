@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRFChain Media - Go Live</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #fff; text-align: center; padding: 20px; }
-    video { width: 90%; max-width: 600px; border-radius: 12px; margin-top: 20px; background: #000; }
-    button { margin: 15px; padding: 12px 24px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; }
-    #goLiveBtn { background: #28a745; color: white; }
-    #stopBtn { background: #dc3545; color: white; }
-    #status { margin-top: 15px; font-weight: bold; }
-    a.playback { color: #1e90ff; display: block; margin-top: 20px; }
+    body { font-family: Arial; text-align: center; background:#111; color:#fff; padding:20px; }
+    video { width:90%; max-width:600px; margin-top:20px; border-radius:12px; background:#000; }
+    button { padding:12px 24px; margin:10px; border:none; border-radius:8px; cursor:pointer; font-size:16px; }
+    #goLiveBtn { background:#28a745; color:white; }
+    #stopBtn { background:#dc3545; color:white; }
+    #status { margin-top:15px; font-weight:bold; }
+    a.playback { color:#1e90ff; display:block; margin-top:20px; }
   </style>
   
   <!-- Firebase SDK -->
@@ -31,9 +31,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const functions = getFunctions(app);
-
-    // Expose functions globally
+    const functions = getFunctions(app, "us-central1"); // replace region if different
     window.firebaseFunctions = functions;
   </script>
 </head>
@@ -45,7 +43,6 @@
   <p id="status">Not live</p>
   <a id="playbackLink" class="playback" href="#" target="_blank"></a>
 
-  <!-- Livepeer WebRTC SDK -->
   <script src="https://unpkg.com/@livepeer/webrtmp-sdk"></script>
 
   <script type="module">
@@ -55,7 +52,6 @@
     const preview = document.getElementById("preview");
     const playbackLink = document.getElementById("playbackLink");
 
-    // Your Livepeer stream info
     const STREAM_ID = "71f601e4-3d7b-4428-9bc5-23c1049d9e61";
     const PLAYBACK_URL = "https://livepeercdn.studio/hls/71f6n2n0h31cgvn1/index.m3u8";
 
@@ -65,17 +61,16 @@
     async function startLive() {
       try {
         statusEl.innerText = "Requesting camera/mic...";
-        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
         preview.srcObject = mediaStream;
 
         statusEl.innerText = "Fetching Livepeer token...";
-        // Call Firebase Cloud Function to get temporary token
         const getToken = httpsCallable(window.firebaseFunctions, 'getLivepeerToken');
         const res = await getToken({ streamId: STREAM_ID });
+        if(res.data.error){ throw new Error(res.data.error); }
         const token = res.data.token;
 
         statusEl.innerText = "Starting live stream...";
-
         const client = new Livepeer.WebRTMP.Client({ token });
         session = client.cast(mediaStream, { streamKey: STREAM_ID });
         await session.start();
@@ -85,24 +80,18 @@
         playbackLink.innerText = "📺 Watch playback here";
         goLiveBtn.disabled = true;
         stopBtn.disabled = false;
-      } catch (err) {
+      } catch(err) {
         console.error("Failed to start live stream:", err);
         statusEl.innerText = "❌ Failed to start live stream. Check console.";
       }
     }
 
     function stopLive() {
-      if (session) {
-        session.close();
-        session = null;
-      }
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        preview.srcObject = null;
-      }
-      statusEl.innerText = "Stopped";
-      goLiveBtn.disabled = false;
-      stopBtn.disabled = true;
+      if(session){ session.close(); session=null; }
+      if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); preview.srcObject=null; }
+      statusEl.innerText="Stopped";
+      goLiveBtn.disabled=false;
+      stopBtn.disabled=true;
     }
 
     goLiveBtn.addEventListener("click", startLive);
