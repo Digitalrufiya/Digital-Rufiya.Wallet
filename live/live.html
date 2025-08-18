@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFChain Media Go Live</title>
+</head>
+<body style="font-family: Arial; padding:20px;">
+
+  <h2>🎥 DRFChain Media - Go Live</h2>
+  <button id="goLiveBtn">Go Live</button>
+
+  <h3>🔑 Stream Info:</h3>
+  <pre id="output">Not live yet...</pre>
+
+  <script>
+    const goLiveBtn = document.getElementById("goLiveBtn");
+    const output = document.getElementById("output");
+
+    goLiveBtn.addEventListener("click", async () => {
+      output.textContent = "⏳ Creating live stream...";
+      try {
+        // Make sure both files are on the same PHP-enabled hosting
+        const response = await fetch("live.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "DRFChain Live Stream" })
+        });
+
+        const data = await response.json();
+        console.log("Livepeer response:", data);
+
+        if (data.streamKey) {
+          output.textContent = `
+Stream Key: ${data.streamKey}
+Playback ID: ${data.playbackId}
+Playback URL: https://livepeercdn.studio/hls/${data.playbackId}/index.m3u8
+Embed: https://lvpr.tv/broadcast/${data.id}
+`;
+          alert("✅ Stream created! Use the streamKey in OBS, Larix, or mobile RTMP to start streaming.");
+        } else {
+          output.textContent = "❌ Failed to create stream. Check console.";
+        }
+      } catch (err) {
+        console.error(err);
+        output.textContent = "❌ Error: " + err.message;
+      }
+    });
+  </script>
+
+</body>
+</html>
