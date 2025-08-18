@@ -20,12 +20,14 @@
     goLiveBtn.addEventListener("click", async () => {
       output.textContent = "⏳ Creating live stream...";
       try {
-        const response = await fetch("live.php", {  // call your backend PHP file
+        // Make sure live.php is in the same folder and your server supports PHP
+        const response = await fetch("live.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: "DRFChain Live Stream" })
         });
 
+        // Parse JSON response
         const data = await response.json();
         console.log("Livepeer response:", data);
 
@@ -33,7 +35,7 @@
           output.textContent = JSON.stringify(data, null, 2);
           alert("✅ Stream created! Use the streamKey in OBS or Larix to start streaming.");
         } else {
-          output.textContent = "❌ Failed to create stream. Check console.";
+          output.textContent = "❌ Failed to create stream. Check console for details.";
         }
       } catch (err) {
         console.error(err);
