@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Marketing Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <!-- Header -->
+  <header class="mb-6">
+    <h1 class="text-3xl font-bold text-indigo-600">DRF Marketing Platform</h1>
+    <p class="text-gray-600">Create, preview, schedule, and share posts for DRF platforms</p>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- Left Sidebar -->
+    <aside class="bg-white p-4 rounded shadow h-fit">
+      <h2 class="text-xl font-bold mb-4">Menu</h2>
+      <ul class="space-y-2">
+        <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('create')">Create Post</button></li>
+        <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('scheduled')">Scheduled Posts</button></li>
+        <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('analytics')">Analytics</button></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="md:col-span-2 space-y-6">
+
+      <!-- Create Post Section -->
+      <section id="create" class="bg-white p-6 rounded shadow">
+        <h2 class="text-2xl font-bold mb-4">Create New Post</h2>
+
+        <!-- Post Text -->
+        <textarea id="postText" placeholder="Write your post here..." class="w-full p-3 border rounded mb-4 h-24"></textarea>
+
+        <!-- File Upload -->
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.webm" class="mb-4">
+
+        <!-- Preview Container -->
+        <div id="preview" class="mb-4"></div>
+
+        <!-- Hashtags -->
+        <div class="mb-4">
+          <span class="text-gray-500 mr-2">Hashtags:</span>
+          <span class="text-indigo-600">#DRF</span>
+          <span class="text-indigo-600">#DRFMedia</span>
+          <span class="text-indigo-600">#DRFTube</span>
+          <span class="text-indigo-600">#DRFWallet</span>
+          <span class="text-indigo-600">#DigitalRufiyaCoin</span>
+          <span class="text-indigo-600">#DRFChain</span>
+        </div>
+
+        <!-- Schedule -->
+        <div class="mb-4">
+          <label class="text-gray-700 mr-2">Schedule Date & Time:</label>
+          <input type="datetime-local" id="scheduleTime" class="border p-2 rounded">
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-4 mb-4">
+          <button id="postNow" class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">
+            <i class="fas fa-paper-plane mr-2"></i>Preview
+          </button>
+          <button id="scheduleLater" class="bg-gray-300 text-gray-800 px-6 py-2 rounded hover:bg-gray-400">
+            <i class="fas fa-clock mr-2"></i>Schedule Later
+          </button>
+        </div>
+
+        <!-- Share Buttons -->
+        <div id="shareButtons" class="flex gap-3 mb-4 hidden">
+          <a id="fbShare" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded">Facebook</a>
+          <a id="twShare" href="#" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded">Twitter/X</a>
+          <a id="lnShare" href="#" target="_blank" class="bg-blue-700 text-white px-4 py-2 rounded">LinkedIn</a>
+          <a id="ttShare" href="#" target="_blank" class="bg-pink-500 text-white px-4 py-2 rounded">TikTok</a>
+        </div>
+      </section>
+
+      <!-- Scheduled Posts Section -->
+      <section id="scheduled" class="bg-white p-6 rounded shadow hidden">
+        <h2 class="text-2xl font-bold mb-4">Scheduled Posts</h2>
+        <ul id="scheduledPosts" class="space-y-2"></ul>
+      </section>
+
+      <!-- Analytics Section -->
+      <section id="analytics" class="bg-white p-6 rounded shadow hidden">
+        <h2 class="text-2xl font-bold mb-4">Analytics</h2>
+        <canvas id="engagementChart" class="mb-6"></canvas>
+        <h3 class="text-lg font-bold mb-2">Top Posts</h3>
+        <table class="min-w-full border rounded">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="py-2 px-4 text-left">Post</th>
+              <th class="py-2 px-4">Platform</th>
+              <th class="py-2 px-4">Impressions</th>
+              <th class="py-2 px-4">Likes</th>
+              <th class="py-2 px-4">Comments</th>
+            </tr>
+          </thead>
+          <tbody id="topPosts"></tbody>
+        </table>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Sidebar Navigation
+    function showSection(section) {
+      document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(section).classList.remove('hidden');
+    }
+
+    // Post & Preview Logic
+    const postText = document.getElementById('postText');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const shareButtons = document.getElementById('shareButtons');
+    const hashtags = "#DRF #DRFMedia #DRFTube #DRFWallet #DigitalRufiyaCoin #DRFChain";
+    const scheduledPosts = document.getElementById('scheduledPosts');
+
+    fileInput.addEventListener('change', function() {
+      preview.innerHTML = '';
+      const file = this.files[0];
+      if (!file) return;
+
+      const fileType = file.type;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let element;
+        if (fileType.startsWith('image/')) {
+          element = document.createElement('img');
+          element.src = e.target.result;
+          element.className = 'max-h-64 rounded mb-2';
+        } else if (fileType.startsWith('video/')) {
+          element = document.createElement('video');
+          element.src = e.target.result;
+          element.controls = true;
+          element.className = 'max-h-64 rounded mb-2';
+        } else {
+          element = document.createElement('p');
+          element.textContent = 'Preview not available for this file type.';
+        }
+        preview.appendChild(element);
+      }
+      reader.readAsDataURL(file);
+    });
+
+    function appendHashtags() {
+      if (!postText.value.includes(hashtags)) postText.value += " " + hashtags;
+    }
+
+    // Share Buttons
+    document.getElementById('postNow').addEventListener('click', function() {
+      appendHashtags();
+      const text = encodeURIComponent(postText.value);
+      const url = encodeURIComponent("https://drfmedia.com"); // Your site link
+
+      shareButtons.classList.remove('hidden');
+      document.getElementById('fbShare').href = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
+      document.getElementById('twShare').href = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+      document.getElementById('lnShare').href = `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${text}`;
+      document.getElementById('ttShare').href = `https://www.tiktok.com/share?text=${text}`;
+
+      alert("Post preview ready! Click any share button to post.");
+    });
+
+    // Schedule Posts
+    document.getElementById('scheduleLater').addEventListener('click', function() {
+      appendHashtags();
+      const time = document.getElementById('scheduleTime').value;
+      if (!time) { alert("Please select a date & time!"); return; }
+      const li = document.createElement('li');
+      li.textContent = `${postText.value} (Scheduled: ${new Date(time).toLocaleString()})`;
+      scheduledPosts.appendChild(li);
+      alert("Post scheduled! (Manual share required)");
+      postText.value = '';
+      fileInput.value = '';
+      preview.innerHTML = '';
+      shareButtons.classList.add('hidden');
+      document.getElementById('scheduleTime').value = '';
+    });
+
+    // Analytics (Sample Data)
+    const platforms = ['Facebook', 'TikTok', 'YouTube', 'Instagram', 'X', 'Telegram'];
+    const impressions = [1200, 900, 670, 940, 500, 300];
+    const likes = [300, 200, 150, 220, 100, 50];
+    const comments = [50, 30, 20, 40, 10, 5];
+
+    const ctx = document.getElementById('engagementChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: platforms,
+        datasets: [
+          { label: 'Impressions', data: impressions, backgroundColor: 'rgba(99, 102, 241, 0.7)' },
+          { label: 'Likes', data: likes, backgroundColor: 'rgba(16, 185, 129, 0.7)' },
+          { label: 'Comments', data: comments, backgroundColor: 'rgba(248, 113, 113, 0.7)' }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' }, title: { display: true, text: 'Platform Engagement Overview' } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    const topPostsData = [
+      { post: 'DRF Wallet Tutorial', platform: 'YouTube', impressions: 670, likes: 150, comments: 20 },
+      { post: 'Weekly Giveaway', platform: 'Facebook', impressions: 1200, likes: 300, comments: 50 },
+      { post: 'DRFTube Trending Video', platform: 'TikTok', impressions: 900, likes: 200, comments: 30 },
+    ];
+
+    const topPostsTbody = document.getElementById('topPosts');
+    topPostsData.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b';
+      tr.innerHTML = `
+        <td class="py-2 px-4">${item.post}</td>
+        <td class="py-2 px-4 text-center">${item.platform}</td>
+        <td class="py-2 px-4 text-center">${item.impressions}</td>
+        <td class="py-2 px-4 text-center">${item.likes}</td>
+        <td class="py-2 px-4 text-center">${item.comments}</td>
+      `;
+      topPostsTbody.appendChild(tr);
+    });
+  </script>
+
+</body>
+</html>
