@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRF Marketing Platform - Pay to Unlock</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{background-color:#f3f4f6;}
+#dropArea{border:2px dashed #a5b4fc;padding:20px;text-align:center;cursor:pointer;border-radius:8px;}
+#dropArea.dragover{background-color:#eef2ff;}
+.media-item{max-height:120px;border-radius:8px;margin:5px;cursor:grab;position:relative;}
+.logo-overlay{position:absolute;bottom:5px;right:5px;width:30px;height:30px;border-radius:50%;pointer-events:none;}
+.carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:10px;}
+.carousel-item{scroll-snap-align:start;flex:0 0 auto;position:relative;}
+.carousel-item img,.carousel-item video{max-height:200px;border-radius:8px;}
+</style>
+</head>
+<body class="p-4">
+
+<div id="paymentScreen" class="text-center">
+  <h1 class="text-3xl font-bold text-indigo-600 mb-4">DRF Marketing Platform</h1>
+  <p class="mb-4">Pay <strong>2 DRF</strong> to unlock full features.</p>
+  <a id="trustPay" href="https://link.trustwallet.com/send?coin=20000714&address=0x88253D87990EdD1E647c3B6eD21F57fb061a3040&amount=2.0&token_id=0x7788a60dbC85AB46767F413EC7d51F149AA1bec6" target="_blank" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 inline-block mb-4">Pay 2 DRF</a>
+  <p>After payment, paste your <strong>transaction hash</strong> below:</p>
+  <input type="text" id="txHash" placeholder="Enter transaction hash" class="border p-2 rounded w-2/3 mb-2">
+  <button id="verifyPayment" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Verify Payment & Unlock</button>
+</div>
+
+<div id="dashboard" class="hidden">
+<header class="mb-4 text-center">
+  <h1 class="text-3xl font-bold text-indigo-600">DRF Marketing Platform</h1>
+  <p class="text-gray-600">Create, schedule & auto-post DRF content across platforms</p>
+</header>
+
+<div class="md:grid md:grid-cols-3 md:gap-6">
+<aside class="bg-white p-4 rounded shadow mb-4 md:mb-0 h-fit">
+  <h2 class="text-xl font-bold mb-4">Menu</h2>
+  <ul class="space-y-2">
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('create')">Create Post</button></li>
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('scheduled')">Scheduled Posts</button></li>
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('analytics')">Analytics</button></li>
+  </ul>
+</aside>
+
+<main class="md:col-span-2 space-y-6">
+
+<section id="create" class="bg-white p-4 rounded shadow">
+<h2 class="text-2xl font-bold mb-4">Create & Queue Posts</h2>
+
+<label class="font-semibold mb-2 block">Select a Promotional Caption:</label>
+<select id="promoSelect" class="w-full border p-2 rounded mb-4">
+  <option value="">-- Choose a Caption --</option>
+  <option value="🚀 Discover the power of DRF Wallet! Secure, fast & easy. #DRF #DRFWallet #DigitalRufiyaCoin #DRFChain">DRF Wallet Promo</option>
+  <option value="🎥 Check out the latest DRFTube video! Crypto news & insights. #DRFTube #DRFMedia #DRFChain">DRFTube Update</option>
+  <option value="📢 DRFMedia is LIVE! Stay updated with the latest DRF ecosystem news. #DRFMedia #DRFChain">DRFMedia Update</option>
+  <option value="🎁 Join our weekly giveaway & earn free DRF coins! #DRF #Giveaway #DRFChain">Giveaway / Contest</option>
+  <option value="💡 Learn how to use DRFChain and grow your crypto portfolio! #DRFChain #DigitalRufiyaCoin #Crypto">DRFChain Education</option>
+</select>
+
+<textarea id="postText" placeholder="Write your post here..." class="w-full p-3 border rounded mb-4 h-24"></textarea>
+
+<div id="dropArea" class="mb-4">
+Drag & drop images/videos here or tap to select
+<input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.webm" class="hidden">
+</div>
+
+<div id="preview" class="carousel mb-4"></div>
+
+<div class="mb-4 text-center">
+<span class="text-gray-500 mr-2">Hashtags:</span>
+<span class="text-indigo-600">#DRF</span>
+<span class="text-indigo-600">#DRFMedia</span>
+<span class="text-indigo-600">#DRFTube</span>
+<span class="text-indigo-600">#DRFWallet</span>
+<span class="text-indigo-600">#DigitalRufiyaCoin</span>
+<span class="text-indigo-600">#DRFChain</span>
+</div>
+
+<div class="flex flex-wrap gap-2 justify-center mb-4">
+<button id="queuePost" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"><i class="fas fa-plus mr-1"></i>Add to Queue</button>
+<button id="runQueue" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"><i class="fas fa-robot mr-1"></i>Run Auto Queue</button>
+</div>
+
+<div id="shareButtons" class="flex flex-wrap gap-2 justify-center mb-4 hidden">
+<a id="fbShare" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded">Facebook</a>
+<a id="twShare" href="#" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded">Twitter/X</a>
+<a id="lnShare" href="#" target="_blank" class="bg-blue-700 text-white px-4 py-2 rounded">LinkedIn</a>
+<a id="ttShare" href="#" target="_blank" class="bg-pink-500 text-white px-4 py-2 rounded">TikTok</a>
+</div>
+</section>
+
+<section id="scheduled" class="bg-white p-4 rounded shadow hidden">
+<h2 class="text-2xl font-bold mb-4">Scheduled & Queued Posts</h2>
+<ul id="scheduledPosts" class="space-y-2"></ul>
+</section>
+
+<section id="analytics" class="bg-white p-4 rounded shadow hidden">
+<h2 class="text-2xl font-bold mb-4">Analytics</h2>
+<ul id="clickAnalytics" class="space-y-2"></ul>
+</section>
+
+</main>
+</div>
+</div>
+
+<script>
+// Payment Verification
+document.getElementById('verifyPayment').addEventListener('click',()=>{
+  const hash=document.getElementById('txHash').value.trim();
+  if(!hash){alert("Enter transaction hash"); return;}
+  if(hash.length>10){
+    alert("Payment verified! Dashboard unlocked.");
+    document.getElementById('paymentScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+  } else { alert("Invalid transaction hash"); }
+});
+
+// Section toggle
+function showSection(section){
+  document.querySelectorAll('main section').forEach(sec=>sec.classList.add('hidden'));
+  document.getElementById(section).classList.remove('hidden');
+}
+
+// Drag & Drop Media
+const dropArea=document.getElementById('dropArea');
+const fileInput=document.getElementById('fileInput');
+const preview=document.getElementById('preview');
+let mediaFiles=[];
+dropArea.addEventListener('click',()=>fileInput.click());
+dropArea.addEventListener('dragover',e=>{e.preventDefault(); dropArea.classList.add('dragover');});
+dropArea.addEventListener('dragleave',e=>{e.preventDefault(); dropArea.classList.remove('dragover');});
+dropArea.addEventListener('drop',e=>{e.preventDefault(); dropArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files);});
+fileInput.addEventListener('change',()=>handleFiles(fileInput.files));
+function handleFiles(files){ Array.from(files).forEach(file=>{ mediaFiles.push(file); displayFile(file); });}
+function displayFile(file){
+  const url=URL.createObjectURL(file);
+  const div=document.createElement('div'); div.className='carousel-item relative';
+  let elem;
+  if(file.type.startsWith('video')){ elem=document.createElement('video'); elem.src=url; elem.controls=true; elem.className='rounded';}
+  else{ elem=document.createElement('img'); elem.src=url; elem.className='rounded';}
+  const logo=document.createElement('img'); logo.src='https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226'; logo.className='logo-overlay';
+  div.appendChild(elem); div.appendChild(logo); preview.appendChild(div);
+}
+
+// Post Queue
+let postQueue=[];
+document.getElementById('queuePost').addEventListener('click',()=>{
+  const text=document.getElementById('postText').value.trim() || document.getElementById('promoSelect').value;
+  if(!text){alert("Enter post text or select promo"); return;}
+  const id='post'+Date.now();
+  postQueue.push({id,text,media:[...mediaFiles]});
+  updateScheduled();
+  document.getElementById('postText').value=''; mediaFiles=[]; preview.innerHTML='';
+  alert('Post added to queue!');
+});
+
+// Update Scheduled Posts
+function updateScheduled(){
+  const ul=document.getElementById('scheduledPosts'); ul.innerHTML='';
+  postQueue.forEach(p=>{ 
+    const li=document.createElement('li'); 
+    li.className='border p-2 rounded flex justify-between items-center'; 
+    li.innerHTML=`<span>${p.text}</span> <button class="bg-red-500 text-white px-2 py-1 rounded" onclick="removePost('${p.id}')">Remove</button>`; 
+    ul.appendChild(li);
+  });
+}
+function removePost(id){ postQueue=postQueue.filter(p=>p.id!==id); updateScheduled(); updateAnalytics();}
+
+// Run Auto Queue
+document.getElementById('runQueue').addEventListener('click',()=>{
+  if(postQueue.length===0){alert("No posts in queue"); return;}
+  postQueue.forEach(p=>{
+    const baseLink='https://www.drfchain.org/Market/promote.html/'+p.id;
+    document.getElementById('fbShare').href='https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(baseLink);
+    document.getElementById('twShare').href='https://twitter.com/intent/tweet?url='+encodeURIComponent(baseLink)+'&text='+encodeURIComponent(p.text);
+    document.getElementById('lnShare').href='https://www.linkedin.com/shareArticle?mini=true&url='+encodeURIComponent(baseLink)+'&title='+encodeURIComponent(p.text);
+    document.getElementById('ttShare').href='https://www.tiktok.com/share/video?url='+encodeURIComponent(baseLink);
+  });
+  document.getElementById('shareButtons').classList.remove('hidden');
+  updateAnalytics();
+});
+
+// Analytics
+function updateAnalytics(){
+  const ul=document.getElementById('clickAnalytics'); ul.innerHTML='';
+  postQueue.forEach(p=>{
+    const clicks=localStorage.getItem('clicks_'+p.id)||0;
+    const li=document.createElement('li'); li.className='border p-2 rounded';
+    li.innerHTML=`<strong>${p.text}</strong> - Clicks: ${clicks}`;
+    ul.appendChild(li);
+  });
+}
+
+// Track clicks on promote.html links (to be included on promote.html)
+if(window.location.href.includes('promote.html')){
+  const postId=window.location.href.split('/').pop();
+  const clicks=localStorage.getItem('clicks_'+postId)||0;
+  localStorage.setItem('clicks_'+postId,parseInt(clicks)+1);
+}
+</script>
+</body>
+</html>
