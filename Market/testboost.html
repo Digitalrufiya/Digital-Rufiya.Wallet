@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Marketplace</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.7.5/dist/web3.min.js"></script>
+</head>
+<body style="font-family: Arial; padding:20px;">
+  <h1>🚀 DRF Marketplace</h1>
+  <p>Post your product for only <b>1 USDT</b></p>
+
+  <form id="postForm">
+    <input type="text" id="title" placeholder="Product Title" required><br><br>
+    <textarea id="desc" placeholder="Product Description" required></textarea><br><br>
+    <button type="submit">Pay & Post (1 USDT)</button>
+  </form>
+
+  <script>
+    const USDT_CONTRACT = "0x55d398326f99059fF775485246999027B3197955"; // BSC USDT
+    const OWNER_ADDRESS = "YOUR_WALLET_ADDRESS"; // your wallet to receive fees
+
+    async function payUSDT() {
+      if (window.ethereum) {
+        await ethereum.request({ method: "eth_requestAccounts" });
+        const web3 = new Web3(window.ethereum);
+        const accounts = await web3.eth.getAccounts();
+
+        const usdt = new web3.eth.Contract([
+          {
+            "constant": false,
+            "inputs": [
+              { "name": "_to", "type": "address" },
+              { "name": "_value", "type": "uint256" }
+            ],
+            "name": "transfer",
+            "outputs": [{ "name": "", "type": "bool" }],
+            "type": "function"
+          }
+        ], USDT_CONTRACT);
+
+        const amount = web3.utils.toWei("1", "ether"); // 1 USDT = 1e18 decimals
+
+        await usdt.methods.transfer(OWNER_ADDRESS, amount).send({ from: accounts[0] });
+        alert("✅ Payment successful! Your product is posted.");
+      } else {
+        alert("Please install MetaMask!");
+      }
+    }
+
+    document.getElementById("postForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      await payUSDT();
+    });
+  </script>
+</body>
+</html>
