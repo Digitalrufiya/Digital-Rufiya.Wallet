@@ -3,91 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DRF Marketing Platform</title>
+<title>DRF Marketing Tool</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-#dropArea {border:2px dashed #a5b4fc; padding:20px; text-align:center; cursor:pointer; border-radius:8px;}
-#dropArea.dragover { background-color:#eef2ff; }
-.media-item { max-height:120px; border-radius:8px; margin:5px; cursor:grab; position:relative; }
-.media-container { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
-.logo-overlay { position:absolute; bottom:5px; right:5px; width:30px; height:30px; border-radius:50%; pointer-events:none; }
-.carousel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:10px; padding-bottom:10px; }
-.carousel-item { scroll-snap-align:start; flex:0 0 auto; position:relative; }
-.carousel-item img, .carousel-item video { max-height:200px; border-radius:8px; }
+  body { background:#f0f2f5; font-family:sans-serif; }
+  #uploadSection { background:white; padding:20px; margin:20px auto; max-width:700px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+  #dropArea { border:2px dashed #6366f1; padding:20px; text-align:center; border-radius:8px; cursor:pointer; margin-bottom:10px; }
+  #dropArea.dragover { background:#eef2ff; }
+  .carousel { display:flex; overflow-x:auto; gap:10px; margin-top:10px; }
+  .carousel-item { position:relative; flex:0 0 auto; scroll-snap-align:start; }
+  .carousel-item img, .carousel-item video { max-height:200px; border-radius:8px; }
+  .logo-overlay { position:absolute; bottom:5px; right:5px; width:30px; height:30px; pointer-events:none; border-radius:50%; }
+  .post { background:white; margin:20px auto; max-width:700px; padding:15px; border-radius:8px; box-shadow:0 0 6px rgba(0,0,0,0.1); }
+  .buttons { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .buttons button { flex:1; padding:8px; border:none; border-radius:5px; cursor:pointer; color:white; }
+  .share-btn { background:#6366f1; }
 </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body>
 
-<header class="mb-4 text-center">
-  <h1 class="text-3xl font-bold text-indigo-600">DRF Marketing Platform</h1>
-  <p class="text-gray-600">Upload, preview & share promo posts</p>
-</header>
-
-<div class="md:grid md:grid-cols-3 md:gap-6">
-<aside class="bg-white p-4 rounded shadow mb-4 md:mb-0 h-fit">
-  <h2 class="text-xl font-bold mb-4">Menu</h2>
-  <ul class="space-y-2">
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('create')">Create Post</button></li>
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('scheduled')">Scheduled Posts</button></li>
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('analytics')">Analytics</button></li>
-  </ul>
-</aside>
-
-<main class="md:col-span-2 space-y-6">
-
-<section id="create" class="bg-white p-4 rounded shadow">
-<h2 class="text-2xl font-bold mb-4">Create New Post</h2>
-
-<textarea id="postText" placeholder="Write your post..." class="w-full p-3 border rounded mb-4 h-24"></textarea>
-
-<div id="dropArea" class="mb-4">
-Drag & drop images/videos here or tap to select
-<input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.webm" class="hidden">
-</div>
-
-<div id="preview" class="carousel mb-4"></div>
-
-<div class="flex flex-wrap gap-2 justify-center mb-4">
-<button id="uploadPinata" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"><i class="fas fa-cloud-upload-alt mr-1"></i>Upload & Preview</button>
-<button id="shareButtonsBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"><i class="fas fa-share-alt mr-1"></i>Show Share Buttons</button>
-</div>
-
-<div id="shareButtons" class="flex flex-wrap gap-2 justify-center mb-4 hidden">
-<a id="fbShare" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded">Facebook</a>
-<a id="twShare" href="#" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded">Twitter/X</a>
-<a id="lnShare" href="#" target="_blank" class="bg-blue-700 text-white px-4 py-2 rounded">LinkedIn</a>
-<a id="ttShare" href="#" target="_blank" class="bg-pink-500 text-white px-4 py-2 rounded">TikTok</a>
-</div>
+<section id="uploadSection">
+  <h2 class="text-xl font-bold mb-2">Create Marketing Post</h2>
+  <textarea id="postText" placeholder="Write your post..." class="w-full p-2 border rounded mb-2"></textarea>
+  <div id="dropArea">Drag & drop images/videos here or click to select
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" class="hidden">
+  </div>
+  <div id="preview" class="carousel"></div>
+  <button id="uploadBtn" class="bg-green-600 px-4 py-2 rounded text-white mt-2">Upload Post</button>
+  <div id="uploadStatus" class="mt-2 text-gray-600"></div>
 </section>
 
-<section id="scheduled" class="bg-white p-4 rounded shadow hidden">
-<h2 class="text-2xl font-bold mb-4">Scheduled Posts</h2>
-<ul id="scheduledPosts" class="space-y-2"></ul>
-</section>
+<section id="feed"></section>
+<div id="loading" class="text-center mt-4 text-gray-500">Loading posts...</div>
 
-<section id="analytics" class="bg-white p-4 rounded shadow hidden">
-<h2 class="text-2xl font-bold mb-4">Analytics</h2>
-<canvas id="engagementChart" class="mb-4"></canvas>
-</section>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-</main>
-</div>
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+};
 
-<script>
-const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Your JWT
+
+let currentUser = null;
+onAuthStateChanged(auth, user => { if(!user) signInAnonymously(auth).catch(console.error); else currentUser=user; });
+
+const dropArea = document.getElementById("dropArea");
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const postText = document.getElementById("postText");
+const uploadBtn = document.getElementById("uploadBtn");
+const feed = document.getElementById("feed");
+const uploadStatus = document.getElementById("uploadStatus");
 
 let mediaFiles = [];
-const dropArea = document.getElementById('dropArea');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
 
-dropArea.addEventListener('click', ()=> fileInput.click());
-dropArea.addEventListener('dragover', e=> { e.preventDefault(); dropArea.classList.add('dragover'); });
-dropArea.addEventListener('dragleave', e=> { e.preventDefault(); dropArea.classList.remove('dragover'); });
-dropArea.addEventListener('drop', e=> { e.preventDefault(); dropArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-fileInput.addEventListener('change', ()=> handleFiles(fileInput.files));
+dropArea.addEventListener("click",()=>fileInput.click());
+dropArea.addEventListener("dragover",e=>{ e.preventDefault(); dropArea.classList.add("dragover"); });
+dropArea.addEventListener("dragleave",e=>{ e.preventDefault(); dropArea.classList.remove("dragover"); });
+dropArea.addEventListener("drop",e=>{ e.preventDefault(); dropArea.classList.remove("dragover"); handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener("change",()=>handleFiles(fileInput.files));
 
 function handleFiles(files){
   Array.from(files).forEach(f=>mediaFiles.push(f));
@@ -95,74 +81,79 @@ function handleFiles(files){
 }
 
 function renderPreview(){
-  preview.innerHTML = '';
+  preview.innerHTML='';
   mediaFiles.forEach((file,index)=>{
     const reader = new FileReader();
-    reader.onload = async e => {
-      const div = document.createElement('div');
-      div.className = 'carousel-item';
+    reader.onload = e=>{
+      const div = document.createElement("div"); div.className='carousel-item';
       let el;
-      if(file.type.startsWith('image/')){
-        el = document.createElement('img'); el.src = e.target.result; el.className='media-item';
-        // Add watermark
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = ()=>{
-          canvas.width = img.width; canvas.height = img.height;
-          ctx.drawImage(img,0,0);
-          const logo = new Image(); logo.src='https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226';
-          logo.onload = ()=>{ ctx.drawImage(logo, img.width-50, img.height-50, 40,40); el.src = canvas.toDataURL(); };
-        }
-      } else if(file.type.startsWith('video/')){
-        el = document.createElement('video'); el.src=e.target.result; el.controls=true; el.className='media-item';
-        // Note: watermarking videos client-side is complex; we’ll overlay logo in preview
-      }
-      div.appendChild(el);
-      if(file.type.startsWith('video/')){
-        const logoDiv = document.createElement('img'); logoDiv.src='https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226';
-        logoDiv.className='logo-overlay'; div.appendChild(logoDiv);
-      }
+      if(file.type.startsWith("image/")) el=document.createElement("img");
+      else if(file.type.startsWith("video/")){ el=document.createElement("video"); el.controls=true; }
+      el.src = e.target.result; el.className="carousel-item";
+      const logo = document.createElement("img"); logo.src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"; logo.className="logo-overlay";
+      div.appendChild(el); div.appendChild(logo);
       preview.appendChild(div);
-    }
+    };
     reader.readAsDataURL(file);
   });
 }
 
-// Upload to Pinata
-document.getElementById('uploadPinata').addEventListener('click', async ()=>{
-  if(mediaFiles.length === 0){ alert('Add files first!'); return; }
-  for(const file of mediaFiles){
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS',{
-      method:'POST',
-      headers:{ Authorization: `Bearer ${PINATA_JWT}` },
-      body: formData
-    });
-    const data = await res.json();
-    console.log('Uploaded to Pinata:', data.IpfsHash);
-  }
-  alert('All files uploaded to Pinata!');
-});
-
-// Show share buttons
-document.getElementById('shareButtonsBtn').addEventListener('click', ()=>{
-  document.getElementById('shareButtons').classList.toggle('hidden');
-  const text = encodeURIComponent(document.getElementById('postText').value + " #DRF #DRFChain");
-  const url = encodeURIComponent('https://drfchain.org');
-  document.getElementById('fbShare').href=`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
-  document.getElementById('twShare').href=`https://twitter.com/intent/tweet?text=${text}&url=${url}`;
-  document.getElementById('lnShare').href=`https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${text}`;
-  document.getElementById('ttShare').href=`https://www.tiktok.com/share?text=${text}`;
-});
-
-// Section switch
-function showSection(section){
-  document.querySelectorAll('main section').forEach(sec=>sec.classList.add('hidden'));
-  document.getElementById(section).classList.remove('hidden');
+async function uploadToPinata(file){
+  const url="https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const formData = new FormData(); formData.append("file",file);
+  const res = await fetch(url,{method:"POST", headers:{Authorization:`Bearer ${pinataJWT}`}, body:formData});
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const data = await res.json(); return data.IpfsHash;
 }
+
+uploadBtn.onclick = async ()=>{
+  if(!postText.value.trim() || mediaFiles.length===0){ alert("Post text and media required"); return; }
+  uploadBtn.disabled = true; uploadStatus.textContent="Uploading...";
+  try{
+    const uploadedMedia=[];
+    for(const f of mediaFiles){
+      const ipfsHash = await uploadToPinata(f);
+      uploadedMedia.push({ ipfsHash, type: f.type.startsWith("video")?"video":"image" });
+    }
+    await addDoc(collection(db,"marketingPosts"),{
+      text: postText.value.trim(),
+      media: uploadedMedia,
+      createdAt: serverTimestamp()
+    });
+    uploadStatus.textContent="Upload successful!";
+    postText.value=""; preview.innerHTML=""; mediaFiles=[];
+    loadFeed();
+  }catch(err){ console.error(err); uploadStatus.textContent="Upload failed!"; }
+  finally{ uploadBtn.disabled=false; }
+};
+
+async function loadFeed(){
+  feed.innerHTML=""; document.getElementById("loading").style.display="block";
+  try{
+    const q = query(collection(db,"marketingPosts"), orderBy("createdAt","desc"));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(doc=>{
+      const data = doc.data(); const div=document.createElement("div"); div.className="post";
+      div.innerHTML = `<p>${data.text}</p><div class="carousel"></div><div class="buttons"><button class="share-btn">Share</button></div>`;
+      const carouselDiv = div.querySelector(".carousel");
+      data.media.forEach(m=>{
+        let el;
+        if(m.type==="video"){ el=document.createElement("video"); el.controls=true; el.src="https://gateway.pinata.cloud/ipfs/"+m.ipfsHash; }
+        else{ el=document.createElement("img"); el.src="https://gateway.pinata.cloud/ipfs/"+m.ipfsHash; }
+        el.style.maxHeight="200px"; el.style.borderRadius="8px";
+        const logo = document.createElement("img"); logo.src="https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"; logo.className="logo-overlay";
+        const wrapper = document.createElement("div"); wrapper.className="carousel-item"; wrapper.appendChild(el); wrapper.appendChild(logo);
+        carouselDiv.appendChild(wrapper);
+      });
+      div.querySelector(".share-btn").onclick=()=>{ if(navigator.share) navigator.share({title:"DRF Post", text:data.text, url:window.location.href}); else alert("Sharing not supported"); };
+      feed.appendChild(div);
+    });
+  }catch(err){ console.error(err); }
+  document.getElementById("loading").style.display="none";
+}
+
+// Initial load
+loadFeed();
 </script>
 </body>
 </html>
