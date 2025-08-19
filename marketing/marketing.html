@@ -8,25 +8,113 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.258.0/dist/lucide.min.js"></script>
+  <style>
+    /* Optional custom styles */
+    body { background-color: #f1f5f9; }
+  </style>
 </head>
 <body class="bg-slate-100">
-
   <div id="root"></div>
 
   <!-- React + ReactDOM CDN -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
   <!-- Recharts CDN -->
   <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
 
-  <!-- App.js -->
-  <script type="text/babel">
-    // Paste the full App.js code here
-    // (The full DRFMarketingDashboard code we just created)
-  </script>
-
-  <!-- Babel CDN for JSX support -->
+  <!-- Babel CDN (for JSX support) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- App.js code (must be AFTER Babel) -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+    const { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } = Recharts;
+    const { Home, CalendarClock, BarChart3, Settings, PlusSquare, Send, Clock, Hashtag, Images, Video, Trash2, CheckCircle2, XCircle, LogOut, Bell, Users, Link: LinkIcon } = lucide;
+
+    // --- Helpers ---
+    const cls = (...xs) => xs.filter(Boolean).join(" ");
+
+    const platforms = [
+      { key: "facebook", label: "Facebook", hint: "Pages & Groups" },
+      { key: "instagram", label: "Instagram", hint: "Business" },
+      { key: "x", label: "X (Twitter)", hint: "API v2" },
+      { key: "tiktok", label: "TikTok", hint: "Upload API" },
+      { key: "youtube", label: "YouTube", hint: "For DRFTube" },
+      { key: "telegram", label: "Telegram", hint: "Channel/Bot" },
+    ];
+
+    const hashtagSuggestions = [ "#DigitalRufiya", "#DRFMedia", "#DRFTube", "#Crypto", "#Web3", "#Maldives", "#BSC", "#DeFi" ];
+    const demoStats = [
+      { name: "Mon", impressions: 2100, engagement: 220 },
+      { name: "Tue", impressions: 3400, engagement: 410 },
+      { name: "Wed", impressions: 2900, engagement: 380 },
+      { name: "Thu", impressions: 4100, engagement: 520 },
+      { name: "Fri", impressions: 4700, engagement: 680 },
+      { name: "Sat", impressions: 3900, engagement: 430 },
+      { name: "Sun", impressions: 5200, engagement: 800 },
+    ];
+    const pieData = [
+      { name: "TikTok", value: 36 },
+      { name: "YouTube", value: 22 },
+      { name: "Facebook", value: 18 },
+      { name: "Instagram", value: 14 },
+      { name: "X", value: 6 },
+      { name: "Telegram", value: 4 },
+    ];
+    const pieColors = ["#60a5fa", "#34d399", "#a78bfa", "#fbbf24", "#f87171", "#22d3ee"];
+
+    const load = (k, v) => {
+      try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : v; } catch { return v; }
+    };
+    const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+    // --- Main Dashboard ---
+    function DRFMarketingDashboard() {
+      const [active, setActive] = useState("home");
+      const [connected, setConnected] = useState(load("drfmp-connected", { facebook:false, instagram:false, x:false, tiktok:false, youtube:false, telegram:false }));
+      const [scheduled, setScheduled] = useState(load("drfmp-scheduled", []));
+      const [posts, setPosts] = useState(load("drfmp-posts", []));
+      const [toast, setToast] = useState(null);
+
+      useEffect(() => save("drfmp-connected", connected), [connected]);
+      useEffect(() => save("drfmp-scheduled", scheduled), [scheduled]);
+      useEffect(() => save("drfmp-posts", posts), [posts]);
+
+      const totalFollowers = 12800;
+      const todayEngagement = 1540;
+      const bestPost = posts[0];
+
+      return (
+        <div className="flex h-screen overflow-hidden">
+          {/* Sidebar */}
+          <div className="sidebar flex flex-col p-4 gap-4">
+            <h1 className="text-xl font-bold mb-4">DRF Marketing</h1>
+            <button className={cls("side-item", active==="home" && "active")} onClick={()=>setActive("home")}>Dashboard</button>
+            <button className={cls("side-item", active==="create" && "active")} onClick={()=>setActive("create")}>Create Post</button>
+            <button className={cls("side-item", active==="schedule" && "active")} onClick={()=>setActive("schedule")}>Schedule</button>
+            <button className={cls("side-item", active==="analytics" && "active")} onClick={()=>setActive("analytics")}>Analytics</button>
+            <button className={cls("side-item", active==="settings" && "active")} onClick={()=>setActive("settings")}>Settings</button>
+          </div>
+
+          {/* Main */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Welcome, Hassan 👋</h2>
+            {active === "home" && <div>Quick stats and recent posts will show here.</div>}
+            {active === "create" && <div>Create Post UI goes here.</div>}
+            {active === "schedule" && <div>Schedule Manager goes here.</div>}
+            {active === "analytics" && <div>Analytics charts go here.</div>}
+            {active === "settings" && <div>Settings & Connections go here.</div>}
+          </div>
+
+          {/* Toast */}
+          {toast && <div className="toast">{toast}</div>}
+        </div>
+      );
+    }
+
+    ReactDOM.render(<DRFMarketingDashboard />, document.getElementById("root"));
+  </script>
 
 </body>
 </html>
