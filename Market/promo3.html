@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRF Marketing Platform - Auto Scheduler</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ccapture.js@1.1.0/build/CCapture.all.min.js"></script>
+<style>
+#dropArea {border:2px dashed #a5b4fc; padding:20px; text-align:center; cursor:pointer; border-radius:8px;}
+#dropArea.dragover { background-color:#eef2ff; }
+.media-item { max-height:120px; border-radius:8px; margin:5px; cursor:grab; position:relative; }
+.logo-overlay { position:absolute; bottom:5px; right:5px; width:30px; height:30px; border-radius:50%; pointer-events:none; }
+.carousel { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:10px; padding-bottom:10px; }
+.carousel-item { scroll-snap-align:start; flex:0 0 auto; position:relative; }
+.carousel-item img, .carousel-item video { max-height:200px; border-radius:8px; }
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+
+<header class="mb-4 text-center">
+  <h1 class="text-3xl font-bold text-indigo-600">DRF Marketing Platform</h1>
+  <p class="text-gray-600">Create, schedule & auto-post DRF content across platforms</p>
+</header>
+
+<div class="md:grid md:grid-cols-3 md:gap-6">
+
+<aside class="bg-white p-4 rounded shadow mb-4 md:mb-0 h-fit">
+  <h2 class="text-xl font-bold mb-4">Menu</h2>
+  <ul class="space-y-2">
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('create')">Create Post</button></li>
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('scheduled')">Scheduled Posts</button></li>
+    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('analytics')">Analytics</button></li>
+  </ul>
+</aside>
+
+<main class="md:col-span-2 space-y-6">
+
+<section id="create" class="bg-white p-4 rounded shadow">
+<h2 class="text-2xl font-bold mb-4">Create & Queue Posts</h2>
+
+<label class="font-semibold mb-2 block">Select a Promotional Caption:</label>
+<select id="promoSelect" class="w-full border p-2 rounded mb-4">
+  <option value="">-- Choose a Caption --</option>
+  <option value="🚀 Discover the power of DRF Wallet! Secure, fast & easy. #DRF #DRFWallet #DigitalRufiyaCoin #DRFChain">DRF Wallet Promo</option>
+  <option value="🎥 Check out the latest DRFTube video! Crypto news & insights. #DRFTube #DRFMedia #DRFChain">DRFTube Update</option>
+  <option value="📢 DRFMedia is LIVE! Stay updated with the latest DRF ecosystem news. #DRFMedia #DRFChain">DRFMedia Update</option>
+  <option value="🎁 Join our weekly giveaway & earn free DRF coins! #DRF #Giveaway #DRFChain">Giveaway / Contest</option>
+  <option value="💡 Learn how to use DRFChain and grow your crypto portfolio! #DRFChain #DigitalRufiyaCoin #Crypto">DRFChain Education</option>
+</select>
+
+<textarea id="postText" placeholder="Write your post here..." class="w-full p-3 border rounded mb-4 h-24"></textarea>
+
+<div id="dropArea" class="mb-4">
+Drag & drop images/videos here or tap to select
+<input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.webm" class="hidden">
+</div>
+
+<div id="preview" class="carousel mb-4"></div>
+
+<div class="mb-4 text-center">
+<span class="text-gray-500 mr-2">Hashtags:</span>
+<span class="text-indigo-600">#DRF</span>
+<span class="text-indigo-600">#DRFMedia</span>
+<span class="text-indigo-600">#DRFTube</span>
+<span class="text-indigo-600">#DRFWallet</span>
+<span class="text-indigo-600">#DigitalRufiyaCoin</span>
+<span class="text-indigo-600">#DRFChain</span>
+</div>
+
+<div class="flex flex-wrap gap-2 justify-center mb-4">
+<button id="queuePost" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"><i class="fas fa-plus mr-1"></i>Add to Queue</button>
+<button id="runQueue" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"><i class="fas fa-robot mr-1"></i>Run Auto Queue</button>
+</div>
+
+<div id="shareButtons" class="flex flex-wrap gap-2 justify-center mb-4 hidden">
+<a id="fbShare" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded">Facebook</a>
+<a id="twShare" href="#" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded">Twitter/X</a>
+<a id="lnShare" href="#" target="_blank" class="bg-blue-700 text-white px-4 py-2 rounded">LinkedIn</a>
+<a id="ttShare" href="#" target="_blank" class="bg-pink-500 text-white px-4 py-2 rounded">TikTok</a>
+</div>
+</section>
+
+<section id="scheduled" class="bg-white p-4 rounded shadow hidden">
+<h2 class="text-2xl font-bold mb-4">Scheduled & Queued Posts</h2>
+<ul id="scheduledPosts" class="space-y-2"></ul>
+</section>
+
+<section id="analytics" class="bg-white p-4 rounded shadow hidden">
+<h2 class="text-2xl font-bold mb-4">Analytics</h2>
+<canvas id="engagementChart" class="mb-4"></canvas>
+</section>
+
+</main>
+</div>
+
+<script>
+// Section toggle
+function showSection(section){
+  document.querySelectorAll('main section').forEach(sec=>sec.classList.add('hidden'));
+  document.getElementById(section).classList.remove('hidden');
+}
+
+// Drag & Drop Media
+const dropArea=document.getElementById('dropArea');
+const fileInput=document.getElementById('fileInput');
+const preview=document.getElementById('preview');
+let mediaFiles=[];
+dropArea.addEventListener('click',()=>fileInput.click());
+dropArea.addEventListener('dragover',e=>{e.preventDefault(); dropArea.classList.add('dragover');});
+dropArea.addEventListener('dragleave',e=>{e.preventDefault(); dropArea.classList.remove('dragover');});
+dropArea.addEventListener('drop',e=>{e.preventDefault(); dropArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files);});
+fileInput.addEventListener('change',()=>handleFiles(fileInput.files));
+function handleFiles(files){ Array.from(files).forEach(f=>mediaFiles.push(f)); renderPreview(); }
+function renderPreview(){ preview.innerHTML=''; mediaFiles.forEach((file,index)=>{ const reader=new FileReader();
+reader.onload=e=>{ const div=document.createElement('div'); div.className='carousel-item'; div.dataset.index=index; div.draggable=true;
+let el=file.type.startsWith('image/')?document.createElement('img'):document.createElement('video'); if(file.type.startsWith('video/')) el.controls=true;
+el.src=e.target.result; el.className='media-item';
+const logo=document.createElement('img'); logo.src='https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg?updatedAt=1745663093226'; logo.className='logo-overlay';
+div.appendChild(el); div.appendChild(logo); preview.appendChild(div);}; reader.readAsDataURL(file);});}
+
+// Auto Post Queue
+let postQueue=[];
+document.getElementById('queuePost').addEventListener('click',()=>{
+  const text=document.getElementById('postText').value.trim();
+  if(!text){alert("Enter caption"); return;}
+  postQueue.push({caption:text, media:[...mediaFiles]});
+  const li=document.createElement('li'); li.textContent=`${text} (${mediaFiles.length} media)`; document.getElementById('scheduledPosts').appendChild(li);
+  alert("Post added to queue!"); postText.value=''; fileInput.value=''; preview.innerHTML=''; mediaFiles=[];
+});
+
+document.getElementById('runQueue').addEventListener('click',()=>{
+  if(postQueue.length===0){alert("Queue empty"); return;}
+  alert("Auto Queue started! Posts will appear one by one with previews.");
+  let i=0;
+  const interval=setInterval(()=>{
+    if(i>=postQueue.length){clearInterval(interval); alert("Queue finished!"); return;}
+    const post=postQueue[i];
+    document.getElementById('postText').value=post.caption;
+    mediaFiles=post.media;
+    renderPreview();
+    document.getElementById('shareButtons').classList.remove('hidden');
+    i++;
+  },5000); // 5 seconds per post preview
+});
+
+// Analytics (dummy)
+const ctxChart=document.getElementById('engagementChart').getContext('2d');
+new Chart(ctxChart,{type:'bar',data:{labels:['Facebook','TikTok','YouTube','Instagram','X','Telegram'],datasets:[
+{label:'Impressions',data:[1200,900,670,940,500,300],backgroundColor:'rgba(99,102,241,0.7)'},
+{label:'Likes',data:[300,200,150,220,100,50],backgroundColor:'rgba(16,185,129,0.7)'},
+{label:'Comments',data:[50,30,20,40,10,5],backgroundColor:'rgba(248,113,113,0.7)'}
+]},options:{responsive:true,plugins:{legend:{position:'top'}}}});
+</script>
+
+</body>
+</html>
