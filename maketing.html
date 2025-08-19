@@ -1,0 +1,674 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Home,
+  CalendarClock,
+  BarChart3,
+  Settings,
+  PlusSquare,
+  Send,
+  Clock,
+  Hashtag,
+  Images,
+  Video,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  LogOut,
+  Bell,
+  Users,
+  Link as LinkIcon,
+} from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+// --- Helpers
+const cls = (...xs) => xs.filter(Boolean).join(" ");
+const platforms = [
+  { key: "facebook", label: "Facebook", hint: "Pages & Groups" },
+  { key: "instagram", label: "Instagram", hint: "Business" },
+  { key: "x", label: "X (Twitter)", hint: "API v2" },
+  { key: "tiktok", label: "TikTok", hint: "Upload API" },
+  { key: "youtube", label: "YouTube", hint: "For DRFTube" },
+  { key: "telegram", label: "Telegram", hint: "Channel/Bot" },
+];
+
+const hashtagSuggestions = [
+  "#DigitalRufiya",
+  "#DRFMedia",
+  "#DRFTube",
+  "#Crypto",
+  "#Web3",
+  "#Maldives",
+  "#BSC",
+  "#DeFi",
+];
+
+const demoStats = [
+  { name: "Mon", impressions: 2100, engagement: 220 },
+  { name: "Tue", impressions: 3400, engagement: 410 },
+  { name: "Wed", impressions: 2900, engagement: 380 },
+  { name: "Thu", impressions: 4100, engagement: 520 },
+  { name: "Fri", impressions: 4700, engagement: 680 },
+  { name: "Sat", impressions: 3900, engagement: 430 },
+  { name: "Sun", impressions: 5200, engagement: 800 },
+];
+
+const pieData = [
+  { name: "TikTok", value: 36 },
+  { name: "YouTube", value: 22 },
+  { name: "Facebook", value: 18 },
+  { name: "Instagram", value: 14 },
+  { name: "X", value: 6 },
+  { name: "Telegram", value: 4 },
+];
+
+const pieColors = ["#60a5fa", "#34d399", "#a78bfa", "#fbbf24", "#f87171", "#22d3ee"];
+
+const load = (k, v) => {
+  try {
+    const s = localStorage.getItem(k);
+    return s ? JSON.parse(s) : v;
+  } catch {
+    return v;
+  }
+};
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+export default function DRFMarketingDashboard() {
+  const [active, setActive] = useState("home");
+  const [connected, setConnected] = useState(load("drfmp-connected", {
+    facebook: false,
+    instagram: false,
+    x: false,
+    tiktok: false,
+    youtube: false,
+    telegram: false,
+  }));
+
+  const [scheduled, setScheduled] = useState(load("drfmp-scheduled", []));
+  const [posts, setPosts] = useState(load("drfmp-posts", []));
+
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => save("drfmp-connected", connected), [connected]);
+  useEffect(() => save("drfmp-scheduled", scheduled), [scheduled]);
+  useEffect(() => save("drfmp-posts", posts), [posts]);
+
+  const totalFollowers = 12800; // placeholder
+  const todayEngagement = 1540; // placeholder
+  const bestPost = posts[0];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+      <div className="grid grid-cols-12">
+        {/* Sidebar */}
+        <aside className="col-span-12 md:col-span-3 lg:col-span-2 bg-white md:min-h-screen shadow-sm md:sticky md:top-0">
+          <div className="p-4 border-b">
+            <h1 className="text-xl font-bold">DRF Marketing</h1>
+            <p className="text-xs text-slate-500">Post everywhere in one click</p>
+          </div>
+          <nav className="p-2 space-y-1">
+            <SideItem icon={<Home size={18} />} label="Dashboard" active={active === "home"} onClick={() => setActive("home")} />
+            <SideItem icon={<PlusSquare size={18} />} label="Create Post" active={active === "create"} onClick={() => setActive("create")} />
+            <SideItem icon={<CalendarClock size={18} />} label="Schedule" active={active === "schedule"} onClick={() => setActive("schedule")} />
+            <SideItem icon={<BarChart3 size={18} />} label="Analytics" active={active === "analytics"} onClick={() => setActive("analytics")} />
+            <SideItem icon={<Settings size={18} />} label="Settings" active={active === "settings"} onClick={() => setActive("settings")} />
+          </nav>
+          <div className="p-4 border-t text-xs text-slate-500 flex items-center gap-2">
+            <Bell size={14} />
+            Tips: Post daily + 1 weekly giveaway
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="col-span-12 md:col-span-9 lg:col-span-10 p-4 md:p-6">
+          <Header onLogout={() => notify(setToast, "Logged out (demo)")} />
+
+          <AnimatePresence mode="wait">
+            {active === "home" && (
+              <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-6">
+                <QuickStats totalFollowers={totalFollowers} todayEngagement={todayEngagement} bestPost={bestPost} />
+                <RecentPosts posts={posts} />
+              </motion.div>
+            )}
+
+            {active === "create" && (
+              <motion.div key="create" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <CreatePost
+                  connected={connected}
+                  onPost={(pushed) => {
+                    setPosts((prev) => [pushed, ...prev].slice(0, 50));
+                    notify(setToast, "Posted to connected platforms (demo)");
+                  }}
+                  onSchedule={(item) => {
+                    setScheduled((prev) => [item, ...prev]);
+                    notify(setToast, "Scheduled successfully (demo)");
+                  }}
+                />
+              </motion.div>
+            )}
+
+            {active === "schedule" && (
+              <motion.div key="schedule" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <ScheduleManager
+                  items={scheduled}
+                  onDelete={(id) => setScheduled((prev) => prev.filter((x) => x.id !== id))}
+                />
+              </motion.div>
+            )}
+
+            {active === "analytics" && (
+              <motion.div key="analytics" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <AnalyticsSection />
+              </motion.div>
+            )}
+
+            {active === "settings" && (
+              <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <SettingsSection connected={connected} setConnected={setConnected} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+
+      <Toast toast={toast} onClose={() => setToast(null)} />
+    </div>
+  );
+}
+
+function Header({ onLogout }) {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h2 className="text-2xl font-bold">Welcome, Hassan 👋</h2>
+        <p className="text-sm text-slate-500">Ship your DRF content everywhere in one click.</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="px-3 py-2 text-sm rounded-xl bg-white shadow-sm border flex items-center gap-2">
+          <Users size={16} /> Team
+        </button>
+        <button onClick={onLogout} className="px-3 py-2 text-sm rounded-xl bg-white shadow-sm border flex items-center gap-2">
+          <LogOut size={16} /> Logout
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SideItem({ icon, label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cls(
+        "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm",
+        active ? "bg-slate-900 text-white" : "hover:bg-slate-100 text-slate-700"
+      )}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function QuickStats({ totalFollowers, todayEngagement, bestPost }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-2xl p-4 shadow-sm border">
+        <div className="text-xs text-slate-500">Total Followers</div>
+        <div className="text-2xl font-bold">{formatNumber(totalFollowers)}</div>
+        <div className="text-xs text-slate-500 mt-1">Across all platforms</div>
+      </div>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border">
+        <div className="text-xs text-slate-500">Engagement Today</div>
+        <div className="text-2xl font-bold">{formatNumber(todayEngagement)}</div>
+        <div className="text-xs text-slate-500 mt-1">Likes • Comments • Shares</div>
+      </div>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border lg:col-span-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">7-day Impressions</div>
+        </div>
+        <div className="h-32 mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={demoStats} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="impressions" stroke="#2563eb" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecentPosts({ posts }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold">Recent Posts</h3>
+        <span className="text-xs text-slate-500">Last {Math.min(posts.length, 5)} shown</span>
+      </div>
+      <div className="divide-y">
+        {posts.slice(0, 5).map((p) => (
+          <div key={p.id} className="py-3 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+              <Send size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium truncate">{p.text || "(no text)"}</div>
+              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
+                {p.platforms.map((k) => (
+                  <span key={k} className="px-2 py-0.5 rounded-full bg-slate-100">{k}</span>
+                ))}
+                <span>•</span>
+                <span>{new Date(p.createdAt).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {posts.length === 0 && (
+          <div className="text-sm text-slate-500 py-6 text-center">No posts yet. Create your first one!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreatePost({ connected, onPost, onSchedule }) {
+  const [text, setText] = useState("");
+  const [hashtags, setHashtags] = useState(["#DigitalRufiya", "#DRFMedia", "#DRFTube"]);
+  const [image, setImage] = useState(null);
+  const [video, setVideo] = useState(null);
+  const [links, setLinks] = useState("");
+  const [targetPlatforms, setTargetPlatforms] = useState(() =>
+    Object.fromEntries(Object.keys(connected).map((k) => [k, connected[k]]))
+  );
+  const [schedule, setSchedule] = useState({ enabled: false, date: "", time: "" });
+
+  useEffect(() => {
+    setTargetPlatforms(Object.fromEntries(Object.keys(connected).map((k) => [k, connected[k]])));
+  }, [connected]);
+
+  const selectedPlatforms = useMemo(
+    () => Object.entries(targetPlatforms).filter(([, v]) => v).map(([k]) => k),
+    [targetPlatforms]
+  );
+
+  const handlePostNow = () => {
+    const payload = makePostPayload({ text, hashtags, image, video, links, platforms: selectedPlatforms });
+    onPost(payload);
+    clearForm();
+  };
+
+  const handleSchedule = () => {
+    if (!schedule.date || !schedule.time) return;
+    const when = new Date(`${schedule.date}T${schedule.time}`);
+    const item = {
+      id: `sch_${Date.now()}`,
+      text,
+      hashtags,
+      links,
+      hasImage: !!image,
+      hasVideo: !!video,
+      platforms: selectedPlatforms,
+      runAt: when.toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    onSchedule(item);
+    clearForm();
+  };
+
+  const clearForm = () => {
+    setText("");
+    setHashtags(["#DigitalRufiya", "#DRFMedia", "#DRFTube"]);
+    setImage(null);
+    setVideo(null);
+    setLinks("");
+    setTargetPlatforms(Object.fromEntries(Object.keys(connected).map((k) => [k, connected[k]])));
+    setSchedule({ enabled: false, date: "", time: "" });
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="lg:col-span-2 bg-white rounded-2xl p-4 shadow-sm border">
+        <h3 className="font-semibold mb-3">Create Post</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-slate-500">Text</label>
+            <textarea
+              className="w-full mt-1 rounded-xl border bg-white p-3 outline-none focus:ring-2 focus:ring-slate-300"
+              rows={5}
+              placeholder="What’s your update today?"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 flex items-center gap-2"><Hashtag size={14}/> Hashtags</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {hashtags.map((h, i) => (
+                <span key={i} className="px-2 py-1 rounded-full bg-slate-100 text-sm flex items-center gap-1">
+                  {h}
+                  <button className="text-slate-400 hover:text-slate-600" onClick={() => setHashtags(hashtags.filter((_x, idx) => idx !== i))}><XCircle size={14}/></button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <input
+                className="flex-1 rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300"
+                placeholder="#AddYourTag"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const val = e.currentTarget.value.trim();
+                    if (val) setHashtags((hs) => [...hs, val.startsWith("#") ? val : `#${val}`]);
+                    e.currentTarget.value = "";
+                  }
+                }}
+              />
+              <button
+                className="px-3 py-2 rounded-xl border bg-white hover:bg-slate-50"
+                onClick={() => setHashtags((hs) => Array.from(new Set([...hs, ...hashtagSuggestions])))}
+              >
+                Add Suggestions
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label className="flex items-center gap-3 px-3 py-2 rounded-xl border bg-white cursor-pointer hover:bg-slate-50">
+              <Images size={16} /> Image
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setImage(e.target.files?.[0] || null)} />
+              {image && <span className="text-xs text-slate-500 truncate">{image.name}</span>}
+            </label>
+            <label className="flex items-center gap-3 px-3 py-2 rounded-xl border bg-white cursor-pointer hover:bg-slate-50">
+              <Video size={16} /> Video
+              <input type="file" accept="video/*" className="hidden" onChange={(e) => setVideo(e.target.files?.[0] || null)} />
+              {video && <span className="text-xs text-slate-500 truncate">{video.name}</span>}
+            </label>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 flex items-center gap-2"><LinkIcon size={14}/> Links (optional)</label>
+            <input
+              value={links}
+              onChange={(e) => setLinks(e.target.value)}
+              className="w-full mt-1 rounded-xl border bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300"
+              placeholder="https://drfchain.org, https://drfmedia.org/post/..."
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500">Platforms</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+              {platforms.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setTargetPlatforms((s) => ({ ...s, [p.key]: !s[p.key] }))}
+                  className={cls(
+                    "px-3 py-2 rounded-xl border text-left",
+                    targetPlatforms[p.key] ? "bg-slate-900 text-white" : "bg-white hover:bg-slate-50"
+                  )}
+                >
+                  <div className="text-sm font-medium">{p.label}</div>
+                  <div className="text-[10px] opacity-70">{p.hint}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={schedule.enabled} onChange={(e) => setSchedule((s) => ({ ...s, enabled: e.target.checked }))} />
+                Schedule later
+              </label>
+              {schedule.enabled && (
+                <div className="flex items-center gap-2">
+                  <input type="date" value={schedule.date} onChange={(e) => setSchedule((s) => ({ ...s, date: e.target.value }))} className="rounded-xl border px-2 py-1" />
+                  <input type="time" value={schedule.time} onChange={(e) => setSchedule((s) => ({ ...s, time: e.target.value }))} className="rounded-xl border px-2 py-1" />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {!schedule.enabled && (
+                <button onClick={handlePostNow} className="px-4 py-2 rounded-2xl bg-slate-900 text-white flex items-center gap-2">
+                  <Send size={16} /> Post Now
+                </button>
+              )}
+              {schedule.enabled && (
+                <button onClick={handleSchedule} className="px-4 py-2 rounded-2xl bg-slate-900 text-white flex items-center gap-2">
+                  <Clock size={16} /> Schedule
+                </button>
+              )}
+              <button onClick={clearForm} className="px-4 py-2 rounded-2xl bg-white border">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Preview */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border">
+        <h3 className="font-semibold mb-3">Live Preview</h3>
+        <div className="rounded-xl border bg-slate-50 p-3 space-y-2">
+          <div className="text-sm whitespace-pre-wrap">{text || "(Your post text will appear here)"}</div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            {hashtags.map((h, i) => (
+              <span key={i} className="px-2 py-1 rounded-full bg-white border">{h}</span>
+            ))}
+          </div>
+          {links && (
+            <div className="text-xs text-slate-600 break-all">Links: {links}</div>
+          )}
+          <div className="text-xs text-slate-500">Platforms: {selectedPlatforms.length ? selectedPlatforms.join(", ") : "(none selected)"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleManager({ items, onDelete }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold">Scheduled Posts</h3>
+        <span className="text-xs text-slate-500">{items.length} total</span>
+      </div>
+      <div className="divide-y">
+        {items.map((it) => (
+          <div key={it.id} className="py-3 flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+              <Clock size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">{it.text || "(no text)"}</div>
+              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
+                {it.platforms.map((k) => (
+                  <span key={k} className="px-2 py-0.5 rounded-full bg-slate-100">{k}</span>
+                ))}
+                <span>•</span>
+                <span>Runs: {new Date(it.runAt).toLocaleString()}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => onDelete(it.id)} className="px-2 py-1 rounded-lg bg-white border text-slate-600 hover:bg-slate-50">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="text-sm text-slate-500 py-6 text-center">No scheduled posts. Create one from "Create Post".</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsSection() {
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="bg-white rounded-2xl p-4 shadow-sm border xl:col-span-2">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Impressions vs Engagement (7 days)</h3>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={demoStats} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="impressions" fill="#3b82f6" />
+              <Bar dataKey="engagement" fill="#10b981" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border">
+        <h3 className="font-semibold mb-2">Best Platform (share %)</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={100} label>
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl p-4 shadow-sm border xl:col-span-3">
+        <h3 className="font-semibold mb-2">Posts Performance (last 10)</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={demoStats} margin={{ top: 5, right: 12, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="engagement" stroke="#8b5cf6" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsSection({ connected, setConnected }) {
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm border">
+      <h3 className="font-semibold mb-3">Settings & Connections</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {platforms.map((p) => (
+          <div key={p.key} className="p-3 rounded-xl border bg-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">{p.label}</div>
+                <div className="text-[11px] text-slate-500">{p.hint}</div>
+              </div>
+              {connected[p.key] ? (
+                <span className="flex items-center gap-1 text-green-600 text-xs"><CheckCircle2 size={14}/> Connected</span>
+              ) : (
+                <span className="flex items-center gap-1 text-slate-400 text-xs"><XCircle size={14}/> Not Connected</span>
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              {!connected[p.key] ? (
+                <button
+                  onClick={() => setConnected((s) => ({ ...s, [p.key]: true }))}
+                  className="px-3 py-2 rounded-xl bg-slate-900 text-white text-sm"
+                >
+                  Connect
+                </button>
+              ) : (
+                <button
+                  onClick={() => setConnected((s) => ({ ...s, [p.key]: false }))}
+                  className="px-3 py-2 rounded-xl bg-white border text-sm"
+                >
+                  Disconnect
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6">
+        <h4 className="font-semibold mb-2 text-sm">Team Members (demo)</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {["Hassan", "DRF Admin", "Content Editor"].map((n) => (
+            <div key={n} className="p-3 rounded-xl border bg-white flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">{n}</div>
+                <div className="text-xs text-slate-500">Role: Editor</div>
+              </div>
+              <button className="px-3 py-2 rounded-xl bg-white border text-sm">Manage</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ toast, onClose }) {
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(onClose, 2200);
+    return () => clearTimeout(t);
+  }, [toast]);
+  return (
+    <AnimatePresence>
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-2xl shadow-lg"
+        >
+          {toast}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function makePostPayload({ text, hashtags, image, video, links, platforms }) {
+  return {
+    id: `post_${Date.now()}`,
+    text,
+    hashtags,
+    image: image ? { name: image.name, size: image.size } : null,
+    video: video ? { name: video.name, size: video.size } : null,
+    links,
+    platforms,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function notify(setToast, msg) {
+  setToast(msg);
+}
+
+function formatNumber(n) {
+  try {
+    return new Intl.NumberFormat().format(n);
+  } catch {
+    return String(n);
+  }
+}
