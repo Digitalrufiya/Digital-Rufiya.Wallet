@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Marketing Dashboard</title>
+
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.258.0/dist/lucide.min.js"></script>
+</head>
+<body class="bg-slate-100">
+
+  <div id="root"></div>
+
+  <!-- React + ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Recharts UMD -->
+  <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- App.js code -->
+  <script type="text/babel">
+
+// ----- DRF Marketing Dashboard -----
+const { useState, useEffect, useMemo } = React;
+const { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, ResponsiveContainer } = Recharts;
+
+const platforms = [
+  { key: "facebook", label: "Facebook", hint: "Pages & Groups" },
+  { key: "instagram", label: "Instagram", hint: "Business" },
+  { key: "x", label: "X (Twitter)", hint: "API v2" },
+  { key: "tiktok", label: "TikTok", hint: "Upload API" },
+  { key: "youtube", label: "YouTube", hint: "For DRFTube" },
+  { key: "telegram", label: "Telegram", hint: "Channel/Bot" },
+];
+
+const hashtagSuggestions = ["#DigitalRufiya", "#DRFMedia", "#DRFTube", "#Crypto", "#Web3", "#Maldives"];
+
+const demoStats = [
+  { name: "Mon", impressions: 2100, engagement: 220 },
+  { name: "Tue", impressions: 3400, engagement: 410 },
+  { name: "Wed", impressions: 2900, engagement: 380 },
+  { name: "Thu", impressions: 4100, engagement: 520 },
+  { name: "Fri", impressions: 4700, engagement: 680 },
+  { name: "Sat", impressions: 3900, engagement: 430 },
+  { name: "Sun", impressions: 5200, engagement: 800 },
+];
+
+const pieData = [
+  { name: "TikTok", value: 36 },
+  { name: "YouTube", value: 22 },
+  { name: "Facebook", value: 18 },
+  { name: "Instagram", value: 14 },
+  { name: "X", value: 6 },
+  { name: "Telegram", value: 4 },
+];
+
+const pieColors = ["#60a5fa", "#34d399", "#a78bfa", "#fbbf24", "#f87171", "#22d3ee"];
+
+function DRFMarketingDashboard() {
+  const [active, setActive] = useState("home");
+  const [toast, setToast] = useState(null);
+  const [connected, setConnected] = useState(() => {
+    const saved = localStorage.getItem("drfmp-connected");
+    return saved ? JSON.parse(saved) : platforms.reduce((a,p)=>({...a,[p.key]:false}),{});
+  });
+
+  useEffect(()=>{localStorage.setItem("drfmp-connected", JSON.stringify(connected))},[connected]);
+
+  return (
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <div className="w-64 bg-white p-4 shadow-lg flex flex-col">
+        <div className="font-bold text-xl mb-6">DRF Marketing</div>
+        {["home","create","schedule","analytics","settings"].map(item => (
+          <button key={item}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-2 ${active===item?'bg-slate-900 text-white':'hover:bg-slate-50'}`}
+            onClick={()=>setActive(item)}
+          >
+            {item.charAt(0).toUpperCase()+item.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Panel */}
+      <div className="flex-1 p-6 space-y-6 overflow-auto">
+        <h1 className="text-2xl font-bold">Welcome, Hassan 👋</h1>
+        {active==="home" && <div className="p-4 bg-white rounded-xl shadow-sm">Home Stats / Tips...</div>}
+        {active==="create" && <CreatePost connected={connected} setToast={setToast} />}
+        {active==="schedule" && <div className="p-4 bg-white rounded-xl shadow-sm">Schedule Manager (demo)</div>}
+        {active==="analytics" && <AnalyticsSection />}
+        {active==="settings" && <SettingsSection connected={connected} setConnected={setConnected} />}
+      </div>
+
+      {toast && <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-2xl">{toast}</div>}
+    </div>
+  );
+}
+
+// ---- Components ----
+function CreatePost({ connected, setToast }) {
+  const [text,setText]=useState(""); 
+  const [hashtags,setHashtags]=useState(["#DigitalRufiya","#DRFMedia","#DRFTube"]);
+  const selectedPlatforms = useMemo(()=>Object.keys(connected).filter(k=>connected[k]),[connected]);
+  const handlePost=()=>{setToast("Posted to demo platforms!"); setText("");};
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm space-y-4">
+      <h2 className="font-semibold text-lg">Create Post</h2>
+      <textarea className="w-full p-2 border rounded-md" placeholder="Write something..." value={text} onChange={e=>setText(e.target.value)} />
+      <div className="flex gap-2">
+        {hashtags.map((h,i)=><span key={i} className="px-2 py-1 bg-slate-100 rounded-full text-sm">{h}</span>)}
+      </div>
+      <button className="px-4 py-2 bg-slate-900 text-white rounded-xl" onClick={handlePost}>Post Now</button>
+      <div className="text-sm text-slate-500">Platforms: {selectedPlatforms.join(", ")||"(none selected)"}</div>
+    </div>
+  );
+}
+
+function AnalyticsSection(){
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <h3 className="font-semibold mb-2">7-Day Stats</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={demoStats}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name"/>
+              <YAxis/>
+              <Tooltip/>
+              <Bar dataKey="impressions" fill="#3b82f6"/>
+              <Bar dataKey="engagement" fill="#10b981"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="bg-white p-4 rounded-xl shadow-sm">
+        <h3 className="font-semibold mb-2">Best Platform</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={pieData} dataKey="value" outerRadius={80} label>
+                {pieData.map((entry,index)=><Cell key={index} fill={pieColors[index % pieColors.length]} />)}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsSection({connected,setConnected}){
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-sm space-y-4">
+      <h2 className="font-semibold text-lg">Settings & Connections</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {platforms.map(p=>(
+          <div key={p.key} className="p-3 rounded-lg border bg-white flex justify-between items-center">
+            <div>
+              <div className="font-medium">{p.label}</div>
+              <div className="text-xs text-slate-500">{p.hint}</div>
+            </div>
+            <button className={`px-3 py-1 rounded-xl text-sm ${connected[p.key]?'bg-white border':'bg-slate-900 text-white'}`}
+              onClick={()=>setConnected(s=>({...s,[p.key]:!s[p.key]}))}>
+              {connected[p.key]?'Disconnect':'Connect'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---- Render ----
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<DRFMarketingDashboard />);
+
+  </script>
+
+</body>
+</html>
