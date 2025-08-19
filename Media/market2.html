@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRF Marketplace — Payment Verified Upload</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
+  #upload-section { background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:1000px; margin:18px auto; }
+  input, textarea, button, select { box-sizing:border-box; width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; }
+  button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; }
+  button.secondary{ background:#10b981; }
+  button:disabled{ background:#9ca3af; cursor:default; }
+  #posts{ max-width:1000px; margin:18px auto; }
+  .post{ background:#fff; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
+  .buttons{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .note{ font-size:13px; color:#374151; margin-top:8px; }
+  .small{ font-size:13px; color:#6b7280; }
+  img, video { max-width:100%; border-radius:8px; margin-top:8px; }
+  .header { text-align:center; margin-bottom:10px; }
+  .cols { display:grid; grid-template-columns: 1fr 380px; gap:16px; align-items:start; max-width:1100px; margin: 0 auto; }
+  @media(max-width:900px){ .cols { grid-template-columns: 1fr; } }
+  .txbox { display:flex; gap:8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DRF Marketplace — Upload & Listings</h1>
+  <p class="small">Pay 1 USDC to unlock uploads. Sellers add their own payment link for direct buyer payment.</p>
+</div>
+
+<div class="cols">
+  <section id="upload-section">
+    <h2>Upload Listing — Payment Verified (1 USDC)</h2>
+
+    <!-- media + details -->
+    <input type="file" id="mediaInput" accept="image/*,video/*" />
+    <input type="text" id="titleInput" placeholder="Title" />
+    <textarea id="descriptionInput" placeholder="Description" rows="3"></textarea>
+    <input type="number" id="priceInput" placeholder="Price (USD)" />
+    <input type="text" id="locationInput" placeholder="Location" />
+    <input type="text" id="whatsappInput" placeholder="WhatsApp Number" />
+    <input type="text" id="paymentLinkInput" placeholder="Seller Payment Link (trustworthy URL or wallet link)" />
+
+    <!-- Payment -->
+    <div style="display:flex;gap:8px;">
+      <button id="payBtn">Open Trust Wallet (Pay 1 USDC)</button>
+      <button id="openWalletBtn" style="background:#111827">Open Wallet (MetaMask)</button>
+    </div>
+
+    <div class="note">After payment, paste either your <strong>transaction hash</strong> (recommended) or your <strong>BSC wallet address</strong> and click <em>Verify Payment</em>.</div>
+
+    <div class="txbox">
+      <input type="text" id="txHashInput" placeholder="Paste tx hash (0x...) or wallet address (0x...)" />
+      <button id="verifyBtn" class="secondary">Verify Payment</button>
+    </div>
+
+    <div id="uploadStatus" class="small" style="margin-top:10px">Not verified</div>
+
+    <div style="margin-top:12px">
+      <button id="uploadBtn" disabled>Upload Listing (to IPFS & Firestore)</button>
+    </div>
+
+    <p class="small" style="margin-top:8px">Important: this verifies on-chain transfer to the project wallet. Do not enable upload unless verification is successful.</p>
+  </section>
+
+  <!-- Right column: quick status & instructions -->
+  <aside style="background:#fff;padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.04);">
+    <h3>Status</h3>
+    <p id="statusBox" class="small">Not verified</p>
+    <h4 style="margin-top:10px">Setup (one-time)</h4>
+    <ol class="small">
+      <li>Pinata JWT is embedded (frontend). This is temporary — move to backend later.</li>
+      <li>BscScan API key is embedded to verify payments.</li>
+      <li>If you change USDC token/decimals, update constants inside the file.</li>
+    </ol>
+    <p style="margin-top:8px" class="small">Warning: Keep PINATA_JWT secret in production by moving upload to a Cloud Function.</p>
+  </aside>
+</div>
+
+<section id="posts"></section>
+
+<script type="module">
+/* ==========================
+  CONFIG - replace if needed
+==========================*/
+const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
+
+const BSCSCAN_API_KEY = "G9H3FIK6M6EREF9DENVXG9EXHAVJJCXFM8"; // provided by you
+const OWNER_ADDRESS = "0x88253d87990edd1e647c3b6ed21f57fb061a3040".toLowerCase(); // project wallet
+const USDC_CONTRACT = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d".toLowerCase(); // USDC on BSC (example)
+const REQUIRED_AMOUNT = BigInt(1) * BigInt(10 ** 18); // default 18 decimals; adjust if token has 6 decimals
+
+/* ==========================
+   Helper functions
+   - hexToBigInt: parse hex amount to BigInt
+   - safe helpers for escaping when showing text
+==========================*/
+function hexToBigInt(hex) {
+  if (typeof hex !== "string") return BigInt(0);
+  if (hex.startsWith("0x")) hex = hex.slice(2);
+  if (hex === "") return BigInt(0);
+  return BigInt("0x" + hex);
+}
+function escapeHtml(s){ if(!s) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function escapeAttr(s){ if(!s) return '#'; return String(s).replaceAll('"','&quot;'); }
+
+/* UI */
+const payBtn = document.getElementById("payBtn");
+const openWalletBtn = document.getElementById("openWalletBtn");
+const txHashInput = document.getElementById("txHashInput");
+const verifyBtn = document.getElementById("verifyBtn");
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+const statusBox = document.getElementById("statusBox");
+const postsContainer = document.getElementById("posts");
+
+/* Trust Wallet link prefilled */
+const trustLink = `https://link.trustwallet.com/send?coin=20000714&address=${OWNER_ADDRESS}&amount=1.0&token_id=${USDC_CONTRACT}`;
+payBtn.onclick = () => {
+  window.open(trustLink, "_blank");
+  alert("Trust Wallet opened. After payment paste the tx hash or your wallet address and click Verify Payment.");
+};
+
+/* optional: connect MetaMask */
+openWalletBtn.onclick = async () => {
+  if (window.ethereum) {
+    try { await window.ethereum.request({ method: "eth_requestAccounts" }); alert("Wallet connected (MetaMask)."); }
+    catch(e){ console.error(e); alert("Wallet connect failed"); }
+  } else alert("MetaMask not found");
+};
+
+/* Verify payment: accept either txHash (starts with 0x) OR wallet address.
+   - If txHash: use proxy eth_getTransactionByHash + eth_getTransactionReceipt to decode transfer to token contract
+   - If wallet address: use tokentx endpoint for ownerAddress and search transfers from that wallet
+*/
+verifyBtn.onclick = async () => {
+  const input = (txHashInput.value || "").trim();
+  if (!input) { alert("Paste tx hash or your wallet address"); return; }
+
+  uploadStatus.textContent = "Verifying payment on BSC (please wait)...";
+  statusBox.textContent = "Verifying...";
+
+  try {
+    if (input.startsWith("0x") && input.length > 20) {
+      // tx hash path (use proxy APIs)
+      const txUrl = `https://api.bscscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${input}&apikey=${BSCSCAN_API_KEY}`;
+      const rcptUrl = `https://api.bscscan.com/api?module=proxy&action=eth_getTransactionReceipt&txhash=${input}&apikey=${BSCSCAN_API_KEY}`;
+      const [txRes, rcptRes] = await Promise.all([fetch(txUrl), fetch(rcptUrl)]);
+      const txJson = await txRes.json();
+      const rcptJson = await rcptRes.json();
+      if (!txJson || !txJson.result) throw new Error("Transaction not found");
+      if (!rcptJson || !rcptJson.result) throw new Error("Receipt not found");
+
+      const tx = txJson.result;
+      const receipt = rcptJson.result;
+      if (receipt.status !== "0x1") throw new Error("On-chain transaction failed");
+
+      const txTo = (tx.to || "").toLowerCase();
+      if (txTo !== USDC_CONTRACT) throw new Error("Transaction 'to' is not the USDC contract. Make sure you sent USDC.");
+
+      const inputData = tx.input || "";
+      const methodId = inputData.slice(0,10);
+      if (methodId !== "0xa9059cbb") throw new Error("Transaction input not ERC20 transfer (transfer method expected)");
+
+      const recipientHex = "0x" + inputData.slice(10 + 24, 10 + 64);
+      const recipient = recipientHex.toLowerCase();
+      if (recipient !== OWNER_ADDRESS) throw new Error("Recipient of token transfer is not the project wallet");
+
+      const amountHex = "0x" + inputData.slice(inputData.length - 64);
+      const amount = hexToBigInt(amountHex);
+      if (amount < REQUIRED_AMOUNT) throw new Error("Transfer amount is less than required 1 USDC");
+
+      uploadStatus.textContent = `✅ Payment verified (tx ${input}). Sender: ${tx.from}`;
+      statusBox.textContent = `Verified tx: ${input}`;
+      uploadBtn.disabled = false;
+      uploadBtn.dataset.verifiedTx = input;
+      return;
+    } else {
+      // wallet address path (search tokentx for transfers from this wallet to owner)
+      const wallet = input.toLowerCase();
+      // fetch token transfers for the ownerAddress (incoming)
+      const url = `https://api.bscscan.com/api?module=account&action=tokentx&contractaddress=${USDC_CONTRACT}&address=${OWNER_ADDRESS}&page=1&offset=50&sort=desc&apikey=${BSCSCAN_API_KEY}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (!json || json.status !== "1" || !json.result) throw new Error("No token transfers found yet");
+
+      // search for a transfer where from == wallet and to == owner and amount >= required
+      let found = null;
+      for (const tx of json.result) {
+        if (tx.from && tx.from.toLowerCase() === wallet.toLowerCase() && tx.to && tx.to.toLowerCase() === OWNER_ADDRESS) {
+          // tokenDecimal is string like "18" or "6". value is raw.
+          const decimals = parseInt(tx.tokenDecimal || "18");
+          const valBig = BigInt(tx.value || "0");
+          const req = BigInt(1) * BigInt(10 ** decimals);
+          if (valBig >= req) { found = tx; break; }
+        }
+      }
+
+      if (!found) throw new Error("No qualifying payment found from that wallet to project. Wait a bit and try again.");
+
+      uploadStatus.textContent = `✅ Payment verified (tx ${found.hash}). Sender: ${found.from}`;
+      statusBox.textContent = `Verified tx: ${found.hash}`;
+      uploadBtn.disabled = false;
+      uploadBtn.dataset.verifiedTx = found.hash;
+      return;
+    }
+  } catch (err) {
+    console.error("verify error", err);
+    uploadStatus.textContent = "❌ Verification failed: " + (err.message || err);
+    statusBox.textContent = "Verification failed";
+    alert("Verification failed: " + (err.message || err));
+  }
+};
+
+/* ========== Firebase + Pinata integration (frontend) ========== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, query, serverTimestamp, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let currentUser = null;
+onAuthStateChanged(auth, user => { if (user) currentUser = user; else signInAnonymously(auth).catch(console.error); });
+
+/* Pinata upload (client-side) */
+async function uploadToPinata(file) {
+  if (!PINATA_JWT || PINATA_JWT === "") throw new Error("Pinata JWT missing");
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}` }, body: form });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error("Pinata upload failed: " + txt);
+  }
+  const js = await res.json();
+  return js.IpfsHash;
+}
+
+/* Upload listing (after verification) */
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+  const price = parseFloat(document.getElementById("priceInput").value);
+  const location = document.getElementById("locationInput").value.trim();
+  const whatsapp = document.getElementById("whatsappInput").value.trim();
+  const paymentLink = document.getElementById("paymentLinkInput").value.trim();
+  const verifiedTx = uploadBtn.dataset.verifiedTx || "";
+
+  if (!fileInput.files[0] || !title || !description || isNaN(price) || !location || !whatsapp || !paymentLink) {
+    alert("All fields required (including seller payment link)");
+    return;
+  }
+  if (!verifiedTx) {
+    alert("Listing must be backed by a verified payment transaction");
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  uploadStatus.textContent = "Uploading media to IPFS (Pinata)...";
+
+  try {
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
+
+    await addDoc(collection(db, "posts"), {
+      title, description, price, location, whatsapp, paymentLink,
+      ipfsHash, mediaType, createdAt: serverTimestamp(), verifiedTx
+    });
+
+    uploadStatus.textContent = "Upload successful! Listing published.";
+    // clear form
+    fileInput.value = "";
+    document.getElementById("titleInput").value = "";
+    document.getElementById("descriptionInput").value = "";
+    document.getElementById("priceInput").value = "";
+    document.getElementById("locationInput").value = "";
+    document.getElementById("whatsappInput").value = "";
+    document.getElementById("paymentLinkInput").value = "";
+    uploadBtn.dataset.verifiedTx = "";
+    loadPosts(true);
+  } catch (err) {
+    console.error(err);
+    uploadStatus.textContent = "Upload error: " + (err.message || err);
+    alert("Upload failed: " + (err.message || err));
+  } finally {
+    uploadBtn.disabled = false;
+  }
+};
+
+/* Load posts & display */
+let lastVisible = null;
+let loading = false;
+async function loadPosts(reset=false) {
+  if (loading) return;
+  loading = true;
+  if (reset) { postsContainer.innerHTML = ""; lastVisible = null; }
+  const header = document.createElement("h2"); header.textContent = "Marketplace Listings"; if (!reset && postsContainer.children.length===0) postsContainer.appendChild(header);
+  const q = lastVisible
+    ? query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(lastVisible), limit(8))
+    : query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(8));
+
+  try {
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      if (postsContainer.children.length === 0) {
+        const p = document.createElement("p"); p.className = "small"; p.textContent = "No listings yet.";
+        postsContainer.appendChild(p);
+      }
+      loading = false;
+      return;
+    }
+    snap.forEach(doc => {
+      const d = doc.data();
+      const div = document.createElement("div");
+      div.className = "post";
+      let mediaHTML = "";
+      if (d.mediaType === "video" && d.ipfsHash) {
+        mediaHTML = `<video playsinline controls src="https://gateway.pinata.cloud/ipfs/${d.ipfsHash}"></video>`;
+      } else if (d.ipfsHash) {
+        mediaHTML = `<img src="https://gateway.pinata.cloud/ipfs/${d.ipfsHash}" alt="${escapeHtml(d.title||'')}" />`;
+      }
+      div.innerHTML = `
+        <h3>${escapeHtml(d.title||'')}</h3>
+        <p>${escapeHtml(d.description||'')}</p>
+        <p><b>Price:</b> $${d.price || ''} | <b>Location:</b> ${escapeHtml(d.location||'')}</p>
+        <p><b>WhatsApp:</b> <a href="https://wa.me/${encodeURIComponent(d.whatsapp||'')}" target="_blank">${escapeHtml(d.whatsapp||'')}</a></p>
+        ${mediaHTML}
+        <div class="buttons">
+          <a href="${escapeAttr(d.paymentLink||'#')}" target="_blank"><button>Pay Seller</button></a>
+          <button class="shareBtn">Share</button>
+        </div>
+        <div class="small" style="margin-top:8px">Verified tx: ${escapeHtml(d.verifiedTx||'')}</div>
+      `;
+      const shareBtn = div.querySelector(".shareBtn");
+      shareBtn.onclick = () => {
+        if (navigator.share) navigator.share({ title: d.title, text: d.description, url: window.location.href });
+        else alert("Sharing not supported on this browser");
+      };
+      postsContainer.appendChild(div);
+    });
+    lastVisible = snap.docs[snap.docs.length - 1];
+  } catch (err) {
+    console.error("Load posts error:", err);
+    const p = document.createElement("p"); p.className = "small"; p.textContent = "Failed to load listings.";
+    postsContainer.appendChild(p);
+  } finally {
+    loading = false;
+  }
+}
+
+/* initial load */
+loadPosts(true);
+
+/* infinite scroll to load more */
+window.addEventListener("scroll", () => {
+  if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 120)) {
+    loadPosts();
+  }
+});
+</script>
+</body>
+</html>
