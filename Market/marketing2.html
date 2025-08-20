@@ -1,244 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Marketing Platform</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    /* Drag & Drop area */
-    #dropArea {
-      border: 2px dashed #a5b4fc;
-      padding: 20px;
-      text-align: center;
-      cursor: pointer;
-      border-radius: 8px;
-    }
-    #dropArea.dragover {
-      background-color: #eef2ff;
-    }
-    img, video {
-      max-width: 100%;
-      border-radius: 8px;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Marketing Post</title>
+
+<!-- Default OG tags -->
+<meta property="og:title" content="DRF Marketing Post" />
+<meta property="og:description" content="Check out this post!" />
+<meta property="og:image" content="" />
+<meta property="og:url" content="" />
+<meta property="og:type" content="website" />
+
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
+#post-container { max-width:800px; margin:auto; background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+h1 { font-size:22px; margin-bottom:8px; }
+p { font-size:16px; margin-bottom:12px; }
+img, video { max-width:100%; border-radius:6px; margin-bottom:12px; }
+input, textarea, button { width:100%; padding:10px; margin:8px 0; border-radius:6px; border:1px solid #d1d5db; }
+button { background:#2563eb; color:#fff; border:none; cursor:pointer; }
+button:disabled { background:#9ca3af; cursor:default; }
+.share-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.share-btn { flex:1; text-align:center; padding:8px 0; background:#10b981; color:#fff; border-radius:6px; cursor:pointer; font-size:14px; text-decoration:none; }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body>
 
-<header class="mb-4 text-center">
-  <h1 class="text-3xl font-bold text-indigo-600">DRF Marketing Platform</h1>
-  <p class="text-gray-600">Create, preview, schedule & share posts for DRF platforms</p>
-</header>
-
-<div class="md:grid md:grid-cols-3 md:gap-6">
-
-<aside class="bg-white p-4 rounded shadow mb-4 md:mb-0 h-fit">
-  <h2 class="text-xl font-bold mb-4">Menu</h2>
-  <ul class="space-y-2">
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('create')">Create Post</button></li>
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('scheduled')">Scheduled Posts</button></li>
-    <li><button class="w-full text-left px-3 py-2 rounded hover:bg-indigo-100" onclick="showSection('analytics')">Analytics</button></li>
-  </ul>
-</aside>
-
-<main class="md:col-span-2 space-y-6">
-
-<!-- Create Post Section -->
-<section id="create" class="bg-white p-4 rounded shadow">
-  <h2 class="text-2xl font-bold mb-4">Create New Post</h2>
-
-  <textarea id="postText" placeholder="Write your post here..." class="w-full p-3 border rounded mb-4 h-24"></textarea>
-
-  <!-- Drag & Drop Multiple Files -->
-  <div id="dropArea" class="mb-4">
-    Drag & drop images/videos here or tap to select
-    <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.mp4,.mov,.webm" class="hidden">
-  </div>
-
-  <!-- Preview -->
-  <div id="preview" class="mb-4 flex flex-wrap gap-2 justify-center"></div>
-
-  <!-- Hashtags -->
-  <div class="mb-4 text-center">
-    <span class="text-gray-500 mr-2">Hashtags:</span>
-    <span class="text-indigo-600">#DRF</span>
-    <span class="text-indigo-600">#DRFMedia</span>
-    <span class="text-indigo-600">#DRFTube</span>
-    <span class="text-indigo-600">#DRFWallet</span>
-    <span class="text-indigo-600">#DigitalRufiyaCoin</span>
-    <span class="text-indigo-600">#DRFChain</span>
-  </div>
-
-  <!-- Schedule -->
-  <div class="mb-4 text-center">
-    <label class="text-gray-700 mr-2">Schedule Date & Time:</label>
-    <input type="datetime-local" id="scheduleTime" class="border p-2 rounded">
-  </div>
-
-  <!-- Buttons -->
-  <div class="flex flex-wrap gap-2 justify-center mb-4">
-    <button id="postNow" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"><i class="fas fa-paper-plane mr-1"></i>Preview</button>
-    <button id="scheduleLater" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"><i class="fas fa-clock mr-1"></i>Schedule</button>
-    <button id="copyPost" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"><i class="fas fa-copy mr-1"></i>Copy</button>
-    <button id="downloadPost" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"><i class="fas fa-download mr-1"></i>Download</button>
-  </div>
-
-  <!-- Share Buttons -->
-  <div id="shareButtons" class="flex flex-wrap gap-2 justify-center mb-4 hidden">
-    <a id="fbShare" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded">Facebook</a>
-    <a id="twShare" href="#" target="_blank" class="bg-blue-400 text-white px-4 py-2 rounded">Twitter/X</a>
-    <a id="lnShare" href="#" target="_blank" class="bg-blue-700 text-white px-4 py-2 rounded">LinkedIn</a>
-    <a id="ttShare" href="#" target="_blank" class="bg-pink-500 text-white px-4 py-2 rounded">TikTok</a>
-  </div>
+<section id="post-container">
+  <h1 id="post-title">Loading...</h1>
+  <p id="post-description"></p>
+  <div id="post-media"></div>
+  <div class="share-buttons" id="share-buttons"></div>
 </section>
 
-<!-- Scheduled Posts -->
-<section id="scheduled" class="bg-white p-4 rounded shadow hidden">
-  <h2 class="text-2xl font-bold mb-4">Scheduled Posts</h2>
-  <ul id="scheduledPosts" class="space-y-2"></ul>
+<hr style="margin:30px 0;">
+
+<section id="upload-section" style="max-width:800px; margin:auto; background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+  <h2>Upload New Post</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*" />
+  <input type="text" id="titleInput" placeholder="Title" />
+  <textarea id="descriptionInput" placeholder="Description" rows="3"></textarea>
+  <button id="uploadBtn">Upload</button>
+  <div id="uploadStatus" style="margin-top:10px;"></div>
 </section>
 
-<!-- Analytics -->
-<section id="analytics" class="bg-white p-4 rounded shadow hidden">
-  <h2 class="text-2xl font-bold mb-4">Analytics</h2>
-  <canvas id="engagementChart" class="mb-4"></canvas>
-  <h3 class="text-lg font-bold mb-2">Top Posts</h3>
-  <table class="min-w-full border rounded text-sm">
-    <thead class="bg-gray-100">
-      <tr>
-        <th class="py-2 px-2 text-left">Post</th>
-        <th class="py-2 px-2">Platform</th>
-        <th class="py-2 px-2">Impressions</th>
-        <th class="py-2 px-2">Likes</th>
-        <th class="py-2 px-2">Comments</th>
-      </tr>
-    </thead>
-    <tbody id="topPosts"></tbody>
-  </table>
-</section>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-</main>
-</div>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+};
 
-<script>
-  function showSection(section) {
-    document.querySelectorAll('main section').forEach(sec => sec.classList.add('hidden'));
-    document.getElementById(section).classList.remove('hidden');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+onAuthStateChanged(auth, user => {
+  if(user) currentUser = user;
+  else signInAnonymously(auth).catch(console.error);
+});
+
+// Pinata JWT
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // 🔑 Replace with your JWT
+
+async function uploadToPinata(file){
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const data = new FormData();
+  data.append("file", file);
+  const res = await fetch(url, { method:"POST", headers:{Authorization:pinataJWT}, body:data });
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const json = await res.json();
+  return json.IpfsHash;
+}
+
+// DOM elements
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+const mediaInput = document.getElementById("mediaInput");
+const titleInput = document.getElementById("titleInput");
+const descInput = document.getElementById("descriptionInput");
+const postTitle = document.getElementById("post-title");
+const postDesc = document.getElementById("post-description");
+const postMedia = document.getElementById("post-media");
+const shareButtons = document.getElementById("share-buttons");
+
+// Upload new post
+uploadBtn.onclick = async () => {
+  if(!mediaInput.files[0] || !titleInput.value.trim() || !descInput.value.trim()){
+    alert("All fields are required!");
+    return;
   }
+  uploadBtn.disabled = true;
+  uploadStatus.textContent = "Uploading...";
+  try{
+    const ipfsHash = await uploadToPinata(mediaInput.files[0]);
+    const mediaType = mediaInput.files[0].type.startsWith("video") ? "video" : "image";
 
-  const postText = document.getElementById('postText');
-  const fileInput = document.getElementById('fileInput');
-  const dropArea = document.getElementById('dropArea');
-  const preview = document.getElementById('preview');
-  const shareButtons = document.getElementById('shareButtons');
-  const hashtags = "#DRF #DRFMedia #DRFTube #DRFWallet #DigitalRufiyaCoin #DRFChain";
-  const scheduledPosts = document.getElementById('scheduledPosts');
-
-  // Drag & Drop
-  dropArea.addEventListener('click', () => fileInput.click());
-  dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('dragover'); });
-  dropArea.addEventListener('dragleave', e => { e.preventDefault(); dropArea.classList.remove('dragover'); });
-  dropArea.addEventListener('drop', e => { e.preventDefault(); dropArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
-
-  function handleFiles(files) {
-    preview.innerHTML = '';
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        let element;
-        if (file.type.startsWith('image/')) { element = document.createElement('img'); element.src = e.target.result; }
-        else if (file.type.startsWith('video/')) { element = document.createElement('video'); element.src = e.target.result; element.controls = true; }
-        else { element = document.createElement('p'); element.textContent = 'Preview not available for this file type.'; }
-        element.className = 'max-h-48 rounded';
-        preview.appendChild(element);
-      }
-      reader.readAsDataURL(file);
+    const docRef = await addDoc(collection(db,"marketingPosts"),{
+      title:titleInput.value.trim(),
+      description:descInput.value.trim(),
+      ipfsHash,
+      mediaType,
+      createdAt:serverTimestamp()
     });
+
+    uploadStatus.textContent = "✅ Upload successful!";
+    mediaInput.value = "";
+    titleInput.value = "";
+    descInput.value = "";
+    window.location.href = window.location.pathname+"?id="+docRef.id;
+  }catch(err){
+    console.error(err);
+    uploadStatus.textContent = "Upload failed: "+(err.message||err);
+  }finally{
+    uploadBtn.disabled=false;
   }
+}
 
-  function appendHashtags() { if (!postText.value.includes(hashtags)) postText.value += " " + hashtags; }
+// Load post by ID
+const params = new URLSearchParams(window.location.search);
+const postId = params.get("id");
 
-  // Share Buttons
-  document.getElementById('postNow').addEventListener('click', function() {
-    appendHashtags();
-    const text = encodeURIComponent(postText.value);
-    const url = encodeURIComponent("https://drfmedia.com");
-    shareButtons.classList.remove('hidden');
-    document.getElementById('fbShare').href = `https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`;
-    document.getElementById('twShare').href = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
-    document.getElementById('lnShare').href = `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${text}`;
-    document.getElementById('ttShare').href = `https://www.tiktok.com/share?text=${text}`;
-    alert("Post preview ready! Click share buttons to post.");
-  });
+if(postId){
+  async function loadPost(){
+    try{
+      const docRef = doc(db,"marketingPosts",postId);
+      const docSnap = await getDoc(docRef);
+      if(docSnap.exists()){
+        const data = docSnap.data();
+        postTitle.textContent = data.title;
+        postDesc.textContent = data.description;
 
-  // Schedule Posts
-  document.getElementById('scheduleLater').addEventListener('click', function() {
-    appendHashtags();
-    const time = document.getElementById('scheduleTime').value;
-    if (!time) { alert("Please select a date & time!"); return; }
-    const li = document.createElement('li');
-    li.textContent = `${postText.value} (Scheduled: ${new Date(time).toLocaleString()})`;
-    scheduledPosts.appendChild(li);
-    alert("Post scheduled! Manual share required.");
-    postText.value = ''; fileInput.value = ''; preview.innerHTML = ''; shareButtons.classList.add('hidden'); document.getElementById('scheduleTime').value = '';
-  });
+        if(data.mediaType==="video"){
+          const video = document.createElement("video");
+          video.src=`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+          video.controls=true;
+          postMedia.appendChild(video);
+        }else{
+          const img = document.createElement("img");
+          img.src=`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+          postMedia.appendChild(img);
+        }
 
-  // Copy Post
-  document.getElementById('copyPost').addEventListener('click', () => {
-    appendHashtags();
-    const filesList = Array.from(fileInput.files).map(f => f.name).join(', ');
-    navigator.clipboard.writeText(`Post:\n${postText.value}\nMedia Files: ${filesList}`)
-      .then(()=>alert("Post copied!")).catch(()=>alert("Copy error."));
-  });
+        // Update OG tags
+        document.querySelector('meta[property="og:title"]').setAttribute("content",data.title);
+        document.querySelector('meta[property="og:description"]').setAttribute("content",data.description);
+        document.querySelector('meta[property="og:image"]').setAttribute("content",`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`);
+        document.querySelector('meta[property="og:url"]').setAttribute("content",window.location.href);
 
-  // Download Post
-  document.getElementById('downloadPost').addEventListener('click', () => {
-    appendHashtags();
-    const filesList = Array.from(fileInput.files).map(f => f.name).join(', ');
-    const blob = new Blob([`Post:\n${postText.value}\nMedia Files: ${filesList}`], {type:"text/plain"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `DRFPost_${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  });
+        // Social share buttons
+        const link = encodeURIComponent(window.location.href);
+        const text = encodeURIComponent(`${data.title} - ${data.description}`);
+        shareButtons.innerHTML = `
+          <a class="share-btn" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=${link}">Facebook</a>
+          <a class="share-btn" target="_blank" href="https://twitter.com/intent/tweet?url=${link}&text=${text}">Twitter</a>
+          <a class="share-btn" target="_blank" href="https://www.linkedin.com/shareArticle?mini=true&url=${link}&title=${text}">LinkedIn</a>
+          <div class="share-btn" onclick="navigator.clipboard.writeText('${window.location.href}').then(()=>alert('Link copied!'))">Copy Link</div>
+        `;
 
-  // Analytics Sample
-  const platforms = ['Facebook','TikTok','YouTube','Instagram','X','Telegram'];
-  const impressions = [1200,900,670,940,500,300];
-  const likes = [300,200,150,220,100,50];
-  const comments = [50,30,20,40,10,5];
-  const ctx = document.getElementById('engagementChart').getContext('2d');
-  new Chart(ctx,{
-    type:'bar',
-    data:{labels:platforms,datasets:[
-      {label:'Impressions', data:impressions, backgroundColor:'rgba(99,102,241,0.7)'},
-      {label:'Likes', data:likes, backgroundColor:'rgba(16,185,129,0.7)'},
-      {label:'Comments', data:comments, backgroundColor:'rgba(248,113,113,0.7)'}
-    ]},
-    options:{responsive:true,plugins:{legend:{position:'top'},title:{display:true,text:'Platform Engagement Overview'}},scales:{y:{beginAtZero:true}}}
-  });
-
-  const topPostsData = [
-    {post:'DRF Wallet Tutorial', platform:'YouTube', impressions:670, likes:150, comments:20},
-    {post:'Weekly Giveaway', platform:'Facebook', impressions:1200, likes:300, comments:50},
-    {post:'DRFTube Trending Video', platform:'TikTok', impressions:900, likes:200, comments:30},
-  ];
-  const topPostsTbody = document.getElementById('topPosts');
-  topPostsData.forEach(item => {
-    const tr = document.createElement('tr'); tr.className='border-b';
-    tr.innerHTML = `<td class="py-1 px-2">${item.post}</td>
-                    <td class="py-1 px-2 text-center">${item.platform}</td>
-                    <td class="py-1 px-2 text-center">${item.impressions}</td>
-                    <td class="py-1 px-2 text-center">${item.likes}</td>
-                    <td class="py-1 px-2 text-center">${item.comments}</td>`;
-    topPostsTbody.appendChild(tr);
-  });
+      }else{
+        postTitle.textContent="Post not found!";
+      }
+    }catch(err){
+      console.error(err);
+      postTitle.textContent="Error loading post";
+    }
+  }
+  loadPost();
+}else{
+  postTitle.textContent="No post selected. Upload a new post below!";
+}
 </script>
-
 </body>
 </html>
