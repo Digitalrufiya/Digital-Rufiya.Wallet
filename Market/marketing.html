@@ -1,148 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRF Marketing Tool</title>
-  <!-- Tailwind CSS (for testing; in production, use CLI/PostCSS) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRF Marketing Tool</title>
+<style>
+  body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
+  #upload-section { background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:900px; margin:auto; }
+  input, textarea, button { box-sizing:border-box; width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; }
+  button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; }
+  button:disabled{ background:#9ca3af; cursor:default; }
+  #feed{ max-width:900px; margin:18px auto; }
+  .post{ background:#fff; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center">
+<body>
 
-  <div class="w-full max-w-2xl p-4">
-    <h1 class="text-2xl font-bold text-center mb-4">📢 DRF Marketing Tool</h1>
+<section id="upload-section">
+  <h2>Create Marketing Campaign</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*" />
+  <input type="text" id="titleInput" placeholder="Campaign Title" />
+  <textarea id="descriptionInput" placeholder="Campaign Description" rows="3"></textarea>
+  <button id="uploadBtn">Upload Campaign</button>
+  <div id="uploadStatus" style="font-size:13px; color:#374151; margin-top:10px;"></div>
+</section>
 
-    <!-- Create Campaign Form -->
-    <div class="bg-white shadow p-4 rounded mb-6">
-      <h2 class="text-lg font-semibold mb-2">Create Campaign</h2>
-      <input id="title" type="text" placeholder="Campaign Title" class="w-full border p-2 rounded mb-2">
-      <textarea id="description" placeholder="Campaign Description" class="w-full border p-2 rounded mb-2"></textarea>
-      <input id="file" type="file" class="mb-2">
-      <button onclick="submitPost()" class="bg-blue-600 text-white px-4 py-2 rounded">Publish</button>
-    </div>
+<section id="feed"></section>
 
-    <!-- Feed -->
-    <div id="feed" class="space-y-4"></div>
-  </div>
+<script type="module">
+// --- FIREBASE CONFIG ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let currentUser = null;
+onAuthStateChanged(auth, user => { if(user) currentUser=user; else signInAnonymously(auth).catch(console.error); });
 
-    // Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
-      authDomain: "drfmarket-place.firebaseapp.com",
-      projectId: "drfmarket-place",
-      storageBucket: "drfmarket-place.appspot.com",
-      messagingSenderId: "752616443115",
-      appId: "1:752616443115:web:73b71924daf66ae9c882ae",
-      measurementId: "G-MV9JQZHLLY"
-    };
+// --- PINATA CONFIG (temporary, move to backend later) ---
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // << replace with your JWT
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+async function uploadToPinata(file){
+  if(!pinataJWT) throw new Error("Pinata JWT not configured");
+  const data = new FormData();
+  data.append("file", file);
+  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method:"POST",
+    headers:{ Authorization: pinataJWT },
+    body: data
+  });
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const json = await res.json();
+  return json.IpfsHash;
+}
 
-    // ✅ Replace with your own Pinata JWT
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+// --- UPLOAD BUTTON ---
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
 
-    // Submit Post
-    async function submitPost() {
-      const title = document.getElementById("title").value.trim();
-      const description = document.getElementById("description").value.trim();
-      const fileInput = document.getElementById("file");
+  if(!fileInput.files[0] || !title || !description) { alert("All fields required"); return; }
 
-      if (!title || !description) {
-        alert("Please enter title and description.");
-        return;
-      }
+  uploadBtn.disabled = true;
+  uploadStatus.textContent = "Uploading media to IPFS...";
 
-      let ipfsUrl = "";
+  try {
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
 
-      if (fileInput.files.length > 0) {
-        try {
-          const file = fileInput.files[0];
-          const formData = new FormData();
-          formData.append("file", file);
+    await addDoc(collection(db,"marketing_campaigns"),{
+      title, description, ipfsHash, mediaType, createdAt: serverTimestamp()
+    });
 
-          const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-            method: "POST",
-            headers: { Authorization: PINATA_JWT },
-            body: formData
-          });
+    uploadStatus.textContent = "✅ Campaign uploaded successfully!";
+    fileInput.value=""; document.getElementById("titleInput").value=""; document.getElementById("descriptionInput").value="";
+    loadFeed();
+  } catch(err){
+    console.error(err);
+    uploadStatus.textContent = "❌ Upload failed: "+err.message;
+  } finally { uploadBtn.disabled=false; }
+};
 
-          if (!res.ok) throw new Error("Pinata upload failed: " + res.status);
+// --- LOAD FEED ---
+async function loadFeed(){
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+  const snapshot = await getDocs(collection(db,"marketing_campaigns"));
+  snapshot.forEach(doc=>{
+    const post = doc.data();
+    const ipfsUrl = `https://ipfs.io/ipfs/${post.ipfsHash}`;
+    const mediaHtml = post.mediaType==="video"
+      ? `<video controls class="mt-2 rounded w-full"><source src="${ipfsUrl}" type="video/mp4"></video>`
+      : `<img src="${ipfsUrl}" class="mt-2 rounded w-full">`;
+    feed.innerHTML += `
+      <div class="post">
+        <h3>${post.title}</h3>
+        <p>${post.description}</p>
+        ${mediaHtml}
+      </div>
+    `;
+  });
+}
 
-          const data = await res.json();
-          ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-        } catch (err) {
-          console.error(err);
-          alert("File upload failed. Check your Pinata JWT.");
-          return;
-        }
-      }
-
-      try {
-        await addDoc(collection(db, "campaigns"), {
-          title,
-          description,
-          file: ipfsUrl,
-          timestamp: new Date().toISOString()
-        });
-        alert("Campaign Published ✅");
-        document.getElementById("title").value = "";
-        document.getElementById("description").value = "";
-        document.getElementById("file").value = "";
-        loadPosts();
-      } catch (err) {
-        console.error(err);
-        alert("Error saving campaign to Firestore.");
-      }
-    }
-
-    // Load Posts
-    async function loadPosts() {
-      const feed = document.getElementById("feed");
-      feed.innerHTML = "";
-
-      try {
-        const querySnapshot = await getDocs(collection(db, "campaigns"));
-        querySnapshot.forEach((doc) => {
-          const post = doc.data();
-          const text = encodeURIComponent(`${post.title} - ${post.description}`);
-          const shareUrl = encodeURIComponent(post.file || window.location.href);
-
-          let mediaHtml = "";
-          if (post.file) {
-            if (post.file.endsWith(".mp4")) {
-              mediaHtml = `<video controls class="mt-2 rounded w-full"><source src="${post.file}" type="video/mp4"></video>`;
-            } else {
-              mediaHtml = `<img src="${post.file}" class="mt-2 rounded w-full">`;
-            }
-          }
-
-          feed.innerHTML += `
-            <div class="bg-white shadow p-4 rounded">
-              <h3 class="text-xl font-semibold">${post.title}</h3>
-              <p class="text-gray-700">${post.description}</p>
-              ${mediaHtml}
-              <div class="flex space-x-4 mt-2">
-                <a href="https://twitter.com/intent/tweet?text=${text}&url=${shareUrl}" target="_blank" class="text-blue-400">Twitter</a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u=${shareUrl}" target="_blank" class="text-blue-600">Facebook</a>
-                <a href="https://api.whatsapp.com/send?text=${text}%20${shareUrl}" target="_blank" class="text-green-500">WhatsApp</a>
-              </div>
-            </div>
-          `;
-        });
-      } catch (err) {
-        console.error(err);
-        feed.innerHTML = "<p class='text-red-500'>Error loading campaigns.</p>";
-      }
-    }
-
-    // Auto-load feed
-    loadPosts();
-    window.submitPost = submitPost;
-  </script>
+// auto-load feed
+loadFeed();
+</script>
 </body>
 </html>
