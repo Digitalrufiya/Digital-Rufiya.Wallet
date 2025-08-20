@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DRF Marketing Tool</title>
-  <!-- Tailwind (CDN for dev only) -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
@@ -12,7 +11,6 @@
   <div class="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md">
     <h1 class="text-2xl font-bold mb-4 text-center">📢 DRF Marketing Tool</h1>
 
-    <!-- Post Form -->
     <input id="postTitle" type="text" placeholder="Enter title"
       class="w-full border rounded p-2 mb-3" />
     <textarea id="postDesc" placeholder="Enter description"
@@ -24,21 +22,20 @@
       Upload & Share
     </button>
 
-    <!-- Output -->
     <div id="output" class="mt-4 text-sm"></div>
   </div>
 
-  <!-- Firebase (Compat SDKs for non-modular use) -->
+  <!-- Firebase compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 
   <script>
-    // ✅ Firebase config
+    // ✅ Firebase config (fixed storageBucket)
     const firebaseConfig = {
       apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
       authDomain: "drfmarket-place.firebaseapp.com",
       projectId: "drfmarket-place",
-      storageBucket: "drfmarket-place.firebasestorage.app",
+      storageBucket: "drfmarket-place.appspot.com", // FIXED ✅
       messagingSenderId: "752616443115",
       appId: "1:752616443115:web:73b71924daf66ae9c882ae",
       measurementId: "G-MV9JQZHLLY"
@@ -46,8 +43,8 @@
     firebase.initializeApp(firebaseConfig);
     const storage = firebase.storage();
 
-    // ✅ Pinata JWT
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w";
+    // ✅ Pinata JWT (raw, no "Bearer " prefix here!)
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."; 
 
     async function submitPost() {
       const title = document.getElementById("postTitle").value;
@@ -63,28 +60,28 @@
       output.innerHTML = "⏳ Uploading...";
 
       try {
-        // Upload to Pinata (IPFS)
+        // ✅ Upload to Pinata (IPFS)
         const formData = new FormData();
         formData.append("file", file);
 
         const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${PINATA_JWT}`,
+            Authorization: `Bearer ${PINATA_JWT}`, // FIXED ✅
           },
           body: formData,
         });
 
+        if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
         const data = await res.json();
-        const ipfsHash = data.IpfsHash;
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
 
-        // Upload to Firebase Storage too
+        // ✅ Upload to Firebase
         const storageRef = storage.ref().child("posts/" + file.name);
         await storageRef.put(file);
         const firebaseUrl = await storageRef.getDownloadURL();
 
-        // Show success + share links
+        // ✅ Show success + share links
         output.innerHTML = `
           ✅ Uploaded Successfully!<br>
           <b>Title:</b> ${title}<br>
