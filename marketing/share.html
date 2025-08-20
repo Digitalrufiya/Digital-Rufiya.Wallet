@@ -3,20 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title id="pageTitle">DRF Marketing Post</title>
+<title>Marketing Post</title>
+
+<!-- Open Graph Tags -->
 <meta property="og:title" content="DRF Marketing Post" id="ogTitle"/>
 <meta property="og:description" content="Check out this marketing content!" id="ogDesc"/>
 <meta property="og:image" content="" id="ogImage"/>
 <meta property="og:type" content="website" />
+<meta property="og:url" content="" id="ogUrl"/>
+
 <style>
-body { font-family: Arial; margin:0; padding:20px; background:#f3f4f6; color:#111; }
-#post-container { max-width:900px; margin:auto; background:#fff; padding:16px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-#post-container img, #post-container video { max-width:100%; border-radius:6px; margin-top:12px; }
+body { font-family: Arial; margin:0; padding:20px; background:#f3f4f6; color:#111; text-align:center; }
+#postContainer { max-width:700px; margin:auto; background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+#postContainer img, #postContainer video{ max-width:100%; border-radius:6px; margin-top:8px; }
 </style>
 </head>
 <body>
-<div id="post-container">
-  <h2 id="postTitle">Loading...</h2>
+
+<div id="postContainer">
+  <h2 id="postTitle"></h2>
   <p id="postDesc"></p>
   <div id="postMedia"></div>
 </div>
@@ -25,7 +30,6 @@ body { font-family: Arial; margin:0; padding:20px; background:#f3f4f6; color:#11
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
   authDomain: "drfmarket-place.firebaseapp.com",
@@ -34,10 +38,10 @@ const firebaseConfig = {
   messagingSenderId: "752616443115",
   appId: "1:752616443115:web:73b71924daf66ae9c882ae"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Helper for IPFS gateways
 function getIpfsUrls(hash){
   const gateways = [
     "https://gateway.pinata.cloud/ipfs/",
@@ -47,40 +51,43 @@ function getIpfsUrls(hash){
   return gateways.map(g=>g+hash);
 }
 
-// Get post ID from URL
+// --- Get post ID from URL ---
 const urlParams = new URLSearchParams(window.location.search);
-const postId = urlParams.get('post');
+const postId = urlParams.get("post");
 
-if(!postId){
-  document.getElementById("postTitle").textContent = "Post not found!";
-} else {
-  async function loadPost(){
-    const docRef = doc(db, "marketingPosts", postId);
-    const docSnap = await getDoc(docRef);
-
-    if(docSnap.exists()){
-      const data = docSnap.data();
-      document.getElementById("postTitle").textContent = data.title;
-      document.getElementById("postDesc").textContent = data.description;
-
-      const urls = getIpfsUrls(data.ipfsHash);
-      const mediaHTML = data.mediaType === "video"
-        ? `<video controls src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"></video>`
-        : `<img src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"/>`;
-      document.getElementById("postMedia").innerHTML = mediaHTML;
-
-      // Update OG meta tags
-      document.getElementById("pageTitle").textContent = data.title;
-      document.getElementById("ogTitle").setAttribute("content", data.title);
-      document.getElementById("ogDesc").setAttribute("content", data.description);
-      document.getElementById("ogImage").setAttribute("content", urls[0]);
-    } else {
-      document.getElementById("postTitle").textContent = "Post not found!";
-    }
+async function loadPost(id){
+  if(!id) {
+    document.getElementById("postContainer").innerHTML = "Post not found!";
+    return;
   }
 
-  loadPost();
+  const docRef = doc(db, "marketingPosts", id);
+  const docSnap = await getDoc(docRef);
+
+  if(!docSnap.exists()){
+    document.getElementById("postContainer").innerHTML = "Post not found!";
+    return;
+  }
+
+  const data = docSnap.data();
+  const urls = getIpfsUrls(data.ipfsHash);
+  const mediaHTML = data.mediaType === "video"
+    ? `<video controls autoplay muted loop src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"></video>`
+    : `<img src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"/>`;
+
+  document.getElementById("postTitle").textContent = data.title;
+  document.getElementById("postDesc").textContent = data.description;
+  document.getElementById("postMedia").innerHTML = mediaHTML;
+
+  // Update OG tags dynamically
+  document.getElementById("ogTitle").setAttribute("content", data.title);
+  document.getElementById("ogDesc").setAttribute("content", data.description);
+  document.getElementById("ogImage").setAttribute("content", urls[0]);
+  document.getElementById("ogUrl").setAttribute("content", window.location.href);
 }
+
+loadPost(postId);
 </script>
+
 </body>
 </html>
