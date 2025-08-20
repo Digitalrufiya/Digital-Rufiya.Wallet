@@ -1,108 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRF Marketing Tool</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gray-100 min-h-screen flex flex-col items-center">
 
-  <div class="bg-white shadow-xl rounded-2xl p-6 w-full max-w-md">
-    <h1 class="text-2xl font-bold mb-4 text-center">📢 DRF Marketing Tool</h1>
+  <div class="w-full max-w-2xl p-4">
+    <h1 class="text-2xl font-bold text-center mb-4">📢 DRF Marketing Tool</h1>
 
-    <input id="postTitle" type="text" placeholder="Enter title"
-      class="w-full border rounded p-2 mb-3" />
-    <textarea id="postDesc" placeholder="Enter description"
-      class="w-full border rounded p-2 mb-3"></textarea>
-    <input id="postImage" type="file" accept="image/*"
-      class="w-full mb-3" />
+    <!-- Upload Form -->
+    <div class="bg-white shadow p-4 rounded mb-6">
+      <h2 class="text-lg font-semibold mb-2">Create Campaign</h2>
+      <input id="title" type="text" placeholder="Campaign Title" class="w-full border p-2 rounded mb-2">
+      <textarea id="description" placeholder="Campaign Description" class="w-full border p-2 rounded mb-2"></textarea>
+      <input id="image" type="file" class="mb-2">
+      <button onclick="submitPost()" class="bg-blue-600 text-white px-4 py-2 rounded">Publish</button>
+    </div>
 
-    <button onclick="submitPost()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
-      Upload & Share
-    </button>
-
-    <div id="output" class="mt-4 text-sm"></div>
+    <!-- Feed -->
+    <div id="feed" class="space-y-4"></div>
   </div>
 
-  <!-- Firebase compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <!-- Firebase -->
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-  <script>
-    // ✅ Firebase config (fixed storageBucket)
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
       authDomain: "drfmarket-place.firebaseapp.com",
       projectId: "drfmarket-place",
-      storageBucket: "drfmarket-place.appspot.com", // FIXED ✅
+      storageBucket: "drfmarket-place.firebasestorage.app",
       messagingSenderId: "752616443115",
       appId: "1:752616443115:web:73b71924daf66ae9c882ae",
       measurementId: "G-MV9JQZHLLY"
     };
-    firebase.initializeApp(firebaseConfig);
-    const storage = firebase.storage();
 
-    // ✅ Pinata JWT (raw, no "Bearer " prefix here!)
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w"; 
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
+    // Pinata JWT
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your JWT
+
+    // Submit Post
     async function submitPost() {
-      const title = document.getElementById("postTitle").value;
-      const desc = document.getElementById("postDesc").value;
-      const file = document.getElementById("postImage").files[0];
-      const output = document.getElementById("output");
+      const title = document.getElementById("title").value;
+      const description = document.getElementById("description").value;
+      const fileInput = document.getElementById("image");
 
-      if (!file) {
-        alert("Please choose an image.");
-        return;
-      }
+      let ipfsUrl = "";
 
-      output.innerHTML = "⏳ Uploading...";
-
-      try {
-        // ✅ Upload to Pinata (IPFS)
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
         const formData = new FormData();
         formData.append("file", file);
 
         const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${PINATA_JWT}`, // FIXED ✅
-          },
-          body: formData,
+          headers: { Authorization: PINATA_JWT },
+          body: formData
         });
 
-        if (!res.ok) throw new Error("Pinata upload failed: " + res.statusText);
         const data = await res.json();
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+        ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+      }
 
-        // ✅ Upload to Firebase
-        const storageRef = storage.ref().child("posts/" + file.name);
-        await storageRef.put(file);
-        const firebaseUrl = await storageRef.getDownloadURL();
+      await addDoc(collection(db, "campaigns"), {
+        title,
+        description,
+        image: ipfsUrl,
+        timestamp: new Date().toISOString()
+      });
 
-        // ✅ Show success + share links
-        output.innerHTML = `
-          ✅ Uploaded Successfully!<br>
-          <b>Title:</b> ${title}<br>
-          <b>Description:</b> ${desc}<br>
-          <b>IPFS:</b> <a href="${ipfsUrl}" target="_blank">${ipfsUrl}</a><br>
-          <b>Firebase:</b> <a href="${firebaseUrl}" target="_blank">${firebaseUrl}</a><br><br>
+      alert("Campaign Published ✅");
+      loadPosts();
+    }
 
-          <div class="flex gap-2">
-            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(ipfsUrl)}" target="_blank"
-              class="bg-blue-500 text-white px-3 py-1 rounded">Facebook</a>
-            <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(ipfsUrl)}&text=${encodeURIComponent(title)}"
-              target="_blank" class="bg-sky-400 text-white px-3 py-1 rounded">Twitter</a>
-            <a href="https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(ipfsUrl)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(desc)}"
-              target="_blank" class="bg-blue-700 text-white px-3 py-1 rounded">LinkedIn</a>
+    // Load Posts
+    async function loadPosts() {
+      const feed = document.getElementById("feed");
+      feed.innerHTML = "";
+
+      const querySnapshot = await getDocs(collection(db, "campaigns"));
+      querySnapshot.forEach((doc) => {
+        const post = doc.data();
+        const url = encodeURIComponent(window.location.href);
+        const text = encodeURIComponent(`${post.title} - ${post.description}`);
+        const shareUrl = encodeURIComponent(post.image || window.location.href);
+
+        feed.innerHTML += `
+          <div class="bg-white shadow p-4 rounded">
+            <h3 class="text-xl font-semibold">${post.title}</h3>
+            <p class="text-gray-700">${post.description}</p>
+            ${post.image ? `<img src="${post.image}" class="mt-2 rounded">` : ""}
+            <div class="flex space-x-4 mt-2">
+              <a href="https://twitter.com/intent/tweet?text=${text}&url=${shareUrl}" target="_blank" class="text-blue-400">Twitter</a>
+              <a href="https://www.facebook.com/sharer/sharer.php?u=${shareUrl}" target="_blank" class="text-blue-600">Facebook</a>
+              <a href="https://api.whatsapp.com/send?text=${text}%20${shareUrl}" target="_blank" class="text-green-500">WhatsApp</a>
+            </div>
           </div>
         `;
-      } catch (err) {
-        console.error(err);
-        output.innerHTML = "❌ Upload failed. Check console.";
-      }
+      });
     }
+
+    // Auto-load feed
+    loadPosts();
+
+    // Expose submitPost
+    window.submitPost = submitPost;
   </script>
 </body>
 </html>
