@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRF Marketing Post Generator</title>
+  <style>
+    body { font-family: Arial; max-width:600px; margin:30px auto; padding:20px; background:#f3f4f6; }
+    input, textarea, button { width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; }
+    button { background:#2563eb; color:white; border:none; cursor:pointer; }
+    button:disabled { background:#aaa; cursor:default; }
+    #result { margin-top:20px; padding:10px; background:#e0ffe0; border-radius:6px; word-break:break-all; }
+  </style>
+</head>
+<body>
+
+<h2>DRF Marketing Post Link Generator</h2>
+
+<input type="text" id="videoCID" placeholder="Pinata Video CID (e.g., QmVideo123)">
+<input type="text" id="thumbCID" placeholder="Pinata Thumbnail CID (e.g., QmThumb123)">
+<input type="text" id="title" placeholder="Title of the Post">
+<textarea id="desc" placeholder="Description of the Post" rows="3"></textarea>
+
+<button id="generateBtn">Generate Share Link</button>
+
+<div id="result"></div>
+
+<script>
+const generateBtn = document.getElementById("generateBtn");
+const result = document.getElementById("result");
+
+generateBtn.onclick = () => {
+  const videoCID = document.getElementById("videoCID").value.trim();
+  const thumbCID = document.getElementById("thumbCID").value.trim();
+  const title = encodeURIComponent(document.getElementById("title").value.trim());
+  const desc = encodeURIComponent(document.getElementById("desc").value.trim());
+
+  if(!videoCID || !thumbCID || !title || !desc){
+    alert("All fields are required!");
+    return;
+  }
+
+  // Construct GitHub Pages shareable link
+  const baseLink = "https://yourusername.github.io/yourrepo/post.html";
+  const shareLink = `${baseLink}?video=https://gateway.pinata.cloud/ipfs/${videoCID}/video.mp4&thumb=https://gateway.pinata.cloud/ipfs/${thumbCID}/thumbnail.jpg&title=${title}&desc=${desc}`;
+
+  result.innerHTML = `<strong>Copy & Share this link:</strong><br><a href="${shareLink}" target="_blank">${shareLink}</a>`;
+};
+</script>
+
+</body>
+</html>
