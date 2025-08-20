@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Promo Upload Dashboard</title>
+<style>
+body { font-family: Arial; margin:0; padding:20px; background:#f3f4f6; color:#111; }
+#upload-section { background:#fff; padding:20px; border-radius:10px; max-width:700px; margin:auto; box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+input, textarea, button { width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; }
+button { background:#2563eb; color:#fff; border:none; cursor:pointer; }
+button:disabled { background:#9ca3af; cursor:default; }
+#status { margin-top:10px; }
+</style>
+</head>
+<body>
+
+<section id="upload-section">
+  <h2>Upload Marketing Post</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*" />
+  <input type="text" id="titleInput" placeholder="Title" />
+  <textarea id="descriptionInput" placeholder="Description"></textarea>
+  <button id="uploadBtn">Upload</button>
+  <div id="status"></div>
+</section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let currentUser = null;
+onAuthStateChanged(auth, user => {
+  if(user) currentUser = user;
+  else signInAnonymously(auth).catch(console.error);
+});
+
+// Pinata JWT for IPFS
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+async function uploadToPinata(file){
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const data = new FormData();
+  data.append("file", file);
+  const res = await fetch(url, { method:"POST", headers:{Authorization: pinataJWT}, body:data });
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const json = await res.json();
+  return json.IpfsHash;
+}
+
+const uploadBtn = document.getElementById("uploadBtn");
+const status = document.getElementById("status");
+
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+
+  if(!fileInput.files[0] || !title || !description){
+    alert("All fields are required!");
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  status.textContent = "Uploading...";
+
+  try{
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
+
+    await addDoc(collection(db, "marketingPosts"), {
+      title, description, ipfsHash, mediaType, createdAt: serverTimestamp()
+    });
+
+    status.textContent = "✅ Upload successful!";
+    fileInput.value = "";
+    document.getElementById("titleInput").value = "";
+    document.getElementById("descriptionInput").value = "";
+  } catch(e){
+    console.error(e);
+    status.textContent = "❌ Upload failed: "+e.message;
+  } finally {
+    uploadBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
