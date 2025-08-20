@@ -30,6 +30,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebas
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
+// ===== Firebase config =====
 const firebaseConfig = {
   apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
   authDomain: "drfmarket-place.firebaseapp.com",
@@ -43,52 +44,61 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-let currentUser=null;
-onAuthStateChanged(auth,user=>{if(user) currentUser=user; else signInAnonymously(auth).catch(console.error);});
+let currentUser = null;
+onAuthStateChanged(auth, user => {
+  if(user) currentUser = user;
+  else signInAnonymously(auth).catch(console.error);
+});
 
+// ===== Pinata JWT (without "Bearer") =====
 const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
 async function uploadToPinata(file){
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
   const data = new FormData();
   data.append("file", file);
-  const res = await fetch(url,{method:"POST",headers:{Authorization:`Bearer ${pinataJWT}`},body:data});
+  const res = await fetch(url,{
+    method:"POST",
+    headers:{Authorization:`Bearer ${pinataJWT}`},
+    body:data
+  });
   if(!res.ok) throw new Error("Pinata upload failed");
   const json = await res.json();
   return json.IpfsHash;
 }
 
+// ===== Upload button =====
 const uploadBtn = document.getElementById("uploadBtn");
 const uploadStatus = document.getElementById("uploadStatus");
 const shareLinkDiv = document.getElementById("shareLink");
 
-uploadBtn.onclick = async ()=>{
-  const fileInput=document.getElementById("mediaInput");
-  const title=document.getElementById("titleInput").value.trim();
-  const description=document.getElementById("descriptionInput").value.trim();
-  const thumb=document.getElementById("thumbnailInput").value.trim();
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+  const thumb = document.getElementById("thumbnailInput").value.trim();
 
   if(!fileInput.files[0] || !title || !description){
     alert("All fields required");
     return;
   }
 
-  uploadBtn.disabled=true;
-  uploadStatus.textContent="Uploading to IPFS...";
+  uploadBtn.disabled = true;
+  uploadStatus.textContent = "Uploading to IPFS...";
 
   try{
     const ipfsHash = await uploadToPinata(fileInput.files[0]);
     const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
 
     const docRef = await addDoc(collection(db,"marketingPosts"),{
-      title, description, mediaType, ipfsHash, thumbnail:thumb || "", createdAt:serverTimestamp()
+      title, description, mediaType, ipfsHash, thumbnail: thumb || "", createdAt: serverTimestamp()
     });
 
-    uploadStatus.textContent="✅ Uploaded successfully!";
+    uploadStatus.textContent = "✅ Uploaded successfully!";
     const generatedFile = `post-${docRef.id}.html`;
     shareLinkDiv.innerHTML=`Share Link: <a href="${generatedFile}" target="_blank">${generatedFile}</a>`;
 
-    // Generate static HTML content
+    // ===== Generate static HTML for shareable post =====
     const staticHTML = `
 <!DOCTYPE html>
 <html lang="en">
@@ -109,13 +119,14 @@ ${mediaType==='video'?`<video controls width="100%" src="https://gateway.pinata.
 </body>
 </html>
     `;
-    console.log("Copy this static HTML into a file named "+generatedFile+" on your GitHub Pages or server:\n", staticHTML);
+    console.log("Copy this HTML as", generatedFile, "on your GitHub Pages or server:\n", staticHTML);
 
-  }catch(err){
+  } catch(err) {
     console.error(err);
-    uploadStatus.textContent="Upload failed: "+err.message;
-  }finally{uploadBtn.disabled=false;}
+    uploadStatus.textContent = "Upload failed: "+err.message;
+  } finally { uploadBtn.disabled = false; }
 };
 </script>
+
 </body>
 </html>
