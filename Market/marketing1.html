@@ -14,6 +14,8 @@
   .post{ background:#fff; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
   .share-buttons{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .share-buttons button{ flex:1; background:#e5e7eb; color:#111; padding:6px; font-size:12px; border-radius:4px; cursor:pointer; }
+  video, img{ max-width:100%; height:auto; border-radius:6px; margin-top:6px; }
+  @media(max-width:600px){ body{padding:10px;} #upload-section{padding:12px;} .share-buttons button{font-size:11px; padding:5px;} }
 </style>
 </head>
 <body>
@@ -39,7 +41,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
   authDomain: "drfmarket-place.firebaseapp.com",
   projectId: "drfmarket-place",
-  storageBucket: "drfmarket-place.firebasestorage.app",
+  storageBucket: "drfmarket-place.appspot.com",
   messagingSenderId: "752616443115",
   appId: "1:752616443115:web:73b71924daf66ae9c882ae"
 };
@@ -50,7 +52,7 @@ let currentUser = null;
 onAuthStateChanged(auth, user => { if(user) currentUser=user; else signInAnonymously(auth).catch(console.error); });
 
 // --- PINATA UPLOAD ---
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your JWT
+const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // replace with your JWT
 
 async function uploadToPinata(file){
   const data = new FormData();
@@ -102,9 +104,9 @@ async function loadFeed(){
     const post = doc.data();
     const ipfsUrl = `https://ipfs.io/ipfs/${post.ipfsHash}`;
     const mediaHtml = post.mediaType==="video"
-      ? `<video controls class="mt-2 rounded w-full"><source src="${ipfsUrl}" type="video/mp4"></video>`
-      : `<img src="${ipfsUrl}" class="mt-2 rounded w-full">`;
-    
+      ? `<video controls><source src="${ipfsUrl}" type="video/mp4"></video>`
+      : `<img src="${ipfsUrl}">`;
+
     const shareUrl = encodeURIComponent(window.location.href + "?postId=" + doc.id);
     feed.innerHTML += `
       <div class="post">
@@ -115,6 +117,8 @@ async function loadFeed(){
           <button onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${shareUrl}','_blank')">Facebook</button>
           <button onclick="window.open('https://twitter.com/intent/tweet?url=${shareUrl}&text=${encodeURIComponent(post.title)}','_blank')">Twitter</button>
           <button onclick="window.open('https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}','_blank')">LinkedIn</button>
+          <button onclick="window.open('https://www.tiktok.com/share/video?url=${shareUrl}','_blank')">TikTok</button>
+          <button onclick="window.open('https://www.instagram.com/?url=${shareUrl}','_blank')">Instagram</button>
           <button onclick="copyLink('${shareUrl}')">Copy Link</button>
         </div>
       </div>
@@ -123,9 +127,7 @@ async function loadFeed(){
 }
 
 // --- COPY LINK ---
-window.copyLink = (link)=>{
-  navigator.clipboard.writeText(decodeURIComponent(link)).then(()=>alert("Link copied!"));
-}
+window.copyLink = (link)=>{ navigator.clipboard.writeText(decodeURIComponent(link)).then(()=>alert("Link copied!")); }
 
 // auto-load feed
 loadFeed();
