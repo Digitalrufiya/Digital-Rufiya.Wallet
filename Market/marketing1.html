@@ -5,20 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DRF Marketing Dashboard</title>
 <style>
-  body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
+  body { font-family: Arial,sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
   #upload-section { background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:900px; margin:auto; }
   input, textarea, button { box-sizing:border-box; width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; }
-  button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; font-size:14px; }
+  button{ background:#2563eb; color:#fff; border:none; padding:8px; cursor:pointer; font-size:14px; }
   button:disabled{ background:#9ca3af; cursor:default; }
   #posts{ max-width:900px; margin:18px auto; }
   .post{ background:#fff; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
-  .post img, .post video{ max-width:100%; border-radius:6px; margin-top:8px; }
-  .buttons{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
-  .buttons button{ flex:1; padding:8px; font-size:13px; }
-  @media(max-width:600px){
-    .buttons{ flex-direction: column; }
-    .buttons button{ width:100%; }
-  }
+  .post img, .post video{ max-width:100%; border-radius:6px; margin-top:8px; display:block; }
+  .buttons{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .buttons button{ flex:1; font-size:12px; padding:6px; }
 </style>
 </head>
 <body>
@@ -31,7 +27,7 @@
   <div style="margin-top:12px">
     <button id="uploadBtn">Upload Content</button>
   </div>
-  <div id="uploadStatus" class="small" style="margin-top:10px"></div>
+  <div id="uploadStatus" style="margin-top:10px"></div>
 </section>
 
 <section id="posts"></section>
@@ -50,6 +46,7 @@ const firebaseConfig = {
   appId: "1:752616443115:web:73b71924daf66ae9c882ae",
   measurementId: "G-MV9JQZHLLY"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -60,13 +57,15 @@ onAuthStateChanged(auth, user => {
   else signInAnonymously(auth).catch(console.error);
 });
 
-const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your own
-async function uploadToPinata(file) {
+/* --- Pinata Upload --- */
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+async function uploadToPinata(file){
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
   const data = new FormData();
   data.append("file", file);
-  const res = await fetch(url, { method: "POST", headers: { Authorization: pinataJWT }, body: data });
-  if (!res.ok) throw new Error("Pinata upload failed");
+  const res = await fetch(url,{ method:"POST", headers:{Authorization:pinataJWT}, body:data });
+  if(!res.ok) throw new Error("Pinata upload failed");
   const json = await res.json();
   return json.IpfsHash;
 }
@@ -75,12 +74,12 @@ const uploadBtn = document.getElementById("uploadBtn");
 const uploadStatus = document.getElementById("uploadStatus");
 const postsContainer = document.getElementById("posts");
 
-uploadBtn.onclick = async () => {
+uploadBtn.onclick = async ()=>{
   const fileInput = document.getElementById("mediaInput");
   const title = document.getElementById("titleInput").value.trim();
   const description = document.getElementById("descriptionInput").value.trim();
 
-  if (!fileInput.files[0] || !title || !description) {
+  if(!fileInput.files[0] || !title || !description){
     alert("All fields are required");
     return;
   }
@@ -88,76 +87,79 @@ uploadBtn.onclick = async () => {
   uploadBtn.disabled = true;
   uploadStatus.textContent = "Uploading media to IPFS...";
 
-  try {
+  try{
     const ipfsHash = await uploadToPinata(fileInput.files[0]);
     const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
 
-    // generate custom HTML page for each post (on client-side, user can download or host)
-    const postHTML = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta property="og:title" content="${title}">
-<meta property="og:description" content="${description}">
-<meta property="og:image" content="https://gateway.pinata.cloud/ipfs/${ipfsHash}">
-<meta property="og:type" content="${mediaType==='video'?'video.other':'website'}">
-<title>${title}</title>
-</head>
-<body>
-<h1>${title}</h1>
-<p>${description}</p>
-${mediaType==='video'?`<video controls src="https://gateway.pinata.cloud/ipfs/${ipfsHash}"></video>`:`<img src="https://gateway.pinata.cloud/ipfs/${ipfsHash}" />`}
-</body>
-</html>
-    `;
-    console.log("Copy this HTML as a separate file to host for OG preview:\n", postHTML);
-
-    await addDoc(collection(db, "marketingPosts"), {
-      title, description, ipfsHash, mediaType, createdAt: serverTimestamp()
+    await addDoc(collection(db,"marketingPosts"),{
+      title, description, ipfsHash, mediaType, createdAt:serverTimestamp()
     });
 
     uploadStatus.textContent = "✅ Content uploaded successfully!";
-    fileInput.value = "";
-    document.getElementById("titleInput").value = "";
-    document.getElementById("descriptionInput").value = "";
-
+    fileInput.value=""; document.getElementById("titleInput").value=""; document.getElementById("descriptionInput").value="";
     loadPosts();
-  } catch (err) {
+  }catch(err){
     console.error(err);
-    uploadStatus.textContent = "Upload error: " + (err.message || err);
-    alert("Upload failed: " + (err.message || err));
-  } finally {
-    uploadBtn.disabled = false;
-  }
-};
+    uploadStatus.textContent = "Upload error: "+(err.message||err);
+    alert("Upload failed: "+(err.message||err));
+  }finally{ uploadBtn.disabled=false; }
+}
 
-async function loadPosts() {
-  postsContainer.innerHTML = "";
-  const q = query(collection(db, "marketingPosts"), orderBy("createdAt", "desc"));
+/* --- Lazy load posts --- */
+async function loadPosts(){
+  postsContainer.innerHTML="";
+  const q = query(collection(db,"marketingPosts"),orderBy("createdAt","desc"));
   const snapshot = await getDocs(q);
-  snapshot.forEach(doc => {
+  snapshot.forEach(doc=>{
     const data = doc.data();
     const postEl = document.createElement("div");
-    postEl.className = "post";
+    postEl.className="post";
 
-    const sharePageURL = `https://yourdomain.com/posts/${doc.id}.html`; // host the static HTML per post
+    // Cloudflare IPFS gateway for fast, reliable access
+    const ipfsUrl = `https://cloudflare-ipfs.com/ipfs/${data.ipfsHash}`;
 
-    postEl.innerHTML = `
+    postEl.innerHTML=`
       <h3>${data.title}</h3>
       <p>${data.description}</p>
-      ${data.mediaType==='video'?`<video src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" controls></video>`:`<img src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" />`}
+      ${data.mediaType==="video"
+        ? `<video data-src="${ipfsUrl}" controls muted playsinline preload="none" poster="${ipfsUrl}"></video>`
+        : `<img data-src="${ipfsUrl}" alt="${data.title}" />`
+      }
       <div class="buttons">
-        <button onclick="navigator.clipboard.writeText('${sharePageURL}').then(()=>alert('Link copied!'))">Copy Link</button>
-        <button onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(sharePageURL)}','_blank')">Facebook</button>
-        <button onclick="window.open('https://twitter.com/intent/tweet?url=${encodeURIComponent(sharePageURL)}&text=${encodeURIComponent(data.title)}','_blank')">Twitter</button>
-        <button onclick="window.open('https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(sharePageURL)}&title=${encodeURIComponent(data.title)}&summary=${encodeURIComponent(data.description)}','_blank')">LinkedIn</button>
+        <button onclick="copyLink('${ipfsUrl}')">Copy Link</button>
+        <button onclick="shareFB('${data.title}','${data.description}','${ipfsUrl}')">Facebook</button>
+        <button onclick="shareTW('${data.title}','${ipfsUrl}')">Twitter</button>
+        <button onclick="shareLI('${data.title}','${ipfsUrl}')">LinkedIn</button>
       </div>
     `;
     postsContainer.appendChild(postEl);
   });
+  lazyLoadMedia();
 }
 
+/* --- Lazy load function --- */
+function lazyLoadMedia(){
+  const mediaEls = document.querySelectorAll("img[data-src],video[data-src]");
+  const observer = new IntersectionObserver((entries, obs)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const el = entry.target;
+        el.src = el.dataset.src;
+        el.removeAttribute("data-src");
+        obs.unobserve(el);
+      }
+    });
+  },{rootMargin:"100px"});
+  mediaEls.forEach(el=>observer.observe(el));
+}
+
+/* --- Sharing buttons --- */
+function copyLink(url){ navigator.clipboard.writeText(url).then(()=>alert("Link copied!")); }
+function shareFB(title,desc,url){ window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(title+" - "+desc)}`,"_blank"); }
+function shareTW(title,url){ window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,"_blank"); }
+function shareLI(title,url){ window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,"_blank"); }
+
+// initial load
 loadPosts();
 </script>
 
