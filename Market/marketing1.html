@@ -8,12 +8,17 @@
   body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#f3f4f6; color:#111; }
   #upload-section { background:#fff; padding:16px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); max-width:900px; margin:auto; }
   input, textarea, button { box-sizing:border-box; width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; }
-  button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; }
+  button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; font-size:14px; }
   button:disabled{ background:#9ca3af; cursor:default; }
   #posts{ max-width:900px; margin:18px auto; }
   .post{ background:#fff; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
   .post img, .post video{ max-width:100%; border-radius:6px; margin-top:8px; }
-  .buttons{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .buttons{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .buttons button{ flex:1; padding:8px; font-size:13px; }
+  @media(max-width:600px){
+    .buttons{ flex-direction: column; }
+    .buttons button{ width:100%; }
+  }
 </style>
 </head>
 <body>
@@ -55,8 +60,7 @@ onAuthStateChanged(auth, user => {
   else signInAnonymously(auth).catch(console.error);
 });
 
-/* --- Pinata Upload --- */
-const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // replace with your own
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your own
 async function uploadToPinata(file) {
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
   const data = new FormData();
@@ -88,7 +92,28 @@ uploadBtn.onclick = async () => {
     const ipfsHash = await uploadToPinata(fileInput.files[0]);
     const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
 
-    const docRef = await addDoc(collection(db, "marketingPosts"), {
+    // generate custom HTML page for each post (on client-side, user can download or host)
+    const postHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="https://gateway.pinata.cloud/ipfs/${ipfsHash}">
+<meta property="og:type" content="${mediaType==='video'?'video.other':'website'}">
+<title>${title}</title>
+</head>
+<body>
+<h1>${title}</h1>
+<p>${description}</p>
+${mediaType==='video'?`<video controls src="https://gateway.pinata.cloud/ipfs/${ipfsHash}"></video>`:`<img src="https://gateway.pinata.cloud/ipfs/${ipfsHash}" />`}
+</body>
+</html>
+    `;
+    console.log("Copy this HTML as a separate file to host for OG preview:\n", postHTML);
+
+    await addDoc(collection(db, "marketingPosts"), {
       title, description, ipfsHash, mediaType, createdAt: serverTimestamp()
     });
 
@@ -107,7 +132,6 @@ uploadBtn.onclick = async () => {
   }
 };
 
-/* --- Display posts --- */
 async function loadPosts() {
   postsContainer.innerHTML = "";
   const q = query(collection(db, "marketingPosts"), orderBy("createdAt", "desc"));
@@ -117,27 +141,23 @@ async function loadPosts() {
     const postEl = document.createElement("div");
     postEl.className = "post";
 
-    // Share URL: create a static URL using ipfs hash for OG preview
-    const shareURL = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+    const sharePageURL = `https://yourdomain.com/posts/${doc.id}.html`; // host the static HTML per post
 
     postEl.innerHTML = `
       <h3>${data.title}</h3>
       <p>${data.description}</p>
-      ${data.mediaType === "video" 
-        ? `<video src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" controls></video>` 
-        : `<img src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" />`}
+      ${data.mediaType==='video'?`<video src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" controls></video>`:`<img src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" />`}
       <div class="buttons">
-        <button onclick="navigator.clipboard.writeText('${shareURL}').then(()=>alert('Link copied!'))">Copy Link</button>
-        <button onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareURL)}','_blank')">Facebook</button>
-        <button onclick="window.open('https://twitter.com/intent/tweet?url=${encodeURIComponent(shareURL)}&text=${encodeURIComponent(data.title)}','_blank')">Twitter</button>
-        <button onclick="window.open('https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareURL)}&title=${encodeURIComponent(data.title)}&summary=${encodeURIComponent(data.description)}','_blank')">LinkedIn</button>
+        <button onclick="navigator.clipboard.writeText('${sharePageURL}').then(()=>alert('Link copied!'))">Copy Link</button>
+        <button onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(sharePageURL)}','_blank')">Facebook</button>
+        <button onclick="window.open('https://twitter.com/intent/tweet?url=${encodeURIComponent(sharePageURL)}&text=${encodeURIComponent(data.title)}','_blank')">Twitter</button>
+        <button onclick="window.open('https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(sharePageURL)}&title=${encodeURIComponent(data.title)}&summary=${encodeURIComponent(data.description)}','_blank')">LinkedIn</button>
       </div>
     `;
     postsContainer.appendChild(postEl);
   });
 }
 
-// initial load
 loadPosts();
 </script>
 
