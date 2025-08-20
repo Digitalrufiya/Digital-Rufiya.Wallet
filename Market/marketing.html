@@ -27,29 +27,25 @@
 
   <!-- Firebase -->
   <script type="module">
-    // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    // Firebase Config
+    // ✅ Corrected Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
       authDomain: "drfmarket-place.firebaseapp.com",
       projectId: "drfmarket-place",
-      storageBucket: "drfmarket-place.firebasestorage.app",
+      storageBucket: "drfmarket-place.appspot.com",  // FIXED
       messagingSenderId: "752616443115",
       appId: "1:752616443115:web:73b71924daf66ae9c882ae",
       measurementId: "G-MV9JQZHLLY"
     };
 
-    // Init Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Pinata JWT
-    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your JWT
+    const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."; 
 
-    // Submit Post
     async function submitPost() {
       const title = document.getElementById("title").value;
       const description = document.getElementById("description").value;
@@ -83,7 +79,6 @@
       loadPosts();
     }
 
-    // Load Posts
     async function loadPosts() {
       const feed = document.getElementById("feed");
       feed.innerHTML = "";
@@ -91,7 +86,6 @@
       const querySnapshot = await getDocs(collection(db, "campaigns"));
       querySnapshot.forEach((doc) => {
         const post = doc.data();
-        const url = encodeURIComponent(window.location.href);
         const text = encodeURIComponent(`${post.title} - ${post.description}`);
         const shareUrl = encodeURIComponent(post.image || window.location.href);
 
@@ -110,10 +104,7 @@
       });
     }
 
-    // Auto-load feed
     loadPosts();
-
-    // Expose submitPost
     window.submitPost = submitPost;
   </script>
 </body>
