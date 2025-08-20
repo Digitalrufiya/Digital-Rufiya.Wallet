@@ -1,77 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DRF Marketing Post</title>
-
-  <!-- Default OG tags (fallback for bots that don’t run JS) -->
-  <meta property="og:title" content="DRF Marketing Post">
-  <meta property="og:description" content="Check out this campaign on DRF Marketing Tool">
-  <meta property="og:image" content="https://drfchain.org/default-thumbnail.png">
-  <meta property="og:type" content="website">
-
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f3f4f6; }
-    .post { max-width: 800px; margin:auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.06);}
-    img, video { max-width: 100%; border-radius: 10px; margin-top:12px; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Marketing Tool</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f0f2f5;margin:0;padding:20px;}
+#upload-section{background:white;padding:20px;border-radius:8px;max-width:600px;margin:auto;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+input,textarea,button{width:100%;margin:10px 0;padding:10px;border-radius:6px;border:1px solid #ccc;box-sizing:border-box;}
+button{background:#2563eb;color:white;border:none;cursor:pointer;}
+button:disabled{background:#aaa;cursor:default;}
+</style>
 </head>
 <body>
-  <div id="post" class="post">Loading post...</div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+<section id="upload-section">
+<h2>Upload Marketing Post</h2>
+<input type="file" id="mediaInput" accept="image/*,video/*" />
+<input type="text" id="titleInput" placeholder="Title" />
+<textarea id="descriptionInput" placeholder="Description" rows="3"></textarea>
+<input type="text" id="thumbnailInput" placeholder="Thumbnail URL (optional)" />
+<button id="uploadBtn">Upload & Generate Shareable Link</button>
+<div id="uploadStatus"></div>
+<div id="shareLink"></div>
+</section>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
-      authDomain: "drfmarket-place.firebaseapp.com",
-      projectId: "drfmarket-place",
-      storageBucket: "drfmarket-place.firebasestorage.app",
-      messagingSenderId: "752616443115",
-      appId: "1:752616443115:web:73b71924daf66ae9c882ae"
-    };
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+};
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const postId = urlParams.get("id");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
-    async function loadPost() {
-      if (!postId) {
-        document.getElementById("post").textContent = "Invalid post link.";
-        return;
-      }
+let currentUser=null;
+onAuthStateChanged(auth,user=>{if(user) currentUser=user; else signInAnonymously(auth).catch(console.error);});
 
-      const docRef = doc(db, "marketingPosts", postId);
-      const snap = await getDoc(docRef);
+const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
-      if (!snap.exists()) {
-        document.getElementById("post").textContent = "Post not found.";
-        return;
-      }
+async function uploadToPinata(file){
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const data = new FormData();
+  data.append("file", file);
+  const res = await fetch(url,{method:"POST",headers:{Authorization:`Bearer ${pinataJWT}`},body:data});
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const json = await res.json();
+  return json.IpfsHash;
+}
 
-      const data = snap.data();
-      const media = data.mediaType === "video"
-        ? `<video src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" controls></video>`
-        : `<img src="https://gateway.pinata.cloud/ipfs/${data.ipfsHash}" />`;
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+const shareLinkDiv = document.getElementById("shareLink");
 
-      document.getElementById("post").innerHTML = `
-        <h2>${data.title}</h2>
-        <p>${data.description}</p>
-        ${media}
-      `;
+uploadBtn.onclick = async ()=>{
+  const fileInput=document.getElementById("mediaInput");
+  const title=document.getElementById("titleInput").value.trim();
+  const description=document.getElementById("descriptionInput").value.trim();
+  const thumb=document.getElementById("thumbnailInput").value.trim();
 
-      // ✅ Dynamically update meta tags (for SEO / Twitter, but FB won’t see JS)
-      document.querySelector('meta[property="og:title"]').setAttribute("content", data.title);
-      document.querySelector('meta[property="og:description"]').setAttribute("content", data.description);
-      document.querySelector('meta[property="og:image"]').setAttribute("content", `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`);
-      document.title = data.title;
-    }
+  if(!fileInput.files[0] || !title || !description){
+    alert("All fields required");
+    return;
+  }
 
-    loadPost();
-  </script>
+  uploadBtn.disabled=true;
+  uploadStatus.textContent="Uploading to IPFS...";
+
+  try{
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
+
+    const docRef = await addDoc(collection(db,"marketingPosts"),{
+      title, description, mediaType, ipfsHash, thumbnail:thumb || "", createdAt:serverTimestamp()
+    });
+
+    uploadStatus.textContent="✅ Uploaded successfully!";
+    const generatedFile = `post-${docRef.id}.html`;
+    shareLinkDiv.innerHTML=`Share Link: <a href="${generatedFile}" target="_blank">${generatedFile}</a>`;
+
+    // Generate static HTML content
+    const staticHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${description}">
+<meta property="og:image" content="${thumb || "https://gateway.pinata.cloud/ipfs/"+ipfsHash}">
+<meta property="og:type" content="video.other">
+<meta property="og:video" content="https://gateway.pinata.cloud/ipfs/${ipfsHash}">
+<meta property="og:video:type" content="${mediaType==='video'?'video/mp4':'image/jpeg'}">
+<title>${title}</title>
+</head>
+<body>
+<h1>${title}</h1>
+<p>${description}</p>
+${mediaType==='video'?`<video controls width="100%" src="https://gateway.pinata.cloud/ipfs/${ipfsHash}"></video>`:`<img src="https://gateway.pinata.cloud/ipfs/${ipfsHash}" alt="${title}"/>`}
+</body>
+</html>
+    `;
+    console.log("Copy this static HTML into a file named "+generatedFile+" on your GitHub Pages or server:\n", staticHTML);
+
+  }catch(err){
+    console.error(err);
+    uploadStatus.textContent="Upload failed: "+err.message;
+  }finally{uploadBtn.disabled=false;}
+};
+</script>
 </body>
 </html>
