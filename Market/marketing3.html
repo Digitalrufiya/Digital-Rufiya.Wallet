@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loading...</title>
+
+<!-- Default OG tags, will be updated dynamically -->
+<meta property="og:title" content="Loading...">
+<meta property="og:description" content="">
+<meta property="og:image" content="">
+<meta property="og:type" content="website">
+<meta property="og:url" content="">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Loading...">
+<meta name="twitter:description" content="">
+<meta name="twitter:image" content="">
+
+<style>
+  body { font-family: Arial, sans-serif; padding:20px; text-align:center; background:#f3f4f6; }
+  img, video { max-width:90%; border-radius:8px; margin-top:16px; }
+  h1 { font-size:24px; margin-top:16px; }
+  p { font-size:16px; margin-top:8px; }
+</style>
+</head>
+<body>
+<h1 id="title">Loading...</h1>
+<p id="description"></p>
+<div id="media"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Get post ID from URL
+const params = new URLSearchParams(window.location.search);
+const postId = params.get("id");
+
+if(postId){
+  const docRef = doc(db, "marketingPosts", postId);
+  getDoc(docRef).then(docSnap=>{
+    if(docSnap.exists()){
+      const data = docSnap.data();
+      const mediaURL = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+
+      // Set page content
+      document.getElementById("title").textContent = data.title;
+      document.getElementById("description").textContent = data.description;
+      const mediaDiv = document.getElementById("media");
+      if(data.mediaType==="video"){
+        mediaDiv.innerHTML = `<video src="${mediaURL}" controls autoplay muted loop></video>`;
+      } else {
+        mediaDiv.innerHTML = `<img src="${mediaURL}" />`;
+      }
+
+      // Update OG tags dynamically
+      document.querySelector('meta[property="og:title"]').setAttribute("content", data.title);
+      document.querySelector('meta[property="og:description"]').setAttribute("content", data.description);
+      document.querySelector('meta[property="og:image"]').setAttribute("content", mediaURL);
+      document.querySelector('meta[property="og:url"]').setAttribute("content", window.location.href);
+
+      document.querySelector('meta[name="twitter:title"]').setAttribute("content", data.title);
+      document.querySelector('meta[name="twitter:description"]').setAttribute("content", data.description);
+      document.querySelector('meta[name="twitter:image"]').setAttribute("content", mediaURL);
+
+      document.title = data.title;
+
+    } else {
+      document.getElementById("title").textContent="Post not found";
+    }
+  }).catch(err=>console.error(err));
+}else{
+  document.getElementById("title").textContent="Invalid Post ID";
+}
+</script>
+</body>
+</html>
