@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title id="pageTitle">DRF Marketing Post</title>
+<meta property="og:title" content="DRF Marketing Post" id="ogTitle"/>
+<meta property="og:description" content="Check out this marketing content!" id="ogDesc"/>
+<meta property="og:image" content="" id="ogImage"/>
+<meta property="og:type" content="website" />
+<style>
+body { font-family: Arial; margin:0; padding:20px; background:#f3f4f6; color:#111; }
+#post-container { max-width:900px; margin:auto; background:#fff; padding:16px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+#post-container img, #post-container video { max-width:100%; border-radius:6px; margin-top:12px; }
+</style>
+</head>
+<body>
+<div id="post-container">
+  <h2 id="postTitle">Loading...</h2>
+  <p id="postDesc"></p>
+  <div id="postMedia"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Helper for IPFS gateways
+function getIpfsUrls(hash){
+  const gateways = [
+    "https://gateway.pinata.cloud/ipfs/",
+    "https://ipfs.io/ipfs/",
+    "https://cloudflare-ipfs.com/ipfs/"
+  ];
+  return gateways.map(g=>g+hash);
+}
+
+// Get post ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const postId = urlParams.get('post');
+
+if(!postId){
+  document.getElementById("postTitle").textContent = "Post not found!";
+} else {
+  async function loadPost(){
+    const docRef = doc(db, "marketingPosts", postId);
+    const docSnap = await getDoc(docRef);
+
+    if(docSnap.exists()){
+      const data = docSnap.data();
+      document.getElementById("postTitle").textContent = data.title;
+      document.getElementById("postDesc").textContent = data.description;
+
+      const urls = getIpfsUrls(data.ipfsHash);
+      const mediaHTML = data.mediaType === "video"
+        ? `<video controls src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"></video>`
+        : `<img src="${urls[0]}" onerror="this.src='${urls[1]}'; this.onerror='this.src=\'${urls[2]}\';'"/>`;
+      document.getElementById("postMedia").innerHTML = mediaHTML;
+
+      // Update OG meta tags
+      document.getElementById("pageTitle").textContent = data.title;
+      document.getElementById("ogTitle").setAttribute("content", data.title);
+      document.getElementById("ogDesc").setAttribute("content", data.description);
+      document.getElementById("ogImage").setAttribute("content", urls[0]);
+    } else {
+      document.getElementById("postTitle").textContent = "Post not found!";
+    }
+  }
+
+  loadPost();
+}
+</script>
+</body>
+</html>
