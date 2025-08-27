@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRF Marketplace — Optimized</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f2f5; }
+#upload-section { background:white; padding:15px; margin:15px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+input, textarea, button { display:block; width:100%; margin:10px 0; padding:8px; border-radius:4px; border:1px solid #ccc; }
+button { cursor:pointer; background-color:#007bff; color:white; border:none; transition:0.2s; }
+button:disabled { background:#aaa; cursor:default; }
+button:hover:not(:disabled) { background:#0056b3; }
+#posts { max-width:600px; margin:auto; padding:10px; }
+.post { background:white; margin-bottom:20px; border-radius:8px; padding:15px; box-shadow:0 0 6px rgba(0,0,0,0.1); position:relative; }
+.post h3 { margin:0 0 5px 0; }
+.post video, .post img { max-width:100%; border-radius:8px; margin-top:10px; opacity:0; transition:opacity 0.4s ease; background:#000; }
+.post img[data-loaded], .post video[data-loaded] { opacity:1; }
+.loading-overlay { position:absolute; top:0; left:0; width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:rgba(255,255,255,0.7); font-weight:bold; border-radius:8px; }
+.buttons { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+.buttons button { flex:1; }
+#loading { text-align:center; padding:20px; font-size:18px; color:#555; }
+</style>
+</head>
+<body>
+
+<section id="upload-section">
+  <h2>Upload your Listing</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*" />
+  <input type="text" id="titleInput" placeholder="Title" required />
+  <textarea id="descriptionInput" placeholder="Description" rows="3" required></textarea>
+  <input type="number" id="priceInput" placeholder="Price" required />
+  <input type="text" id="locationInput" placeholder="Location" required />
+  <input type="text" id="whatsappInput" placeholder="WhatsApp Number" required />
+  <button id="payBtn">Pay 1 USDC</button>
+  <button id="uploadBtn" disabled>Upload Listing</button>
+  <div id="uploadStatus"></div>
+</section>
+
+<section id="posts"></section>
+<div id="loading">Loading posts...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebasestorage.app",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae",
+  measurementId: "G-MV9JQZHLLY"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const pinataJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w"; 
+
+let lastVisible = null;
+let loadingPosts = false;
+const postsContainer = document.getElementById("posts");
+const loadingEl = document.getElementById("loading");
+let currentUser = null;
+
+const uploadBtn = document.getElementById("uploadBtn");
+const payBtn = document.getElementById("payBtn");
+const trustWalletLink = "https://link.trustwallet.com/send?coin=20000714&address=0x88253D87990EdD1E647c3B6eD21F57fb061a3040&amount=1.0&token_id=0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+
+payBtn.onclick = () => {
+  window.open(trustWalletLink, "_blank");
+  alert("After payment, click OK to enable upload");
+  uploadBtn.disabled = false;
+  payBtn.disabled = true;
+};
+
+async function uploadToPinata(file) {
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+  const data = new FormData();
+  data.append("file", file);
+
+  const res = await fetch(url, { method:"POST", headers:{Authorization:`Bearer ${pinataJWT}`}, body:data });
+  if (!res.ok) throw new Error("Pinata upload failed");
+  const result = await res.json();
+  return result.IpfsHash;
+}
+
+function createPostElement(postData, postId) {
+  const div = document.createElement("div");
+  div.classList.add("post");
+  div.dataset.id = postId;
+
+  div.innerHTML = `
+    <h3>${postData.title}</h3>
+    <p>${postData.description}</p>
+    <p><strong>Price:</strong> $${postData.price}</p>
+    <p><strong>Location:</strong> ${postData.location}</p>
+    <p><strong>WhatsApp:</strong> <a href="https://wa.me/${postData.whatsapp}" target="_blank">${postData.whatsapp}</a></p>
+    <div class="media-container"></div>
+    <div class="loading-overlay">Loading...</div>
+    <div class="buttons">
+      <button class="payBtn">Pay</button>
+      <button class="whatsappBtn">Contact Seller</button>
+      <button class="shareBtn">Share</button>
+    </div>
+  `;
+
+  const mediaHolder = div.querySelector(".media-container");
+  if (postData.mediaType === "video") {
+    const v = document.createElement("video");
+    v.src = `https://gateway.pinata.cloud/ipfs/${postData.ipfsHash}`;
+    v.controls = true;
+    v.playsInline = true;
+    v.preload = "metadata";
+    v.muted = true;
+    v.onloadeddata = () => { v.setAttribute("data-loaded","true"); div.querySelector(".loading-overlay").style.display="none"; };
+    mediaHolder.appendChild(v);
+    videoObserver.observe(v);
+  } else {
+    const img = document.createElement("img");
+    img.src = `https://gateway.pinata.cloud/ipfs/${postData.ipfsHash}`;
+    img.loading = "lazy";
+    img.alt = postData.title;
+    img.onload = () => { img.setAttribute("data-loaded","true"); div.querySelector(".loading-overlay").style.display="none"; };
+    mediaHolder.appendChild(img);
+  }
+
+  div.querySelector(".payBtn").onclick = () => { if (postData.paymentLink) window.open(postData.paymentLink,"_blank"); };
+  div.querySelector(".whatsappBtn").onclick = () => { if (postData.whatsapp) window.open(`https://wa.me/${postData.whatsapp}`,"_blank"); };
+  div.querySelector(".shareBtn").onclick = () => {
+    if (navigator.share) navigator.share({ title: postData.title, text: postData.description, url: window.location.href });
+    else alert("Sharing not supported");
+  };
+
+  return div;
+}
+
+// ===== Video lazy loader =====
+const videoObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    const v = e.target;
+    if (e.isIntersecting) v.play().catch(()=>{});
+    else v.pause();
+  });
+}, { threshold:0.5 });
+
+// ===== Load posts with infinite scroll =====
+async function loadPosts(batchSize=10) {
+  if (loadingPosts) return;
+  loadingPosts = true;
+  loadingEl.style.display = "block";
+
+  try {
+    const q = lastVisible 
+      ? query(collection(db,"posts"), orderBy("createdAt","desc"), startAfter(lastVisible), limit(batchSize))
+      : query(collection(db,"posts"), orderBy("createdAt","desc"), limit(batchSize));
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) { loadingEl.textContent="No more posts"; loadingPosts=false; return; }
+
+    snapshot.forEach(doc => postsContainer.appendChild(createPostElement(doc.data(), doc.id)));
+    lastVisible = snapshot.docs[snapshot.docs.length-1];
+  } catch(e) { console.error(e); loadingEl.textContent="Failed to load posts"; }
+  loadingPosts = false;
+  loadingEl.style.display="none";
+}
+
+window.addEventListener("scroll", () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 150) loadPosts();
+});
+
+// ===== Anonymous login =====
+onAuthStateChanged(auth, user => { if (user) currentUser=user; else signInAnonymously(auth).catch(console.error); });
+
+// ===== Upload button =====
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+  const price = parseFloat(document.getElementById("priceInput").value);
+  const location = document.getElementById("locationInput").value.trim();
+  const whatsapp = document.getElementById("whatsappInput").value.trim();
+
+  if (!fileInput.files[0] || !title || !description || isNaN(price) || !location || !whatsapp) { alert("All fields are required"); return; }
+
+  uploadBtn.disabled = true;
+  document.getElementById("uploadStatus").textContent = "Uploading to IPFS...";
+
+  try {
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
+    await addDoc(collection(db,"posts"), { title, description, price, location, whatsapp, ipfsHash, mediaType, createdAt: serverTimestamp() });
+    document.getElementById("uploadStatus").textContent = "Upload successful!";
+    fileInput.value = "";
+    loadPosts();
+  } catch(e) { console.error(e); document.getElementById("uploadStatus").textContent="Upload failed!"; }
+  finally { uploadBtn.disabled=false; }
+};
+
+// ===== Initial load =====
+loadPosts();
+</script>
+
+</body>
+</html>
