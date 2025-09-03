@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firebase Anonymous Login Test</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+button { padding: 10px 20px; font-size: 18px; cursor: pointer; }
+#status { margin-top: 20px; font-size: 16px; color: green; word-break: break-word; }
+</style>
+</head>
+<body>
+<h2>Firebase Anonymous Login Test</h2>
+<button id="loginBtn">Login Anonymously</button>
+<div id="status"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// DOM
+const loginBtn = document.getElementById("loginBtn");
+const statusEl = document.getElementById("status");
+
+// Login handler
+loginBtn.onclick = async () => {
+  statusEl.textContent = "Logging in...";
+  try {
+    const userCredential = await signInAnonymously(auth);
+    const user = userCredential.user;
+    statusEl.textContent = `✅ Logged in successfully! UID: ${user.uid}`;
+    loginBtn.disabled = true;
+  } catch(err) {
+    statusEl.textContent = `❌ Login failed: ${err.message}`;
+  }
+};
+</script>
+</body>
+</html>
