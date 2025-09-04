@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DRFMedia — Posts</title>
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --text-body: #212529;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+}
+body{font-family:system-ui,sans-serif;background:var(--bg-body);color:var(--text-body);min-height:100vh;margin:0;}
+header{background:var(--accent);color:#fff;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;position:sticky;top:0;z-index:1000;}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:700;}
+.brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px;}
+#primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius);}
+#primaryNav.show{display:flex;}
+#primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);text-decoration:none;}
+#primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover);}
+@media(min-width:601px){#primaryNav{display:flex !important;flex-direction:row;background:none;margin:0;}}
+#menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;user-select:none;}
+.container{width:min(100%,700px);margin:0 auto;padding:1rem;}
+#searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;border:1px solid #ced4da;border-radius:var(--radius);}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;cursor:pointer;}
+.btn:hover{background:var(--accent-hover);}
+.post-item{background:var(--bg-surface);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin:1.25rem 0;box-shadow:var(--shadow-sm);opacity:0;position:relative;transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s;}
+.post-item:hover{transform: scale(1.02); box-shadow:0 6px 15px rgba(0,0,0,0.2);}
+.post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700;}
+.avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
+.post-caption{margin-top:.75rem;white-space:pre-wrap;}
+video,img{border-radius:var(--radius);background:#000;display:block;}
+#prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none;position:relative;}
+#progBar{height:4px;width:0;background:var(--accent);}
+#progText{position:absolute;right:5px;top:-18px;font-size:.75rem;color:var(--text-body);}
+#splash{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+#splash img{width:100px;margin-bottom:20px;animation:zoomIn 3s ease forwards;}
+@keyframes zoomIn{0%{transform:scale(0.8);opacity:0;}50%{transform:scale(1.05);opacity:1;}100%{transform:scale(1);opacity:1;}}
+.fade{animation:fadeOut 0.6s forwards;}
+@keyframes fadeOut{to{opacity:0;visibility:hidden;}}
+#scrollTopBtn{position:fixed;bottom:20px;right:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:45px;height:45px;font-size:22px;cursor:pointer;display:none;z-index:1001;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+#scrollTopBtn:hover{background:var(--accent-hover);}
+.spinner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border:3px solid #f3f3f3;border-top:3px solid var(--accent);border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;opacity:1;transition:opacity 0.5s;}
+@keyframes spin{0%{transform:translate(-50%,-50%) rotate(0deg);}100%{transform:translate(-50%,-50%) rotate(360deg);}}
+.post-media{position:relative;min-height:150px;}
+.post-media img, .post-media video{display:none;}
+#uploadForm{display:none;background:#fff;padding:1rem;border-radius:.5rem;box-shadow:0 2px 6px rgba(0,0,0,0.1);margin-bottom:1rem;}
+#uploadForm textarea{width:100%;min-height:80px;padding:.75rem;border:1px solid #ced4da;border-radius:.5rem;resize:none;}
+#uploadForm textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,123,255,0.2);}
+#uploadForm label{cursor:pointer;font-size:1.1rem;margin-right:10px;}
+#uploadForm label:hover{color:var(--accent-hover);}
+#uploadForm .btn{padding:.5rem 1rem;font-weight:600;}
+#uploadForm .form-controls{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="logo">
+  <div class="loader">Loading…</div>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <div class="brand">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="logo">
+      <span>DRFMedia</span>
+    </div>
+    <button id="menuToggle">☰</button>
+    <nav id="primaryNav">
+      <a href="media.html" class="active">posts</a>
+      <a href="chat.html">Chat</a>
+      <a href="profile.html">Profile</a>
+      <a href="gift.html">Timelines</a>
+      <a href="market1.html">Market Place</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <input id="searchInput" placeholder="Search posts…">
+    <button id="loginBtn" class="btn">Sign in with Google</button>
+    <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+    <form id="uploadForm">
+      <textarea id="caption" placeholder="What's on your mind?"></textarea>
+      <div class="form-controls">
+        <div>
+          <label>📷<input type="file" id="mediaFile" accept="image/*,video/*" style="display:none;"></label>
+          <span style="font-size:.9rem;color:#6c757d;">Optional</span>
+        </div>
+        <button class="btn" type="submit">Post</button>
+      </div>
+      <div id="prog">
+        <div id="progBar"></div>
+        <span id="progText">0%</span>
+      </div>
+    </form>
+
+    <section id="postContainer"></section>
+    <div id="sentinel"></div>
+  </main>
+</div>
+
+<button id="scrollTopBtn">↑</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain:"drfsocial-23a06.firebaseapp.com",
+  databaseURL:"https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId:"drfsocial-23a06",
+  storageBucket:"drfsocial-23a06.appspot.com",
+  messagingSenderId:"608135115201",
+  appId:"1:608135115201:web:b3d1f368e0c09ac4400f43",
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const PINATA_JWT = "Bearer YOUR_PINATA_JWT_HERE";
+
+function hideSplash(){document.getElementById("app").style.display="block";document.getElementById("splash").classList.add("fade");setTimeout(()=>document.getElementById("splash").remove(),600);}
+setTimeout(hideSplash,3000);
+
+const $=id=>document.getElementById(id);
+const nav=$("primaryNav"),toggle=$("menuToggle");
+toggle.onclick=()=>nav.classList.toggle("show");
+const login=$("loginBtn"),logout=$("logoutBtn"),upload=$("uploadForm");
+const fileIn=$("mediaFile"),capIn=$("caption");
+const prog=$("prog"),bar=$("progBar"),progText=$("progText");
+const posts=$("postContainer"),sentinel=$("sentinel"),qIn=$("searchInput");
+const scrollTopBtn=$("scrollTopBtn");
+
+let user=null,all=[],view=[],index=0;
+const PAGE_SIZE=6;
+
+login.onclick=()=>signInWithPopup(auth,provider);
+logout.onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,u=>{
+  user=u;
+  login.style.display=u?"none":"block";
+  logout.style.display=u?"block":"none";
+  upload.style.display=u?"block":"none";
+  getPosts();
+});
+
+window.onscroll=()=>{scrollTopBtn.style.display=window.scrollY>300?"block":"none";}
+scrollTopBtn.onclick=()=>window.scrollTo({top:0,behavior:"smooth"});
+
+async function uploadToPinata(file,onProgress){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open("POST","https://api.pinata.cloud/pinning/pinFileToIPFS");xhr.setRequestHeader("Authorization",PINATA_JWT);xhr.upload.onprogress=e=>{if(e.lengthComputable && onProgress){const pct=Math.round((e.loaded/e.total)*100);onProgress(pct);}};xhr.onload=()=>{if(xhr.status===200){const json=JSON.parse(xhr.responseText);resolve("https://gateway.pinata.cloud/ipfs/"+json.IpfsHash);}else reject(new Error("Upload fail"));};xhr.onerror=()=>reject(new Error("XHR error"));const data=new FormData();data.append("file",file);xhr.send(data);});}
+
+upload.onsubmit=async e=>{
+  e.preventDefault(); if(!user) return; const file=fileIn.files[0]; const caption=capIn.value.trim(); if(!caption && !file) return alert("Type something or select media!");
+  try{
+    prog.style.display="block"; bar.style.width="0"; progText.textContent="0%";
+    let mediaURL="";
+    if(file){ mediaURL=await uploadToPinata(file,pct=>{bar.style.width=pct+"%"; progText.textContent=pct+"%";}); }
+    await set(push(ref(db,"posts")),{uid:user.uid,displayName:user.displayName,photoURL:user.photoURL,caption,mediaURL,mediaType:file?file.type.startsWith("video")?"video":"image":"text",timestamp:Date.now()});
+    fileIn.value=""; capIn.value="";
+    getPosts();
+  }catch(err){alert("Upload failed: "+err.message);}finally{setTimeout(()=>{prog.style.display="none"; bar.style.width="0"; progText.textContent="0%";},500);}
+};
+
+async function getPosts(){try{const snap=await get(ref(db,"posts")); const obj=snap.val()||{}; all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp); applySearch();}catch(e){console.error(e);}finally{hideSplash();}}
+qIn.oninput=applySearch;
+function applySearch(){const term=(qIn.value||"").toLowerCase(); view=all.filter(p=>(p.caption||"").toLowerCase().includes(term)); posts.innerHTML="";index=0;renderBatch();}
+function renderBatch(){const end=Math.min(index+PAGE_SIZE,view.length);const frag=document.createDocumentFragment();for(let i=index;i<end;i++){frag.appendChild(renderCard(view[i]));}posts.appendChild(frag);index=end;}
+
+const videoObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    const v = entry.target;
+    if(entry.isIntersecting){
+      if(!v.src) v.src = v.dataset.src;
+      v.play().catch(()=>{});
+    } else {
+      v.pause();
+    }
+  });
+},{threshold:0.5});
+
+function renderCard(p){
+  const card=document.createElement("article"); card.className="post-item";
+  const mediaEl=document.createElement("div"); mediaEl.className="post-media";
+  const spinner=document.createElement("div"); spinner.className="spinner"; mediaEl.appendChild(spinner);
+
+  if(p.mediaType==="video"){
+    const vid=document.createElement("video"); vid.controls=true; vid.preload="none"; vid.width="100%"; vid.dataset.src=p.mediaURL; vid.style.display="none";
+    vid.oncanplaythrough=()=>{spinner.remove(); vid.style.display="block";}
+    mediaEl.appendChild(vid); videoObserver.observe(vid);
+  } else if(p.mediaType==="image"){
+    const img=document.createElement("img"); img.src=p.mediaURL; img.loading="lazy"; img.style.display="none";
+    img.onload=()=>{spinner.remove(); img.style.display="block";}
+    mediaEl.appendChild(img);
+  }
+
+  card.innerHTML=`<header class="post-owner">
+    <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}">
+    <div><div>${p.displayName||'Anon'}</div><time>${new Date(p.timestamp).toLocaleString()}</time></div>
+  </header><div class="post-caption">${p.caption||''}</div>`;
+  card.appendChild(mediaEl);
+  card.style.opacity=1;
+  return card;
+}
+</script>
+</body>
+</html>
