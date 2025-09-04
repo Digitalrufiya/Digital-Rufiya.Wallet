@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DRFMarket — Marketplace</title>
+<style>
+:root {
+  --accent:#007bff;
+  --accent-hover:#0056b3;
+  --bg-body:#fff;
+  --text-body:#212529;
+  --radius:.5rem;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.1);
+}
+body {margin:0;font-family:system-ui,sans-serif;background:var(--bg-body);color:var(--text-body);}
+header {background:var(--accent);color:#fff;padding:1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1000;}
+.brand img {width:50px;height:50px;border-radius:.25rem;}
+.brand span {font-weight:700;font-size:1.2rem;}
+.container {max-width:700px;margin:1rem auto;padding:1rem;}
+input,textarea,button {width:100%;margin:.5rem 0;padding:.6rem;border-radius:.5rem;border:1px solid #ccc;font-size:1rem;}
+button {background:var(--accent);color:#fff;border:none;cursor:pointer;}
+button:hover {background:var(--accent-hover);}
+.post-item {border:1px solid #ddd;border-radius:.5rem;padding:1rem;margin:1rem 0;box-shadow:var(--shadow-sm);}
+.post-media img, .post-media video {max-width:100%;border-radius:.5rem;margin-top:.5rem;display:block;}
+#prog {width:100%;height:5px;background:#eee;border-radius:2px;overflow:hidden;display:none;margin:1rem 0;}
+#progBar {height:5px;width:0;background:var(--accent);}
+#progText {font-size:.85rem;text-align:right;margin-top:-20px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo">
+    <span>DRFMarket</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <h2>Post Your Product</h2>
+  <form id="uploadForm">
+    <input type="text" id="title" placeholder="Product Title" required />
+    <textarea id="description" placeholder="Product Description" required></textarea>
+    <input type="text" id="location" placeholder="Location (City or Country)" required />
+    <input type="text" id="whatsapp" placeholder="WhatsApp Number" required />
+    <input type="url" id="gateway" placeholder="Seller Gateway Link" required />
+    <label>📷 / 🎥
+      <input type="file" id="mediaFile" accept="image/*,video/*">
+    </label>
+    <button type="submit">Post Product</button>
+
+    <div id="prog">
+      <div id="progBar"></div>
+      <span id="progText">0%</span>
+    </div>
+  </form>
+
+  <h2>Marketplace Feed</h2>
+  <div id="postContainer"></div>
+</div>
+
+<footer style="text-align:center;margin:2rem 0;font-size:.85rem;color:#555;">
+  Powered by Digital Rufiya Ecosystem + DRFChain + BNB Smart Chain Network + AI Technology + DRFTube
+</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+// ==== Firebase Config ====
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// ==== Anonymous login ====
+let user = null;
+signInAnonymously(auth).then((cred)=>{
+  user = cred.user;
+  console.log("Anonymous UID:", user.uid);
+}).catch(console.error);
+
+// ==== Pinata Upload Function ====
+const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w"; // Replace with your actual JWT
+async function uploadToPinata(file, onProgress){
+  return new Promise((resolve,reject)=>{
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST","https://api.pinata.cloud/pinning/pinFileToIPFS");
+    xhr.setRequestHeader("Authorization", PINATA_JWT);
+    xhr.upload.onprogress = e => {
+      if(e.lengthComputable && onProgress) onProgress(Math.round((e.loaded/e.total)*100));
+    };
+    xhr.onload = ()=>{ 
+      if(xhr.status===200) resolve("https://gateway.pinata.cloud/ipfs/" + JSON.parse(xhr.responseText).IpfsHash);
+      else reject(new Error("Pinata upload failed"));
+    };
+    xhr.onerror = ()=>reject(new Error("XHR error"));
+    const data = new FormData();
+    data.append("file", file);
+    xhr.send(data);
+  });
+}
+
+// ==== DOM Elements ====
+const uploadForm = document.getElementById("uploadForm");
+const fileInput = document.getElementById("mediaFile");
+const prog = document.getElementById("prog");
+const progBar = document.getElementById("progBar");
+const progText = document.getElementById("progText");
+const postContainer = document.getElementById("postContainer");
+
+// ==== Upload Handler ====
+uploadForm.onsubmit = async e=>{
+  e.preventDefault();
+  if(!user) return alert("You must be logged in!");
+  
+  const title = document.getElementById("title").value.trim();
+  const description = document.getElementById("description").value.trim();
+  const location = document.getElementById("location").value.trim();
+  const whatsapp = document.getElementById("whatsapp").value.trim();
+  const gateway = document.getElementById("gateway").value.trim();
+  const file = fileInput.files[0];
+
+  if(!title || !description || !location || !whatsapp || !gateway){
+    return alert("All fields are required!");
+  }
+
+  try {
+    prog.style.display="block"; progBar.style.width="0"; progText.textContent="0%";
+    let mediaURL = "";
+    if(file){
+      mediaURL = await uploadToPinata(file,(pct)=>{
+        progBar.style.width = pct + "%";
+        progText.textContent = pct + "%";
+      });
+    }
+
+    await addDoc(collection(db,"posts"),{
+      uid: user.uid,
+      title,
+      description,
+      location,
+      whatsapp,
+      gateway,
+      mediaURL,
+      mediaType: file ? (file.type.startsWith("video") ? "video" : "image") : "text",
+      timestamp: Date.now()
+    });
+
+    uploadForm.reset();
+    prog.style.display="none";
+    progBar.style.width="0";
+    progText.textContent="0%";
+    getPosts();
+  } catch(err){
+    console.error(err);
+    alert("Failed to post: "+err.message);
+    prog.style.display="none";
+  }
+};
+
+// ==== Fetch and Render Posts ====
+async function getPosts(){
+  postContainer.innerHTML = "";
+  try{
+    const q = query(collection(db,"posts"), orderBy("timestamp","desc"));
+    const snap = await getDocs(q);
+    snap.forEach(doc=>{
+      const p = doc.data();
+      const div = document.createElement("div");
+      div.className="post-item";
+      div.innerHTML = `
+        <h3>${p.title}</h3>
+        <p>${p.description}</p>
+        <p><strong>Location:</strong> ${p.location}</p>
+        <p><strong>WhatsApp:</strong> ${p.whatsapp}</p>
+        <p><strong>Gateway:</strong> <a href="${p.gateway}" target="_blank">${p.gateway}</a></p>
+      `;
+      if(p.mediaURL){
+        if(p.mediaType==="video"){
+          const v = document.createElement("video");
+          v.src = p.mediaURL; v.controls=true; div.appendChild(v);
+        } else {
+          const img = document.createElement("img");
+          img.src = p.mediaURL; div.appendChild(img);
+        }
+      }
+      postContainer.appendChild(div);
+    });
+  } catch(e){
+    console.error(e);
+  }
+}
+
+// Initial fetch
+getPosts();
+</script>
+
+</body>
+</html>
