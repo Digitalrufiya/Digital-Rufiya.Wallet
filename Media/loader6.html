@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Optimized)</title>
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<style>
+/* ===== Loading screen ===== */
+#loadingScreen {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background:#fff; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; z-index:2000;
+}
+#loadingScreen img {
+  width:100px; height:100px; margin-bottom:20px;
+}
+#loadingScreen .spinner {
+  border:6px solid #f3f3f3; border-top:6px solid #007bff;
+  border-radius:50%; width:50px; height:50px;
+  animation:spin 1s linear infinite;
+}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* ===== Variables & body ===== */
+:root {
+  --accent:#007bff; --accent-hover:#0056b3; --accent-muted:#3399ff;
+  --bg-body:#f8f9fa; --bg-surface:#fff; --bg-surface-alt:#fafafa;
+  --text-body:#212529; --text-muted:#6c757d; --radius:.5rem;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06); --shadow-md:0 2px 4px rgba(0,0,0,.1);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg-body:#181a1b; --bg-surface:#242628; --bg-surface-alt:#2b2e30;
+  --text-body:#f1f3f5; --text-muted:#adb5bd; --shadow-sm:none; --shadow-md:none;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg-body);color:var(--text-body);min-height:100vh;display:flex;flex-direction:column;}
+a{color:inherit;text-decoration:none}
+img,video{max-width:100%;border-radius:var(--radius);background:#000;display:block;opacity:0;transition:opacity .3s}
+[data-loaded="true"]{opacity:1;}
+
+/* ===== Header ===== */
+header{
+  background: var(--accent);
+  color:#fff;
+  padding:.75rem 1rem;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
+  position:sticky;top:0;z-index:1000
+}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:700}
+.brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
+#primaryNav{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+#primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
+#primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
+#menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
+@media (max-width:600px){
+  #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius)}
+  #primaryNav.show{display:flex}
+  #menuToggle{display:block}
+}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--accent-hover)}
+.btn:disabled{background:#adb5bd;cursor:not-allowed}
+.container{width:min(100%,700px);margin:0 auto;padding:0 1rem}
+#searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
+.post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin:1.25rem 0;box-shadow:var(--shadow-sm)}
+.post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
+.avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc}
+.post-time{font-size:.8rem;color:var(--text-muted)}
+.post-caption{margin-top:.75rem;white-space:pre-wrap}
+video,img{border-radius:var(--radius)}
+#uploadForm{margin-top:1.25rem}
+#uploadForm textarea{width:100%;min-height:6rem;padding:.65rem .85rem;margin:.75rem 0;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical}
+#prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none}
+#progBar{height:4px;width:0;background:var(--accent)}
+#sentinel{height:1px}
+.helper{color:var(--text-muted);text-align:center;margin:.5rem 0}
+</style>
+</head>
+<body>
+<!-- Loading screen -->
+<div id="loadingScreen">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" />
+  <div class="spinner"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="logo" />
+    <span>DRFMedia</span>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">posts</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html"> Timelines</a>
+    <a href="market1.html"> Market Place</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none">
+    <input id="mediaFile" type="file" accept="image/*,video/*" />
+    <textarea id="caption" minlength="1" placeholder="Write your caption…"></textarea>
+    <div id="prog"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+  <p id="feedHint" class="helper" style="display:none">Scroll for more…</p>
+  <div id="sentinel" aria-hidden="true"></div>
+</main>
+
+<script type="module">
+  // ===== Navigation =====
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  menuToggle.addEventListener("click", () => primaryNav.classList.toggle("show"));
+  [...primaryNav.querySelectorAll("a")].forEach(a=>{
+    a.addEventListener("click",()=>{ if(window.innerWidth<=600) primaryNav.classList.remove("show"); });
+  });
+
+  // ===== Firebase =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+    measurementId: "G-TBFQX80NRP"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const $ = id => document.getElementById(id);
+  const login = $("loginBtn"), logout = $("logoutBtn");
+  const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
+  const prog = $("prog"), bar = $("progBar");
+  const posts = $("postContainer"), qIn = $("searchInput");
+  const sentinel = $("sentinel"), feedHint = $("feedHint");
+
+  let user=null, all=[], view=[], index=0, PAGE_SIZE=10;
+  
+  function escapeHTML(s=""){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
+  const gw=cid=>({g1:`https://gateway.pinata.cloud/ipfs/${cid}`,g2:`https://cloudflare-ipfs.com/ipfs/${cid}`,g3:`https://ipfs.io/ipfs/${cid}`});
+
+  function createImage(cid){
+    const {g1,g2,g3}=gw(cid);
+    const img=document.createElement('img');
+    img.loading='lazy';
+    img.src=g1;
+    img.onerror=()=>{if(img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null;}
+    img.addEventListener('load',checkAllMediaLoaded);
+    img.addEventListener('error',checkAllMediaLoaded);
+    return img;
+  }
+
+  function createVideo(cid){
+    const {g1,g2,g3}=gw(cid);
+    const v=document.createElement('video');
+    v.controls=true;
+    v.playsInline=true;
+    v.preload='none';
+    v.dataset.g1=g1; v.dataset.g2=g2; v.dataset.g3=g3; v.dataset.idx='0';
+    v.onerror=()=>switchGateway(v);
+    v.oncanplay=checkAllMediaLoaded;
+    return v;
+  }
+
+  window.switchGateway=function(v){
+    let idx=parseInt(v.dataset.idx)+1;
+    let next='';
+    if(idx===1) next=v.dataset.g1; else if(idx===2) next=v.dataset.g2; else if(idx===3) next=v.dataset.g3; else {v.onerror=null; return;}
+    v.dataset.idx=String(idx); if(v.src!==next){v.src=next; v.load();}
+  }
+
+  const videoObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const v=entry.target;
+      if(entry.isIntersecting){
+        if(!v.getAttribute('src')) switchGateway(v);
+        v.play?.().catch(()=>{});
+      } else v.pause?.();
+    });
+  },{threshold:0.5});
+
+  const pagingObserver=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting) renderNextBatch();});
+  },{rootMargin:'800px 0px'});
+  pagingObserver.observe(sentinel);
+
+  function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
+  function renderCard(p){
+    const card=document.createElement('article');
+    card.className='post-item';
+    card.innerHTML=`
+      <header class="post-owner">
+        <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="Avatar"/>
+        <div>
+          <div>${escapeHTML(p.displayName||'Anonymous')}</div>
+          <small class="post-time">${new Date(p.timestamp).toLocaleString()}</small>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(p.caption||'')}</div>
+    `;
+    if(p.mediaType==='image') card.appendChild(createImage(p.ipfsHash));
+    if(p.mediaType==='video'){const v=createVideo(p.ipfsHash); card.appendChild(v); videoObserver.observe(v);}
+    posts.appendChild(card);
+  }
+
+  function renderNextBatch(){
+    const batch=view.slice(index,index+PAGE_SIZE);
+    batch.forEach(renderCard);
+    index+=PAGE_SIZE;
+    if(index<view.length) feedHint.style.display='block';
+    else feedHint.style.display='none';
+  }
+
+  function checkAllMediaLoaded(){
+    const media=posts.querySelectorAll('img,video');
+    const loaded=[...media].every(m=>(m.readyState>=2 || m.tagName==='IMG' && m.complete));
+    if(loaded) $('loadingScreen').style.display='none';
+  }
+
+  onAuthStateChanged(auth,u=>{
+    user=u;
+    login.style.display=user?'none':'inline-block';
+    logout.style.display=user?'inline-block':'none';
+    upload.style.display=user?'none':'block';
+    loadPosts();
+  });
+
+  login.onclick=()=>signInWithPopup(auth,provider).catch(e=>alert(e.message));
+  logout.onclick=()=>signOut(auth).catch(e=>alert(e.message));
+
+  async function loadPosts(){
+    const snap=await get(ref(db,'posts')); all=Object.values(snap.val()||{}).sort((a,b)=>b.timestamp-a.timestamp);
+    view=all.slice(); renderReset(); renderNextBatch();
+  }
+
+</script>
+</body>
+</html>
