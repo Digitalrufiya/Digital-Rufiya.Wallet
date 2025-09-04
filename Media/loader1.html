@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Optimized)</title>
+<meta name="color-scheme" content="light dark" />
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
+  }
+}
+*{box-sizing:border-box;margin:0}
+body{
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column
+}
+a{color:inherit;text-decoration:none}
+img,video{max-width:100%}
+
+/* ===== Splash screen ===== */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  transition: opacity .6s ease, visibility .6s ease;
+}
+#splash img {
+  width: 120px;
+  height: 120px;
+  border-radius: .5rem;
+  margin-bottom: 1rem;
+}
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--accent-muted);
+  border-top: 4px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+#splash.fade {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* ===== App fade-in ===== */
+#app {
+  opacity: 0;
+  transition: opacity .6s ease;
+}
+#app.show {
+  opacity: 1;
+}
+
+/* ===== Header & rest ===== */
+header{
+  background: var(--accent);
+  color:#fff;
+  padding:.75rem 1rem;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;position:sticky;top:0;z-index:1000
+}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:700}
+.brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
+#primaryNav{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+#primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
+#primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
+#menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
+@media (max-width:600px){
+  #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius)}
+  #primaryNav.show{display:flex}
+  #menuToggle{display:block}
+}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--accent-hover)}
+.btn:disabled{background:#adb5bd;cursor:not-allowed}
+.container{width:min(100%,700px);margin:0 auto;padding:0 1rem}
+#searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
+.post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin:1.25rem 0;box-shadow:var(--shadow-sm)}
+.post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
+.avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc}
+.post-time{font-size:.8rem;color:var(--text-muted)}
+.post-caption{margin-top:.75rem;white-space:pre-wrap}
+video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;transition:opacity .3s}
+[data-loaded="true"]{opacity:1}
+#uploadForm{margin-top:1.25rem}
+#uploadForm textarea{width:100%;min-height:6rem;padding:.65rem .85rem;margin:.75rem 0;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical}
+#prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none}
+#progBar{height:4px;width:0;background:var(--accent)}
+#sentinel{height:1px}
+.helper{color:var(--text-muted);text-align:center;margin:.5rem 0}
+</style>
+</head>
+<body>
+
+<!-- Splash screen -->
+<div id="splash">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo">
+  <div class="loader"></div>
+</div>
+
+<!-- App wrapper -->
+<div id="app" style="display:none">
+  <header>
+    <div class="brand">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="logo" />
+      <span>DRFMedia</span>
+    </div>
+    <button id="menuToggle" aria-label="Toggle menu">☰</button>
+    <nav id="primaryNav">
+      <a href="media.html" class="active">posts</a>
+      <a href="chat.html">Chat</a>
+      <a href="profile.html">Profile</a>
+      <a href="gift.html"> Timelines</a>
+      <a href="market1.html"> Market Place</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <input id="searchInput" placeholder="Search posts…" />
+    <button id="loginBtn" class="btn">Sign in with Google</button>
+    <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+    <form id="uploadForm" style="display:none">
+      <input id="mediaFile" type="file" accept="image/*,video/*" required />
+      <textarea id="caption" minlength="4" placeholder="Write your caption…" required></textarea>
+      <div id="prog"><div id="progBar"></div></div>
+      <button class="btn" type="submit">Post</button>
+    </form>
+
+    <section id="postContainer" aria-live="polite"></section>
+    <p id="feedHint" class="helper" style="display:none">Scroll for more…</p>
+    <div id="sentinel" aria-hidden="true"></div>
+  </main>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+    measurementId: "G-TBFQX80NRP"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // ===== Pinata JWT (replace with your real JWT) =====
+  const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YOUR_TOKEN_HERE";
+
+  // ===== Splash helpers =====
+  let splashHidden = false;
+  function hideSplash() {
+    if (splashHidden) return;
+    splashHidden = true;
+    const splash = document.getElementById("splash");
+    const appEl = document.getElementById("app");
+    appEl.style.display = "block";
+    setTimeout(()=> appEl.classList.add("show"), 50); // fade-in
+    splash.classList.add("fade");
+    setTimeout(() => splash.remove(), 600);
+  }
+  setTimeout(() => hideSplash(), 5000); // fallback
+
+  // ===== DOM =====
+  const $ = id => document.getElementById(id);
+  const login = $("loginBtn"), logout = $("logoutBtn");
+  const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
+  const prog = $("prog"), bar = $("progBar");
+  const posts = $("postContainer"), qIn = $("searchInput");
+  const sentinel = $("sentinel"), feedHint = $("feedHint"), nav = $("primaryNav");
+
+  let user = null;
+  let all = [], view = []; let index = 0;
+  const PAGE_SIZE = 10;
+
+  const escapeHTML = (s = "") => s.replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+
+  // ===== Upload via Pinata =====
+  async function uploadToPinata(file) {
+    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+    const data = new FormData();
+    data.append("file", file);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${PINATA_JWT}` },
+      body: data
+    });
+
+    if (!res.ok) throw new Error("Upload failed");
+    const json = await res.json();
+    return `https://gateway.pinata.cloud/ipfs/${json.IpfsHash}`;
+  }
+
+  // ===== Post fetch =====
+  async function getPosts(){
+    try {
+      const snap = await get(ref(db, 'posts'));
+      const obj = snap.val() || {};
+      all = Object.entries(obj).map(([id, v])=>({ id, ...v })).sort((a,b)=>b.timestamp - a.timestamp);
+      applySearch();
+    } catch (e) {
+      console.error("Post fetch failed:", e);
+    } finally {
+      hideSplash();
+    }
+  }
+
+  // ===== Auth =====
+  login.onclick = () => signInWithPopup(auth, provider);
+  logout.onclick = () => signOut(auth);
+  onAuthStateChanged(auth, (u)=>{
+    user = u;
+    login.style.display = u ? 'none' : 'block';
+    logout.style.display = u ? 'block' : 'none';
+    upload.style.display = u ? 'block' : 'none';
+    nav.style.display = u ? 'flex' : 'none';
+    getPosts();
+  });
+
+  // ===== Upload handler =====
+  upload.onsubmit = async e => {
+    e.preventDefault();
+    if (!user) return;
+    const file = fileIn.files[0];
+    if (!file) return;
+    try {
+      prog.style.display = "block"; bar.style.width = "10%";
+      const url = await uploadToPinata(file);
+      bar.style.width = "80%";
+
+      await set(push(ref(db, "posts")), {
+        uid: user.uid,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        caption: capIn.value,
+        mediaURL: url,
+        timestamp: Date.now()
+      });
+      bar.style.width = "100%";
+      capIn.value = ""; fileIn.value = "";
+      getPosts();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(()=>{ prog.style.display = "none"; bar.style.width = "0"; }, 800);
+    }
+  };
+
+  // ===== Search =====
+  function applySearch(){
+    const term = (qIn.value || '').trim().toLowerCase();
+    view = all.filter(p => (p.caption || '').toLowerCase().includes(term));
+    posts.innerHTML = '';
+    index = 0;
+    feedHint.style.display = 'none';
+    renderNextBatch();
+  }
+  qIn.oninput = () => applySearch();
+
+  function renderNextBatch(){
+    if (index >= view.length) return;
+    const end = Math.min(index + PAGE_SIZE, view.length);
+    const frag = document.createDocumentFragment();
+    for (let i=index; i<end; i++) frag.appendChild(renderCard(view[i]));
+    posts.appendChild(frag);
+    index = end;
+    feedHint.style.display = index < view.length ? 'block' : 'none';
+  }
+  function renderCard(p){
+    const card = document.createElement('article');
+    card.className = 'post-item';
+    card.innerHTML = `
+      <header class="post-owner">
+        <img class="avatar" src="${p.photoURL || 'https://via.placeholder.com/40'}" alt="User avatar" />
+        <div>
+          <div>${escapeHTML(p.displayName || 'Anon')}</div>
+          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+            ${new Date(p.timestamp).toLocaleString()}
+          </time>
+        </div>
+      </header>
+      ${p.mediaURL ? `<img src="${p.mediaURL}" alt="post media" data-loaded="true"/>` : ""}
+      <div class="post-caption">${escapeHTML(p.caption || '')}</div>
+    `;
+    return card;
+  }
+
+  // Infinite scroll
+  const pagingObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if (e.isIntersecting) renderNextBatch(); });
+  }, { rootMargin: '800px 0px' });
+  pagingObserver.observe(sentinel);
+</script>
+</body>
+</html>
