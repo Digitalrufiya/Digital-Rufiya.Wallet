@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRF Marketplace — Free Uploads</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:18px; background:#fff; color:#111; }
+#upload-section { background:#f3f4f6; padding:16px; border-radius:10px; max-width:1000px; margin:18px auto; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+input, textarea, button { box-sizing:border-box; width:100%; margin:8px 0; padding:10px; border-radius:6px; border:1px solid #d1d5db; }
+button{ background:#2563eb; color:#fff; border:none; padding:10px; cursor:pointer; }
+button:disabled{ background:#9ca3af; cursor:default; }
+#posts{ max-width:1000px; margin:18px auto; }
+.post{ background:#f3f4f6; padding:14px; border-radius:8px; margin-bottom:14px; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative; }
+.badge{ position:absolute; top:12px; right:12px; background:#10b981; color:#fff; padding:4px 8px; font-size:12px; border-radius:6px; }
+.badge.free{ background:#2563eb; }
+.buttons{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.small{ font-size:13px; color:#6b7280; }
+img, video { max-width:100%; border-radius:8px; margin-top:8px; }
+.header { text-align:center; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRFMedia Logo" style="width:120px;margin-bottom:10px;" />
+  <h1>DRF Marketplace — Upload & Listings</h1>
+  <p class="small">Free users can post images and videos up to 1 minute. All uploads are free!</p>
+</div>
+
+<section id="upload-section">
+  <h2>Upload Product</h2>
+  <input type="file" id="mediaInput" accept="image/*,video/*" />
+  <input type="text" id="titleInput" placeholder="Title" />
+  <textarea id="descriptionInput" placeholder="Description" rows="3"></textarea>
+  <input type="number" id="priceInput" placeholder="Price (USD)" />
+  <input type="text" id="locationInput" placeholder="Location (City or Country)" />
+  <input type="text" id="whatsappInput" placeholder="WhatsApp Number" />
+  <input type="text" id="paymentLinkInput" placeholder="Seller Payment Link" />
+  <div style="margin-top:12px">
+    <button id="uploadBtn">Upload Product</button>
+  </div>
+  <p id="uploadStatus" class="small"></p>
+</section>
+
+<section id="posts"></section>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, query, serverTimestamp, limit, startAfter } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDBxNIIuYonkgF9m8QYdUFDOXIXAM6FYqA",
+  authDomain: "drfmarket-place.firebaseapp.com",
+  projectId: "drfmarket-place",
+  storageBucket: "drfmarket-place.firebaseapp.com",
+  messagingSenderId: "752616443115",
+  appId: "1:752616443115:web:73b71924daf66ae9c882ae"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+let currentUser = null;
+onAuthStateChanged(auth, user => { if(user) currentUser=user; else signInAnonymously(auth).catch(console.error); });
+
+async function uploadToPinata(file){
+  const form = new FormData(); form.append("file", file);
+  const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI0MjA3ZmYxYS05MDU2LTRkZTktOGE2Yi1lM2JiZTA1YmY0YmEiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWF1bml2ZXJzaXR5QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIyYjA3YjEyOWJkYTA0YTY2YmE0YSIsInNjb3BlZEtleVNlY3JldCI6IjYxZDdhMGVhYzVmNjAyNzhhNjQyODNlMjdmMTM2YjkxMjQ3YjM4NDg5MjA4YTUzNGYxNWFlMTE2Njc3ZGNkZGQiLCJleHAiOjE3ODYyNzUyNDJ9.BFUeEjlCR0jtpr1vylWYd5VkKVtDkNDhEuC2-3IFW1w"; // Replace with your actual JWT
+  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", { method:"POST", headers:{Authorization:`${PINATA_JWT}`}, body:form });
+  if(!res.ok) throw new Error("Pinata upload failed");
+  const js = await res.json(); 
+  return js.IpfsHash;
+}
+
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadStatus = document.getElementById("uploadStatus");
+const postsContainer = document.getElementById("posts");
+
+uploadBtn.onclick = async () => {
+  const fileInput = document.getElementById("mediaInput");
+  const title = document.getElementById("titleInput").value.trim();
+  const description = document.getElementById("descriptionInput").value.trim();
+  const price = parseFloat(document.getElementById("priceInput").value);
+  const location = document.getElementById("locationInput").value.trim();
+  const whatsapp = document.getElementById("whatsappInput").value.trim();
+  const paymentLink = document.getElementById("paymentLinkInput").value.trim();
+
+  if(!fileInput.files[0] || !title || !description || isNaN(price) || !location || !whatsapp || !paymentLink){
+    alert("All fields required"); return;
+  }
+
+  // Video duration limit for free users
+  if(fileInput.files[0].type.startsWith("video")){
+    const vid = document.createElement("video"); vid.src = URL.createObjectURL(fileInput.files[0]);
+    await vid.play().catch(()=>{}); vid.pause();
+    if(vid.duration > 60){ alert("Free users can upload videos max 1 minute."); return; }
+  }
+
+  uploadBtn.disabled = true;
+  uploadStatus.textContent = "Uploading media to IPFS...";
+
+  try{
+    const ipfsHash = await uploadToPinata(fileInput.files[0]);
+    const mediaType = fileInput.files[0].type.startsWith("video") ? "video" : "image";
+
+    await addDoc(collection(db,"posts"),{
+      title, description, price, location, whatsapp, paymentLink,
+      ipfsHash, mediaType, createdAt: serverTimestamp()
+    });
+
+    uploadStatus.textContent = "✅ Upload successful!";
+    fileInput.value=""; document.getElementById("titleInput").value="";
+    document.getElementById("descriptionInput").value=""; document.getElementById("priceInput").value="";
+    document.getElementById("locationInput").value=""; document.getElementById("whatsappInput").value="";
+    document.getElementById("paymentLinkInput").value="";
+    loadPosts(true);
+  } catch(err){ console.error(err); alert("Upload failed: "+err.message); } finally{uploadBtn.disabled=false;}
+};
+
+/* Multiple Gateway Video Loader */
+function tryNextGateway(video){
+    let gateways = JSON.parse(video.getAttribute("data-gateways"));
+    if(!video.currentFallback) video.currentFallback = 0;
+    video.currentFallback++;
+    if(video.currentFallback < gateways.length){
+        video.src = gateways[video.currentFallback];
+        video.load();
+        video.play().catch(()=>{});
+    } else { console.error("Video failed on all gateways:", gateways); }
+}
+
+/* Load posts */
+let lastVisible=null, loading=false;
+async function loadPosts(reset=false){
+  if(loading) return; loading=true;
+  if(reset){ postsContainer.innerHTML=""; lastVisible=null; }
+  const q = lastVisible
+    ? query(collection(db,"posts"),orderBy("createdAt","desc"),startAfter(lastVisible),limit(8))
+    : query(collection(db,"posts"),orderBy("createdAt","desc"),limit(8));
+  try{
+    const snap = await getDocs(q);
+    if(snap.empty){ if(postsContainer.children.length===0){ const p=document.createElement("p"); p.className="small"; p.textContent="No listings yet."; postsContainer.appendChild(p); } loading=false; return; }
+    snap.forEach(doc=>{
+      const d = doc.data();
+      const div = document.createElement("div"); div.className="post";
+      div.innerHTML=`<div class="badge free">Free</div>
+        <h3>${d.title||''}</h3>
+        <p>${d.description||''}</p>
+        <p><b>Price:</b> $${d.price||''} | <b>Location:</b> ${d.location||''}</p>
+        <p><b>WhatsApp:</b> <a href="https://wa.me/${encodeURIComponent(d.whatsapp||'')}" target="_blank">${d.whatsapp||''}</a></p>
+      `;
+      if(d.mediaType==="video" && d.ipfsHash){
+        const gateways = [
+            `https://gateway.pinata.cloud/ipfs/${d.ipfsHash}`,
+            `https://cloudflare-ipfs.com/ipfs/${d.ipfsHash}`,
+            `https://ipfs.io/ipfs/${d.ipfsHash}`
+        ];
+        const vid = document.createElement("video");
+        vid.controls=true; vid.preload="metadata"; vid.playsInline=true;
+        vid.dataset.gateways = JSON.stringify(gateways); vid.src=gateways[0];
+        vid.onerror = ()=>tryNextGateway(vid);
+        div.appendChild(vid);
+      } else if(d.ipfsHash){
+        const img = document.createElement("img"); img.src=`https://gateway.pinata.cloud/ipfs/${d.ipfsHash}`;
+        div.appendChild(img);
+      }
+      div.innerHTML += `<div class="buttons"><a href="${d.paymentLink||'#'}" target="_blank"><button>Pay Seller</button></a></div>`;
+      postsContainer.appendChild(div);
+    });
+    lastVisible=snap.docs[snap.docs.length-1];
+  } catch(err){ console.error("Load posts error:",err);} finally{loading=false;}
+}
+
+loadPosts(true);
+window.addEventListener("scroll",()=>{ if((window.innerHeight+window.scrollY)>=(document.body.offsetHeight-120)) loadPosts(); });
+
+</script>
+</body>
+</html>
