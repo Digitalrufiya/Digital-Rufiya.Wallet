@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Optimized)</title>
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
+  }
+}
+*{box-sizing:border-box;margin:0}
+body{
+  font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-body);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column
+}
+a{color:inherit;text-decoration:none}
+img,video{max-width:100%}
+header{
+  background: var(--accent);
+  color:#fff;
+  padding:.75rem 1rem;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;position:sticky;top:0;z-index:1000
+}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:700}
+.brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
+/* Navigation */
+#primaryNav{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+#primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
+#primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
+#menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
+@media (max-width:600px){
+  #primaryNav{display:none;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius)}
+  #primaryNav.show{display:flex}
+  #menuToggle{display:block}
+}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--accent-hover)}
+.btn:disabled{background:#adb5bd;cursor:not-allowed}
+.container{width:min(100%,700px);margin:0 auto;padding:0 1rem}
+#searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
+.post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin:1.25rem 0;box-shadow:var(--shadow-sm)}
+.post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
+.avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc}
+.post-time{font-size:.8rem;color:var(--text-muted)}
+.post-caption{margin-top:.75rem;white-space:pre-wrap}
+video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;transition:opacity .3s}
+[data-loaded="true"]{opacity:1}
+#uploadForm{margin-top:1.25rem}
+#uploadForm textarea{width:100%;min-height:6rem;padding:.65rem .85rem;margin:.75rem 0;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical}
+#prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none}
+#progBar{height:4px;width:0;background:var(--accent)}
+#sentinel{height:1px}
+.helper{color:var(--text-muted);text-align:center;margin:.5rem 0}
+
+/* Reward Button & Form */
+#rewardBtn{position:fixed; top:18px; left:18px; z-index:2000; background:#10b981; color:#fff; border:none; border-radius:6px; padding:.6rem 1rem; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#rewardForm{display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:1rem 1.25rem; border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,0.3); z-index:2001; max-width:90%; width:350px;}
+#rewardForm input,#rewardForm textarea{width:100%; margin:.5rem 0; padding:.5rem; border:1px solid #ced4da; border-radius:4px;}
+#rewardForm button{background:#10b981; color:#fff; border:none; padding:.5rem 1rem; border-radius:4px; font-weight:600; cursor:pointer;}
+#rewardForm button:hover{background:#0f766e;}
+#rewardFormClose{position:absolute; top:8px; right:12px; cursor:pointer; font-weight:bold; color:#dc3545;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="logo" />
+    <span>DRFMedia</span>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">posts</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html"> Timelines</a>
+    <a href="market.html"> Market Place</a>
+  </nav>
+</header>
+
+<!-- Reward Button & Form -->
+<button id="rewardBtn">Share & Get Reward</button>
+<div id="rewardForm">
+  <span id="rewardFormClose">✖</span>
+  <h3>Share & Get Reward</h3>
+  <input type="text" id="rewardName" placeholder="Your Name" required />
+  <input type="email" id="rewardEmail" placeholder="Your Email" required />
+  <textarea id="rewardPost" placeholder="Your Post / Share link" required></textarea>
+  <button id="rewardSubmit">Submit & Get Reward</button>
+  <p id="rewardMsg" style="color:green; font-weight:bold; display:none;">Submitted! You will get reward soon.</p>
+</div>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <textarea id="caption" minlength="4" placeholder="Write your caption…" required></textarea>
+    <div id="prog"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+  <p id="feedHint" class="helper" style="display:none">Scroll for more…</p>
+  <div id="sentinel" aria-hidden="true"></div>
+</main>
+
+<script type="module">
+  // ===== Navigation (unchanged) =====
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
+  if (window.innerWidth <= 600) primaryNav.style.display = "none";
+  menuToggle.addEventListener("click", () => {
+    primaryNav.style.display = primaryNav.style.display === "flex" ? "none" : "flex";
+  });
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
+    a.addEventListener("click", () => { if (window.innerWidth <= 600) primaryNav.style.display = "none"; });
+  });
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    if (window.innerWidth <= 600 && !primaryNav.contains(t) && t !== menuToggle) primaryNav.style.display = "none";
+  });
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
+    if (location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("active");
+    else a.classList.remove("active");
+  });
+
+  // ===== Firebase =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+  const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+    measurementId: "G-TBFQX80NRP"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  // ===== Shortcuts / DOM =====
+  const $ = id => document.getElementById(id);
+  const login = $("loginBtn"), logout = $("logoutBtn");
+  const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
+  const prog = $("prog"), bar = $("progBar");
+  const posts = $("postContainer"), qIn = $("searchInput");
+  const sentinel = $("sentinel"), feedHint = $("feedHint"), nav = $("primaryNav");
+
+  let user = null;
+  let all = [];        // all posts from DB
+  let view = [];       // filtered/sorted list for current search
+  let index = 0;       // render pointer for infinite scroll
+  const PAGE_SIZE = 10; // how many posts per batch
+
+  const escapeHTML = (s = "") => s.replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+
+  // ===== IPFS helpers =====
+  const gw = cid => ({
+    g1: `https://gateway.pinata.cloud/ipfs/${cid}`,
+    g2: `https://cloudflare-ipfs.com/ipfs/${cid}`,
+    g3: `https://ipfs.io/ipfs/${cid}`
+  });
+
+  function createImage(cid){
+    const { g1, g2, g3 } = gw(cid);
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = g1;
+    img.alt = 'Post media';
+    img.onerror = () => { if(img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null; };
+    img.addEventListener('load', ()=>img.setAttribute('data-loaded','true'));
+    return img;
+  }
+
+  function createVideo(cid){
+    const { g1, g2, g3 } = gw(cid);
+    const v=document.createElement('video');
+    v.controls=true; v.playsInline=true; v.preload='none'; v.muted=false;
+    v.dataset.g1=g1; v.dataset.g2=g2; v.dataset.g3=g3; v.dataset.idx='0';
+    v.onerror=()=>switchGateway(v);
+    v.oncanplay=()=>v.setAttribute('data-loaded','true');
+    return v;
+  }
+
+  window.switchGateway=function(video){
+    let idx=parseInt(video.dataset.idx||'0',10)+1;
+    const g1=video.dataset.g1,g2=video.dataset.g2,g3=video.dataset.g3;
+    let next='';
+    if(idx===1) next=g1; else if(idx===2) next=g2; else if(idx===3) next=g3; else {video.onerror=null; return;}
+    video.dataset.idx=String(idx);
+    if(video.src!==next){ video.src=next; video.load(); }
+  }
+
+  // ===== Lazy observers =====
+  const videoObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      const v = entry.target;
+      if(entry.isIntersecting){
+        if(!v.getAttribute('src')) switchGateway(v);
+        v.play && v.play().catch(()=>{});
+      } else { v.pause && v.pause(); }
+    });
+  }, { threshold:0.5 });
+
+  const pagingObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting) renderNextBatch();
+    });
+  }, { rootMargin:'800px 0px' });
+  pagingObserver.observe(sentinel);
+
+  // ===== Rendering =====
+  function renderReset(){ posts.innerHTML=''; index=0; feedHint.style.display='none'; }
+
+  function renderCard(p){
+    const card = document.createElement('article');
+    card.className='post-item';
+    card.innerHTML=`
+      <header class="post-owner">
+        <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="User avatar" />
+        <div>
+          <div>${escapeHTML(p.displayName||'Anon')}</div>
+          <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">
+            ${new Date(p.timestamp).toLocaleString()}
+          </time>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(p.caption||'')}</div>
+      <div class="post-media" id="m-${p.id}"></div>
+    `;
+    const holder=card.querySelector(`#m-${p.id}`);
+    if(p.mediaType==='video'){
+      const v=createVideo(p.ipfsHash);
+      holder.appendChild(v);
+      videoObserver.observe(v);
+    } else holder.appendChild(createImage(p.ipfsHash));
+    return card;
+  }
+
+  function renderNextBatch(){
+    if(index>=view.length) return;
+    const end=Math.min(index+PAGE_SIZE,view.length);
+    const frag=document.createDocumentFragment();
+    for(let i=index;i<end;i++) frag.appendChild(renderCard(view[i]));
+    posts.appendChild(frag);
+    index=end;
+    feedHint.style.display=(index<view.length)?'block':'none';
+  }
+
+  function applySearch(){
+    const term=(qIn.value||'').trim().toLowerCase();
+    view=all.filter(p=>(p.caption||'').toLowerCase().includes(term));
+    renderReset(); renderNextBatch();
+  }
+
+  // ===== Data fetch =====
+  async function getPosts(){
+    const snap=await get(ref(db,'posts'));
+    const obj=snap.val()||{};
+    all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+    applySearch();
+  }
+
+  // ===== Auth & UI =====
+  login.onclick=()=>signInWithPopup(auth,provider);
+  logout.onclick=()=>signOut(auth);
+  onAuthStateChanged(auth,(u)=>{
+    user=u;
+    login.style.display=u?'none':'block';
+    logout.style.display=u?'block':'none';
+    upload.style.display=u?'block':'none';
+    nav.style.display=u?'flex':'none';
+    getPosts();
+  });
+  qIn.oninput=()=>applySearch();
+
+  // ===== Upload =====
+  upload.onsubmit=async(e)=>{
+    e.preventDefault();
+    if(!fileIn.files[0]) return alert('Choose a file');
+    if(capIn.value.trim().length<4) return alert('Caption too short');
+    const file=fileIn.files[0];
+    upload.querySelector('button').disabled=true;
+    prog.style.display='block'; bar.style.width='0';
+
+    try{
+      const fd=new FormData(); fd.append('file',file);
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','https://api.pinata.cloud/pinning/pinFileToIPFS');
+      xhr.setRequestHeader('Authorization',pinataJWT);
+      xhr.upload.onprogress=(e)=>{ if(e.lengthComputable) bar.style.width=(e.loaded/e.total)*100+'%'; };
+      const cid=await new Promise((res,rej)=>{
+        xhr.onload=()=>{ try{ res(JSON.parse(xhr.responseText).IpfsHash); } catch{ rej('Pinata error'); } };
+        xhr.onerror=()=>rej('Upload failed'); xhr.send(fd);
+      });
+      const newRef=push(ref(db,'posts'));
+      await set(newRef,{
+        userId:user.uid,
+        displayName:user.displayName||'Anon',
+        photoURL:user.photoURL||'',
+        caption:capIn.value.trim(),
+        ipfsHash:cid,
+        mediaType:file.type.startsWith('video')?'video':'image',
+        timestamp:Date.now(),
+      });
+      fileIn.value=''; capIn.value=''; bar.style.width='100%';
+      setTimeout(()=>prog.style.display='none',400);
+      await getPosts();
+      window.scrollTo({top:0,behavior:'smooth'});
+    }catch(e){ alert(e); prog.style.display='none'; }
+    finally{ upload.querySelector('button').disabled=false; }
+  };
+
+  // ===== Reward Button =====
+  const rewardBtn=document.getElementById('rewardBtn');
+  const rewardForm=document.getElementById('rewardForm');
+  const rewardClose=document.getElementById('rewardFormClose');
+  const rewardSubmit=document.getElementById('rewardSubmit');
+  const rewardMsg=document.getElementById('rewardMsg');
+
+  rewardBtn.addEventListener('click',()=>rewardForm.style.display='block');
+  rewardClose.addEventListener('click',()=>rewardForm.style.display='none');
+
+  rewardSubmit.addEventListener('click',async()=>{
+    const name=document.getElementById('rewardName').value.trim();
+    const email=document.getElementById('rewardEmail').value.trim();
+    const post=document.getElementById('rewardPost').value.trim();
+    if(!name || !email || !post){ alert('All fields required'); return; }
+    try{
+      // TODO: replace with your Firebase/DB submission
+      console.log("Reward submitted:", {name,email,post});
+      rewardMsg.style.display='block';
+      setTimeout(()=>{ rewardMsg.style.display='none'; rewardForm.style.display='none'; },2000);
+      document.getElementById('rewardName').value='';
+      document.getElementById('rewardEmail').value='';
+      document.getElementById('rewardPost').value='';
+    }catch(e){ console.error(e); alert('Error submitting reward'); }
+  });
+</script>
+</body>
+</html>
