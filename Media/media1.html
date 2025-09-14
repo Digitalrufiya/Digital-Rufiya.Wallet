@@ -132,33 +132,32 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
 <script type="module">
   const menuToggle = document.getElementById("menuToggle");
   const primaryNav = document.getElementById("primaryNav");
-  if (window.innerWidth <= 600) primaryNav.style.display = "none";
-  menuToggle.addEventListener("click", () => {
-    primaryNav.style.display = primaryNav.style.display === "flex" ? "none" : "flex";
-  });
-  [...primaryNav.querySelectorAll("a")].forEach(a => {
-    a.addEventListener("click", () => { if (window.innerWidth <= 600) primaryNav.style.display='none'; });
+  menuToggle.addEventListener("click", () => primaryNav.classList.toggle("show"));
+
+  [...primaryNav.querySelectorAll("a")].forEach(a=>{
+    a.addEventListener("click", ()=>primaryNav.classList.remove("show"));
   });
 
-  document.addEventListener("click", (e) => {
-    const t = e.target;
-    if (window.innerWidth <= 600 && !primaryNav.contains(t) && t !== menuToggle) primaryNav.style.display='none';
+  document.addEventListener("click", (e)=>{
+    if(window.innerWidth<=600 && !primaryNav.contains(e.target) && e.target!==menuToggle){
+      primaryNav.classList.remove("show");
+    }
   });
 
-  [...primaryNav.querySelectorAll("a")].forEach(a => {
-    if (location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("active");
+  [...primaryNav.querySelectorAll("a")].forEach(a=>{
+    if(location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("active");
     else a.classList.remove("active");
   });
 
-  document.getElementById('rewardBtn').onclick = () => window.location.href = 'rewardpost.html';
+  document.getElementById('rewardBtn').onclick=()=>window.location.href='rewardpost.html';
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  const INFURA_PROJECT_ID = "eb5fbf85657f4b82bbd7488878159ec9";
-  const INFURA_PROJECT_SECRET = "yQBIodWV16YSfVrayrtiqB0a2AO72Bkw9kjG2cpdxe70opGPbQwNiQ";
-  const INFURA_AUTH = "Basic " + btoa(INFURA_PROJECT_ID + ":" + INFURA_PROJECT_SECRET);
+  // Replace Pinata JWT with your own free Pinata account JWT
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
+
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -176,79 +175,68 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
 
-  const $ = id => document.getElementById(id);
-  const login = $("loginBtn"), logout = $("logoutBtn");
-  const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
-  const prog = $("prog"), bar = $("progBar");
-  const posts = $("postContainer"), qIn = $("searchInput");
-  const sentinel = $("sentinel"), feedHint = $("feedHint");
+  const $ = id=>document.getElementById(id);
+  const login=$("loginBtn"),logout=$("logoutBtn");
+  const upload=$("uploadForm"),fileIn=$("mediaFile"),capIn=$("caption");
+  const prog=$("prog"),bar=$("progBar");
+  const posts=$("postContainer"),qIn=$("searchInput");
+  const sentinel=$("sentinel"),feedHint=$("feedHint");
 
-  let user = null;
-  let all = [];
-  let view = [];
-  let index = 0;
-  const PAGE_SIZE = 10;
+  let user=null,all=[],view=[],index=0;
+  const PAGE_SIZE=10;
 
-  const escapeHTML = (s = "") => s.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+  const escapeHTML=s=>s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-  const gw = cid => ({
-    g1: `https://gateway.pinata.cloud/ipfs/${cid}`,
-    g2: `https://cloudflare-ipfs.com/ipfs/${cid}`,
-    g3: `https://ipfs.io/ipfs/${cid}`
+  const gw=cid=>({
+    g1:`https://gateway.pinata.cloud/ipfs/${cid}`,
+    g2:`https://cloudflare-ipfs.com/ipfs/${cid}`,
+    g3:`https://ipfs.io/ipfs/${cid}`
   });
 
   function createImage(cid){
-    const { g1, g2, g3 } = gw(cid);
-    const img = document.createElement('img');
-    img.loading = 'lazy';
-    img.src = g1;
-    img.alt = 'Post media';
-    img.onerror = () => { if (img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null };
-    img.addEventListener('load', ()=>img.setAttribute('data-loaded','true'));
+    const {g1,g2,g3}=gw(cid);
+    const img=document.createElement('img');
+    img.loading='lazy';
+    img.src=g1;
+    img.alt='Post media';
+    img.onerror=()=>{if(img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null};
+    img.addEventListener('load',()=>img.setAttribute('data-loaded','true'));
     return img;
   }
 
   function createVideo(cid){
-    const { g1, g2, g3 } = gw(cid);
-    const v = document.createElement('video');
-    v.controls = true;
-    v.playsInline = true;
-    v.preload = 'metadata';
-    v.muted = true;
-    v.dataset.g1 = g1; v.dataset.g2 = g2; v.dataset.g3 = g3; v.dataset.idx='0';
-    v.onerror = () => switchGateway(v);
-    v.oncanplay = () => v.setAttribute('data-loaded','true');
+    const {g1,g2,g3}=gw(cid);
+    const v=document.createElement('video');
+    v.controls=true; v.playsInline=true; v.preload='metadata'; v.muted=true;
+    v.dataset.g1=g1; v.dataset.g2=g2; v.dataset.g3=g3; v.dataset.idx='0';
+    v.onerror=()=>switchGateway(v);
+    v.oncanplay=()=>v.setAttribute('data-loaded','true');
     return v;
   }
 
-  window.switchGateway = function(video){
-    let idx = parseInt(video.dataset.idx || '0',10)+1;
-    const g1=video.dataset.g1,g2=video.dataset.g2,g3=video.dataset.g3;
+  window.switchGateway=function(v){
+    let idx=parseInt(v.dataset.idx||'0')+1;
+    const g1=v.dataset.g1,g2=v.dataset.g2,g3=v.dataset.g3;
     let next='';
-    if(idx===1) next=g1; else if(idx===2) next=g2; else if(idx===3) next=g3; else {video.onerror=null; return;}
-    video.dataset.idx=String(idx);
-    if(video.src!==next){video.src=next; video.load();}
+    if(idx===1) next=g1; else if(idx===2) next=g2; else if(idx===3) next=g3; else {v.onerror=null;return;}
+    v.dataset.idx=String(idx);
+    if(v.src!==next){v.src=next;v.load();}
   }
 
-  const videoObserver = new IntersectionObserver((entries)=>{
+  const videoObserver=new IntersectionObserver(entries=>{
     entries.forEach(entry=>{
-      const v = entry.target;
-      if(entry.isIntersecting){
-        if(!v.getAttribute('src')) switchGateway(v);
-        v.play && v.play().catch(()=>{});
-      } else v.pause && v.pause();
+      const v=entry.target;
+      if(entry.isIntersecting){if(!v.getAttribute('src')) switchGateway(v); v.play&&v.play().catch(()=>{});}
+      else v.pause&&v.pause();
     });
-  }, {threshold:0.5});
+  },{threshold:0.5});
 
-  const pagingObserver = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{if(e.isIntersecting) renderNextBatch()});
-  }, {rootMargin:'800px 0px'});
+  const pagingObserver=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting) renderNextBatch()})},{rootMargin:'800px 0px'});
   pagingObserver.observe(sentinel);
 
   function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
   function renderCard(p){
-    const card = document.createElement('article');
-    card.className='post-item';
+    const card=document.createElement('article'); card.className='post-item';
     card.innerHTML=`
       <header class="post-owner">
         <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="User avatar" />
@@ -262,7 +250,7 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
       <div class="post-caption">${escapeHTML(p.caption||'')}</div>
       <div class="post-media" id="m-${p.id}"></div>
     `;
-    const holder = card.querySelector(`#m-${p.id}`);
+    const holder=card.querySelector(`#m-${p.id}`);
     if(p.mediaType==='video'){const v=createVideo(p.ipfsHash); holder.appendChild(v); videoObserver.observe(v);}
     else holder.appendChild(createImage(p.ipfsHash));
     return card;
@@ -275,7 +263,7 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
     for(let i=index;i<end;i++) frag.appendChild(renderCard(view[i]));
     posts.appendChild(frag);
     index=end;
-    feedHint.style.display = index<view.length?'block':'none';
+    feedHint.style.display=index<view.length?'block':'none';
   }
 
   function applySearch(){
@@ -285,46 +273,39 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
   }
 
   async function getPosts(){
-    const snap = await get(ref(db,'posts'));
-    const obj = snap.val()||{};
-    all = Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+    const snap=await get(ref(db,'posts'));
+    const obj=snap.val()||{};
+    all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
     applySearch();
   }
 
-  login.onclick = ()=>signInWithPopup(auth,provider);
-  logout.onclick = ()=>signOut(auth);
+  login.onclick=()=>signInWithPopup(auth,provider);
+  logout.onclick=()=>signOut(auth);
+
   onAuthStateChanged(auth,u=>{
     user=u;
-    login.style.display = u?'none':'block';
-    logout.style.display = u?'block':'none';
-    upload.style.display = u?'block':'none';
+    login.style.display=u?'none':'block';
+    logout.style.display=u?'block':'none';
+    upload.style.display=u?'block':'none';
+    primaryNav.style.display=u?'flex':'none';
     getPosts();
   });
-  qIn.oninput = ()=>applySearch();
 
-  upload.onsubmit = async(e)=>{
+  qIn.oninput=()=>applySearch();
+
+  upload.onsubmit=async(e)=>{
     e.preventDefault();
     if(!fileIn.files[0]) return alert('Choose a file');
     if(capIn.value.trim().length<4) return alert('Caption too short');
     const file=fileIn.files[0];
     upload.querySelector('button').disabled=true;
-    prog.style.display='block';
-    bar.style.width='0';
+    prog.style.display='block'; bar.style.width='0';
 
     try{
-      const cid = await new Promise((res,rej)=>{
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST','https://ipfs.infura.io:5001/api/v0/add');
-        xhr.setRequestHeader('Authorization', INFURA_AUTH);
-        xhr.upload.onprogress = (event)=>{
-          if(event.lengthComputable) bar.style.width = ((event.loaded/event.total)*100)+'%';
-        }
-        xhr.onload = ()=>xhr.status===200?res(JSON.parse(xhr.response).Hash):rej('Upload failed');
-        xhr.onerror = ()=>rej('Upload failed');
-        const fd = new FormData();
-        fd.append('file',file);
-        xhr.send(fd);
-      });
+      const fd=new FormData(); fd.append('file',file);
+      const cid=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{
+        method:'POST', headers:{Authorization:pinataJWT}, body:fd
+      }).then(r=>r.json()).then(d=>d.IpfsHash);
 
       const newRef=push(ref(db,'posts'));
       await set(newRef,{
@@ -334,16 +315,17 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
         caption:capIn.value.trim(),
         ipfsHash:cid,
         mediaType:file.type.startsWith('video')?'video':'image',
-        timestamp:Date.now(),
+        timestamp:Date.now()
       });
+
       fileIn.value=''; capIn.value='';
       bar.style.width='100%';
       setTimeout(()=>prog.style.display='none',400);
       await getPosts();
       window.scrollTo({top:0,behavior:'smooth'});
-    }catch(e){alert(e); prog.style.display='none';}
+    }catch(err){alert(err); prog.style.display='none';}
     finally{upload.querySelector('button').disabled=false;}
-  };
+  }
 </script>
 </body>
 </html>
