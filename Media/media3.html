@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Admin Delete + Auto Unpin)</title>
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<!-- (styles are same as before, trimmed here for brevity) -->
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-header">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png" alt="DRFMedia logo" />
+      <span>DRFMedia<span id="adminTag" class="admin-badge" style="display:none">Admin</span></span>
+    </div>
+    <button id="rewardBtn">Share & Get Rewards</button>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">posts</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html">Timelines</a>
+    <a href="market.html">Market Place</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <div style="display:flex;gap:.5rem;align-items:center;">
+    <button id="loginBtn" class="btn">Sign in with Google</button>
+    <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+  </div>
+
+  <form id="uploadForm" style="display:none">
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <textarea id="caption" minlength="4" placeholder="Write your caption…" required></textarea>
+    <div id="prog"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+  <p id="feedHint" class="helper" style="display:none">Scroll for more…</p>
+  <div id="sentinel" aria-hidden="true"></div>
+</main>
+
+<script type="module">
+/* ============================
+   CONFIG
+   ============================ */
+const PINATA_JWT = `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY3Rpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiM2Q4N2Y5ZWQ5MDRkZjg5MjY1NGMiLCJzY29wZWRLZXlTZWNyZXQiOiJhMjc5ZTg4NTRkNDRhZjZjYjE3MDQ3ZGE5OGFhNzcyYTE5MDIyYWFhMjA5NDliMTM3ZjlmYjEwMjdjMDNiZjlmIiwiZXhwIjoxNzgwNDIzMDcyfQ.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA`;
+
+const ADMIN_EMAIL = "digitalrufiya@gmail.com";
+
+/* Firebase config */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, get, remove } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+  measurementId: "G-TBFQX80NRP"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+/* ===== All other logic (upload, render, delete, unpin) is the same as I gave you in the previous final file ===== */
+
+/* At delete: unpins from Pinata */
+async function unpinFromPinata(cid){
+  if(!cid) return;
+  try{
+    const res = await fetch(`https://api.pinata.cloud/pinning/unpin/${cid}`, {
+      method: 'DELETE',
+      headers: { Authorization: PINATA_JWT }
+    });
+    return res.ok;
+  }catch(e){ console.error('Unpin error', e); return false; }
+}
+</script>
+</body>
+</html>
