@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="style.css" />
 <meta name="color-scheme" content="light dark" />
 <style>
-/* === your same CSS unchanged === */
 :root {
   --accent: #007bff;
   --accent-hover: #0056b3;
@@ -64,6 +63,7 @@ header{
 .brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
 #rewardBtn{background:#ffc107;color:#212529;border:none;border-radius:var(--radius);padding:.4rem .75rem;font-weight:600;cursor:pointer;transition:background .2s;margin-top:.5rem}
 #rewardBtn:hover{background:#e0a800}
+/* Navigation */
 #primaryNav{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
 #primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
 #primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
@@ -130,13 +130,17 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
 </main>
 
 <script type="module">
-  /* === same navigation, firebase setup, helpers code unchanged === */
+  // ===== Navigation (improved and robust) =====
+  const menuToggle = document.getElementById("menuToggle");
+  const primaryNav = document.getElementById("primaryNav");
 
+  // ===== Firebase imports =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
   import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
   import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-  const pinataJWT = "Bearer YOUR_JWT_HERE";
+  // ===== Configs (kept same as your original file) =====
+  const pinataJWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -154,34 +158,185 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
   const auth = getAuth(app);
   const provider = new GoogleAuthProvider();
 
+  // ===== DOM helpers & refs =====
   const $ = id => document.getElementById(id);
   const login = $("loginBtn"), logout = $("logoutBtn");
   const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
   const prog = $("prog"), bar = $("progBar");
   const posts = $("postContainer"), qIn = $("searchInput");
-  const sentinel = $("sentinel"), feedHint = $("feedHint"), nav = $("primaryNav");
+  const sentinel = $("sentinel"), feedHint = $("feedHint");
 
+  // state
   let user = null;
   let all = [];
   let view = [];
   let index = 0;
   const PAGE_SIZE = 10;
 
-  /* === rendering functions unchanged === */
+  // escape helper
+  const escapeHTML = (s = "") => s.replace(/[&<>"']/g, m => ( {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
 
+  // IPFS gateway helper and media creators (unchanged)
+  const gw = cid => ({
+    g1: `https://gateway.pinata.cloud/ipfs/${cid}`,
+    g2: `https://cloudflare-ipfs.com/ipfs/${cid}`,
+    g3: `https://ipfs.io/ipfs/${cid}`
+  });
+
+  function createImage(cid){
+    const { g1, g2, g3 } = gw(cid);
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = g1;
+    img.alt = 'Post media';
+    img.onerror = () => { if (img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null };
+    img.addEventListener('load', ()=>img.setAttribute('data-loaded','true'));
+    return img;
+  }
+
+  function createVideo(cid){
+    const { g1, g2, g3 } = gw(cid);
+    const v = document.createElement('video');
+    v.controls = true;
+    v.playsInline = true;
+    v.preload = 'metadata';
+    v.muted = true;
+    v.dataset.g1 = g1; v.dataset.g2 = g2; v.dataset.g3 = g3; v.dataset.idx='0';
+    v.onerror = () => switchGateway(v);
+    v.oncanplay = () => v.setAttribute('data-loaded','true');
+    return v;
+  }
+
+  window.switchGateway = function(video){
+    let idx = parseInt(video.dataset.idx || '0',10)+1;
+    const g1=video.dataset.g1,g2=video.dataset.g2,g3=video.dataset.g3;
+    let next='';
+    if(idx===1) next=g1; else if(idx===2) next=g2; else if(idx===3) next=g3; else {video.onerror=null; return;}
+    video.dataset.idx=String(idx);
+    if(video.src!==next){video.src=next; video.load();}
+  }
+
+  const videoObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      const v = entry.target;
+      if(entry.isIntersecting){
+        if(!v.getAttribute('src')) switchGateway(v);
+        v.play && v.play().catch(()=>{});
+      } else v.pause && v.pause();
+    });
+  }, {threshold:0.5});
+
+  const pagingObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{if(e.isIntersecting) renderNextBatch()});
+  }, {rootMargin:'800px 0px'});
+  pagingObserver.observe(sentinel);
+
+  function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
+  function renderCard(p){
+    const card = document.createElement('article');
+    card.className='post-item';
+    card.innerHTML=`
+      <header class="post-owner">
+        <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="User avatar" />
+        <div>
+          <div>${escapeHTML(p.displayName||'Anon')}</div>
+          <time class="post-time" datetime="${new Date(p.timestamp||0).toISOString()}">
+            ${p.timestamp? new Date(p.timestamp).toLocaleString() : ''}
+          </time>
+        </div>
+      </header>
+      <div class="post-caption">${escapeHTML(p.caption||'')}</div>
+      <div class="post-media" id="m-${p.id}"></div>
+    `;
+    const holder = card.querySelector(`#m-${p.id}`);
+    if((p.mediaType||'').startsWith('video')){ const v=createVideo(p.ipfsHash||''); holder.appendChild(v); videoObserver.observe(v); }
+    else holder.appendChild(createImage(p.ipfsHash||''));
+    return card;
+  }
+
+  function renderNextBatch(){
+    if(index>=view.length) return;
+    const end=Math.min(index+PAGE_SIZE,view.length);
+    const frag=document.createDocumentFragment();
+    for(let i=index;i<end;i++) frag.appendChild(renderCard(view[i]));
+    posts.appendChild(frag);
+    index=end;
+    feedHint.style.display = index<view.length?'block':'none';
+  }
+
+  function applySearch(){
+    const term=(qIn.value||'').trim().toLowerCase();
+    view=all.filter(p=>(p.caption||'').toLowerCase().includes(term));
+    renderReset(); renderNextBatch();
+  }
+
+  // safer getPosts with error handling
+  async function getPosts(){
+    try{
+      const snap = await get(ref(db,'posts'));
+      const obj = snap.val()||{};
+      all = Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+      applySearch();
+    }catch(err){
+      console.error("getPosts error:", err);
+      all=[]; view=[]; renderReset();
+      posts.innerHTML = '<p class="helper">Unable to load posts. Check console for details.</p>';
+    }
+  }
+
+  // ===== Navigation: use class 'show' (keeps CSS behavior consistent) =====
+  function updateNavForWidth(){
+    if(window.innerWidth <= 600){
+      menuToggle.style.display = 'block';
+      // keep current 'show' state (user may have toggled), but if not logged-in, ensure hidden
+      if(!user) primaryNav.classList.remove('show');
+    } else {
+      menuToggle.style.display = 'none';
+      // show nav on desktop only if logged-in (matches old behavior)
+      if(user) primaryNav.classList.add('show');
+      else primaryNav.classList.remove('show');
+    }
+  }
+  window.addEventListener('resize', updateNavForWidth);
+  updateNavForWidth();
+
+  menuToggle.addEventListener("click", ()=> primaryNav.classList.toggle('show'));
+  [...primaryNav.querySelectorAll("a")].forEach(a=>{
+    a.addEventListener("click", ()=> { if(window.innerWidth <= 600) primaryNav.classList.remove('show'); });
+  });
+  document.addEventListener("click",(e)=>{
+    const t = e.target;
+    if(window.innerWidth <= 600 && !primaryNav.contains(t) && t !== menuToggle) primaryNav.classList.remove('show');
+  });
+  [...primaryNav.querySelectorAll("a")].forEach(a => {
+    if (location.pathname.endsWith(a.getAttribute("href"))) a.classList.add("active");
+    else a.classList.remove("active");
+  });
+
+  // ===== Auth & UI wiring =====
   login.onclick = ()=>signInWithPopup(auth,provider);
   logout.onclick = ()=>signOut(auth);
-  onAuthStateChanged(auth,u=>{
-    user=u;
-    login.style.display = u?'none':'block';
-    logout.style.display = u?'block':'none';
-    upload.style.display = u?'block':'none';
-    nav.style.display = u?'flex':'none';
+  onAuthStateChanged(auth, u=>{
+    user = u;
+    login.style.display = u ? 'none' : 'block';
+    logout.style.display = u ? 'block' : 'none';
+    upload.style.display = u ? 'block' : 'none';
+
+    // show/hide nav based on auth & width (keeps previous behavior while using class toggles)
+    if(u){
+      if (window.innerWidth > 600) primaryNav.classList.add('show');
+      else primaryNav.classList.remove('show');
+    } else {
+      primaryNav.classList.remove('show');
+    }
+    updateNavForWidth();
     getPosts();
   });
   qIn.oninput = ()=>applySearch();
 
-  // ===== FIXED UPLOAD SECTION =====
+  // ===== UPLOAD (Pinata) - robust parsing and undefined protection =====
   upload.onsubmit = async(e)=>{
     e.preventDefault();
     if(!fileIn.files[0]) return alert('Choose a file');
@@ -196,39 +351,34 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
       const xhr=new XMLHttpRequest();
       xhr.open('POST','https://api.pinata.cloud/pinning/pinFileToIPFS');
       xhr.setRequestHeader('Authorization',pinataJWT);
-      xhr.upload.onprogress=(e)=>{if(e.lengthComputable) bar.style.width=(e.loaded/e.total)*100+'%';};
+      xhr.upload.onprogress=(ev)=>{ if(ev.lengthComputable) bar.style.width=(ev.loaded/ev.total)*100+'%'; };
 
-      const cid=await new Promise((res,rej)=>{
-        xhr.onload=()=>{
-          try {
-            const json = JSON.parse(xhr.responseText);
+      const cid = await new Promise((res,rej)=>{
+        xhr.onload = ()=>{
+          try{
+            const json = JSON.parse(xhr.responseText || '{}');
             console.log("Pinata Response:", json);
-            if(json && json.IpfsHash){
-              res(json.IpfsHash);
-            } else {
-              rej("Pinata error: " + xhr.responseText);
-            }
-          } catch(err){
-            rej("Pinata parse error: " + err.message);
+            if(json && json.IpfsHash) return res(json.IpfsHash);
+            return rej("Pinata error: " + xhr.responseText);
+          }catch(err){
+            return rej("Pinata parse error: " + err.message);
           }
         };
-        xhr.onerror=()=>rej("Upload failed");
+        xhr.onerror = ()=> rej("Upload failed (network)");
         xhr.send(fd);
       });
 
-      if(!cid){
-        throw new Error("No IPFS hash returned from Pinata.");
-      }
+      if(!cid) throw new Error("No IPFS hash returned.");
 
-      const newRef=push(ref(db,'posts'));
-      await set(newRef,{
-        userId:user.uid,
-        displayName:user.displayName||'Anon',
-        photoURL:user.photoURL||'',
-        caption:capIn.value.trim(),
-        ipfsHash:cid,
-        mediaType:file.type.startsWith('video')?'video':'image',
-        timestamp:Date.now(),
+      const newRef = push(ref(db,'posts'));
+      await set(newRef, {
+        userId: user.uid,
+        displayName: user.displayName||'Anon',
+        photoURL: user.photoURL||'',
+        caption: capIn.value.trim(),
+        ipfsHash: cid,
+        mediaType: file.type.startsWith('video') ? 'video' : 'image',
+        timestamp: Date.now(),
       });
 
       fileIn.value=''; capIn.value='';
@@ -236,13 +386,17 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
       setTimeout(()=>prog.style.display='none',400);
       await getPosts();
       window.scrollTo({top:0,behavior:'smooth'});
-    }catch(e){
-      alert("Upload Error: " + e);
+    }catch(err){
+      console.error("Upload Error:", err);
+      alert("Upload Error: " + err);
       prog.style.display='none';
     }finally{
       upload.querySelector('button').disabled=false;
     }
   };
+
+  // ensure posts attempt to load if something didn't trigger auth handler
+  getPosts();
 </script>
 </body>
 </html>
