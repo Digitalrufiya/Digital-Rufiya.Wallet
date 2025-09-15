@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DRFMessenger</title>
 
-  <!-- Firebase compat SDKs -->
+  <!-- Firebase compat SDKs (added storage) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <!-- Emoji picker -->
   <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
@@ -16,81 +17,130 @@
   <style>
     *{box-sizing:border-box;}
     body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
-    nav{background:#0066cc;color:#fff;padding:15px;text-align:center;font-weight:bold;}
-    #loginBtn{margin-top:10px;padding:8px 16px;font-size:1rem;cursor:pointer;border:none;border-radius:5px;background:#fff;color:#0066cc;}
-    #container{display:none;flex:1;overflow:hidden;display:flex;}
-    #usersList{width:240px;background:#fff;border-right:1px solid #ccc;overflow-y:auto;display:flex;flex-direction:column;}
-    #usersList h2{margin:0;padding:15px;background:#0066cc;color:#fff;}
-    #searchUserInput{
-      margin: 10px 10px 0 10px;
-      padding: 6px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-      outline:none;
+
+    /* ===== Top menu ===== */
+    nav.topmenu{
+      display:flex;
+      justify-content:space-around;
+      align-items:center;
+      background:#0066cc;
+      color:#fff;
+      padding:12px;
+      font-size:1rem;
+      font-weight:600;
     }
-    #userListContent {
-      flex: 1;
-      overflow-y: auto;
-      padding-bottom: 10px;
+    nav.topmenu a{color:#fff;text-decoration:none;padding:6px 10px;border-radius:6px;}
+    nav.topmenu a.active, nav.topmenu a:hover{background:rgba(255,255,255,0.2);}
+
+    /* Title bar with toggle & back button */
+    nav.titlebar{
+      background:#004a99;color:#fff;padding:14px;display:flex;align-items:center;justify-content:space-between;
     }
-    .user-item{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #eee;cursor:pointer;}
+    #toggleUsersBtn, #backBtn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;display:none;}
+    #chatMeta{font-weight:bold;text-align:center;flex:1}
+
+    #loginBtn{margin-top:10px;padding:12px 22px;font-size:1rem;cursor:pointer;border:none;border-radius:6px;background:#fff;color:#0066cc;font-weight:bold;}
+
+    #container{display:none;flex:1;overflow:hidden;display:flex;position:relative;}
+
+    /* Users list */
+    #usersList{width:260px;background:#fff;border-right:1px solid #ccc;overflow-y:auto;display:flex;flex-direction:column;transition:transform 0.3s ease;}
+    #usersList h2{margin:0;padding:15px;background:#0066cc;color:#fff;font-size:1.1rem;}
+    #searchUserInput{margin:12px;padding:10px 14px;border-radius:10px;border:1px solid #bbb;font-size:1rem;outline:none;}
+    #userListContent{flex:1;overflow-y:auto;padding-bottom:10px;}
+    .user-item{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #eee;cursor:pointer;font-size:1.05rem;}
     .user-item:hover{background:#e6f2ff;}
-    .user-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
-    .user-name{flex:1;font-weight:600;}
+    .user-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
+    .user-name{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .user-status{font-size:0.85rem;color:#666;margin-top:2px;}
+
+    /* Chat area */
     #chatArea{flex:1;display:flex;flex-direction:column;background:#fff;}
-    #chatHeader{padding:15px;border-bottom:1px solid #ccc;background:#f7f7f7;font-weight:bold;}
-    #messagesContainer{flex:1;padding:10px;overflow-y:auto;background:#f0f0f0;display:flex;flex-direction:column;}
-    .message{max-width:70%;padding:8px 12px;margin:6px 0;border-radius:16px;word-break:break-word;}
+    #chatHeader{padding:10px 15px;border-bottom:1px solid #ccc;background:#f7f7f7;display:flex;align-items:center;gap:10px;}
+    #messagesContainer{flex:1;padding:12px;overflow-y:auto;background:#f0f0f0;display:flex;flex-direction:column;}
+    .message{max-width:75%;padding:10px 14px;margin:8px 0;border-radius:16px;word-break:break-word;font-size:1rem;line-height:1.4;position:relative;}
     .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
     .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
     .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
     .preview img{max-width:100%;border-radius:4px;}
-    .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
-    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
-    #inputMessage{flex:1;border:1px solid #ccc;padding:8px 12px;border-radius:20px;height:40px;resize:none;}
-    #sendBtn{margin-left:8px;padding:0 16px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;}
+    .file-link{display:inline-block;padding:6px 8px;border-radius:8px;background:#fff;border:1px solid #ccc;text-decoration:none;color:#0066cc;}
+
+    /* ticks */
+    .ticks{font-size:12px;opacity:0.85;margin-left:6px;}
+    .tick-seen{color:#0b84ff;} /* blue when seen */
+
+    /* Input area */
+    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;gap:8px;}
+    #inputMessage{flex:1;border:1px solid #ccc;padding:10px 14px;border-radius:20px;height:44px;resize:none;font-size:1rem;}
+    #sendBtn{padding:0 18px;height:44px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;font-weight:600;}
     #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
-    #emojiBtn{background:none;border:none;font-size:20px;margin-left:8px;cursor:pointer;}
-    emoji-picker{position:absolute;bottom:60px;right:20px;display:none;z-index:10;}
+    #emojiBtn{background:none;border:none;font-size:22px;margin-left:4px;cursor:pointer;}
+    #fileInput{display:none;}
+
     #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+
+    /* Mobile adjustments */
+    @media(max-width:768px){
+      #usersList{position:absolute;left:0;top:0;bottom:0;width:80%;max-width:300px;z-index:100;background:#fff;transform:translateX(-100%);}
+      #usersList.show{transform:translateX(0);}
+      #toggleUsersBtn{display:block;}
+      #backBtn{display:block;}
+      #chatMeta{font-size:0.95rem}
+    }
   </style>
 </head>
 <body>
-<nav>
-  <a href="media.html">Timeline</a>
-  <a href="profile.html" class="active">Profile</a>
-  <a href="media.html">Posts</a>
-  <a href="gift.html">Donation</a>
-  <a href="chat.html">Chat</a>
-</nav>
-  
-<nav>DRFMessenger</nav>
+  <!-- Top menu -->
+  <nav class="topmenu">
+    <a href="media.html">Timeline</a>
+    <a href="profile.html">Profile</a>
+    <a href="media.html">Posts</a>
+    <a href="gift.html">Donation</a>
+    <a href="chat.html" class="active">Chat</a>
+  </nav>
 
-<!-- Login screen -->
-<div id="loginNotice">
-  <p>Please sign in with Google to use the chat.</p>
-  <button id="loginBtn">Sign in with Google</button>
-</div>
+  <!-- Title bar -->
+  <nav class="titlebar">
+    <button id="toggleUsersBtn">☰</button>
+    <div id="chatMeta">DRFMessenger</div>
+    <button id="backBtn">←</button>
+  </nav>
 
-<!-- Messenger UI -->
-<div id="container">
-  <div id="usersList">
-    <h2>Users</h2>
-    <input id="searchUserInput" type="text" placeholder="Search by name or wallet address" />
-    <div id="userListContent"></div>
+  <!-- Login -->
+  <div id="loginNotice">
+    <p>Please sign in with Google to use the chat.</p>
+    <button id="loginBtn">Sign in with Google</button>
   </div>
-  <div id="chatArea">
-    <div id="chatHeader">Select a user to chat</div>
-    <div id="messagesContainer"></div>
-    <div id="inputArea">
-      <textarea id="inputMessage" placeholder="Type a message…" disabled></textarea>
-      <button id="emojiBtn">😊</button>
-      <button id="sendBtn" disabled>Send</button>
-      <emoji-picker id="picker"></emoji-picker>
+
+  <!-- Messenger -->
+  <div id="container">
+    <div id="usersList">
+      <h2>Users</h2>
+      <input id="searchUserInput" type="text" placeholder="Search by name or wallet address" />
+      <div id="userListContent"></div>
+    </div>
+
+    <div id="chatArea">
+      <div id="chatHeader">
+        <!-- left: back button on mobile, center: name + status -->
+        <div style="display:flex;flex-direction:column;">
+          <div id="chatTitle" style="font-weight:700">Select a user to chat</div>
+          <div id="chatStatus" style="font-size:0.9rem;color:#666"> </div>
+        </div>
+      </div>
+
+      <div id="messagesContainer"></div>
+
+      <div id="inputArea">
+        <input id="fileBtn" type="button" value="📎" style="font-size:18px;padding:8px 10px;border-radius:10px;border:1px solid #ccc;background:#fff;cursor:pointer;">
+        <input id="fileInput" type="file" accept="image/*,application/pdf,.doc,.docx,.txt" />
+        <textarea id="inputMessage" placeholder="Type a message…" disabled></textarea>
+        <button id="emojiBtn">😊</button>
+        <button id="sendBtn" disabled>Send</button>
+        <emoji-picker id="picker"></emoji-picker>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
 /* ---------- Firebase init ---------- */
@@ -106,37 +156,59 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.database();
+const storage = firebase.storage();
 
 /* ---------- DOM refs ---------- */
-const loginNotice        = document.getElementById('loginNotice');
-const loginBtn           = document.getElementById('loginBtn');
-const container          = document.getElementById('container');
-const userListContent    = document.getElementById('userListContent');
-const searchUserInput    = document.getElementById('searchUserInput');
-const chatHeaderEl       = document.getElementById('chatHeader');
-const messagesContainer  = document.getElementById('messagesContainer');
-const inputMessageEl     = document.getElementById('inputMessage');
-const sendBtnEl          = document.getElementById('sendBtn');
-const emojiBtn           = document.getElementById('emojiBtn');
-const emojiPicker        = document.getElementById('picker');
+const loginNotice = document.getElementById('loginNotice');
+const loginBtn = document.getElementById('loginBtn');
+const container = document.getElementById('container');
+const userListContent = document.getElementById('userListContent');
+const searchUserInput = document.getElementById('searchUserInput');
+const chatHeaderEl = document.getElementById('chatHeader');
+const messagesContainer = document.getElementById('messagesContainer');
+const inputMessageEl = document.getElementById('inputMessage');
+const sendBtnEl = document.getElementById('sendBtn');
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPicker = document.getElementById('picker');
+
+const toggleUsersBtn = document.getElementById('toggleUsersBtn');
+const usersListEl = document.getElementById('usersList');
+const backBtn = document.getElementById('backBtn');
+const chatTitle = document.getElementById('chatTitle');
+const chatStatus = document.getElementById('chatStatus');
+
+const fileBtn = document.getElementById('fileBtn');
+const fileInput = document.getElementById('fileInput');
 
 /* ---------- State ---------- */
 let currentUser  = null;
 let selectedUser = null;
 let messagesRef  = null;
-let allUsers     = [];     // cache all users for searching
+let allUsers     = [];
+let typingRef    = null;
+let typingTimeout = null;
+let typingListenerRef = null;
 
 /* ---------- Helpers ---------- */
-const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const esc = s => String(s || '').replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 const chatPath = (uidA, uidB) => {
   const [u1,u2] = [uidA, uidB].sort();
   return `messages/${u1}/${u2}`;
 };
+const typingPath = (uidA, uidB) => {
+  const [u1,u2] = [uidA, uidB].sort();
+  return `typing/${u1}_${u2}`;
+};
+const presencePath = (uid) => `profiles/${uid}`;
+
+/* ---------- UI: toggle/hide users list ---------- */
+toggleUsersBtn.onclick = () => usersListEl.classList.toggle("show");
+backBtn.onclick = () => usersListEl.classList.toggle("show");
 
 /* ---------- Auth flow ---------- */
 loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
 
-auth.onAuthStateChanged(user=>{
+auth.onAuthStateChanged(async user=>{
   if(!user){
     currentUser = null;
     loginNotice.style.display='flex';
@@ -146,20 +218,40 @@ auth.onAuthStateChanged(user=>{
   currentUser = user;
   loginNotice.style.display='none';
   container.style.display='flex';
+
+  // set presence online and handle onDisconnect -> set lastSeen
+  const profRef = db.ref(presencePath(currentUser.uid));
+  profRef.update({ name: currentUser.displayName || null, photoUrl: currentUser.photoURL || null });
+  profRef.child('online').set(true);
+  profRef.child('lastSeen').onDisconnect().set(Date.now());
+  profRef.child('online').onDisconnect().set(false);
+
+  // mark online true now
+  profRef.update({ online: true });
+
+  // load users
   loadUsers();
 });
 
-/* ---------- Load users and setup search ---------- */
+/* ---------- Presence: mark offline on window unload (extra) ---------- */
+window.addEventListener('beforeunload', () => {
+  if(currentUser){
+    db.ref(presencePath(currentUser.uid)).update({ online:false, lastSeen: Date.now() });
+  }
+});
+
+/* ---------- Load users ---------- */
 function loadUsers(){
-  db.ref('profiles').once('value').then(snap=>{
+  db.ref('profiles').on('value', snap=>{
     allUsers = [];
+    userListContent.innerHTML = '';
     snap.forEach(child=>{
       const uid = child.key;
-      const u = child.val();
+      const u = child.val() || {};
       if(uid === currentUser.uid) return; // skip self
-      allUsers.push({ uid, name: u.name || uid, photoUrl: u.photoUrl });
+      allUsers.push({ uid, name: u.name || uid, photoUrl: u.photoUrl, online: u.online || false, lastSeen: u.lastSeen || null });
     });
-    renderUserList('');
+    renderUserList(searchUserInput.value.trim().toLowerCase());
   });
 }
 
@@ -171,7 +263,7 @@ searchUserInput.addEventListener('input', ()=>{
 function renderUserList(filter){
   userListContent.innerHTML = '';
   const filtered = allUsers.filter(u =>
-    u.name.toLowerCase().includes(filter) || u.uid.toLowerCase().includes(filter)
+    (u.name || '').toLowerCase().includes(filter) || (u.uid || '').toLowerCase().includes(filter)
   );
   if(filtered.length === 0){
     userListContent.innerHTML = "<p style='padding:10px;color:#888'>No users found</p>";
@@ -182,8 +274,15 @@ function renderUserList(filter){
     div.className = 'user-item';
     div.innerHTML = `
       <img src="${u.photoUrl || 'https://i.pravatar.cc/40'}" class="user-avatar">
-      <div class="user-name">${u.name}</div>`;
-    div.onclick = () => selectUser(u.uid, u.name);
+      <div style="flex:1">
+        <div class="user-name">${esc(u.name)}</div>
+        <div class="user-status">${u.online ? '🟢 Online' : (u.lastSeen ? 'Last seen: ' + timeAgo(u.lastSeen) : '')}</div>
+      </div>`;
+    div.onclick = () => {
+      selectUser(u.uid, u.name);
+      // hide users list on mobile
+      usersListEl.classList.remove("show");
+    };
     userListContent.appendChild(div);
   }
 }
@@ -191,62 +290,253 @@ function renderUserList(filter){
 /* ---------- Select chat partner ---------- */
 function selectUser(uid,name){
   selectedUser = {uid,name};
-  chatHeaderEl.textContent = 'Chat with ' + name;
+  chatTitle.textContent = name;
+  chatStatus.textContent = ''; // will update via presence typing listeners
   inputMessageEl.disabled = false;
   sendBtnEl.disabled = true;
   inputMessageEl.value = '';
   messagesContainer.innerHTML = '';
 
+  // remove previous listeners
   if(messagesRef) messagesRef.off();
+  if(typingListenerRef) typingListenerRef.off();
+
+  // messages ref for the chat
   messagesRef = db.ref(chatPath(currentUser.uid, uid));
-  messagesRef.off();
-  messagesRef.on('child_added', snap => renderMessage(snap.val()));
-}
 
-/* ---------- Render incoming message ---------- */
-function renderMessage(m){
-  const div = document.createElement('div');
-  div.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
-  const linked = esc(m.text).replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
-  div.innerHTML = linked;
-  messagesContainer.appendChild(div);
+  // when messages arrive: set delivered for messages that are sent by the other user
+  messagesRef.on('child_added', snap => {
+    const m = snap.val();
+    renderMessage(snap.key, m);
+    // if message is from other user and not delivered yet, mark delivered
+    if(m && m.sender !== currentUser.uid && m.status === 'sent'){
+      messagesRef.child(snap.key).update({ status: 'delivered' }).catch(()=>{});
+    }
+    // auto-mark seen when chat is open (immediately)
+    markMessagesSeen();
+  });
 
-  // simple image preview
-  const imgMatch = m.text.match(/(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif))/i);
-  if(imgMatch){
-    const p = document.createElement('div');
-    p.className = 'preview';
-    p.innerHTML = `<img src="${imgMatch[0]}" alt="preview">`;
-    messagesContainer.appendChild(p);
+  // listen for message updates (status changes)
+  messagesRef.on('child_changed', snap => {
+    const m = snap.val();
+    updateMessageUI(snap.key, m);
+  });
+
+  // typing indicator: listen to typing path
+  typingRef = db.ref(typingPath(currentUser.uid, uid));
+  typingListenerRef = typingRef;
+  // show if other user typing
+  typingRef.on('value', snap => {
+    const typingObj = snap.val() || {};
+    // typingObj can contain { <uid>: true/false }
+    const otherTyping = Object.keys(typingObj || {}).some(k => k !== currentUser.uid && typingObj[k] === true);
+    chatStatus.textContent = otherTyping ? 'Typing...' : ''; // show typing or clear
+  });
+
+  // listen to partner presence (online/lastSeen)
+  db.ref(presencePath(uid)).on('value', snap => {
+    const p = snap.val() || {};
+    if(p.online) chatStatus.textContent = '🟢 Online';
+    else chatStatus.textContent = p.lastSeen ? `Last seen: ${timeAgo(p.lastSeen)}` : '';
+  });
+
+  // show back button on mobile
+  if(window.innerWidth <= 768){
+    usersListEl.classList.remove("show"); // ensure closed
+    document.getElementById('toggleUsersBtn').style.display = 'block';
+    document.getElementById('backBtn').style.display = 'block';
+  } else {
+    document.getElementById('toggleUsersBtn').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
   }
 
+  // scroll down after short delay
+  setTimeout(()=> messagesContainer.scrollTop = messagesContainer.scrollHeight, 200);
+}
+
+/* ---------- Render message ---------- */
+function renderMessage(key, m){
+  // avoid duplicates if already exists
+  if(document.getElementById('msg-'+key)) return;
+
+  const div = document.createElement('div');
+  div.id = 'msg-'+key;
+  const cls = m.sender === currentUser.uid ? 'message sent' : 'message received';
+  div.className = cls;
+
+  // message content types: text (default), file
+  if(m.type === 'file'){
+    // if image: show img preview
+    if(m.mime && m.mime.startsWith('image/')){
+      div.innerHTML = `<div>${esc(m.text || '')}</div><div class="preview"><img src="${esc(m.url)}" alt="${esc(m.name || '')}"></div>
+        <div style="font-size:12px;margin-top:6px;color:#666">${esc(m.name || '')}</div>`;
+    } else {
+      div.innerHTML = `<div>${esc(m.text || '')}</div>
+        <div style="margin-top:6px"><a class="file-link" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.name || 'file')}</a></div>`;
+    }
+  } else {
+    // convert URLs to links
+    const linked = esc(m.text || '').replace(/(https?:\/\/[^\s]+)/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+    div.innerHTML = linked;
+  }
+
+  // ticks for sent/delivered/seen (only for messages from current user)
+  if(m.sender === currentUser.uid){
+    const tickSpan = document.createElement('span');
+    tickSpan.className = 'ticks';
+    tickSpan.id = 'ticks-'+key;
+    tickSpan.innerHTML = ticksForStatus(m.status || 'sent');
+    div.appendChild(tickSpan);
+  }
+
+  messagesContainer.appendChild(div);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-/* ---------- Sending ---------- */
-inputMessageEl.oninput = () => sendBtnEl.disabled = inputMessageEl.value.trim().length === 0;
+/* ---------- Update message UI (status change) ---------- */
+function updateMessageUI(key, m){
+  // update ticks
+  const tickSpan = document.getElementById('ticks-'+key);
+  if(tickSpan && m){
+    tickSpan.innerHTML = ticksForStatus(m.status || 'sent');
+    if(m.status === 'seen') tickSpan.classList.add('tick-seen');
+  }
+}
+
+/* ---------- helper ticks html ---------- */
+function ticksForStatus(status){
+  // status: sent, delivered, seen
+  if(status === 'sent') return '✓';
+  if(status === 'delivered') return '✓✓';
+  if(status === 'seen') return '✓✓';
+  return '';
+}
+
+/* ---------- mark messages seen when chat open ---------- */
+function markMessagesSeen(){
+  if(!messagesRef) return;
+  messagesRef.once('value').then(snap=>{
+    snap.forEach(child=>{
+      const m = child.val();
+      const k = child.key;
+      if(m && m.sender !== currentUser.uid && m.status !== 'seen'){
+        messagesRef.child(k).update({ status: 'seen' }).catch(()=>{});
+      }
+    });
+  });
+}
+
+/* ---------- Sending messages & file upload ---------- */
+inputMessageEl.oninput = () => {
+  sendBtnEl.disabled = inputMessageEl.value.trim().length === 0;
+  // typing indicator: set typing true while typing
+  setTyping(true);
+};
+
+let typingTimer = null;
+function setTyping(isTyping){
+  if(!selectedUser) return;
+  const tpRef = db.ref(typingPath(currentUser.uid, selectedUser.uid) + '/' + currentUser.uid);
+  tpRef.set(isTyping);
+  // auto-reset to false after short timeout when stopped
+  if(typingTimer) clearTimeout(typingTimer);
+  if(isTyping){
+    typingTimer = setTimeout(()=> {
+      tpRef.set(false);
+    }, 1500);
+  }
+}
 
 sendBtnEl.onclick = () => {
   const txt = inputMessageEl.value.trim();
   if (!txt || !selectedUser) return;
   sendBtnEl.disabled = true;
 
-  db.ref(chatPath(currentUser.uid, selectedUser.uid)).push({
+  const payload = {
     sender: currentUser.uid,
     text: txt,
-    timestamp: Date.now()
-  }).then(() => {
+    timestamp: Date.now(),
+    status: 'sent',
+    type: 'text'
+  };
+
+  messagesRef.push(payload).then(() => {
     inputMessageEl.value = '';
     sendBtnEl.disabled = true;
-  }).catch(e => alert("Error: " + e.message));
+    // stop typing
+    setTyping(false);
+  }).catch(e => {
+    alert('Send error: '+e.message);
+    sendBtnEl.disabled = false;
+  });
 };
 
+// Enter to send
 inputMessageEl.onkeydown = e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     sendBtnEl.click();
   }
 };
+
+/* ---------- file upload flow ---------- */
+fileBtn.onclick = () => fileInput.click();
+
+fileInput.addEventListener('change', async (ev)=>{
+  const file = ev.target.files[0];
+  if(!file || !selectedUser) return;
+  // show a temporary uploading message
+  const uploadingKey = 'uploading-'+Date.now();
+  const temp = {
+    sender: currentUser.uid,
+    text: 'Uploading...',
+    timestamp: Date.now(),
+    status: 'sent',
+    type: 'file',
+    name: file.name
+  };
+  const tempRef = messagesRef.push(temp);
+  const storagePath = `chat_files/${currentUser.uid}_${selectedUser.uid}/${Date.now()}_${file.name}`;
+  const uploadTask = storage.ref(storagePath).put(file);
+
+  // track progress (optional)
+  uploadTask.on('state_changed', snapshot => {
+    // you could show progress if you want
+  }, err => {
+    alert('Upload failed: ' + err.message);
+    // remove temp message
+    tempRef.remove();
+  }, async () => {
+    const url = await uploadTask.snapshot.ref.getDownloadURL();
+    // update message with real file url and mime
+    tempRef.update({
+      url,
+      mime: file.type,
+      name: file.name,
+      text: file.type && file.type.startsWith('image/') ? '' : (file.name || 'file'),
+      timestamp: Date.now(),
+      status: 'sent'
+    }).then(()=>{
+      // done
+    });
+  });
+
+  // clear file input
+  fileInput.value = '';
+});
+
+/* ---------- Typing indicator: stop on blur or send ---------- */
+inputMessageEl.addEventListener('blur', () => { if(selectedUser) db.ref(typingPath(currentUser.uid, selectedUser.uid) + '/' + currentUser.uid).set(false); });
+
+/* ---------- Utility: timeAgo ---------- */
+function timeAgo(ts){
+  if(!ts) return '';
+  const s = Math.floor((Date.now() - ts)/1000);
+  if(s < 60) return `${s}s ago`;
+  if(s < 3600) return `${Math.floor(s/60)}m ago`;
+  if(s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+}
 
 /* ---------- Emoji picker ---------- */
 emojiBtn.onclick = () => {
@@ -256,6 +546,18 @@ emojiPicker.addEventListener('emoji-click', e => {
   inputMessageEl.value += e.detail.unicode;
   inputMessageEl.dispatchEvent(new Event('input'));
   inputMessageEl.focus();
+});
+
+/* ---------- Initial UI state ---------- */
+loginNotice.style.display = 'flex';
+container.style.display = 'none';
+usersListEl.classList.remove('show');
+
+/* ---------- Clean up: when leaving chat, clear typing */ 
+window.addEventListener('pagehide', () => {
+  if(selectedUser){
+    db.ref(typingPath(currentUser.uid, selectedUser.uid) + '/' + currentUser.uid).set(false);
+  }
 });
 </script>
 </body>
