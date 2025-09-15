@@ -17,7 +17,7 @@
     *{box-sizing:border-box;}
     body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
 
-    /* ===== Menu bar ===== */
+    /* ===== Top Menu ===== */
     nav.topmenu{
       display:flex;
       justify-content:space-around;
@@ -28,12 +28,7 @@
       font-size:1rem;
       font-weight:600;
     }
-    nav.topmenu a{
-      color:#fff;
-      text-decoration:none;
-      padding:6px 10px;
-      border-radius:6px;
-    }
+    nav.topmenu a{color:#fff;text-decoration:none;padding:6px 10px;border-radius:6px;}
     nav.topmenu a.active,
     nav.topmenu a:hover{background:rgba(255,255,255,0.2);}
 
@@ -44,34 +39,27 @@
       text-align:center;
       font-weight:bold;
       font-size:1.2rem;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
     }
+    #toggleUsersBtn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;display:none;}
 
     #loginBtn{margin-top:10px;padding:12px 22px;font-size:1rem;cursor:pointer;border:none;border-radius:6px;background:#fff;color:#0066cc;font-weight:bold;}
 
-    #container{display:none;flex:1;overflow:hidden;display:flex;}
-    #usersList{width:260px;background:#fff;border-right:1px solid #ccc;overflow-y:auto;display:flex;flex-direction:column;}
+    #container{display:none;flex:1;overflow:hidden;display:flex;position:relative;}
+
+    /* ===== User list (hidden on mobile) ===== */
+    #usersList{
+      width:260px;background:#fff;border-right:1px solid #ccc;
+      overflow-y:auto;display:flex;flex-direction:column;
+      transition:transform 0.3s ease;
+    }
     #usersList h2{margin:0;padding:15px;background:#0066cc;color:#fff;font-size:1.1rem;}
+    #searchUserInput{margin:12px;padding:10px 14px;border-radius:10px;border:1px solid #bbb;font-size:1rem;outline:none;}
 
-    /* ===== Search ===== */
-    #searchUserInput{
-      margin:12px;
-      padding:10px 14px;
-      border-radius:10px;
-      border:1px solid #bbb;
-      font-size:1rem;
-      outline:none;
-      width:calc(100% - 24px);
-    }
-
-    /* ===== User list ===== */
     #userListContent{flex:1;overflow-y:auto;padding-bottom:10px;}
-    .user-item{
-      display:flex;align-items:center;gap:12px;
-      padding:12px;
-      border-bottom:1px solid #eee;
-      cursor:pointer;
-      font-size:1.05rem;
-    }
+    .user-item{display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #eee;cursor:pointer;font-size:1.05rem;}
     .user-item:hover{background:#e6f2ff;}
     .user-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
     .user-name{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -85,7 +73,6 @@
     .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
     .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
     .preview img{max-width:100%;border-radius:4px;}
-    .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
 
     /* ===== Input area ===== */
     #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
@@ -97,18 +84,11 @@
 
     #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 
-    /* ===== Mobile ===== */
+    /* ===== Mobile view ===== */
     @media(max-width:768px){
-      #usersList{width:200px;}
-      .user-avatar{width:38px;height:38px;}
-      .user-item{padding:10px;font-size:1rem;}
-      #searchUserInput{font-size:0.95rem;padding:8px 12px;}
-      nav.topmenu{font-size:0.9rem;}
-    }
-    @media(max-width:500px){
-      #usersList{width:180px;}
-      .user-avatar{width:34px;height:34px;}
-      .user-name{font-size:0.95rem;}
+      #usersList{position:absolute;left:0;top:0;bottom:0;width:80%;max-width:300px;z-index:100;background:#fff;transform:translateX(-100%);}
+      #usersList.show{transform:translateX(0);}
+      #toggleUsersBtn{display:block;}
     }
   </style>
 </head>
@@ -122,7 +102,10 @@
     <a href="chat.html" class="active">Chat</a>
   </nav>
 
-  <nav class="titlebar">DRFMessenger</nav>
+  <nav class="titlebar">
+    <span>DRFMessenger</span>
+    <button id="toggleUsersBtn">☰</button>
+  </nav>
 
   <!-- Login -->
   <div id="loginNotice">
@@ -150,7 +133,7 @@
   </div>
 
 <script>
-/* === Your exact Firebase logic kept === */
+/* ---------- Firebase init ---------- */
 const firebaseConfig = {
   apiKey:  "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
   authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -164,7 +147,143 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.database();
 
-/* (rest of your JavaScript exactly same as your file) */
+/* ---------- DOM refs ---------- */
+const loginNotice = document.getElementById('loginNotice');
+const loginBtn = document.getElementById('loginBtn');
+const container = document.getElementById('container');
+const userListContent = document.getElementById('userListContent');
+const searchUserInput = document.getElementById('searchUserInput');
+const chatHeaderEl = document.getElementById('chatHeader');
+const messagesContainer = document.getElementById('messagesContainer');
+const inputMessageEl = document.getElementById('inputMessage');
+const sendBtnEl = document.getElementById('sendBtn');
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPicker = document.getElementById('picker');
+const toggleUsersBtn = document.getElementById('toggleUsersBtn');
+const usersListEl = document.getElementById('usersList');
+
+/* ---------- State ---------- */
+let currentUser  = null;
+let selectedUser = null;
+let messagesRef  = null;
+let allUsers     = [];
+
+/* ---------- Toggle users panel ---------- */
+toggleUsersBtn.onclick = () => {
+  usersListEl.classList.toggle("show");
+};
+
+/* ---------- Auth flow ---------- */
+loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
+auth.onAuthStateChanged(user=>{
+  if(!user){
+    currentUser = null;
+    loginNotice.style.display='flex';
+    container.style.display='none';
+    return;
+  }
+  currentUser = user;
+  loginNotice.style.display='none';
+  container.style.display='flex';
+  loadUsers();
+});
+
+/* ---------- Load users ---------- */
+function loadUsers(){
+  db.ref('profiles').once('value').then(snap=>{
+    allUsers = [];
+    snap.forEach(child=>{
+      const uid = child.key;
+      const u = child.val();
+      if(uid === currentUser.uid) return;
+      allUsers.push({ uid, name: u.name || uid, photoUrl: u.photoUrl });
+    });
+    renderUserList('');
+  });
+}
+searchUserInput.addEventListener('input', ()=>{
+  const filter = searchUserInput.value.trim().toLowerCase();
+  renderUserList(filter);
+});
+function renderUserList(filter){
+  userListContent.innerHTML = '';
+  const filtered = allUsers.filter(u =>
+    u.name.toLowerCase().includes(filter) || u.uid.toLowerCase().includes(filter)
+  );
+  if(filtered.length === 0){
+    userListContent.innerHTML = "<p style='padding:10px;color:#888'>No users found</p>";
+    return;
+  }
+  for(const u of filtered){
+    const div = document.createElement('div');
+    div.className = 'user-item';
+    div.innerHTML = `<img src="${u.photoUrl || 'https://i.pravatar.cc/40'}" class="user-avatar"><div class="user-name">${u.name}</div>`;
+    div.onclick = () => {
+      selectUser(u.uid, u.name);
+      usersListEl.classList.remove("show"); // hide list on mobile
+    };
+    userListContent.appendChild(div);
+  }
+}
+
+/* ---------- Select chat partner ---------- */
+function selectUser(uid,name){
+  selectedUser = {uid,name};
+  chatHeaderEl.textContent = 'Chat with ' + name;
+  inputMessageEl.disabled = false;
+  sendBtnEl.disabled = true;
+  inputMessageEl.value = '';
+  messagesContainer.innerHTML = '';
+  if(messagesRef) messagesRef.off();
+  messagesRef = db.ref(chatPath(currentUser.uid, uid));
+  messagesRef.off();
+  messagesRef.on('child_added', snap => renderMessage(snap.val()));
+}
+const chatPath = (uidA, uidB) => {
+  const [u1,u2] = [uidA, uidB].sort();
+  return `messages/${u1}/${u2}`;
+};
+
+/* ---------- Render message ---------- */
+function renderMessage(m){
+  const div = document.createElement('div');
+  div.className = 'message ' + (m.sender === currentUser.uid ? 'sent' : 'received');
+  div.innerHTML = m.text;
+  messagesContainer.appendChild(div);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+/* ---------- Sending ---------- */
+inputMessageEl.oninput = () => sendBtnEl.disabled = inputMessageEl.value.trim().length === 0;
+sendBtnEl.onclick = () => {
+  const txt = inputMessageEl.value.trim();
+  if (!txt || !selectedUser) return;
+  sendBtnEl.disabled = true;
+  db.ref(chatPath(currentUser.uid, selectedUser.uid)).push({
+    sender: currentUser.uid,
+    text: txt,
+    timestamp: Date.now()
+  }).then(() => {
+    inputMessageEl.value = '';
+    sendBtnEl.disabled = true;
+  });
+};
+inputMessageEl.onkeydown = e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBtnEl.click();
+  }
+};
+
+/* ---------- Emoji ---------- */
+emojiBtn.onclick = () => {
+  emojiPicker.style.display = (emojiPicker.style.display === 'block') ? 'none' : 'block';
+};
+emojiPicker.addEventListener('emoji-click', e => {
+  inputMessageEl.value += e.detail.unicode;
+  inputMessageEl.dispatchEvent(new Event('input'));
+  inputMessageEl.focus();
+});
 </script>
 </body>
 </html>
