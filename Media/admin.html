@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DRF Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+  <!-- Header -->
+  <header class="bg-blue-700 text-white p-4 shadow">
+    <h1 class="text-xl font-bold">DRF Admin Panel</h1>
+  </header>
+
+  <main class="p-6 space-y-6">
+    <!-- Users -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Users & Profiles</h2>
+      <div id="usersList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Posts -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Posts</h2>
+      <div id="postsList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Donations -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Donations</h2>
+      <div id="donationsList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Transactions -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Transactions</h2>
+      <div id="transactionsList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Logs -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Logs</h2>
+      <div id="logsList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Status -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">User Status (Online/Offline)</h2>
+      <div id="statusList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+
+    <!-- Typing -->
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">Typing Indicators</h2>
+      <div id="typingList" class="text-sm text-gray-700">Loading...</div>
+    </section>
+  </main>
+
+  <script type="module">
+    // Import Firebase SDK v12
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    // Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // 🔹 Load Users & Profiles
+    onValue(ref(db, "profiles"), snap => {
+      const users = snap.val() || {};
+      let html = "";
+      Object.keys(users).forEach(uid => {
+        const u = users[uid];
+        html += `<div class="border-b py-1"><b>${u.name}</b> (${u.email})</div>`;
+      });
+      document.getElementById("usersList").innerHTML = html || "No users yet.";
+    });
+
+    // 🔹 Load Posts
+    onValue(ref(db, "posts"), snap => {
+      const posts = snap.val() || {};
+      let html = "";
+      Object.keys(posts).forEach(pid => {
+        const p = posts[pid];
+        html += `<div class="border-b py-1">[${p.userId}] ${p.caption || "No caption"} | Likes: ${p.likesCount || 0} | Comments: ${p.commentsCount || 0}</div>`;
+      });
+      document.getElementById("postsList").innerHTML = html || "No posts.";
+    });
+
+    // 🔹 Load Donations
+    onValue(ref(db, "donations"), snap => {
+      const donations = snap.val() || {};
+      let html = "";
+      Object.keys(donations).forEach(uid => {
+        const userDonations = donations[uid];
+        Object.keys(userDonations).forEach(did => {
+          const d = userDonations[did];
+          html += `<div class="border-b py-1">[${uid}] ${d.type} @ ${new Date(d.timestamp).toLocaleString()}</div>`;
+        });
+      });
+      document.getElementById("donationsList").innerHTML = html || "No donations.";
+    });
+
+    // 🔹 Load Transactions
+    onValue(ref(db, "transactions"), snap => {
+      const txs = snap.val() || {};
+      let html = "";
+      Object.keys(txs).forEach(uid => {
+        Object.keys(txs[uid]).forEach(tid => {
+          const t = txs[uid][tid];
+          html += `<div class="border-b py-1">[${uid}] ${t.type}: ${t.amount} @ ${new Date(t.timestamp).toLocaleString()}</div>`;
+        });
+      });
+      document.getElementById("transactionsList").innerHTML = html || "No transactions.";
+    });
+
+    // 🔹 Load Logs
+    onValue(ref(db, "logs"), snap => {
+      const logs = snap.val() || {};
+      let html = "";
+      Object.keys(logs).forEach(uid => {
+        Object.keys(logs[uid]).forEach(lid => {
+          const l = logs[uid][lid];
+          html += `<div class="border-b py-1">[${uid}] ${l.action} @ ${new Date(l.timestamp).toLocaleString()}</div>`;
+        });
+      });
+      document.getElementById("logsList").innerHTML = html || "No logs.";
+    });
+
+    // 🔹 Load User Status
+    onValue(ref(db, "status"), snap => {
+      const status = snap.val() || {};
+      let html = "";
+      Object.keys(status).forEach(uid => {
+        const s = status[uid];
+        html += `<div class="border-b py-1">${uid}: ${s.state} (last: ${new Date(s.last_changed).toLocaleString()})</div>`;
+      });
+      document.getElementById("statusList").innerHTML = html || "No status updates.";
+    });
+
+    // 🔹 Load Typing Indicators
+    onValue(ref(db, "typing"), snap => {
+      const typing = snap.val() || {};
+      let html = "";
+      Object.keys(typing).forEach(chatId => {
+        Object.keys(typing[chatId]).forEach(uid => {
+          const isTyping = typing[chatId][uid];
+          if (isTyping) {
+            html += `<div class="border-b py-1">Chat ${chatId}: ${uid} is typing...</div>`;
+          }
+        });
+      });
+      document.getElementById("typingList").innerHTML = html || "Nobody is typing.";
+    });
+
+  </script>
+</body>
+</html>
