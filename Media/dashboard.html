@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRFChain - User Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Welcome to DRFChain Dashboard</h1>
+    <button id="logoutBtn">Logout</button>
+  </header>
+
+  <main>
+    <!-- Profile Section -->
+    <section id="profileSection">
+      <h2>My Profile</h2>
+      <p><strong>Name:</strong> <span id="profileName"></span></p>
+      <p><strong>Email:</strong> <span id="profileEmail"></span></p>
+      <p><strong>Photo:</strong> <img id="profilePhoto" width="80"></p>
+    </section>
+
+    <!-- My Posts -->
+    <section id="postsSection">
+      <h2>My Posts</h2>
+      <ul id="myPostsList"></ul>
+    </section>
+
+    <!-- Donations -->
+    <section id="donationsSection">
+      <h2>My Donations</h2>
+      <ul id="myDonationsList"></ul>
+    </section>
+
+    <!-- Transactions -->
+    <section id="transactionsSection">
+      <h2>My Transactions</h2>
+      <ul id="myTransactionsList"></ul>
+    </section>
+
+    <!-- Status -->
+    <section id="statusSection">
+      <h2>My Status</h2>
+      <p><strong>Current State:</strong> <span id="statusState"></span></p>
+      <p><strong>Last Changed:</strong> <span id="statusChanged"></span></p>
+    </section>
+  </main>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.firebasestorage.app",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+      measurementId: "G-W6VHMP77YR"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // Get elements
+    const profileName = document.getElementById("profileName");
+    const profileEmail = document.getElementById("profileEmail");
+    const profilePhoto = document.getElementById("profilePhoto");
+    const postsList = document.getElementById("myPostsList");
+    const donationsList = document.getElementById("myDonationsList");
+    const transactionsList = document.getElementById("myTransactionsList");
+    const statusState = document.getElementById("statusState");
+    const statusChanged = document.getElementById("statusChanged");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    // Load data when user is signed in
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const uid = user.uid;
+        const dbRef = ref(db);
+
+        // Profile
+        const profileSnap = await get(child(dbRef, `profiles/${uid}`));
+        if (profileSnap.exists()) {
+          const profile = profileSnap.val();
+          profileName.textContent = profile.name;
+          profileEmail.textContent = profile.email;
+          profilePhoto.src = profile.photoUrl;
+        }
+
+        // Posts
+        postsList.innerHTML = "";
+        const postsSnap = await get(child(dbRef, "posts"));
+        if (postsSnap.exists()) {
+          postsSnap.forEach((post) => {
+            const data = post.val();
+            if (data.userId === uid) {
+              const li = document.createElement("li");
+              li.textContent = `${data.caption} (Likes: ${data.likesCount}, Comments: ${data.commentsCount})`;
+              postsList.appendChild(li);
+            }
+          });
+        }
+
+        // Donations
+        donationsList.innerHTML = "";
+        const donationsSnap = await get(child(dbRef, `donations/${uid}`));
+        if (donationsSnap.exists()) {
+          donationsSnap.forEach((donation) => {
+            const d = donation.val();
+            const li = document.createElement("li");
+            li.textContent = `${d.type} on ${new Date(d.timestamp).toLocaleString()}`;
+            donationsList.appendChild(li);
+          });
+        }
+
+        // Transactions
+        transactionsList.innerHTML = "";
+        const txSnap = await get(child(dbRef, `transactions/${uid}`));
+        if (txSnap.exists()) {
+          txSnap.forEach((tx) => {
+            const t = tx.val();
+            const li = document.createElement("li");
+            li.textContent = `Amount: ${t.amount}, Type: ${t.type}, Date: ${new Date(t.timestamp).toLocaleString()}`;
+            transactionsList.appendChild(li);
+          });
+        }
+
+        // Status
+        const statusSnap = await get(child(dbRef, `status/${uid}`));
+        if (statusSnap.exists()) {
+          const s = statusSnap.val();
+          statusState.textContent = s.state;
+          statusChanged.textContent = new Date(s.last_changed).toLocaleString();
+        }
+
+      } else {
+        window.location.href = "index.html"; // redirect to login if not signed in
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    });
+  </script>
+</body>
+</html>
