@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DRFMessenger</title>
+
+  <!-- Firebase compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- Emoji picker -->
+  <script src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.8.2/index.js" type="module"></script>
+
+  <style>
+    *{box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;margin:0;height:100vh;display:flex;flex-direction:column;background:#f0f2f5;}
+
+    /* ===== Top Menu Bar ===== */
+    nav.menu-bar{
+      display:flex;
+      justify-content:space-around;
+      align-items:center;
+      background:#0066cc;
+      color:#fff;
+      padding:12px;
+      font-size:1rem;
+      font-weight:600;
+    }
+    nav.menu-bar a{
+      color:#fff;
+      text-decoration:none;
+      padding:6px 10px;
+      border-radius:6px;
+      transition:background 0.2s;
+    }
+    nav.menu-bar a:hover,
+    nav.menu-bar a.active{
+      background:rgba(255,255,255,0.2);
+    }
+
+    /* Messenger title bar */
+    nav.title-bar{
+      background:#004a99;
+      color:#fff;
+      padding:14px;
+      text-align:center;
+      font-weight:bold;
+      font-size:1.2rem;
+    }
+
+    #loginBtn{margin-top:10px;padding:10px 20px;font-size:1rem;cursor:pointer;border:none;border-radius:6px;background:#fff;color:#0066cc;font-weight:bold;}
+
+    #container{display:none;flex:1;overflow:hidden;display:flex;}
+    #usersList{width:280px;min-width:240px;background:#fff;border-right:1px solid #ccc;overflow-y:auto;display:flex;flex-direction:column;}
+    #usersList h2{margin:0;padding:15px;background:#0066cc;color:#fff;font-size:1.1rem;}
+
+    /* ===== Search Input ===== */
+    #searchUserInput{
+      margin: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #bbb;
+      font-size: 1.05rem;
+      outline:none;
+      width: calc(100% - 24px);
+    }
+
+    /* ===== User list ===== */
+    #userListContent {flex: 1;overflow-y: auto;padding-bottom: 10px;}
+    .user-item{
+      display:flex;align-items:center;gap:14px;
+      padding:12px 14px;
+      border-bottom:1px solid #eee;
+      cursor:pointer;
+      font-size:1.05rem;
+    }
+    .user-item:hover{background:#e6f2ff;}
+    .user-avatar{width:44px;height:44px;border-radius:50%;object-fit:cover;border:1px solid #ccc;}
+    .user-name{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* ===== Chat area ===== */
+    #chatArea{flex:1;display:flex;flex-direction:column;background:#fff;}
+    #chatHeader{padding:15px;border-bottom:1px solid #ccc;background:#f7f7f7;font-weight:bold;font-size:1.1rem;}
+    #messagesContainer{flex:1;padding:12px;overflow-y:auto;background:#f0f0f0;display:flex;flex-direction:column;}
+    .message{max-width:75%;padding:10px 14px;margin:8px 0;border-radius:16px;word-break:break-word;font-size:1rem;line-height:1.4;}
+    .sent{background:#007bff;color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+    .received{background:#e4e6eb;color:#000;align-self:flex-start;border-bottom-left-radius:4px;}
+    .preview{margin-top:6px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;}
+    .preview img{max-width:100%;border-radius:4px;}
+    .preview a{font-size:0.9rem;color:#0066cc;word-break:break-all;}
+
+    /* ===== Input area ===== */
+    #inputArea{display:flex;padding:10px;border-top:1px solid #ccc;background:#f7f7f7;align-items:center;}
+    #inputMessage{flex:1;border:1px solid #ccc;padding:10px 14px;border-radius:20px;height:44px;resize:none;font-size:1rem;}
+    #sendBtn{margin-left:8px;padding:0 18px;height:44px;border:none;border-radius:20px;background:#0066cc;color:#fff;cursor:pointer;font-weight:600;}
+    #sendBtn:disabled{background:#aaa;cursor:not-allowed;}
+    #emojiBtn{background:none;border:none;font-size:22px;margin-left:8px;cursor:pointer;}
+    emoji-picker{position:absolute;bottom:60px;right:20px;display:none;z-index:10;}
+
+    #loginNotice{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+
+    /* ===== Responsive for Mobile ===== */
+    @media(max-width:768px){
+      #usersList{width:200px;min-width:200px;}
+      .user-avatar{width:38px;height:38px;}
+      .user-item{padding:10px;font-size:1rem;}
+      #searchUserInput{font-size:1rem;padding:8px 12px;}
+      nav.menu-bar{font-size:0.9rem;}
+    }
+    @media(max-width:500px){
+      #usersList{width:180px;min-width:180px;}
+      .user-avatar{width:34px;height:34px;}
+      .user-name{font-size:0.95rem;}
+      #searchUserInput{font-size:0.95rem;}
+    }
+  </style>
+</head>
+<body>
+  <!-- Menu Bar -->
+  <nav class="menu-bar">
+    <a href="media.html">Timeline</a>
+    <a href="profile.html">Profile</a>
+    <a href="media.html">Posts</a>
+    <a href="gift.html">Donation</a>
+    <a href="chat.html" class="active">Chat</a>
+  </nav>
+  
+  <!-- Messenger Title -->
+  <nav class="title-bar">DRFMessenger</nav>
+
+  <!-- Login screen -->
+  <div id="loginNotice">
+    <p>Please sign in with Google to use the chat.</p>
+    <button id="loginBtn">Sign in with Google</button>
+  </div>
+
+  <!-- Messenger UI -->
+  <div id="container">
+    <div id="usersList">
+      <h2>Users</h2>
+      <input id="searchUserInput" type="text" placeholder="Search by name or wallet address" />
+      <div id="userListContent"></div>
+    </div>
+    <div id="chatArea">
+      <div id="chatHeader">Select a user to chat</div>
+      <div id="messagesContainer"></div>
+      <div id="inputArea">
+        <textarea id="inputMessage" placeholder="Type a message…" disabled></textarea>
+        <button id="emojiBtn">😊</button>
+        <button id="sendBtn" disabled>Send</button>
+        <emoji-picker id="picker"></emoji-picker>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* (same Firebase + chat JS you already have) */
+</script>
+</body>
+</html>
