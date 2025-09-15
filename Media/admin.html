@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRFChain Admin Panel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .sidebar { background:#1e40af; color:white; }
+  .sidebar a.active, .sidebar a:hover { background:#3b82f6; }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+  /* Modal backdrop */
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:50; }
+  .modal.active { display:flex; }
+</style>
+</head>
+<body class="flex flex-col md:flex-row min-h-screen">
+
+<!-- Sidebar -->
+<aside class="sidebar w-full md:w-64 p-4 flex-shrink-0 md:min-h-screen">
+  <h1 class="text-xl font-bold mb-6">DRFChain Admin</h1>
+  <nav class="flex flex-col gap-2">
+    <a href="#" class="active p-2 rounded" data-tab="usersTab">Users</a>
+    <a href="#" class="p-2 rounded" data-tab="postsTab">Posts</a>
+    <a href="#" class="p-2 rounded" data-tab="donationsTab">Donations</a>
+    <a href="#" class="p-2 rounded" data-tab="messagesTab">Messages</a>
+    <a href="#" class="p-2 rounded" data-tab="statusTab">Status</a>
+    <a href="#" class="p-2 rounded" data-tab="logsTab">Logs</a>
+  </nav>
+  <button id="logoutBtn" class="mt-6 w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+</aside>
+
+<!-- Main Content -->
+<main class="flex-1 p-4 overflow-auto">
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white p-4 rounded shadow text-center">
+      <h2 class="font-bold text-lg">Total Users</h2>
+      <p id="totalUsers" class="text-2xl">0</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow text-center">
+      <h2 class="font-bold text-lg">Total Posts</h2>
+      <p id="totalPosts" class="text-2xl">0</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow text-center">
+      <h2 class="font-bold text-lg">Total Donations</h2>
+      <p id="totalDonations" class="text-2xl">0</p>
+    </div>
+  </div>
+
+  <!-- Tabs Content -->
+  <div id="usersTab" class="tab-content active">
+    <h2 class="text-xl font-bold mb-4">Users</h2>
+    <input id="userSearch" type="text" placeholder="Search by name or UID" class="border p-2 rounded mb-4 w-full">
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">Name</th>
+            <th class="p-2">Email</th>
+            <th class="p-2">Verified</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="postsTab" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">Posts</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">User</th>
+            <th class="p-2">Caption</th>
+            <th class="p-2">Likes</th>
+            <th class="p-2">Comments</th>
+            <th class="p-2">Boosted</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="postsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="donationsTab" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">Donations</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">User</th>
+            <th class="p-2">Type</th>
+            <th class="p-2">Timestamp</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="donationsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="messagesTab" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">Messages</h2>
+    <ul id="messagesList" class="list-disc pl-6"></ul>
+  </div>
+
+  <div id="statusTab" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">User Status</h2>
+    <ul id="statusList" class="list-disc pl-6"></ul>
+  </div>
+
+  <div id="logsTab" class="tab-content">
+    <h2 class="text-xl font-bold mb-4">Logs</h2>
+    <ul id="logsList" class="list-disc pl-6"></ul>
+  </div>
+</main>
+
+<!-- Modals -->
+<div id="modal" class="modal flex">
+  <div class="bg-white rounded shadow-lg max-w-md w-full p-6 relative">
+    <button id="closeModal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-900 font-bold">X</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { getDatabase, ref, get, child, update, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.firebasestorage.app",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:dc999df2c0f37241ff3f40",
+  measurementId: "G-W6VHMP77YR"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modalContent");
+document.getElementById("closeModal").addEventListener("click", () => modal.classList.remove("active"));
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  signOut(auth).then(()=>window.location.href="index.html");
+});
+
+// Tabs
+const tabs = document.querySelectorAll(".sidebar a[data-tab]");
+const tabContents = document.querySelectorAll(".tab-content");
+tabs.forEach(tab => {
+  tab.addEventListener("click", e => {
+    e.preventDefault();
+    tabs.forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    tabContents.forEach(c=>c.classList.remove("active"));
+    document.getElementById(tab.dataset.tab).classList.add("active");
+  });
+});
+
+// Auth
+onAuthStateChanged(auth, async (user) => {
+  if(!user) { window.location.href="index.html"; return; }
+  const uid = user.uid;
+  const adminSnap = await get(child(ref(db), `admin/${uid}`));
+  if(!adminSnap.exists() || !adminSnap.val()) {
+    alert("You are not admin!");
+    window.location.href="index.html";
+    return;
+  }
+
+  loadUsers(); loadPosts(); loadDonations(); loadMessages(); loadStatus(); loadLogs();
+});
+
+// --- Functions ---
+async function loadUsers() {
+  const usersSnap = await get(ref(db, "profiles"));
+  const table = document.getElementById("usersTableBody");
+  table.innerHTML = "";
+  let total = 0;
+  if(usersSnap.exists()) {
+    usersSnap.forEach(userSnap=>{
+      total++;
+      const uid = userSnap.key;
+      const u = userSnap.val();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="p-2">${u.name}</td>
+        <td class="p-2">${u.email}</td>
+        <td class="p-2">${(u.verificationStatus ? "Verified":"Pending")}</td>
+        <td class="p-2 flex gap-2">
+          <button onclick="viewUser('${uid}')" class="bg-blue-500 text-white px-2 py-1 rounded">View</button>
+          <button onclick="approveUser('${uid}')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button>
+          <button onclick="removeUser('${uid}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+        </td>
+      `;
+      table.appendChild(tr);
+    });
+  }
+  document.getElementById("totalUsers").innerText = total;
+}
+
+function viewUser(uid) {
+  get(ref(db, `profiles/${uid}`)).then(snapshot=>{
+    if(snapshot.exists()){
+      const u = snapshot.val();
+      modalContent.innerHTML = `
+        <h3 class="text-xl font-bold mb-2">${u.name}</h3>
+        <p>Email: ${u.email}</p>
+        <p>Verified: ${u.verificationStatus ? "Yes":"No"}</p>
+      `;
+      modal.classList.add("active");
+    }
+  });
+}
+
+function approveUser(uid) { update(ref(db, `userVerifications/${uid}`), { verificationStatus:true, reviewedAt: Date.now() }); alert("User approved!"); loadUsers(); }
+function removeUser(uid) { remove(ref(db, `profiles/${uid}`)); remove(ref(db, `userVerifications/${uid}`)); alert("User removed!"); loadUsers(); }
+
+async function loadPosts() {
+  const postsSnap = await get(ref(db, "posts"));
+  const table = document.getElementById("postsTableBody");
+  table.innerHTML = "";
+  let total = 0;
+  if(postsSnap.exists()) {
+    postsSnap.forEach(postSnap=>{
+      total++;
+      const p = postSnap.val();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="p-2">${p.userId}</td>
+        <td class="p-2">${p.caption}</td>
+        <td class="p-2">${p.likesCount || 0}</td>
+        <td class="p-2">${p.commentsCount || 0}</td>
+        <td class="p-2">${p.boostsCount || 0}</td>
+        <td class="p-2 flex gap-2">
+          <button onclick="viewPost('${postSnap.key}')" class="bg-blue-500 text-white px-2 py-1 rounded">View</button>
+          <button onclick="deletePost('${postSnap.key}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
+        </td>
+      `;
+      table.appendChild(tr);
+    });
+  }
+  document.getElementById("totalPosts").innerText = total;
+}
+
+function viewPost(postId){
+  get(ref(db, `posts/${postId}`)).then(snapshot=>{
+    if(snapshot.exists()){
+      const p = snapshot.val();
+      modalContent.innerHTML = `
+        <h3 class="text-xl font-bold mb-2">Post by ${p.userId}</h3>
+        <p>${p.caption}</p>
+        ${p.ipfsHash ? `<img src="https://ipfs.io/ipfs/${p.ipfsHash}" class="mt-2 max-h-60 w-full object-contain rounded"/>` : ""}
+        <p>Likes: ${p.likesCount || 0}</p>
+        <p>Comments: ${p.commentsCount || 0}</p>
+        <p>Boosts: ${p.boostsCount || 0}</p>
+      `;
+      modal.classList.add("active");
+    }
+  });
+}
+
+function deletePost(postId) { remove(ref(db, `posts/${postId}`)); alert("Post deleted!"); loadPosts(); }
+
+// --- Donations, Messages, Status, Logs remain same as previous version ---
+async function loadDonations() {
+  const donationsSnap = await get(ref(db, "donations"));
+  const table = document.getElementById("donationsTableBody");
+  table.innerHTML = "";
+  let total = 0;
+  if(donationsSnap.exists()) {
+    donationsSnap.forEach(userSnap=>{
+      const uid = userSnap.key;
+      userSnap.forEach(donationSnap=>{
+        total++;
+        const d = donationSnap.val();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-2">${uid}</td>
+          <td class="p-2">${d.type}</td>
+          <td class="p-2">${new Date(d.timestamp).toLocaleString()}</td>
+          <td class="p-2"><button onclick="viewDonation('${uid}','${donationSnap.key}')" class="bg-blue-500 text-white px-2 py-1 rounded">View</button></td>
+        `;
+        table.appendChild(tr);
+      });
+    });
+  }
+  document.getElementById("totalDonations").innerText = total;
+}
+
+function viewDonation(uid, donationId){
+  get(ref(db, `donations/${uid}/${donationId}`)).then(snapshot=>{
+    if(snapshot.exists()){
+      const d = snapshot.val();
+      modalContent.innerHTML = `
+        <h3 class="text-xl font-bold mb-2">Donation by ${uid}</h3>
+        <p>Type: ${d.type}</p>
+        <p>Time: ${new Date(d.timestamp).toLocaleString()}</p>
+      `;
+      modal.classList.add("active");
+    }
+  });
+}
+</script>
+</body>
+</html>
