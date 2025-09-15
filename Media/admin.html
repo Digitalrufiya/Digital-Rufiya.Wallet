@@ -2,68 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DRF Admin Panel</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- TailwindCSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>DRFChain Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/heroicons@2.0.16/dist/heroicons.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .sidebar { background:#1e40af; color:white; min-height:100vh; }
+    .sidebar a { display:flex; align-items:center; padding:12px; border-radius:6px; margin:4px 0; text-decoration:none; color:white; }
+    .sidebar a.active, .sidebar a:hover { background:#3b82f6; }
+    .card { background:#f1f5f9; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+  </style>
 </head>
-<body class="bg-gray-100">
-  <!-- Header -->
-  <header class="bg-blue-700 text-white p-4 shadow">
-    <h1 class="text-xl font-bold">DRF Admin Panel</h1>
-  </header>
+<body class="flex">
+  <!-- Sidebar -->
+  <aside class="sidebar w-64 p-4 flex-shrink-0">
+    <h1 class="text-xl font-bold mb-6">DRFChain Admin</h1>
+    <a href="#" class="active" data-tab="usersTab">Users</a>
+    <a href="#" data-tab="postsTab">Posts</a>
+    <a href="#" data-tab="donationsTab">Donations</a>
+    <a href="#" data-tab="messagesTab">Messages</a>
+    <a href="#" data-tab="statusTab">Status</a>
+    <a href="#" data-tab="logsTab">Logs</a>
+    <button id="logoutBtn" class="mt-6 bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Logout</button>
+  </aside>
 
-  <main class="p-6 space-y-6">
-    <!-- Users -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Users & Profiles</h2>
-      <div id="usersList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+  <!-- Main Content -->
+  <main class="flex-1 p-6 overflow-auto">
+    <!-- Cards for quick stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="card"><h2 class="font-bold text-lg">Total Users</h2><p id="totalUsers">0</p></div>
+      <div class="card"><h2 class="font-bold text-lg">Total Posts</h2><p id="totalPosts">0</p></div>
+      <div class="card"><h2 class="font-bold text-lg">Total Donations</h2><p id="totalDonations">0</p></div>
+    </div>
 
-    <!-- Posts -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Posts</h2>
-      <div id="postsList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <!-- Tabs content -->
+    <div id="usersTab" class="tab-content active">
+      <h2 class="text-xl font-bold mb-4">Users</h2>
+      <input id="userSearch" type="text" placeholder="Search by name or UID" class="border p-2 rounded mb-4 w-full">
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">Name</th>
+            <th class="p-2">Email</th>
+            <th class="p-2">Verified</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
 
-    <!-- Donations -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Donations</h2>
-      <div id="donationsList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <div id="postsTab" class="tab-content">
+      <h2 class="text-xl font-bold mb-4">Posts</h2>
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">User</th>
+            <th class="p-2">Caption</th>
+            <th class="p-2">Likes</th>
+            <th class="p-2">Comments</th>
+            <th class="p-2">Boosted</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="postsTableBody"></tbody>
+      </table>
+    </div>
 
-    <!-- Transactions -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Transactions</h2>
-      <div id="transactionsList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <div id="donationsTab" class="tab-content">
+      <h2 class="text-xl font-bold mb-4">Donations</h2>
+      <table class="min-w-full bg-white shadow rounded">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="p-2">User</th>
+            <th class="p-2">Type</th>
+            <th class="p-2">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody id="donationsTableBody"></tbody>
+      </table>
+    </div>
 
-    <!-- Logs -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Logs</h2>
-      <div id="logsList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <div id="messagesTab" class="tab-content">
+      <h2 class="text-xl font-bold mb-4">Messages</h2>
+      <p>View message threads between users.</p>
+      <ul id="messagesList" class="list-disc pl-6"></ul>
+    </div>
 
-    <!-- Status -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">User Status (Online/Offline)</h2>
-      <div id="statusList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <div id="statusTab" class="tab-content">
+      <h2 class="text-xl font-bold mb-4">User Status</h2>
+      <ul id="statusList" class="list-disc pl-6"></ul>
+    </div>
 
-    <!-- Typing -->
-    <section class="bg-white p-4 rounded shadow">
-      <h2 class="text-lg font-semibold mb-3">Typing Indicators</h2>
-      <div id="typingList" class="text-sm text-gray-700">Loading...</div>
-    </section>
+    <div id="logsTab" class="tab-content">
+      <h2 class="text-xl font-bold mb-4">Logs</h2>
+      <ul id="logsList" class="list-disc pl-6"></ul>
+    </div>
   </main>
 
+  <!-- Firebase SDK -->
   <script type="module">
-    // Import Firebase SDK v12
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    import { getDatabase, ref, get, child, update, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-    // Your Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -75,99 +121,180 @@
       measurementId: "G-W6VHMP77YR"
     };
 
-    // Init Firebase
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
+    const auth = getAuth(app);
     const db = getDatabase(app);
 
-    // 🔹 Load Users & Profiles
-    onValue(ref(db, "profiles"), snap => {
-      const users = snap.val() || {};
-      let html = "";
-      Object.keys(users).forEach(uid => {
-        const u = users[uid];
-        html += `<div class="border-b py-1"><b>${u.name}</b> (${u.email})</div>`;
-      });
-      document.getElementById("usersList").innerHTML = html || "No users yet.";
+    const logoutBtn = document.getElementById("logoutBtn");
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).then(()=>window.location.href="index.html");
     });
 
-    // 🔹 Load Posts
-    onValue(ref(db, "posts"), snap => {
-      const posts = snap.val() || {};
-      let html = "";
-      Object.keys(posts).forEach(pid => {
-        const p = posts[pid];
-        html += `<div class="border-b py-1">[${p.userId}] ${p.caption || "No caption"} | Likes: ${p.likesCount || 0} | Comments: ${p.commentsCount || 0}</div>`;
+    // Tabs navigation
+    const tabs = document.querySelectorAll(".sidebar a[data-tab]");
+    const tabContents = document.querySelectorAll(".tab-content");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", e => {
+        e.preventDefault();
+        tabs.forEach(t=>t.classList.remove("active"));
+        tab.classList.add("active");
+        tabContents.forEach(c=>c.classList.remove("active"));
+        document.getElementById(tab.dataset.tab).classList.add("active");
       });
-      document.getElementById("postsList").innerHTML = html || "No posts.";
     });
 
-    // 🔹 Load Donations
-    onValue(ref(db, "donations"), snap => {
-      const donations = snap.val() || {};
-      let html = "";
-      Object.keys(donations).forEach(uid => {
-        const userDonations = donations[uid];
-        Object.keys(userDonations).forEach(did => {
-          const d = userDonations[did];
-          html += `<div class="border-b py-1">[${uid}] ${d.type} @ ${new Date(d.timestamp).toLocaleString()}</div>`;
+    onAuthStateChanged(auth, async (user) => {
+      if(!user) { window.location.href="index.html"; return; }
+      const uid = user.uid;
+      const adminSnap = await get(child(ref(db), `admin/${uid}`));
+      if(!adminSnap.exists() || !adminSnap.val()) {
+        alert("You are not admin!");
+        window.location.href="index.html";
+        return;
+      }
+
+      loadUsers();
+      loadPosts();
+      loadDonations();
+      loadMessages();
+      loadStatus();
+      loadLogs();
+    });
+
+    async function loadUsers() {
+      const usersSnap = await get(ref(db, "profiles"));
+      const table = document.getElementById("usersTableBody");
+      table.innerHTML = "";
+      let total = 0;
+      if(usersSnap.exists()) {
+        usersSnap.forEach(userSnap=>{
+          total++;
+          const uid = userSnap.key;
+          const u = userSnap.val();
+          const verSnap = get(child(ref(db), `userVerifications/${uid}/verificationStatus`));
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="p-2">${u.name}</td>
+            <td class="p-2">${u.email}</td>
+            <td class="p-2">${(u.verificationStatus ? "Verified":"Pending")}</td>
+            <td class="p-2"><button onclick="approveUser('${uid}')" class="bg-green-500 text-white px-2 py-1 rounded">Approve</button> 
+            <button onclick="removeUser('${uid}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button></td>
+          `;
+          table.appendChild(tr);
         });
-      });
-      document.getElementById("donationsList").innerHTML = html || "No donations.";
-    });
+      }
+      document.getElementById("totalUsers").innerText = total;
+    }
 
-    // 🔹 Load Transactions
-    onValue(ref(db, "transactions"), snap => {
-      const txs = snap.val() || {};
-      let html = "";
-      Object.keys(txs).forEach(uid => {
-        Object.keys(txs[uid]).forEach(tid => {
-          const t = txs[uid][tid];
-          html += `<div class="border-b py-1">[${uid}] ${t.type}: ${t.amount} @ ${new Date(t.timestamp).toLocaleString()}</div>`;
+    function approveUser(uid) {
+      update(ref(db, `userVerifications/${uid}`), { verificationStatus:true, reviewedAt: Date.now() });
+      alert("User approved!");
+      loadUsers();
+    }
+
+    function removeUser(uid) {
+      remove(ref(db, `profiles/${uid}`));
+      remove(ref(db, `userVerifications/${uid}`));
+      alert("User removed!");
+      loadUsers();
+    }
+
+    async function loadPosts() {
+      const postsSnap = await get(ref(db, "posts"));
+      const table = document.getElementById("postsTableBody");
+      table.innerHTML = "";
+      let total = 0;
+      if(postsSnap.exists()) {
+        postsSnap.forEach(postSnap=>{
+          total++;
+          const p = postSnap.val();
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="p-2">${p.userId}</td>
+            <td class="p-2">${p.caption}</td>
+            <td class="p-2">${p.likesCount || 0}</td>
+            <td class="p-2">${p.commentsCount || 0}</td>
+            <td class="p-2">${p.boostsCount || 0}</td>
+            <td class="p-2"><button onclick="deletePost('${postSnap.key}')" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button></td>
+          `;
+          table.appendChild(tr);
         });
-      });
-      document.getElementById("transactionsList").innerHTML = html || "No transactions.";
-    });
+      }
+      document.getElementById("totalPosts").innerText = total;
+    }
 
-    // 🔹 Load Logs
-    onValue(ref(db, "logs"), snap => {
-      const logs = snap.val() || {};
-      let html = "";
-      Object.keys(logs).forEach(uid => {
-        Object.keys(logs[uid]).forEach(lid => {
-          const l = logs[uid][lid];
-          html += `<div class="border-b py-1">[${uid}] ${l.action} @ ${new Date(l.timestamp).toLocaleString()}</div>`;
+    function deletePost(postId) {
+      remove(ref(db, `posts/${postId}`));
+      alert("Post deleted!");
+      loadPosts();
+    }
+
+    async function loadDonations() {
+      const donationsSnap = await get(ref(db, "donations"));
+      const table = document.getElementById("donationsTableBody");
+      table.innerHTML = "";
+      let total = 0;
+      if(donationsSnap.exists()) {
+        donationsSnap.forEach(userSnap=>{
+          const uid = userSnap.key;
+          userSnap.forEach(donationSnap=>{
+            total++;
+            const d = donationSnap.val();
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="p-2">${uid}</td>
+              <td class="p-2">${d.type}</td>
+              <td class="p-2">${new Date(d.timestamp).toLocaleString()}</td>
+            `;
+            table.appendChild(tr);
+          });
         });
-      });
-      document.getElementById("logsList").innerHTML = html || "No logs.";
-    });
+      }
+      document.getElementById("totalDonations").innerText = total;
+    }
 
-    // 🔹 Load User Status
-    onValue(ref(db, "status"), snap => {
-      const status = snap.val() || {};
-      let html = "";
-      Object.keys(status).forEach(uid => {
-        const s = status[uid];
-        html += `<div class="border-b py-1">${uid}: ${s.state} (last: ${new Date(s.last_changed).toLocaleString()})</div>`;
-      });
-      document.getElementById("statusList").innerHTML = html || "No status updates.";
-    });
-
-    // 🔹 Load Typing Indicators
-    onValue(ref(db, "typing"), snap => {
-      const typing = snap.val() || {};
-      let html = "";
-      Object.keys(typing).forEach(chatId => {
-        Object.keys(typing[chatId]).forEach(uid => {
-          const isTyping = typing[chatId][uid];
-          if (isTyping) {
-            html += `<div class="border-b py-1">Chat ${chatId}: ${uid} is typing...</div>`;
-          }
+    async function loadMessages() {
+      const msgSnap = await get(ref(db, "messages"));
+      const list = document.getElementById("messagesList");
+      list.innerHTML = "";
+      if(msgSnap.exists()) {
+        msgSnap.forEach(u1=>{
+          u1.forEach(u2=>{
+            const li = document.createElement("li");
+            li.textContent = `Chat: ${u1.key} - ${u2.key}`;
+            list.appendChild(li);
+          });
         });
-      });
-      document.getElementById("typingList").innerHTML = html || "Nobody is typing.";
-    });
+      }
+    }
 
+    async function loadStatus() {
+      const statusSnap = await get(ref(db, "status"));
+      const list = document.getElementById("statusList");
+      list.innerHTML = "";
+      if(statusSnap.exists()) {
+        statusSnap.forEach(userSnap=>{
+          const s = userSnap.val();
+          const li = document.createElement("li");
+          li.textContent = `${userSnap.key}: ${s.state} (Last changed: ${new Date(s.last_changed).toLocaleString()})`;
+          list.appendChild(li);
+        });
+      }
+    }
+
+    async function loadLogs() {
+      const logsSnap = await get(ref(db, "logs"));
+      const list = document.getElementById("logsList");
+      list.innerHTML = "";
+      if(logsSnap.exists()) {
+        logsSnap.forEach(logSnap=>{
+          const li = document.createElement("li");
+          li.textContent = `${logSnap.key}: ${JSON.stringify(logSnap.val())}`;
+          list.appendChild(li);
+        });
+      }
+    }
   </script>
 </body>
 </html>
