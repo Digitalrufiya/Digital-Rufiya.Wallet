@@ -3,9 +3,93 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>DRF Auth System</title>
+  <title>DRF Browser</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="google-site-verification" content="TOZFuJV_y-lAmxDE1wmf7eO8oThJDZ8O70gI57qJ-oo" />
+
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; }
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f0f0f0;
+      text-align: center;
+      color: #333;
+    }
+
+    .tauheed-banner {
+      background-color: black;
+      color: white;
+      padding: 15px 30px;
+      font-size: 28px;
+      font-weight: bold;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.8);
+      font-family: 'Scheherazade New', serif, 'Arial', sans-serif;
+      max-width: 90%;
+      margin: 30px auto 15px auto;
+      direction: rtl;
+    }
+
+    .logo-container {
+      margin: 0 auto 20px auto;
+      max-width: 220px;
+    }
+    .logo-container img {
+      width: 100%;
+      height: auto;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    input[type="search"] {
+      width: 100%;
+      max-width: 400px;
+      padding: 0.75rem;
+      margin: 0 0 1.5rem 0;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+      padding: 0 0.5rem;
+    }
+
+    .icon {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+      font-size: 14px;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon:hover { transform: scale(1.05); }
+
+    #quranVerse {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-top: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* 🔑 Auth Modal */
     .modal {
       display: none; position: fixed; z-index: 999; left:0; top:0;
       width: 100%; height: 100%; background: rgba(0,0,0,0.6);
@@ -14,32 +98,80 @@
     .modal-content {
       background: #fff; padding: 20px; border-radius: 10px;
       width: 90%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      text-align: left;
     }
     .modal-content h2 { margin-top: 0; }
-    input[type="email"], input[type="password"] {
+    .modal-content input {
       width: 100%; padding: 10px; margin: 10px 0;
       border: 1px solid #ccc; border-radius: 5px;
     }
-    button {
+    .modal-content button {
       width: 100%; padding: 10px; margin: 10px 0;
       background: #007bff; color: white; border: none;
       border-radius: 5px; cursor: pointer; font-size: 16px;
     }
-    button:hover { background: #0056b3; }
+    .modal-content button:hover { background: #0056b3; }
     .switch-link { color: #007bff; cursor: pointer; font-weight: bold; }
-    #forgotPassword { margin: 10px 0; text-align: right; cursor: pointer; color: #007bff; }
+    #forgotPassword { text-align: right; cursor: pointer; color: #007bff; }
+
+    /* Auth buttons */
+    .auth-buttons {
+      margin: 20px auto;
+      display: flex; gap: 10px; justify-content: center;
+    }
+    .auth-buttons button {
+      padding: 10px 20px; border:none;
+      border-radius: 8px; font-size: 16px;
+      cursor: pointer; font-weight: bold;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+    .btn-login { background:#007bff; color:#fff; }
+    .btn-register { background:#28a745; color:#fff; }
   </style>
 </head>
 <body>
 
-  <h1 style="text-align:center; margin-top:50px;">DRF Auth Demo</h1>
-  <p style="text-align:center;">Click a protected page to test login/register flow:</p>
-  <div style="text-align:center;">
-    <button onclick="navigateTo('dashboard.html')">Go to Dashboard</button>
-    <button onclick="navigateTo('wallet.html')">Go to Wallet</button>
+  <div class="tauheed-banner">
+    لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ
   </div>
 
-  <!-- Auth Modal -->
+  <div class="logo-container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Sep%2016,%202025,%2010_09_06%20AM.png?updatedAt=1758000547194" alt="DRF Chain Logo" />
+  </div>
+
+  <!-- 🔐 Login / Register buttons -->
+  <div class="auth-buttons">
+    <button class="btn-login" onclick="openAuth(true)">Login</button>
+    <button class="btn-register" onclick="openAuth(false)">Register</button>
+  </div>
+
+  <input type="search" id="drfSearch" placeholder="Search Google or open a DRF module..." onkeydown="handleSearch(event)" />
+
+  <div class="grid">
+    <div class="icon" onclick="navigateTo('aboutus.html')">About Us</div>
+    <div class="icon" onclick="navigateTo('wallet.html')">💼 Wallet</div>
+    <div class="icon" onclick="navigateTo('swap.html')">🔁 Swap</div>
+    <div class="icon" onclick="navigateTo('charity.html')">💖 Charity</div>
+    <div class="icon" onclick="navigateTo('Media/me.html')">🌐 Social Media</div>
+    <div class="icon" onclick="navigateTo('Gemstones/gemstones.html')">💎 Gemstone</div>
+    <div class="icon" onclick="navigateTo('explorer.html')">🛰️ Explorer</div>
+    <div class="icon" onclick="navigateTo('Health/health.html')">Health Tips</div>
+    <div class="icon" onclick="navigateTo('DRFtube/tube.html')">📺 DRFTube</div>
+    <div class="icon" onclick="navigateTo('Quran/quran.html')">📖 Quranic Intelligence System</div>
+    <div class="icon" onclick="navigateTo('earnfree.html')">💸 Earn Free Crypto</div>
+    <div class="icon" onclick="navigateTo('Eraningsystem/financial.html')">💸 Digital Earning System</div>
+  </div>
+
+  <div style="text-align:center; margin-top: 20px;">
+    <a href="redotpay.html" style="display:inline-block; background:#e60000; color:white; padding:15px 30px; border-radius:10px; font-size:18px; font-weight:bold; text-decoration:none; box-shadow: 0 5px 10px rgba(0,0,0,0.3);">
+      💳 Withdraw to ATM via RedotPay 
+    </a>
+  </div>
+
+  <h3>📖 Daily Quran Verse</h3>
+  <div id="quranVerse">Loading verse...</div>
+
+  <!-- 🔐 Auth Modal -->
   <div id="authModal" class="modal">
     <div class="modal-content">
       <h2 id="authTitle">Login</h2>
@@ -56,14 +188,11 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
     import { 
-      getAuth, onAuthStateChanged, 
-      signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword,
-      sendPasswordResetEmail 
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+      sendPasswordResetEmail, onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
     import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-    // 🔑 Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
       authDomain: "drfsocial-23a06.firebaseapp.com",
@@ -75,34 +204,26 @@
       measurementId: "G-TBFQX80NRP"
     };
 
-    // 🚀 Init Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
 
-    let actionUrl = null;
     let isLogin = true;
 
-    // Navigate only if logged in
-    window.navigateTo = function(url) {
-      if (auth.currentUser) {
-        window.location.href = url;
-      } else {
-        actionUrl = url;
-        document.getElementById('authModal').style.display = 'flex';
-      }
+    window.openAuth = function(login=true) {
+      isLogin = login;
+      document.getElementById('authTitle').innerText = login ? "Login" : "Register";
+      document.getElementById('switchText').innerHTML = login
+        ? `Don’t have an account? <span class="switch-link" onclick="toggleAuth()">Register</span>`
+        : `Already have an account? <span class="switch-link" onclick="toggleAuth()">Login</span>`;
+      document.getElementById('forgotPassword').style.display = login ? "block" : "none";
+      document.getElementById('authModal').style.display = "flex";
     };
 
     window.toggleAuth = function() {
-      isLogin = !isLogin;
-      document.getElementById('authTitle').innerText = isLogin ? "Login" : "Register";
-      document.getElementById('switchText').innerHTML = isLogin 
-        ? `Don’t have an account? <span class="switch-link" onclick="toggleAuth()">Register</span>` 
-        : `Already have an account? <span class="switch-link" onclick="toggleAuth()">Login</span>`;
-      document.getElementById('forgotPassword').style.display = isLogin ? "block" : "none";
+      openAuth(!isLogin);
     };
 
-    // Auth logic
     window.handleAuth = async function() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
@@ -110,42 +231,70 @@
         if (isLogin) {
           await signInWithEmailAndPassword(auth, email, password);
         } else {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          // ✅ Save new user email to Realtime DB
+          await createUserWithEmailAndPassword(auth, email, password);
+          // save email in DB
           const usersRef = ref(db, "marketingUsers");
           const newUserRef = push(usersRef);
-          await set(newUserRef, {
-            email: email,
-            createdAt: new Date().toISOString()
-          });
+          await set(newUserRef, { email, createdAt: new Date().toISOString() });
         }
-        document.getElementById('authModal').style.display = 'none';
-        if (actionUrl) window.location.href = actionUrl;
+        document.getElementById('authModal').style.display = "none";
+        alert("✅ Success");
       } catch (err) {
         alert(err.message);
       }
     };
 
-    // Forgot password
     window.resetPassword = async function() {
       const email = document.getElementById('email').value;
-      if (!email) {
-        alert("Please enter your email first.");
-        return;
-      }
+      if (!email) return alert("Enter your email first");
       try {
         await sendPasswordResetEmail(auth, email);
-        alert("Password reset email sent! Please check your inbox.");
+        alert("Password reset link sent!");
       } catch (err) {
         alert(err.message);
       }
     };
 
-    // Track login state
     onAuthStateChanged(auth, user => {
       if (user) console.log("✅ Logged in:", user.email);
-      else console.log("❌ Not logged in");
     });
+  </script>
+
+  <script>
+    function navigateTo(url) { window.location.href = url; }
+
+    function handleSearch(e) {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (!query) return;
+        if (query.startsWith('http') || query.endsWith('.html')) {
+          window.location.href = query;
+        } else {
+          window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+        }
+      }
+    }
+
+    async function loadQuranVerse() {
+      try {
+        const res = await fetch('https://api.alquran.cloud/v1/ayah/random');
+        const data = await res.json();
+        if (data.status === 'OK') {
+          const verse = data.data;
+          document.getElementById('quranVerse').innerHTML =
+            `<strong>${verse.surah.name} [${verse.numberInSurah}]</strong><br>${verse.text}`;
+        }
+      } catch {
+        document.getElementById('quranVerse').innerText = "Failed to load verse.";
+      }
+    }
+    loadQuranVerse();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.warn('⚠️ Service Worker failed', err));
+    }
   </script>
 </body>
 </html>
