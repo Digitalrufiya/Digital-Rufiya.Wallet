@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DRF Admin — SaaS Panel</title>
+  <style>
+    :root{--bg:#f6f7fb;--card:#fff;--accent:#0b76ff;--danger:#e03b3b;--muted:#6b7280}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:#111}
+    header{background:linear-gradient(90deg,#07143a 0%, #0b3768 100%);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between}
+    header h1{margin:0;font-size:18px}
+    .container{max-width:1100px;margin:28px auto;padding:0 16px}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(16,24,40,0.06);margin-bottom:16px}
+    .top-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .controls{display:flex;gap:8px;align-items:center}
+    input[type="search"], input[type="text"], input[type="email"], input[type="password"]{
+      padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;background:#fff;min-width:220px;
+    }
+    button{cursor:pointer;border:0;padding:10px 12px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600}
+    button.ghost{background:#fff;color:var(--accent);border:1px solid #e6e9ef}
+    button.danger{background:var(--danger)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #f1f3f6}
+    th{font-size:13px;color:var(--muted)}
+    tr:hover td{background:#fbfdff}
+    .small{font-size:13px;color:var(--muted)}
+    .login-box{max-width:420px;margin:48px auto}
+    .center{display:flex;align-items:center;justify-content:center}
+    .btn-inline{display:inline-flex;gap:8px;align-items:center}
+    .status{padding:6px 10px;border-radius:999px;background:#eef7ff;color:#0563d9;font-weight:600;font-size:13px}
+    .hidden{display:none}
+    .right{display:flex;gap:8px;align-items:center}
+    @media(max-width:720px){ .top-row{flex-direction:column;align-items:stretch} table td,table th{font-size:13px;padding:8px} }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>DRF Admin Panel — SaaS Mode</h1>
+    <div id="adminHeaderRight" class="right">
+      <span id="adminDisplay" class="small hidden"></span>
+      <button id="logoutBtn" class="ghost hidden">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Login card -->
+    <div id="loginCard" class="card login-box">
+      <h2 style="margin:0 0 8px 0">Admin Login</h2>
+      <p class="small" style="margin:0 0 12px 0">Sign in with your admin account to manage users and export marketing data.</p>
+      <div style="display:grid;gap:8px">
+        <input id="adminEmail" type="email" placeholder="Admin email" />
+        <input id="adminPassword" type="password" placeholder="Password" />
+        <div style="display:flex;gap:8px">
+          <button id="adminSignIn">Sign in</button>
+          <button id="openUsers" class="ghost" style="display:none">Open Users</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+          <a href="#" id="adminForgot" class="small">Forgot password? (sends reset link)</a>
+          <span class="small" style="margin-left:auto">Session timeout: <strong id="timeoutInfo">30</strong> min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin content (hidden until authenticated & authorized) -->
+    <div id="adminPanel" class="hidden">
+
+      <!-- Controls -->
+      <div class="card">
+        <div class="top-row">
+          <div>
+            <h3 style="margin:0">Users (marketingUsers)</h3>
+            <p class="small" style="margin:6px 0 0 0">View and export the emails & usernames collected from the app.</p>
+          </div>
+
+          <div class="controls">
+            <input id="searchInput" type="search" placeholder="Search email or username..." />
+            <button id="refreshBtn" class="ghost">Refresh</button>
+            <button id="exportCsvBtn">Export CSV</button>
+            <button id="exportLogsBtn" class="ghost">Export Admin Logs</button>
+          </div>
+        </div>
+
+        <div id="usersTableWrapper" style="margin-top:12px;overflow:auto">
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Signed Up</th>
+                <th class="small">Key</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody">
+              <!-- rows injected -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin logs -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <h3 style="margin:0">Admin Login Logs</h3>
+            <p class="small" style="margin:6px 0 0 0">Timestamps and device info of admin sign-ins (saved automatically).</p>
+          </div>
+          <div class="small">
+            <button id="clearLogs" class="ghost">Clear Logs</button>
+          </div>
+        </div>
+
+        <div style="margin-top:12px">
+          <table id="logsTable">
+            <thead>
+              <tr><th>When</th><th>Admin Email</th><th>Device / userAgent</th></tr>
+            </thead>
+            <tbody id="logsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div> <!-- adminPanel -->
+
+  </main>
+
+  <!-- Firebase + logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    import {
+      getDatabase, ref, push, set, onValue, get, child, remove
+    } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    // ---------- CONFIG ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+      measurementId: "G-TBFQX80NRP"
+    };
+
+    // Admins allowed (change to your admin emails).
+    // You can keep multiple emails; better to maintain admin accounts in Firebase Auth and update here.
+    const adminEmails = [
+      "digitalrufiya@gmail.com" // <-- change or add your admin emails
+    ];
+
+    // Session inactivity timeout (minutes)
+    const INACTIVITY_MINUTES = 30;
+
+    // ---------- INIT ----------
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // UI handles
+    const loginCard = document.getElementById('loginCard');
+    const adminPanel = document.getElementById('adminPanel');
+    const adminDisplay = document.getElementById('adminDisplay');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const adminSignIn = document.getElementById('adminSignIn');
+    const adminForgot = document.getElementById('adminForgot');
+    const adminEmailInput = document.getElementById('adminEmail');
+    const adminPassInput = document.getElementById('adminPassword');
+    const usersTbody = document.getElementById('usersTbody');
+    const logsTbody = document.getElementById('logsTbody');
+    const searchInput = document.getElementById('searchInput');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const exportLogsBtn = document.getElementById('exportLogsBtn');
+    const clearLogsBtn = document.getElementById('clearLogs');
+
+    const timeoutInfo = document.getElementById('timeoutInfo');
+    timeoutInfo.innerText = INACTIVITY_MINUTES;
+
+    // state
+    let usersSnapshot = {}; // key -> {username,email,createdAt}
+    let logsSnapshot = {};  // key -> {email,userAgent,when}
+    let inactivityTimer = null;
+
+    // ---------- UTILS ----------
+    function showToast(msg){
+      alert(msg);
+    }
+
+    function formatISO(iso){
+      try{ return new Date(iso).toLocaleString(); }catch(e){ return iso || ''; }
+    }
+
+    function toCSV(rows, columns){
+      // rows: array of objects; columns: [{key,label}]
+      const esc = v => (String(v||'')).replace(/"/g,'""');
+      const header = columns.map(c => `"${c.label}"`).join(',');
+      const body = rows.map(r => columns.map(c => `"${esc(r[c.key])}"`).join(',')).join('\n');
+      return header + '\n' + body;
+    }
+
+    function download(filename, text){
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }
+
+    // ---------- AUTH FLOW ----------
+    adminSignIn.addEventListener('click', async () => {
+      const email = adminEmailInput.value.trim();
+      const pass = adminPassInput.value;
+      if(!email || !pass) return showToast('Enter admin email & password');
+      try{
+        await signInWithEmailAndPassword(auth, email, pass);
+        // onAuthStateChanged will handle UI & authorization
+      }catch(err){
+        showToast(err.message || 'Sign-in failed');
+      }
+    });
+
+    adminForgot.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = adminEmailInput.value.trim();
+      if(!email) return showToast('Enter your admin email to receive a reset link');
+      try{
+        await sendPasswordResetEmail(auth, email);
+        showToast('Password reset email sent (check inbox).');
+      }catch(err){
+        showToast(err.message || 'Failed to send reset email');
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+    });
+
+    // called when we want to show admin UI
+    function enableAdminUI(user){
+      loginCard.classList.add('hidden');
+      adminPanel.classList.remove('hidden');
+      adminDisplay.classList.remove('hidden');
+      logoutBtn.classList.remove('hidden');
+      adminDisplay.textContent = `${user.email}`;
+      startInactivityTimer();
+      loadUsers();
+      loadLogs();
+    }
+
+    function disableAdminUI(){
+      loginCard.classList.remove('hidden');
+      adminPanel.classList.add('hidden');
+      adminDisplay.classList.add('hidden');
+      logoutBtn.classList.add('hidden');
+      usersTbody.innerHTML = '';
+      logsTbody.innerHTML = '';
+      usersSnapshot = {};
+      logsSnapshot = {};
+      stopInactivityTimer();
+    }
+
+    // ---------- AUTH STATE ----------
+    onAuthStateChanged(auth, async (user) => {
+      if(user){
+        // verify email is allowed admin
+        if(!adminEmails.includes(user.email)){
+          // not an admin — sign out & show message
+          showToast('This account is not authorized as admin.');
+          await signOut(auth);
+          disableAdminUI();
+          return;
+        }
+
+        // authorized admin
+        enableAdminUI(user);
+        // log admin sign-in into DB
+        try{
+          const logsRef = ref(db, 'adminLogs');
+          const newLog = push(logsRef);
+          await set(newLog, {
+            adminEmail: user.email,
+            when: new Date().toISOString(),
+            userAgent: navigator.userAgent || 'unknown'
+          });
+        }catch(e){
+          console.error('Failed to log admin signin', e);
+        }
+      } else {
+        disableAdminUI();
+      }
+    });
+
+    // ---------- USERS (marketingUsers) ----------
+    async function loadUsers(){
+      usersTbody.innerHTML = '<tr><td colspan="5" class="small">Loading...</td></tr>';
+      try{
+        const snap = await get(ref(db, 'marketingUsers'));
+        usersSnapshot = {};
+        if(snap.exists()){
+          snap.forEach(childSnap => {
+            usersSnapshot[childSnap.key] = childSnap.val();
+          });
+        }
+        renderUsers();
+      }catch(err){
+        console.error(err);
+        usersTbody.innerHTML = `<tr><td colspan="5" class="small">Failed to load users</td></tr>`;
+      }
+    }
+
+    function renderUsers(filter=''){
+      const rows = [];
+      const term = filter.trim().toLowerCase();
+      for(const key in usersSnapshot){
+        const u = usersSnapshot[key] || {};
+        const username = u.username || '';
+        const email = u.email || '';
+        if(term){
+          if(!(username.toLowerCase().includes(term) || email.toLowerCase().includes(term))) continue;
+        }
+        rows.push({
+          key, username, email, createdAt: u.createdAt || ''
+        });
+      }
+      if(rows.length === 0){
+        usersTbody.innerHTML = `<tr><td colspan="5" class="small">No users found</td></tr>`;
+        return;
+      }
+      usersTbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.username)}</td>
+          <td>${escapeHtml(r.email)}</td>
+          <td class="small">${formatISO(r.createdAt)}</td>
+          <td class="small">${r.key}</td>
+          <td>
+            <button class="ghost" onclick="viewUser('${r.key}')">View</button>
+            <button class="danger" onclick="deleteUser('${r.key}')">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.viewUser = function(key){
+      const u = usersSnapshot[key];
+      if(!u) return showToast('User not found');
+      const info = `Username: ${u.username || ''}\nEmail: ${u.email || ''}\nSigned: ${formatISO(u.createdAt||'')}\nKey: ${key}`;
+      alert(info);
+    };
+
+    window.deleteUser = async function(key){
+      if(!confirm('Delete this user entry from database? This cannot be undone.')) return;
+      try{
+        await remove(ref(db, `marketingUsers/${key}`));
+        showToast('Deleted');
+        delete usersSnapshot[key];
+        renderUsers(searchInput.value);
+      }catch(err){
+        console.error(err);
+        showToast('Delete failed: '+err.message);
+      }
+    };
+
+    // ---------- SEARCH & EXPORT ----------
+    searchInput.addEventListener('input', () => renderUsers(searchInput.value));
+
+    refreshBtn.addEventListener('click', loadUsers);
+
+    exportCsvBtn.addEventListener('click', () => {
+      const rows = [];
+      for(const key in usersSnapshot){
+        const u = usersSnapshot[key] || {};
+        rows.push({username: u.username || '', email: u.email || '', createdAt: u.createdAt || '', key});
+      }
+      if(rows.length===0){
+        return showToast('No users to export');
+      }
+      const csv = toCSV(rows, [
+        {key:'username', label:'Username'},
+        {key:'email', label:'Email'},
+        {key:'createdAt', label:'SignedUpISO'},
+        {key:'key', label:'DBKey'}
+      ]);
+      download(`drf_marketing_users_${new Date().toISOString().split('T')[0]}.csv`, csv);
+    });
+
+    // ---------- ADMIN LOGS ----------
+    async function loadLogs(){
+      logsTbody.innerHTML = `<tr><td colspan="3" class="small">Loading logs...</td></tr>`;
+      try{
+        const snap = await get(ref(db, 'adminLogs'));
+        logsSnapshot = {};
+        if(snap.exists()){
+          snap.forEach(childSnap => { logsSnapshot[childSnap.key] = childSnap.val(); });
+        }
+        renderLogs();
+      }catch(err){
+        logsTbody.innerHTML = `<tr><td colspan="3" class="small">Failed to load logs</td></tr>`;
+      }
+    }
+
+    function renderLogs(){
+      const keys = Object.keys(logsSnapshot).sort((a,b) => {
+        const A = new Date(logsSnapshot[a].when||0).getTime();
+        const B = new Date(logsSnapshot[b].when||0).getTime();
+        return B-A;
+      });
+      if(keys.length===0){
+        logsTbody.innerHTML = `<tr><td colspan="3" class="small">No logs</td></tr>`;
+        return;
+      }
+      logsTbody.innerHTML = keys.map(k => {
+        const l = logsSnapshot[k];
+        return `<tr><td>${formatISO(l.when)}</td><td class="small">${escapeHtml(l.adminEmail||'')}</td><td style="max-width:420px;word-break:break-word">${escapeHtml(l.userAgent||'')}</td></tr>`;
+      }).join('');
+    }
+
+    exportLogsBtn.addEventListener('click', () => {
+      const rows = [];
+      for(const key in logsSnapshot){
+        const l = logsSnapshot[key] || {};
+        rows.push({when: l.when || '', adminEmail: l.adminEmail || '', userAgent: l.userAgent || ''});
+      }
+      if(rows.length === 0) return showToast('No logs to export');
+      const csv = toCSV(rows, [
+        {key:'when', label:'WhenISO'},
+        {key:'adminEmail', label:'AdminEmail'},
+        {key:'userAgent', label:'UserAgent'}
+      ]);
+      download(`drf_admin_logs_${new Date().toISOString().split('T')[0]}.csv`, csv);
+    });
+
+    clearLogsBtn.addEventListener('click', async () => {
+      if(!confirm('Clear all admin logs?')) return;
+      try{
+        await set(ref(db, 'adminLogs'), null);
+        logsSnapshot = {};
+        renderLogs();
+        showToast('Cleared logs');
+      }catch(e){
+        console.error(e); showToast('Failed to clear logs');
+      }
+    });
+
+    // ---------- INACTIVITY / AUTO-LOGOUT ----------
+    function startInactivityTimer(){
+      stopInactivityTimer();
+      window.addEventListener('mousemove', resetInactivityTimer);
+      window.addEventListener('keydown', resetInactivityTimer);
+      resetInactivityTimer();
+    }
+    function stopInactivityTimer(){
+      window.removeEventListener('mousemove', resetInactivityTimer);
+      window.removeEventListener('keydown', resetInactivityTimer);
+      if(inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+    }
+    function resetInactivityTimer(){
+      if(inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(async () => {
+        showToast('Logged out due to inactivity.');
+        try{ await signOut(auth); }catch(e){ console.error(e); }
+        stopInactivityTimer();
+      }, INACTIVITY_MINUTES * 60 * 1000);
+    }
+
+    // ---------- small helpers ----------
+    function escapeHtml(s=''){ return String(s).replace(/[&<>"'`]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',"`":'&#96;'}[c])) }
+
+    // ---------- initial state ----------
+    disableAdminUI(); // show login by default
+
+  </script>
+</body>
+</html>
