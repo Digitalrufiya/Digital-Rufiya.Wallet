@@ -51,14 +51,11 @@ header{background: var(--accent);color:#fff;padding:.75rem 1rem;display:flex;ali
 #primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
 #primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
 #menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
-
-/* Mobile menu */
 @media (max-width:600px){
   #primaryNav{display:flex;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius);max-height:0;overflow:hidden;opacity:0}
   #primaryNav.show{max-height:500px;opacity:1}
   #menuToggle{display:block}
 }
-
 .btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
 .btn:hover{background:var(--accent-hover)}
 .btn:disabled{background:#adb5bd;cursor:not-allowed}
@@ -85,34 +82,6 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
 #progBar{height:4px;width:0;background:var(--accent);transition:width .3s}
 #sentinel{height:1px}
 .helper{color:var(--text-muted);text-align:center;margin:.5rem 0}
-
-/* Scroll to Top Button */
-#scrollTopBtn {
-  position: fixed;
-  bottom: 40px;
-  right: 25px;
-  z-index: 999;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 0.6rem 0.85rem;
-  border-radius: 50%;
-  font-size: 1.2rem;
-  cursor: pointer;
-  display: block;
-  opacity: 0;
-  pointer-events: none;
-  box-shadow: var(--shadow-md);
-  transition: background .3s, transform .3s, opacity .4s;
-}
-#scrollTopBtn:hover {
-  background: var(--accent-hover);
-  transform: scale(1.1);
-}
-#scrollTopBtn.show {
-  opacity: 1;
-  pointer-events: auto;
-}
 </style>
 </head>
 <body>
@@ -155,15 +124,12 @@ video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;tr
   <div id="sentinel" aria-hidden="true"></div>
 </main>
 
-<!-- Scroll to Top Button -->
-<button id="scrollTopBtn" title="Go to top">⬆</button>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
 import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // replace with your JWT
+const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
@@ -185,69 +151,68 @@ const $ = id => document.getElementById(id);
 const login = $("loginBtn"), logout = $("logoutBtn");
 const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
 const posts = $("postContainer"), qIn = $("searchInput"), preview = $("previewContainer");
-const sentinel = $("sentinel"), feedHint = $("feedHint");
 const avatarImg = $("userAvatar"), userNameSpan = $("userName");
-const scrollBtn = $("scrollTopBtn");
 
-let user = null, all = [], view = [], index = 0;
-const PAGE_SIZE = 10;
+let user = null, allPosts = [], filtered = [];
 
 const escapeHTML = s => s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-login.onclick=()=>signInWithPopup(auth,provider); 
-logout.onclick=()=>signOut(auth);
-
-onAuthStateChanged(auth,u=>{
-  user=u;
-  login.style.display=u?'none':'block';
-  logout.style.display=u?'block':'none';
-  upload.style.display=u?'block':'none';
-  avatarImg.style.display=u?'inline-block':'none';
-  avatarImg.src=u?.photoURL||'';
-  userNameSpan.textContent=u?.displayName||'DRFMedia';
-  getPosts();
-});
-
-qIn.oninput=()=>applySearch();
-
-async function getPosts(){ 
-  const snap=await get(ref(db,'posts')); 
-  const obj=snap.val()||{}; 
-  all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp); 
-  applySearch(); 
-}
-
-function applySearch(){ 
-  const term=(qIn.value||'').trim().toLowerCase(); 
-  view=all.filter(p=>(p.caption||'').toLowerCase().includes(term)); 
-  renderReset(); renderNextBatch(); 
-}
-
-function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
-function renderNextBatch(){/* simplified for brevity */} // keep your existing renderNextBatch logic here
-
-// Mobile menu toggle
-const menuToggle = $("menuToggle");
-const primaryNav = $("primaryNav");
-menuToggle.addEventListener('click', ()=>{
-  primaryNav.classList.toggle('show');
-  updateScrollBtnVisibility();
-});
-primaryNav.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{
-  primaryNav.classList.remove('show');
-  updateScrollBtnVisibility();
-}));
-
-// Scroll to Top button logic
-window.addEventListener('scroll', updateScrollBtnVisibility);
-function updateScrollBtnVisibility(){
-  if((document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) && !primaryNav.classList.contains('show')){
-    scrollBtn.classList.add('show');
+function createPostCard(p){
+  const card = document.createElement('article');
+  card.className = 'post-item';
+  card.innerHTML = `
+    <header class="post-owner">
+      <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="User avatar" />
+      <div>
+        <div>${escapeHTML(p.displayName||'Anon')}</div>
+        <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
+      </div>
+      <span class="post-badge">${p.mediaType==='video'?'Video':'Image'}</span>
+    </header>
+    <div class="post-caption">${escapeHTML(p.caption||'')}</div>
+    <div class="post-media" id="media-${p.id}"></div>
+  `;
+  const holder = card.querySelector(`#media-${p.id}`);
+  if(p.mediaType==='video'){ 
+    const v = document.createElement('video'); v.controls=true; v.src=p.ipfsHash; holder.appendChild(v);
   } else {
-    scrollBtn.classList.remove('show');
+    const img = document.createElement('img'); img.src=p.ipfsHash; holder.appendChild(img);
   }
+  return card;
 }
-scrollBtn.addEventListener('click', ()=>window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+async function loadPosts(){
+  const snapshot = await get(ref(db,'posts'));
+  const data = snapshot.val()||{};
+  allPosts = Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+  filtered = allPosts;
+  renderPosts();
+}
+
+function renderPosts(){
+  posts.innerHTML='';
+  filtered.forEach(p=>posts.appendChild(createPostCard(p)));
+}
+
+login.onclick = () => signInWithPopup(auth, provider);
+logout.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, u=>{
+  user = u;
+  login.style.display = u?'none':'block';
+  logout.style.display = u?'block':'none';
+  upload.style.display = u?'block':'none';
+  avatarImg.style.display = u?'inline-block':'none';
+  avatarImg.src = u?.photoURL||'';
+  userNameSpan.textContent = u?.displayName||'DRFMedia';
+  loadPosts();
+});
+
+qIn.oninput = ()=>{
+  const term = qIn.value.trim().toLowerCase();
+  filtered = allPosts.filter(p => (p.caption||'').toLowerCase().includes(term));
+  renderPosts();
+};
 </script>
 </body>
 </html>
