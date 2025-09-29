@@ -49,9 +49,55 @@
     /* Install Button */
     #installBtn { display:none; margin:20px auto; padding:12px 20px; background:#ff9800; color:#fff; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
     #installBtn img { width:24px; height:24px; vertical-align:middle; margin-right:8px; border-radius:4px; }
+
+    /* iOS Install Banner Styling */
+    #iosInstallBanner {
+      display: none;
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff9800;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 90%;
+    }
+    #iosInstallBanner img {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    #iosInstallBanner span {
+      flex: 1;
+      text-align: left;
+    }
+    #iosInstallBanner button {
+      background: white;
+      color: #ff9800;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+
+  <!-- iOS Install Banner -->
+  <div id="iosInstallBanner">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731" alt="DRF Wallet Logo"/>
+    <span>📲 iPhone users: Tap the Share button and select 'Add to Home Screen' to install DRF Wallet.</span>
+    <button onclick="document.getElementById('iosInstallBanner').style.display='none'">✕</button>
+  </div>
 
   <div class="tauheed-banner">لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ</div>
 
@@ -65,7 +111,7 @@
     <button class="btn-register" onclick="openAuth(false)">Register</button>
   </div>
 
-  <!-- Install PWA Button -->
+  <!-- Install PWA Button (Android / Desktop) -->
   <button id="installBtn">
     <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731" alt="DRF Wallet Logo" />
     📲 Install DRF Wallet
@@ -209,6 +255,15 @@
         console.log(`User response: ${outcome}`);
         deferredPrompt = null;
         installBtn.style.display = 'none';
+      }
+    });
+
+    // iOS detection and banner
+    function isiOS() { return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()); }
+
+    window.addEventListener('load', () => {
+      if (isiOS()) {
+        document.getElementById('iosInstallBanner').style.display = 'flex';
       }
     });
   </script>
