@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DRFMedia — Post & View (Optimized)</title>
+<meta property="og:title" content="DRFMedia — Share & Discover" />
+<meta property="og:description" content="The First Islamic Social Media. Post, share, and connect." />
+<meta property="og:image" content="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,_202025,_01_10_55%20PM.png" />
+<meta property="og:url" content="https://drfmedia.org/media.html" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="stylesheet" href="style.css" />
+<meta name="color-scheme" content="light dark" />
+<style>
+:root {
+  --accent: #007bff;
+  --accent-hover: #0056b3;
+  --accent-muted: #3399ff;
+  --bg-body: #f8f9fa;
+  --bg-surface: #fff;
+  --bg-surface-alt: #fafafa;
+  --text-body: #212529;
+  --text-muted: #6c757d;
+  --radius: .5rem;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.1)
+}
+@media(prefers-color-scheme:dark) {
+  :root {
+    --bg-body: #181a1b;
+    --bg-surface: #242628;
+    --bg-surface-alt: #2b2e30;
+    --text-body: #f1f3f5;
+    --text-muted: #adb5bd;
+    --shadow-sm: none;
+    --shadow-md: none
+  }
+}
+*{box-sizing:border-box;margin:0}
+body{font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;background: var(--bg-body);color: var(--text-body);min-height: 100vh;display: flex;flex-direction: column}
+a{color:inherit;text-decoration:none}
+img,video{max-width:100%}
+header{background: var(--accent);color:#fff;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;position:sticky;top:0;z-index:1000}
+.brand{display:flex;flex-direction:column;align-items:flex-start;gap:.5rem;font-weight:700}
+.brand-header{display:flex;align-items:center;gap:.5rem;}
+.brand img{width:2.25rem;height:2.25rem;border-radius:.25rem;background:#fff;padding:2px}
+#userAvatar{width:40px;height:40px;border-radius:50%;display:none;}
+#rewardBtn{background:#ffc107;color:#212529;border:none;border-radius:var(--radius);padding:.4rem .75rem;font-weight:600;cursor:pointer;transition:background .2s;margin-top:.5rem}
+#rewardBtn:hover{background:#e0a800}
+#primaryNav{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;transition:max-height .3s ease,opacity .3s ease}
+#primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
+#primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
+#menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
+
+/* Mobile menu */
+@media (max-width:600px){
+  #primaryNav{display:flex;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius);max-height:0;overflow:hidden;opacity:0}
+  #primaryNav.show{max-height:500px;opacity:1}
+  #menuToggle{display:block}
+}
+
+.btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--accent-hover)}
+.btn:disabled{background:#adb5bd;cursor:not-allowed}
+.container{width:min(100%,700px);margin:0 auto;padding:0 1rem}
+#searchInput{width:100%;padding:.55rem .85rem;margin:1rem 0;border:1px solid #ced4da;border-radius:var(--radius);background:var(--bg-surface);color:var(--text-body)}
+.post-item{background:var(--bg-surface-alt);border:1px solid #dee2e6;border-radius:var(--radius);padding:1rem;margin:1.25rem 0;box-shadow:var(--shadow-sm)}
+.post-owner{display:flex;align-items:center;gap:.6rem;font-weight:700}
+.avatar{width:2.25rem;height:2.25rem;border-radius:50%;object-fit:cover;border:1px solid #ccc}
+.post-time{font-size:.8rem;color:var(--text-muted)}
+.post-caption{margin-top:.75rem;white-space:pre-wrap}
+.post-badge{font-size:.7rem;color:#fff;background:#007bff;padding:.15rem .4rem;border-radius:4px;margin-left:0.5rem;}
+.post-actions{margin-top:.5rem;display:flex;gap:1rem;align-items:center;font-size:.85rem}
+.post-actions button{cursor:pointer;border:none;background:none;font-weight:600;color:var(--accent);}
+.comments-container{margin-top:.5rem;padding-left:.5rem;border-left:2px solid var(--accent);font-size:.85rem;}
+.comment-input{display:flex;gap:.5rem;margin-top:.25rem;}
+.comment-input input{flex:1;padding:.35rem .5rem;border:1px solid #ced4da;border-radius:var(--radius);}
+.comment-input button{padding:.35rem .5rem;border:none;background:var(--accent);color:#fff;border-radius:var(--radius);cursor:pointer;}
+video,img{border-radius:var(--radius);background:#000;display:block;opacity:0;transition:opacity .3s}
+[data-loaded="true"]{opacity:1}
+#uploadForm{margin-top:1.25rem}
+#uploadForm textarea{width:100%;min-height:6rem;padding:.65rem .85rem;margin:.75rem 0;border:1px solid #ced4da;border-radius:var(--radius);resize:vertical}
+#previewContainer{margin-bottom:.5rem;text-align:center;}
+#prog{width:100%;height:4px;background:#e9ecef;border-radius:2px;overflow:hidden;display:none}
+#progBar{height:4px;width:0;background:var(--accent);transition:width .3s}
+#sentinel{height:1px}
+.helper{color:var(--text-muted);text-align:center;margin:.5rem 0}
+
+/* Scroll to Top Button */
+#scrollTopBtn {
+  position: fixed;
+  bottom: 40px;
+  right: 25px;
+  z-index: 999;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 0.85rem;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+  transition: background .3s, transform .3s, opacity .4s;
+}
+#scrollTopBtn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.1);
+}
+#scrollTopBtn.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-header">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,_202025,_01_10_55%20PM.png" alt="DRFMedia logo" />
+      <img id="userAvatar" src="" alt="User avatar" />
+      <span id="userName">DRFMedia</span>
+    </div>
+    <button id="rewardBtn">Share & Get Rewards</button>
+  </div>
+  <button id="menuToggle" aria-label="Toggle menu">☰</button>
+  <nav id="primaryNav">
+    <a href="media.html" class="active">posts</a>
+    <a href="chat.html">Chat</a>
+    <a href="profile.html">Profile</a>
+    <a href="gift.html">Timelines</a>
+    <a href="market.html">Market Place</a>
+    <a href="ADS/ads.html">Ads Maker</a>
+    <a href="Charity/charity.html">Charity Request</a>
+  </nav>
+</header>
+
+<main class="container">
+  <input id="searchInput" placeholder="Search posts…" />
+  <button id="loginBtn" class="btn">Sign in with Google</button>
+  <button id="logoutBtn" class="btn" style="display:none;background:#dc3545">Logout</button>
+
+  <form id="uploadForm" style="display:none">
+    <div id="previewContainer"></div>
+    <input id="mediaFile" type="file" accept="image/*,video/*" required />
+    <textarea id="caption" minlength="4" placeholder="Write your caption…" required></textarea>
+    <div id="prog"><div id="progBar"></div></div>
+    <button class="btn" type="submit">Post</button>
+  </form>
+
+  <section id="postContainer" aria-live="polite"></section>
+  <p id="feedHint" class="helper" style="display:none">Scroll for more…</p>
+  <div id="sentinel" aria-hidden="true"></div>
+</main>
+
+<!-- Scroll to Top Button -->
+<button id="scrollTopBtn" title="Go to top">⬆</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import { getDatabase, ref, push, set, get } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+const pinataJWT = "Bearer YOUR_PINATA_JWT_HERE"; // replace with your JWT
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+  authDomain: "drfsocial-23a06.firebaseapp.com",
+  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+  projectId: "drfsocial-23a06",
+  storageBucket: "drfsocial-23a06.appspot.com",
+  messagingSenderId: "608135115201",
+  appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+  measurementId: "G-TBFQX80NRP"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+const $ = id => document.getElementById(id);
+const login = $("loginBtn"), logout = $("logoutBtn");
+const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
+const posts = $("postContainer"), qIn = $("searchInput"), preview = $("previewContainer");
+const sentinel = $("sentinel"), feedHint = $("feedHint");
+const avatarImg = $("userAvatar"), userNameSpan = $("userName");
+const scrollBtn = $("scrollTopBtn");
+
+let user = null, all = [], view = [], index = 0;
+const PAGE_SIZE = 10;
+
+const escapeHTML = s => s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+login.onclick=()=>signInWithPopup(auth,provider); 
+logout.onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,u=>{
+  user=u;
+  login.style.display=u?'none':'block';
+  logout.style.display=u?'block':'none';
+  upload.style.display=u?'block':'none';
+  avatarImg.style.display=u?'inline-block':'none';
+  avatarImg.src=u?.photoURL||'';
+  userNameSpan.textContent=u?.displayName||'DRFMedia';
+  getPosts();
+});
+
+qIn.oninput=()=>applySearch();
+
+async function getPosts(){ 
+  const snap=await get(ref(db,'posts')); 
+  const obj=snap.val()||{}; 
+  all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp); 
+  applySearch(); 
+}
+
+function applySearch(){ 
+  const term=(qIn.value||'').trim().toLowerCase(); 
+  view=all.filter(p=>(p.caption||'').toLowerCase().includes(term)); 
+  renderReset(); renderNextBatch(); 
+}
+
+function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
+function renderNextBatch(){/* simplified for brevity */} // keep your existing renderNextBatch logic here
+
+// Mobile menu toggle
+const menuToggle = $("menuToggle");
+const primaryNav = $("primaryNav");
+menuToggle.addEventListener('click', ()=>{
+  primaryNav.classList.toggle('show');
+  updateScrollBtnVisibility();
+});
+primaryNav.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{
+  primaryNav.classList.remove('show');
+  updateScrollBtnVisibility();
+}));
+
+// Scroll to Top button logic
+window.addEventListener('scroll', updateScrollBtnVisibility);
+function updateScrollBtnVisibility(){
+  if((document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) && !primaryNav.classList.contains('show')){
+    scrollBtn.classList.add('show');
+  } else {
+    scrollBtn.classList.remove('show');
+  }
+}
+scrollBtn.addEventListener('click', ()=>window.scrollTo({ top: 0, behavior: 'smooth' }));
+</script>
+</body>
+</html>
