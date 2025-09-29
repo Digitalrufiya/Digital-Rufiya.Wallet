@@ -1,37 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRFMedia | User Profile</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f4f4f4; color:#222; }
-    nav { background:#0066cc; display:flex; justify-content:center; gap:20px; padding:15px 0; }
-    nav a { color:white; text-decoration:none; font-weight:bold; padding:8px 16px; border-radius:6px; transition:0.3s; }
-    nav a:hover, nav a.active { background:#004999; }
-    #profile { max-width:700px; margin:20px auto; background:white; border-radius:10px; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1);}
-    #coverPhoto { width:100%; height:180px; object-fit:cover; border-radius:10px 10px 0 0; background:#ddd; cursor:pointer; margin-bottom:10px; }
-    #profilePhotoWrapper { position:relative; width:120px; height:120px; margin:-70px auto 10px; border-radius:50%; border:4px solid white; overflow:hidden; cursor:pointer; background:#eee; }
-    #profilePhoto { width:100%; height:100%; object-fit:cover; display:block; }
-    input[type="file"] { display:none; }
-    #editName,#editBio,#editToken { width:100%; border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid #ccc; font-family:inherit; }
-    #editName { font-weight:bold; font-size:1.5rem; }
-    #editBio { min-height:60px; resize:vertical; }
-    #editToken { font-family:monospace; }
-    #saveProfileBtn { display:block; margin:0 auto 20px; background:#0066cc; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; }
-    #saveProfileBtn:disabled { background:#999; cursor:not-allowed; }
-    #userPosts { max-width:700px; margin:30px auto; background:white; padding:20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-    .post-item { border:1px solid #ccc; border-radius:6px; padding:15px; margin-bottom:20px; background:#fafafa; }
-    .post-owner { display:flex; align-items:center; gap:10px; font-weight:700; }
-    .post-owner div { line-height:1.1; }
-    .post-time { font-size:0.85em; color:#555; margin-top:4px; }
-    .post-caption { margin-top:10px; font-size:1em; white-space:pre-wrap; }
-    video,img { max-width:100%; border-radius:6px; margin-top:10px; background:black; display:block; }
-    .avatar { width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #ccc; box-shadow:0 0 3px rgba(0,0,0,0.1); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile | DRFMedia</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;padding:0;background:#f4f4f4;color:#222}
+nav{background:#0066cc;display:flex;justify-content:center;gap:20px;padding:15px 0}
+nav a{color:#fff;text-decoration:none;font-weight:bold;font-size:1.1rem;padding:8px 16px;border-radius:6px;transition:.3s}
+nav a:hover,nav a.active{background:#004999}
+#profile{max-width:700px;margin:20px auto;background:#fff;border-radius:10px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+#coverPhoto{width:100%;height:180px;object-fit:cover;border-radius:10px 10px 0 0;background:#ddd;cursor:pointer;margin-bottom:10px;position:relative}
+#profilePhotoWrapper{position:relative;width:120px;height:120px;margin:-70px auto 10px;border-radius:50%;border:4px solid #fff;overflow:hidden;cursor:pointer;background:#eee}
+#profilePhoto{width:100%;height:100%;object-fit:cover;display:block}
+input[type="file"]{display:none}
+#editName,#editBio,#editToken{width:100%;border-radius:6px;padding:8px;font-size:1rem;margin-bottom:12px;border:1px solid #ccc;font-family:inherit}
+#editName{font-weight:bold;font-size:1.5rem}
+#editBio{min-height:60px;resize:vertical}
+#editToken{font-family:monospace}
+#saveProfileBtn{display:block;margin:0 auto 20px;background:#0066cc;color:#fff;border:none;padding:12px 30px;font-size:1rem;border-radius:8px;cursor:pointer}
+#saveProfileBtn:disabled{background:#999;cursor:not-allowed}
+#userPosts{max-width:700px;margin:30px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+.post-item{border:1px solid #ccc;border-radius:6px;padding:15px;margin-bottom:20px;background:#fafafa}
+.post-owner{display:flex;align-items:center;gap:10px;font-weight:700}
+.post-owner div{line-height:1.1}
+.post-time{font-size:.85em;color:#555;margin-top:4px}
+.post-caption{margin-top:10px;font-size:1em;white-space:pre-wrap}
+video,img{max-width:100%;border-radius:6px;margin-top:10px;background:black;display:block}
+.avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid #ccc;box-shadow:0 0 3px rgba(0,0,0,.1)}
+.post-actions{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+.post-actions button{cursor:pointer;border:none;background:#007bff;color:#fff;padding:6px 14px;border-radius:6px;font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:6px;transition:.3s}
+.post-actions button:hover{background:#0056b3}
+.post-actions button.liked{background:#28a745!important;box-shadow:0 0 8px #28a745aa}
+.post-actions button.boosted{background:gold!important;color:#000!important;box-shadow:0 0 8px #ffd700cc}
+.comments-container{margin-top:10px;max-height:160px;overflow-y:auto;border-top:1px solid #ccc;padding-top:8px;font-size:.9rem}
+.comment{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:.9rem}
+.comment img.avatar{width:28px;height:28px;border-radius:50%;background:#eee}
+.comment-body{background:#f5f5f5;padding:6px 12px;border-radius:8px;flex:1;word-break:break-word}
+.comment-body strong{display:block;color:#007bff;margin-bottom:4px}
+.comment-form{margin-top:10px;display:flex;gap:8px}
+.comment-form input{flex:1;padding:8px 12px;border-radius:6px;border:1.5px solid #ccc;font-size:1rem;font-family:inherit;outline-offset:2px;transition:.3s}
+.comment-form input:focus{border-color:#007bff;outline:none}
+.comment-form button{background:#007bff;color:#fff;border:none;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;transition:.3s}
+.comment-form button:hover{background:#0056b3}
+</style>
 </head>
 <body>
-
 <nav>
   <a href="media.html">Timeline</a>
   <a href="profile.html" class="active">Profile</a>
@@ -41,43 +55,40 @@
 </nav>
 
 <div id="profile">
-  <img id="coverPhoto" src="https://via.placeholder.com/700x180?text=Cover+Photo" alt="Cover Photo" title="Click to change cover photo">
-  <div id="profilePhotoWrapper" title="Click to change profile photo">
-    <img id="profilePhoto" src="https://via.placeholder.com/120" alt="Profile Photo">
+  <img id="coverPhoto" src="" alt="Cover Photo" title="Click to change cover photo" tabindex="0" />
+  <div id="profilePhotoWrapper" title="Click to change profile photo" tabindex="0">
+    <img id="profilePhoto" src="" alt="Profile Photo" />
   </div>
-  <input type="file" id="coverPhotoInput" accept="image/*">
-  <input type="file" id="profilePhotoInput" accept="image/*">
-  <input type="text" id="editName" placeholder="Your name" maxlength="50">
-  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250"></textarea>
-  <input type="text" id="editToken" placeholder="Your DRFM Token Address (for charity)" maxlength="42">
+  <input type="file" id="coverPhotoInput" accept="image/*" />
+  <input type="file" id="profilePhotoInput" accept="image/*" />
+  <input type="text" id="editName" placeholder="Your name" maxlength="50" aria-label="Edit your name" />
+  <textarea id="editBio" placeholder="Your bio (optional)" maxlength="250" aria-label="Edit your bio"></textarea>
+  <input type="text" id="editToken" placeholder="Your DRFM Token Address (for charity)" maxlength="42" aria-label="Edit your DRFM token address" />
   <button id="saveProfileBtn" disabled>Save Profile</button>
 </div>
 
-<div id="userPosts"></div>
+<div id="userPosts" aria-live="polite"></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js';
-import { getDatabase, ref, get, update, onValue, query, orderByChild } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
+import { getDatabase, ref, onValue, update, get } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js';
 import { getAuth, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
 
-// ====== Firebase Config ======
+const PINATA_JWT = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjNkODdmOWVkOTA0ZGY4OTI2NTRjIiwic2NvcGVkS2V5U2VjcmV0IjoiYTI3OWU4ODU0ZDQ0YWY2Y2IxNzA0N2RhOThhYTc3MmExOTAyMmFhYTIwOTQ5YjEzN2Y5ZmIxMDI3YzAzYmY5ZiIsImV4cCI6MTc4MDQyMzA3Mn0.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA"; // replace with your JWT
 const firebaseConfig = {
   apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
-  authDomain: "drfsocial-23a06.firebaseapp.com",
-  databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
-  projectId: "drfsocial-23a06",
-  storageBucket: "drfsocial-23a06.appspot.com",
-  messagingSenderId: "608135115201",
-  appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
+    authDomain: "drfsocial-23a06.firebaseapp.com",
+    databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+    projectId: "drfsocial-23a06",
+    storageBucket: "drfsocial-23a06.appspot.com",
+    messagingSenderId: "608135115201",
+    appId: "1:608135115201:web:dc999df2c0c37241ff3f40"
 };
-
-const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI4MDFmMDAxNy04YjZkLTQ2YjYtOGIwZi04Y2NkZWU5NzE4ODIiLCJlbWFpbCI6ImRpZ2l0YWxydWZpeWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWV9LCJleHAiOjE3ODQwMjMwNzJ9.YpqewbjW7gAVyPSKYiO9Ym9QhddKc_1vm8CJIoXDQyA";
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// ====== DOM Elements ======
 const coverPhoto = document.getElementById('coverPhoto');
 const profilePhoto = document.getElementById('profilePhoto');
 const profilePhotoWrapper = document.getElementById('profilePhotoWrapper');
@@ -92,111 +103,165 @@ const userPostsContainer = document.getElementById('userPosts');
 let currentUser = null;
 let profileData = {};
 
-// ====== Helper ======
-function checkChanges() {
-  if (!currentUser) { saveProfileBtn.disabled = true; return; }
-  const changed = editName.value.trim() !== (currentUser.displayName || "")
-    || editBio.value.trim() !== (profileData.bio || "")
-    || editToken.value.trim() !== (profileData.drfmToken || "")
-    || coverPhoto.src.startsWith('blob:')
-    || profilePhoto.src.startsWith('blob:');
-  saveProfileBtn.disabled = !changed;
+function escapeHTML(str){return String(str).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function checkChanges(){
+  if(!currentUser){saveProfileBtn.disabled=true;return;}
+  const nameChanged=editName.value.trim()!== (currentUser.displayName||"");
+  const bioChanged=editBio.value.trim()!== (profileData.bio||"");
+  const tokenChanged=editToken.value.trim()!== (profileData.drfmToken||"");
+  const coverChanged=coverPhoto.src.startsWith('blob:');
+  const profileChanged=profilePhoto.src.startsWith('blob:');
+  saveProfileBtn.disabled=!(nameChanged||bioChanged||tokenChanged||coverChanged||profileChanged);
 }
 
-function escapeHTML(str){ return String(str).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+coverPhotoInput.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;coverPhoto.src=URL.createObjectURL(file);checkChanges();});
+profilePhotoInput.addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;profilePhoto.src=URL.createObjectURL(file);checkChanges();});
+coverPhoto.addEventListener('click',()=>coverPhotoInput.click());
+profilePhotoWrapper.addEventListener('click',()=>profilePhotoInput.click());
+editName.addEventListener('input',checkChanges);
+editBio.addEventListener('input',checkChanges);
+editToken.addEventListener('input',checkChanges);
 
-// ====== Pinata Upload ======
-async function uploadFileToPinata(file) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{
-    method:"POST",
-    headers:{ Authorization: "Bearer " + PINATA_JWT },
-    body: fd
-  });
-  if(!res.ok) throw new Error("Pinata upload failed: "+res.statusText);
-  const data = await res.json();
-  return "https://gateway.pinata.cloud/ipfs/" + data.IpfsHash;
-}
-
-// ====== Event Listeners ======
-coverPhoto.addEventListener('click', ()=>coverPhotoInput.click());
-profilePhotoWrapper.addEventListener('click', ()=>profilePhotoInput.click());
-coverPhotoInput.addEventListener('change', e=>{ coverPhoto.src = URL.createObjectURL(e.target.files[0]); checkChanges(); });
-profilePhotoInput.addEventListener('change', e=>{ profilePhoto.src = URL.createObjectURL(e.target.files[0]); checkChanges(); });
-editName.addEventListener('input', checkChanges);
-editBio.addEventListener('input', checkChanges);
-editToken.addEventListener('input', checkChanges);
-
-saveProfileBtn.addEventListener('click', async ()=>{
-  if(!currentUser) return alert("Not logged in");
-  saveProfileBtn.disabled=true; saveProfileBtn.textContent="Saving...";
+saveProfileBtn.addEventListener('click',async()=>{
+  if(!currentUser)return alert("Not logged in.");
+  saveProfileBtn.disabled=true;
+  saveProfileBtn.textContent="Saving...";
   try{
-    const updates = {};
-    const userRef = ref(db,'users/'+currentUser.uid);
-
-    if(coverPhoto.src.startsWith('blob:')) updates.coverPhoto = await uploadFileToPinata(coverPhotoInput.files[0]);
-    if(profilePhoto.src.startsWith('blob:')) updates.photoURL = await uploadFileToPinata(profilePhotoInput.files[0]);
-    if(editName.value.trim() !== (currentUser.displayName||"")) await updateProfile(currentUser,{displayName: editName.value.trim()});
-    updates.bio = editBio.value.trim();
-    updates.drfmToken = editToken.value.trim();
+    const updates={};
+    const userRef=ref(db,'users/'+currentUser.uid);
+    if(coverPhoto.src.startsWith('blob:')){
+      const url=await uploadFileToPinata(coverPhotoInput.files[0]);
+      updates.coverPhoto=url;coverPhoto.src=url;
+    }
+    if(profilePhoto.src.startsWith('blob:')){
+      const url=await uploadFileToPinata(profilePhotoInput.files[0]);
+      updates.photoURL=url;profilePhoto.src=url;
+    }
+    if(editName.value.trim()!== (currentUser.displayName||"")){await updateProfile(currentUser,{displayName:editName.value.trim()});}
+    updates.bio=editBio.value.trim();
+    updates.drfmToken=editToken.value.trim();
     await update(userRef,updates);
-    profileData = {...profileData,...updates};
-    if(updates.photoURL) profilePhoto.src = updates.photoURL;
-    if(updates.coverPhoto) coverPhoto.src = updates.coverPhoto;
+    profileData={...profileData,...updates};
     alert("Profile saved!");
-  }catch(err){ alert("Error: "+err.message); }
-  finally{ saveProfileBtn.textContent="Save Profile"; checkChanges(); }
+  }catch(err){alert("Error saving profile: "+err.message);}
+  finally{saveProfileBtn.textContent="Save Profile";checkChanges();}
 });
 
-// ====== Load User & Posts ======
-onAuthStateChanged(auth, async user=>{
-  currentUser = user;
-  if(!user) return window.location.href="timeline.html";
+async function uploadFileToPinata(file){
+  const fd=new FormData();fd.append("file",file);
+  const res=await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS",{method:"POST",headers:{Authorization:PINATA_JWT},body:fd});
+  const data=await res.json();
+  if(!data.IpfsHash)throw new Error("Pinata upload failed");
+  return "https://gateway.pinata.cloud/ipfs/"+data.IpfsHash;
+}
 
-  const userRef = ref(db,'users/'+user.uid);
-  const snapshot = await get(userRef);
-  profileData = snapshot.exists()? snapshot.val() : {};
+async function updateOldPostsAvatarAndName(){
+  if(!currentUser)return;
+  const postsSnapshot=await get(ref(db,"posts"));
+  const allPosts=postsSnapshot.val()||{};
+  for(const [postId,post] of Object.entries(allPosts)){
+    if(post.userId===currentUser.uid){
+      await update(ref(db,`posts/${postId}`),{
+        photoURL:currentUser.photoURL||"https://via.placeholder.com/32",
+        displayName:currentUser.displayName||"Anonymous"
+      });
+    }
+  }
+}
 
-  profilePhoto.src = profileData.photoURL || user.photoURL || "https://via.placeholder.com/120";
-  coverPhoto.src = profileData.coverPhoto || "https://via.placeholder.com/700x180?text=Cover+Photo";
-  editName.value = user.displayName||"";
-  editBio.value = profileData.bio||"";
-  editToken.value = profileData.drfmToken||"";
+onAuthStateChanged(auth,async user=>{
+  currentUser=user;if(!user)return window.location.href="timeline.html";
+  const userRef=ref(db,'users/'+user.uid);
+  const snapshot=await get(userRef);
+  profileData=snapshot.exists()?snapshot.val():{};
+  profilePhoto.src=profileData.photoURL||user.photoURL||"https://via.placeholder.com/120";
+  coverPhoto.src=profileData.coverPhoto||"https://via.placeholder.com/700x180?text=Cover+Photo";
+  editName.value=user.displayName||"";
+  editBio.value=profileData.bio||"";
+  editToken.value=profileData.drfmToken||"";
   saveProfileBtn.disabled=true;
-
+  await updateOldPostsAvatarAndName();
   loadUserPosts(user.uid);
 });
 
-// ====== Load Posts ======
 function loadUserPosts(uid){
   userPostsContainer.innerHTML="<p>Loading posts...</p>";
-  const postsRef = query(ref(db,"posts"), orderByChild("userId"));
-  onValue(ref(db,"posts"), snapshot=>{
-    const allPosts = snapshot.val() || {};
-    const userPosts = Object.entries(allPosts).filter(([id,p])=>p.userId===uid).sort((a,b)=>b[1].timestamp-a[1].timestamp);
-    userPostsContainer.innerHTML = userPosts.length===0?"<p>No posts yet.</p>":"";
-    userPosts.forEach(([id,p])=>renderPost(id,p));
+  onValue(ref(db,"posts"),snapshot=>{
+    const allPostsData=snapshot.val()||{};
+    const allUserPosts=Object.entries(allPostsData)
+      .filter(([id,post])=>post.userId===uid)
+      .sort((a,b)=>b[1].timestamp-a[1].timestamp);
+    userPostsContainer.innerHTML=allUserPosts.length===0?"<p>No posts yet.</p>":"";
+    allUserPosts.forEach(([id,post])=>renderPost(id,post));
   });
 }
 
-function renderPost(postId, post){
-  const url = post.ipfsHash? "https://gateway.pinata.cloud/ipfs/"+post.ipfsHash : "";
-  const postEl = document.createElement("div");
+function renderPost(postId,post){
+  const postEl=document.createElement("div");
   postEl.className="post-item";
+  postEl.dataset.postId=postId;
+  const likesCount=post.likes?Object.keys(post.likes).length:0;
+  const commentsCount=post.comments?Object.keys(post.comments).length:0;
+
+  let mediaHTML="";
+  if(post.mediaType==="video"){mediaHTML=`<video controls src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" onerror="this.src='https://cloudflare-ipfs.com/ipfs/${post.ipfsHash}'"></video>`;}
+  else if(post.mediaType==="image"){mediaHTML=`<img src="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" onerror="this.src='https://cloudflare-ipfs.com/ipfs/${post.ipfsHash}'"/>`;}
+  else if(post.ipfsHash){mediaHTML=`<p><a href="https://gateway.pinata.cloud/ipfs/${post.ipfsHash}" target="_blank">Download File</a></p>`;}
+
   postEl.innerHTML=`
-    <div class="post-owner">
-      <img src="${post.photoURL||'https://via.placeholder.com/32'}" class="avatar"/>
+    <div class="post-owner" style="gap:10px;">
+      <img src="${post.photoURL||'https://via.placeholder.com/32'}" class="avatar" alt="User profile photo"/>
       <div>
         <strong>${escapeHTML(post.displayName||"Anonymous")}</strong><br/>
-        <small style="color:#666; font-size:0.85em;">${escapeHTML(post.drfAddress||"Wallet not linked")}</small>
+        <small style="color:#666;font-size:.85em;">${escapeHTML(post.drfAddress||"Wallet not linked")}</small>
       </div>
     </div>
     <div class="post-time">${new Date(post.timestamp).toLocaleString()}</div>
-    ${post.mediaType==="video"?`<video controls src="${url}"></video>`:`<img src="${url}"/>`}
+    ${mediaHTML}
     <p class="post-caption">${escapeHTML(post.caption||"")}</p>
+    <div class="post-actions">
+      <button class="like-btn">${likesCount} ❤️ Like</button>
+      <button class="comment-btn">${commentsCount} 💬 Comment</button>
+      <button class="boost-btn">⚡ Boost</button>
+    </div>
+    <div class="comments-container"></div>
   `;
   userPostsContainer.prepend(postEl);
+
+  const commentsContainer=postEl.querySelector(".comments-container");
+  const commentForm=document.createElement("form");
+  commentForm.className="comment-form";
+  commentForm.innerHTML=`
+    <input type="text" placeholder="Write a comment..." aria-label="Comment input"/>
+    <button type="submit">Post</button>
+  `;
+  commentsContainer.appendChild(commentForm);
+
+  const commentInput=commentForm.querySelector("input");
+  commentForm.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const text=commentInput.value.trim();if(!text)return;
+    const commentId=Date.now();
+    const commentData={
+      text,
+      userId:currentUser.uid,
+      displayName:currentUser.displayName||"Anonymous",
+      photoURL:currentUser.photoURL||"https://via.placeholder.com/32",
+      timestamp:Date.now()
+    };
+    await update(ref(db,`posts/${postId}/comments/${commentId}`),commentData);
+    commentInput.value="";
+  });
+
+  if(post.comments){
+    Object.values(post.comments).forEach(c=>{
+      const cDiv=document.createElement("div");
+      cDiv.className="comment";
+      cDiv.innerHTML=`<img class="avatar" src="${c.photoURL||'https://via.placeholder.com/28'}" alt="User"/>
+        <div class="comment-body"><strong>${escapeHTML(c.displayName)}</strong>${escapeHTML(c.text)}</div>`;
+      commentsContainer.insertBefore(cDiv,commentForm);
+    });
+  }
 }
 </script>
 </body>
