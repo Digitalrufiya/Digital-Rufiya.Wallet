@@ -4,38 +4,33 @@ const urlsToCache = [
   "./index.html",
   "./style.css",
   "./app.js",
-  "./manifest.json"
+  "./manifest.json",
+  "https://ik.imagekit.io/ttbbg9ocv/1000000655.jpg"
 ];
 
-// Install event: cache files
-self.addEventListener("install", (event) => {
+// Install: cache files
+self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
 });
 
-// Fetch event: serve from cache, fallback to network
-self.addEventListener("fetch", (event) => {
+// Fetch: serve cached first
+self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
 
-// Activate event: clean old caches
-self.addEventListener("activate", (event) => {
+// Activate: clean old caches
+self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    caches.keys().then(keys =>
+      Promise.all(keys.map(key => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      }))
+    )
   );
+  self.clients.claim();
 });
