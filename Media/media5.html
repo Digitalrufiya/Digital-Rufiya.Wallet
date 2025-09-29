@@ -51,11 +51,14 @@ header{background: var(--accent);color:#fff;padding:.75rem 1rem;display:flex;ali
 #primaryNav a{color:#fff;font-weight:600;padding:.5rem .75rem;border-radius:var(--radius);transition:background-color .2s}
 #primaryNav a:hover,#primaryNav a.active{background-color:var(--accent-hover)}
 #menuToggle{background:transparent;border:none;color:#fff;font-size:1.5rem;cursor:pointer;display:none;user-select:none}
+
+/* Mobile menu */
 @media (max-width:600px){
   #primaryNav{display:flex;flex-direction:column;width:100%;background:var(--accent);margin-top:.5rem;border-radius:var(--radius);max-height:0;overflow:hidden;opacity:0}
   #primaryNav.show{max-height:500px;opacity:1}
   #menuToggle{display:block}
 }
+
 .btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:.5rem 1rem;font-weight:600;cursor:pointer;transition:background .2s}
 .btn:hover{background:var(--accent-hover)}
 .btn:disabled{background:#adb5bd;cursor:not-allowed}
@@ -150,19 +153,33 @@ const provider = new GoogleAuthProvider();
 const $ = id => document.getElementById(id);
 const login = $("loginBtn"), logout = $("logoutBtn");
 const upload = $("uploadForm"), fileIn = $("mediaFile"), capIn = $("caption");
+const prog = $("prog"), bar = $("progBar");
 const posts = $("postContainer"), qIn = $("searchInput"), preview = $("previewContainer");
+const sentinel = $("sentinel"), feedHint = $("feedHint");
 const avatarImg = $("userAvatar"), userNameSpan = $("userName");
 
-let user = null, allPosts = [], filtered = [];
+let user = null;
+let all = [], view = [], index = 0;
+const PAGE_SIZE = 10;
 
 const escapeHTML = s => s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-function createPostCard(p){
-  const card = document.createElement('article');
-  card.className = 'post-item';
-  card.innerHTML = `
+const gw = cid => ({g1:`https://gateway.pinata.cloud/ipfs/${cid}`,g2:`https://cloudflare-ipfs.com/ipfs/${cid}`,g3:`https://ipfs.io/ipfs/${cid}`});
+
+function createImage(cid){const {g1,g2,g3}=gw(cid); const img=document.createElement('img'); img.loading='lazy'; img.src=g1; img.alt='Post media'; img.onerror=()=>{if(img.src===g1) img.src=g2; else if(img.src===g2) img.src=g3; else img.onerror=null}; img.addEventListener('load',()=>img.setAttribute('data-loaded','true')); return img;}
+function createVideo(cid){const {g1,g2,g3}=gw(cid); const v=document.createElement('video'); v.controls=true; v.playsInline=true; v.preload='metadata'; v.muted=true; v.dataset.g1=g1; v.dataset.g2=g2; v.dataset.g3=g3; v.dataset.idx='0'; v.onerror=()=>switchGateway(v); v.oncanplay=()=>v.setAttribute('data-loaded','true'); return v;}
+window.switchGateway=function(video){let idx=parseInt(video.dataset.idx||'0',10)+1; const g1=video.dataset.g1,g2=video.dataset.g2,g3=video.dataset.g3; let next=''; if(idx===1) next=g1; else if(idx===2) next=g2; else if(idx===3) next=g3; else{video.onerror=null;return;} video.dataset.idx=String(idx); if(video.src!==next){video.src=next; video.load();}}
+const videoObserver=new IntersectionObserver(entries=>{entries.forEach(entry=>{const v=entry.target;if(entry.isIntersecting){if(!v.getAttribute('src')) switchGateway(v); v.play && v.play().catch(()=>{});} else v.pause && v.pause();})},{threshold:0.5});
+const pagingObserver=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting) renderNextBatch()})},{rootMargin:'800px 0px'});
+pagingObserver.observe(sentinel);
+
+function renderReset(){posts.innerHTML=''; index=0; feedHint.style.display='none';}
+function renderCard(p){
+  const card=document.createElement('article'); card.className='post-item';
+  const avatar = p.photoURL && p.photoURL !== '' ? p.photoURL : 'https://via.placeholder.com/40?text=U';
+  card.innerHTML=`
     <header class="post-owner">
-      <img class="avatar" src="${p.photoURL||'https://via.placeholder.com/40'}" alt="User avatar" />
+      <img class="avatar" src="${avatar}" alt="User avatar" />
       <div>
         <div>${escapeHTML(p.displayName||'Anon')}</div>
         <time class="post-time" datetime="${new Date(p.timestamp).toISOString()}">${new Date(p.timestamp).toLocaleString()}</time>
@@ -170,49 +187,61 @@ function createPostCard(p){
       <span class="post-badge">${p.mediaType==='video'?'Video':'Image'}</span>
     </header>
     <div class="post-caption">${escapeHTML(p.caption||'')}</div>
-    <div class="post-media" id="media-${p.id}"></div>
+    <div class="post-media" id="m-${p.id}"></div>
+    <div class="post-actions">
+      <button data-id="${p.id}" class="likeBtn">❤️ Like</button>
+      <button data-id="${p.id}" class="commentBtn">💬 Comment</button>
+      <button data-id="${p.id}" class="shareBtn">🔗 Share</button>
+    </div>
+    <div class="comments-container" id="comments-${p.id}"></div>
+    <div class="comment-input">
+      <input type="text" placeholder="Add a comment…" id="input-${p.id}" />
+      <button data-id="${p.id}">Post</button>
+    </div>
   `;
-  const holder = card.querySelector(`#media-${p.id}`);
-  if(p.mediaType==='video'){ 
-    const v = document.createElement('video'); v.controls=true; v.src=p.ipfsHash; holder.appendChild(v);
-  } else {
-    const img = document.createElement('img'); img.src=p.ipfsHash; holder.appendChild(img);
-  }
+  const holder=card.querySelector(`#m-${p.id}`);
+  if(p.mediaType==='video'){const v=createVideo(p.ipfsHash); holder.appendChild(v); videoObserver.observe(v);} 
+  else holder.appendChild(createImage(p.ipfsHash));
   return card;
 }
 
-async function loadPosts(){
-  const snapshot = await get(ref(db,'posts'));
-  const data = snapshot.val()||{};
-  allPosts = Object.entries(data).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp);
-  filtered = allPosts;
-  renderPosts();
+function renderNextBatch(){
+  if(index>=view.length) return;
+  const end=Math.min(index+PAGE_SIZE,view.length); 
+  const frag=document.createDocumentFragment(); 
+  for(let i=index;i<end;i++) frag.appendChild(renderCard(view[i])); 
+  posts.appendChild(frag); 
+  index=end; 
+  feedHint.style.display=index<view.length?'block':'none'; 
+  setupPostActions(); 
+  for(let i=index-PAGE_SIZE;i<index;i++) listenComments(view[i].id);
 }
 
-function renderPosts(){
-  posts.innerHTML='';
-  filtered.forEach(p=>posts.appendChild(createPostCard(p)));
-}
+function applySearch(){const term=(qIn.value||'').trim().toLowerCase(); view=all.filter(p=>(p.caption||'').toLowerCase().includes(term)); renderReset(); renderNextBatch(); }
 
-login.onclick = () => signInWithPopup(auth, provider);
-logout.onclick = () => signOut(auth);
+async function getPosts(){const snap=await get(ref(db,'posts')); const obj=snap.val()||{}; all=Object.entries(obj).map(([id,v])=>({id,...v})).sort((a,b)=>b.timestamp-a.timestamp); applySearch(); }
 
-onAuthStateChanged(auth, u=>{
-  user = u;
-  login.style.display = u?'none':'block';
-  logout.style.display = u?'block':'none';
-  upload.style.display = u?'block':'none';
-  avatarImg.style.display = u?'inline-block':'none';
-  avatarImg.src = u?.photoURL||'';
-  userNameSpan.textContent = u?.displayName||'DRFMedia';
-  loadPosts();
+login.onclick=()=>signInWithPopup(auth,provider); logout.onclick=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{
+  user=u;
+  login.style.display=u?'none':'block';
+  logout.style.display=u?'block':'none';
+  upload.style.display=u?'block':'none';
+  avatarImg.style.display=u?'inline-block':'none';
+  avatarImg.src=u?.photoURL||'https://via.placeholder.com/40?text=U';
+  userNameSpan.textContent=u?.displayName||'DRFMedia';
+  getPosts();
 });
+qIn.oninput=()=>applySearch();
 
-qIn.oninput = ()=>{
-  const term = qIn.value.trim().toLowerCase();
-  filtered = allPosts.filter(p => (p.caption||'').toLowerCase().includes(term));
-  renderPosts();
-};
+fileIn.onchange=()=>{preview.innerHTML=''; if(fileIn.files[0]){const f=fileIn.files[0]; let elem=f.type.startsWith('video')?createVideo(URL.createObjectURL(f)):createImage(URL.createObjectURL(f)); elem.style.maxHeight='200px'; preview.appendChild(elem);}};
+upload.onsubmit=async(e)=>{e.preventDefault(); if(!fileIn.files[0]) return alert('Choose a file'); if(capIn.value.trim().length<4) return alert('Caption too short'); const file=fileIn.files[0]; upload.querySelector('button').disabled=true; prog.style.display='block'; bar.style.width='0'; try{ const fd=new FormData(); fd.append('file',file); const xhr=new XMLHttpRequest(); xhr.open('POST','https://api.pinata.cloud/pinning/pinFileToIPFS'); xhr.setRequestHeader('Authorization',pinataJWT); xhr.upload.onprogress=(e)=>{if(e.lengthComputable) bar.style.width=(e.loaded/e.total)*100+'%';}; const cid=await new Promise((res,rej)=>{xhr.onload=()=>{try{res(JSON.parse(xhr.responseText).IpfsHash);}catch{rej('Pinata error');};}; xhr.onerror=()=>rej('Upload failed'); xhr.send(fd);}); const newRef=push(ref(db,'posts')); await set(newRef,{userId:user.uid, displayName:user.displayName||'Anon', photoURL:user.photoURL||'https://via.placeholder.com/40?text=U', caption:capIn.value.trim(), ipfsHash:cid, mediaType:file.type.startsWith('video')?'video':'image', timestamp:Date.now()}); capIn.value=''; fileIn.value=''; preview.innerHTML=''; alert('Posted successfully!'); getPosts();}catch(err){console.error(err); alert('Upload failed');} finally{upload.querySelector('button').disabled=false; prog.style.display='none';}};
+
+// Mobile menu toggle
+const menuToggle = document.getElementById('menuToggle');
+const primaryNav = document.getElementById('primaryNav');
+menuToggle.addEventListener('click', ()=>primaryNav.classList.toggle('show'));
+primaryNav.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>primaryNav.classList.remove('show')));
 </script>
 </body>
 </html>
