@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DRF Browser</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Manifest for PWA -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Theme color for address bar -->
+  <meta name="theme-color" content="#000000"/>
+
+  <!-- iOS PWA support -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+  <meta name="apple-mobile-web-app-title" content="DRF Browser"/>
+
+  <style>
+    body { font-family: 'Arial', sans-serif; margin: 0; padding: 1rem; background: #f0f0f0; text-align: center; color: #333; }
+    .tauheed-banner { background-color: black; color: white; padding: 15px 30px; font-size: 28px; font-weight: bold; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.8); font-family: 'Scheherazade New', serif, 'Arial', sans-serif; max-width: 90%; margin: 30px auto 15px auto; direction: rtl; }
+    .logo-container { margin: 0 auto 20px auto; max-width: 220px; }
+    .logo-container img { width: 100%; height: auto; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    input[type="search"] { width: 100%; max-width: 400px; padding: 0.75rem; margin: 0 0 1.5rem 0; font-size: 1rem; border-radius: 0.5rem; border: 1px solid #ccc; box-sizing: border-box; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-top: 1rem; padding: 0 0.5rem; }
+    .icon { background: white; border-radius: 1rem; padding: 1rem; text-align: center; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .icon:hover { transform: scale(1.08); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+    .icon img { width: 60px; height: 60px; margin-bottom: 8px; border-radius: 10px; }
+    .icon div { font-size: 14px; font-weight: bold; }
+    #quranVerse { background: #fff; padding: 1rem; border-radius: 1rem; margin-top: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); max-width: 600px; margin-left: auto; margin-right: auto; }
+
+    /* 🔑 Auth Modal */
+    .modal { display: none; position: fixed; z-index: 999; left:0; top:0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
+    .modal-content { background: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); text-align: left; transition: transform 0.3s; }
+    .modal-content h2 { margin-top: 0; }
+    .modal-content input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+    .modal-content button { width: 100%; padding: 10px; margin: 10px 0; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+    .modal-content button:hover { background: #0056b3; }
+    .switch-link { color: #007bff; cursor: pointer; font-weight: bold; }
+    #forgotPassword { text-align: right; cursor: pointer; color: #007bff; }
+    .auth-buttons { margin: 20px auto; display: flex; gap: 10px; justify-content: center; }
+    .auth-buttons button { padding: 10px 20px; border:none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    .btn-login { background:#007bff; color:#fff; }
+    .btn-register { background:#28a745; color:#fff; }
+
+    /* Install Button */
+    #installBtn { display:none; margin:20px auto; padding:12px 20px; background:#ff9800; color:#fff; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 3px 8px rgba(0,0,0,0.3); }
+    #installBtn img { width:24px; height:24px; vertical-align:middle; margin-right:8px; border-radius:4px; }
+
+    /* iOS Install Banner Styling */
+    #iosInstallBanner {
+      display: none;
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff9800;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 90%;
+    }
+    #iosInstallBanner img { width: 32px; height: 32px; border-radius: 8px; }
+    #iosInstallBanner span { flex: 1; text-align: left; }
+    #iosInstallBanner button { background: white; color: #ff9800; border: none; padding: 6px 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <!-- iOS Install Banner -->
+  <div id="iosInstallBanner">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731" alt="DRF Wallet Logo"/>
+    <span>📲 iPhone users: Tap the Share button and select 'Add to Home Screen' to install DRF Wallet.</span>
+    <button onclick="document.getElementById('iosInstallBanner').style.display='none'">✕</button>
+  </div>
+
+  <div class="tauheed-banner">لَا إِلٰهَ إِلَّا اللهُ مُحَمَّدٌ رَسُولُ اللهِ</div>
+
+  <div class="logo-container">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731" alt="DRF Wallet Logo" />
+  </div>
+
+  <!-- 🔐 Login / Register buttons -->
+  <div class="auth-buttons">
+    <button class="btn-login" onclick="openAuth(true)">Login</button>
+    <button class="btn-register" onclick="openAuth(false)">Register</button>
+  </div>
+
+  <!-- Install PWA Button (Android / Desktop) -->
+  <button id="installBtn">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731" alt="DRF Wallet Logo" />
+    📲 Install DRF Wallet
+  </button>
+
+  <input type="search" id="drfSearch" placeholder="Search Google or open a DRF module..." onkeydown="handleSearch(event)" />
+
+  <!-- 🔹 Main Grid -->
+  <div class="grid">
+    <div class="icon" onclick="navigateTo('Media/me.html')">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png?updatedAt=1748874907311" alt="DRF Media Logo">
+      <div>Social Media</div>
+    </div>
+    <div class="icon" onclick="navigateTo('DRFtube/tube.html')">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png?updatedAt=1748838061244" alt="DRFTube Logo">
+      <div>DRFTube</div>
+    </div>
+    <div class="icon" onclick="navigateTo('aboutus.html')">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/aboutus-icon.png" alt="About Us Icon">
+      <div>About Us</div>
+    </div>
+    <div class="icon" onclick="navigateTo('Quran/quran.html')">
+      <img src="https://ik.imagekit.io/ttbbg9ocv/quran-icon.png" alt="Quran Logo">
+      <div>Quran</div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top: 20px;">
+    <a href="redotpay.html" style="display:inline-block; background:#e60000; color:white; padding:15px 30px; border-radius:10px; font-size:18px; font-weight:bold; text-decoration:none; box-shadow: 0 5px 10px rgba(0,0,0,0.3);">
+      💳 Withdraw to ATM via RedotPay 
+    </a>
+  </div>
+
+  <h3>📖 Daily Quran Verse</h3>
+  <div id="quranVerse">Loading verse...</div>
+
+  <!-- 🔐 Auth Modal -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <h2 id="authTitle">Login</h2>
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <div id="forgotPassword" onclick="resetPassword()">Forgot Password?</div>
+      <button onclick="handleAuth()">Submit</button>
+      <p id="switchText">Don’t have an account? <span class="switch-link" onclick="toggleAuth()">Register</span></p>
+    </div>
+  </div>
+
+  <!-- Firebase Auth -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+      authDomain: "drfsocial-23a06.firebaseapp.com",
+      databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+      projectId: "drfsocial-23a06",
+      storageBucket: "drfsocial-23a06.appspot.com",
+      messagingSenderId: "608135115201",
+      appId: "1:608135115201:web:b3d1f368e0c09ac4400f43",
+      measurementId: "G-TBFQX80NRP"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let isLogin = true;
+
+    window.openAuth = function(login=true) {
+      isLogin = login;
+      document.getElementById('authTitle').innerText = login ? "Login" : "Register";
+      document.getElementById('switchText').innerHTML = login
+        ? `Don’t have an account? <span class="switch-link" onclick="toggleAuth()">Register</span>`
+        : `Already have an account? <span class="switch-link" onclick="toggleAuth()">Login</span>`;
+      document.getElementById('forgotPassword').style.display = login ? "block" : "none";
+      document.getElementById('authModal').style.display = "flex";
+      document.querySelector('.modal-content').style.transform = 'scale(0.8)';
+      setTimeout(()=>{ document.querySelector('.modal-content').style.transform = 'scale(1)'; }, 50);
+    };
+
+    window.toggleAuth = function() { openAuth(!isLogin); };
+
+    window.handleAuth = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      try {
+        if (isLogin) { await signInWithEmailAndPassword(auth, email, password); } 
+        else { 
+          await createUserWithEmailAndPassword(auth, email, password);
+          const usersRef = ref(db, "marketingUsers");
+          const newUserRef = push(usersRef);
+          await set(newUserRef, { email, createdAt: new Date().toISOString() });
+        }
+        document.getElementById('authModal').style.display = "none";
+        alert("✅ Success");
+      } catch (err) { alert(err.message); }
+    };
+
+    window.resetPassword = async function() {
+      const email = document.getElementById('email').value;
+      if (!email) return alert("Enter your email first");
+      try { await sendPasswordResetEmail(auth, email); alert("✅ Password reset link sent! Check your email."); } 
+      catch (err) { alert(err.message); }
+    };
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        console.log("✅ Logged in:", user.email);
+        // Show avatar + name
+        if(!document.getElementById('userInfo')) {
+          const div = document.createElement('div');
+          div.id = 'userInfo';
+          div.style.margin = '15px auto';
+          div.style.fontWeight = 'bold';
+          div.innerHTML = `<img src='https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg?updatedAt=1758002787731' style='width:40px;height:40px;border-radius:50%;vertical-align:middle;margin-right:10px;'> ${user.email}`;
+          document.body.insertBefore(div, document.querySelector('.auth-buttons'));
+        }
+      }
+    });
+  </script>
+
+  <!-- PWA & Quran Verse -->
+  <script>
+    function navigateTo(url) { window.location.href = url; }
+
+    function handleSearch(e) {
+      if (e.key === 'Enter') {
+        const query = e.target.value.trim();
+        if (!query) return;
+        if (query.startsWith('http') || query.endsWith('.html')) { window.location.href = query; } 
+        else { window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank'); }
+      }
+    }
+
+    async function loadQuranVerse() {
+      try {
+        const res = await fetch('https://api.alquran.cloud/v1/ayah/random');
+        const data = await res.json();
+        if (data.status === 'OK') {
+          const verse = data.data;
+          document.getElementById('quranVerse').innerHTML =
+            `<strong>${verse.surah.name} [${verse.numberInSurah}]</strong><br>${verse.text}`;
+        }
+      } catch { document.getElementById('quranVerse').innerText = "Failed to load verse."; }
+    }
+    loadQuranVerse();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('✅ Service Worker registered'))
+        .catch(err => console.warn('⚠️ Service Worker failed', err));
+    }
+
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+      }
+    });
+
+    // iOS detection and banner
+    function isiOS() { return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()); }
+
+    window.addEventListener('load', () => {
+      if (isiOS()) {
+        document.getElementById('iosInstallBanner').style.display = 'flex';
+      }
+    });
+  </script>
+
+</body>
+</html>
