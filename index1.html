@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DRF Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:sans-serif;margin:20px;">
+
+  <h1>🚀 Welcome to DRF Platform</h1>
+
+  <div id="authBox">
+    <input type="email" id="email" placeholder="Email" style="padding:8px;margin:5px;">
+    <input type="password" id="password" placeholder="Password" style="padding:8px;margin:5px;">
+    <br>
+    <button id="loginBtn" style="padding:8px 16px;margin:5px;">Login</button>
+    <button id="registerBtn" style="padding:8px 16px;margin:5px;">Register</button>
+  </div>
+
+  <div id="statusBox" style="margin-top:20px;"></div>
+
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+    // -------------------
+    // Firebase Config Switcher
+    // -------------------
+    let firebaseConfig;
+
+    if (window.location.hostname.includes("media")) {
+      // DRFMedia
+      firebaseConfig = {
+        apiKey: "AIzaSyB-W_j74lsbmJUFnTbJpn79HM62VLmkQC8",
+        authDomain: "drfsocial-23a06.firebaseapp.com",
+        databaseURL: "https://drfsocial-23a06-default-rtdb.firebaseio.com",
+        projectId: "drfsocial-23a06",
+        storageBucket: "drfsocial-23a06.firebasestorage.app",
+        messagingSenderId: "608135115201",
+        appId: "1:608135115201:web:b37dffeb550941ffff3f40",
+        measurementId: "G-TPT7QMWDYE"
+      };
+    } else if (window.location.hostname.includes("tube")) {
+      // DRFTube
+      firebaseConfig = {
+        apiKey: "AIzaSyCdFX1PbNEgubM4Zib7U-hgtJbSOONPk6U",
+        authDomain: "drftube-634c6.firebaseapp.com",
+        databaseURL: "https://drftube-634c6-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "drftube-634c6",
+        storageBucket: "drftube-634c6.firebasestorage.app",
+        messagingSenderId: "819828633864",
+        appId: "1:819828633864:web:513002b461259b000cbcbd",
+        measurementId: "G-ZPTJE4DMNN"
+      };
+    } else {
+      console.error("❌ Unknown platform, no Firebase config found");
+    }
+
+    // -------------------
+    // Init Firebase
+    // -------------------
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    // -------------------
+    // Pinata JWT (replace with real key)
+    // -------------------
+    const PINATA_JWT = "eyJhbGciOi...your_jwt_here";
+    function getPinataHeaders() {
+      return {
+        "Authorization": `Bearer ${PINATA_JWT}`,
+        "Content-Type": "application/json"
+      };
+    }
+
+    // -------------------
+    // Auth Functions
+    // -------------------
+    async function login(email, password) {
+      return await signInWithEmailAndPassword(auth, email, password);
+    }
+
+    async function register(email, password) {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      // Save new user to DB
+      const usersRef = ref(db, "users");
+      const newUserRef = push(usersRef);
+      await set(newUserRef, { email, createdAt: new Date().toISOString() });
+      return userCred;
+    }
+
+    async function logout() {
+      return await signOut(auth);
+    }
+
+    // -------------------
+    // UI: Show user avatar + email
+    // -------------------
+    function showUser(user) {
+      const statusBox = document.getElementById("statusBox");
+      statusBox.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ddd;border-radius:8px;">
+          <img src="https://api.dicebear.com/7.x/initials/svg?seed=${user.email}" 
+               style="width:50px;height:50px;border-radius:50%;" />
+          <div>
+            <strong>${user.email}</strong><br>
+            <button id="logoutBtn" style="padding:5px 10px;margin-top:5px;">Logout</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("logoutBtn").onclick = () => logout();
+    }
+
+    // -------------------
+    // State Listener
+    // -------------------
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        console.log("✅ Logged in:", user.email);
+        localStorage.setItem("drfUser", JSON.stringify({ email: user.email, uid: user.uid }));
+        showUser(user);
+        document.getElementById("authBox").style.display = "none";
+      } else {
+        console.log("🚪 Logged out");
+        localStorage.removeItem("drfUser");
+        document.getElementById("authBox").style.display = "block";
+        document.getElementById("statusBox").innerHTML = "";
+      }
+    });
+
+    // -------------------
+    // Button Handlers
+    // -------------------
+    document.getElementById("loginBtn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      await login(email, password);
+    };
+
+    document.getElementById("registerBtn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      await register(email, password);
+    };
+  </script>
+</body>
+</html>
