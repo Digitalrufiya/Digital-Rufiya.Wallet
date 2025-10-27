@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FENTOM — Super Hybrid Electro‑Mechanical Engine (3D Diagram)</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --panel:#0b1220;
+      --accent:#00d1b2;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+      --card: rgba(255,255,255,0.04);
+      --label-bg: rgba(0,0,0,0.6);
+    }
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;color:#e6eef6;background:linear-gradient(180deg,#071021 0%,var(--bg) 100%);}
+    .app{display:flex;gap:20px;height:100vh;padding:28px;box-sizing:border-box}
+    .stage{flex:1;display:flex;align-items:center;justify-content:center;}
+    .ui{width:380px;background:linear-gradient(180deg,var(--panel),#071021);border-radius:12px;padding:18px;box-shadow:0 6px 30px rgba(2,6,23,0.6);}
+
+    /* 3D container */
+    .viewport{width:680px;height:680px;perspective:1400px;}
+    .scene{width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.2s ease;position:relative}
+
+    /* Central axle / shaft */
+    .shaft{position:absolute;left:50%;top:50%;width:22px;height:520px;background:linear-gradient(180deg,#a3a3a3,#404040);transform:translate(-50%,-50%) rotateX(80deg);border-radius:12px;box-shadow:inset 0 2px 6px rgba(255,255,255,0.06)}
+
+    /* concentric rings to represent parts (using transform translateZ to stack) */
+    .ring{position:absolute;left:50%;top:50%;transform-style:preserve-3d;transform-origin:center center;}
+    .ring .disc{border-radius:50%;box-shadow:0 6px 24px rgba(2,6,23,0.6);backdrop-filter:blur(3px)}
+
+    /* flywheel (inner) */
+    .flywheel{width:220px;height:220px;transform:translate(-50%,-50%) translateZ(40px)}
+    .flywheel .disc{background:linear-gradient(135deg,#2b3340,#121417);border:4px solid #1e293b}
+    .flywheel .rim{position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 40px rgba(0,0,0,0.7)}
+    .flywheel .mag-layer{position:absolute;inset:12px;border-radius:50%;border:10px dashed #ff6b6b;opacity:0.95}
+
+    /* inner clutch ring - attached to flywheel */
+    .inner-clutch{width:260px;height:260px;transform:translate(-50%,-50%) translateZ(20px)}
+    .inner-clutch .disc{background:conic-gradient(from 0deg,#ff8c00 0 10deg,#ffd966 10deg 20deg,#ff8c00 20deg 30deg,#ffd966 30deg 40deg);border:3px solid rgba(255,140,0,0.12);opacity:0.95}
+
+    /* outer clutch ring - attached to wheel */
+    .outer-clutch{width:340px;height:340px;transform:translate(-50%,-50%) translateZ(10px)}
+    .outer-clutch .disc{background:repeating-conic-gradient(#00d1b2 0 12deg, rgba(0,209,178,0.25) 12deg 24deg);border:3px solid rgba(0,209,178,0.08)}
+
+    /* damper ring (stationary) */
+    .damper{width:300px;height:300px;transform:translate(-50%,-50%) translateZ(30px)}
+    .damper .disc{background:radial-gradient(circle at 40% 30%, rgba(130,130,130,0.06), transparent 40%),linear-gradient(90deg,#0b1220,#0b1220);border:6px dashed rgba(148,163,184,0.06)}
+
+    /* outer tire magnets */
+    .tire{width:560px;height:560px;transform:translate(-50%,-50%) translateZ(-10px)}
+    .tire .disc{background:linear-gradient(135deg,#0b1220,#071021);border:12px solid rgba(255,255,255,0.02);box-shadow:0 12px 60px rgba(2,6,23,0.7)}
+    .tire .mag{position:absolute;width:60px;height:20px;background:linear-gradient(90deg,#ff4646,#ffb142);border-radius:6px;left:50%;top:6%;transform-origin:center 140px}
+
+    /* coil / piston discs */
+    .coil{width:360px;height:360px;transform:translate(-50%,-50%) translateZ(-40px)}
+    .coil .disc{background:radial-gradient(circle at center,#071728,#041017);border-radius:50%;box-shadow:inset 0 0 40px rgba(2,6,23,0.6)}
+    .coil .windings{position:absolute;inset:28px;border-radius:50%;border:8px solid rgba(255,215,125,0.12)}
+
+    /* bearings - small rings */
+    .bearing{position:absolute;width:38px;height:38px;border-radius:50%;background:linear-gradient(180deg,#cbd5e1,#64748b);transform:translate(-50%,-50%)}
+
+    /* labels */
+    .label{position:absolute;background:var(--label-bg);padding:8px 10px;border-radius:8px;color:#e6eef6;font-size:13px;backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .legend{margin-top:12px;color:var(--muted);font-size:13px}
+    .btn{display:inline-block;padding:8px 10px;border-radius:8px;background:var(--glass);color:var(--accent);cursor:pointer;margin-right:8px;border:1px solid rgba(255,255,255,0.03)}
+
+    /* info panel */
+    .info{margin-top:12px;background:var(--card);padding:12px;border-radius:8px;color:var(--muted);font-size:13px}
+
+    /* small responsive tweaks */
+    @media (max-width:1000px){.app{flex-direction:column}.ui{width:100%;height:260px;order:2}.stage{order:1}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="stage">
+      <div class="viewport" id="viewport">
+        <div class="scene" id="scene">
+
+          <!-- Shaft -->
+          <div class="shaft" id="shaft"></div>
+
+          <!-- Coil / piston discs (both sides) -->
+          <div class="ring coil" id="coil-left" style="left:50%;top:50%;">
+            <div class="disc"></div>
+            <div class="windings"></div>
+          </div>
+
+          <!-- Outer tire -->
+          <div class="ring tire" id="tire" style="left:50%;top:50%;">
+            <div class="disc"></div>
+            <!-- sample magnets around rim (visual only) -->
+            <!-- generate with JS for nicer distribution -->
+          </div>
+
+          <!-- Outer clutch ring -->
+          <div class="ring outer-clutch" id="outer-clutch" style="left:50%;top:50%;">
+            <div class="disc"></div>
+          </div>
+
+          <!-- Inner Clutch (on flywheel rim) -->
+          <div class="ring inner-clutch" id="inner-clutch" style="left:50%;top:50%;">
+            <div class="disc"></div>
+          </div>
+
+          <!-- Damper (stationary) -->
+          <div class="ring damper" id="damper" style="left:50%;top:50%;">
+            <div class="disc"></div>
+          </div>
+
+          <!-- Flywheel -->
+          <div class="ring flywheel" id="flywheel" style="left:50%;top:50%;">
+            <div class="disc">
+              <div class="rim"></div>
+              <div class="mag-layer" title="Flywheel magnet layer"></div>
+            </div>
+          </div>
+
+          <!-- Bearings (top and bottom around shaft) -->
+          <div class="bearing" style="left:50%;top:30%;transform:translate(-50%,-50%) translateZ(60px)" title="Upper LM10UU bearing"></div>
+          <div class="bearing" style="left:50%;top:70%;transform:translate(-50%,-50%) translateZ(60px)" title="Lower LM10UU bearing"></div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="ui">
+      <h3 style="margin:0;color:#e6eef6">FENTOM — Super Hybrid Engine (3D Diagram)</h3>
+      <p style="margin:8px 0 0;color:var(--muted);font-size:13px">Interactive 3D-style HTML/CSS preview. Click parts in the list to highlight in the diagram. Drag to rotate view.</p>
+
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn" data-target="tire">Outer Tire Magnets</button>
+        <button class="btn" data-target="outer-clutch">Outer Clutch Ring</button>
+        <button class="btn" data-target="inner-clutch">Inner Clutch (Flywheel)</button>
+        <button class="btn" data-target="flywheel">Flywheel + Magnet Rim</button>
+        <button class="btn" data-target="damper">Damper Ring</button>
+        <button class="btn" data-target="coil-left">Coil / Piston Discs</button>
+        <button class="btn" id="resetView">Reset View</button>
+      </div>
+
+      <div class="legend">
+        <strong>Legend</strong>
+        <div style="margin-top:8px">• <span style="color:var(--accent)">Mechanical Battery</span> = Flywheel (stores rotational energy)</div>
+        <div>• <span style="color:#ff8c00">Clutch Rings</span> = Magnetic coupling (gearless)</div>
+        <div>• <span style="color:#ff6b6b">Mag Layer</span> = Neodymium magnets</div>
+        <div>• <span style="color:#94a3b8">Damper</span> = Stationary magnetic cushion</div>
+      </div>
+
+      <div class="info" id="info">
+        <strong>Part Info</strong>
+        <div id="infoText" style="margin-top:8px;color:var(--muted);font-size:13px">Click a button above to highlight a part and read details.</div>
+      </div>
+
+      <div style="margin-top:12px;color:var(--muted);font-size:13px">Prototype tips: balance flywheel, set clutch gap 2–3mm, use LM10UU bearings for the shaft, keep coil pulses timed with Hall sensors.</div>
+    </div>
+  </div>
+
+  <script>
+    // Basic interactive behavior: generate tire magnets, handle rotation drag, highlight parts
+    const scene = document.getElementById('scene');
+    const viewport = document.getElementById('viewport');
+    let rotX = -15, rotY = -20;
+    function updateView(){scene.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`}
+    updateView();
+
+    // drag to rotate
+    let dragging=false, lastX=0, lastY=0;
+    viewport.addEventListener('pointerdown', e=>{dragging=true; lastX=e.clientX; lastY=e.clientY; viewport.setPointerCapture(e.pointerId)});
+    viewport.addEventListener('pointermove', e=>{if(!dragging) return; const dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY; rotY += dx*0.2; rotX -= dy*0.15; rotX = Math.max(-80, Math.min(20, rotX)); updateView();});
+    viewport.addEventListener('pointerup', e=>{dragging=false});
+
+    // generate visual magnets on tire (decorative)
+    const tire = document.getElementById('tire');
+    const magCount = 18;
+    for(let i=0;i<magCount;i++){
+      const el = document.createElement('div'); el.className='mag';
+      const angle = i*(360/magCount);
+      el.style.transform = `translate(-50%, -50%) rotate(${angle}deg) translateY(260px)`;
+      tire.appendChild(el);
+    }
+
+    // highlight logic
+    const buttons = document.querySelectorAll('.btn[data-target]');
+    const infoText = document.getElementById('infoText');
+    buttons.forEach(b=>{
+      b.addEventListener('click',()=>{
+        const id=b.dataset.target; const node=document.getElementById(id);
+        // flash style
+        node.querySelector('.disc').style.boxShadow='0 0 40px 6px rgba(0,209,178,0.12), inset 0 0 40px rgba(255,255,255,0.02)';
+        setTimeout(()=>{node.querySelector('.disc').style.boxShadow='';},900);
+        // info text
+        const infoMap = {
+          'tire':'Outer Tire Magnets — N52 blocks/segments. Provide main tangential torque. Use balanced count (12–24) and protect with ABS shell.',
+          'outer-clutch':'Outer Clutch Ring — paired with inner clutch on flywheel to transfer rotation non‑contact. Keep 2–3 mm gap.',
+          'inner-clutch':'Inner Clutch (on flywheel) — small magnet ring attached to flywheel rim to couple into outer clutch ring.',
+          'flywheel':'Flywheel — mechanical battery. Example: 5–7 kg, 0.1–0.12 m radius. Store kinetic energy: E=½ I ω². Balance precisely.',
+          'damper':'Damper Ring — stationary magnetic cushion that recenters flywheel and absorbs vibration. Use many small N35 magnets with 2–3 mm gap.',
+          'coil-left':'Coil / Piston Discs — electromagnetic discs on both sides; pulse to kick the flywheel. Use dual coils 180° apart for smooth torque.'
+        };
+        infoText.textContent = infoMap[id] || 'Part details not found.';
+      });
+    });
+
+    document.getElementById('resetView').addEventListener('click',()=>{rotX=-15;rotY=-20;updateView();});
+
+  </script>
+</body>
+</html>
