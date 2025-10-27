@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Magnetic Clutch — Face-to-Face & Coaxial Ring Models</title>
+  <style>
+    body{ margin:0; font-family:Inter, Arial, sans-serif; background:#f5f7fb; }
+    #wrap{ display:flex; height:100vh; }
+    #left, #right{ flex:1; position:relative; }
+    .panel{ position:absolute; top:12px; left:12px; background:rgba(255,255,255,0.95); padding:10px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.08); width:300px; }
+    h4{ margin:4px 0 8px 0; font-size:15px }
+    .row{ display:flex; gap:8px; align-items:center; margin-bottom:6px }
+    .sw{ width:14px; height:10px; border-radius:2px }
+    button{ padding:8px 10px; border-radius:8px; border:0; background:#111827; color:white; cursor:pointer }
+    .footer{ position:absolute; right:12px; bottom:12px; font-size:13px; color:#333 }
+    .dim{ font-size:13px; color:#111827 }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <div id="left">
+      <div class="panel">
+        <h4>Face‑to‑Face Magnetic Clutch (100 mm)</h4>
+        <div class="row"><div class="sw" style="background:#ff3b30"></div><div class="dim">Rotor (driven) — circular plate</div></div>
+        <div class="row"><div class="sw" style="background:#0ea5a4"></div><div class="dim">Stator (driven / stationary) — opposing plate</div></div>
+        <div class="row"><div class="sw" style="background:#ff9f1c"></div><div class="dim">Magnet segments — arc segments arranged radially</div></div>
+        <div style="margin-top:8px">Controls: <button id="flipFace">Flip Polarity</button> <button id="toggleFaceLabels">Toggle Labels</button></div>
+      </div>
+      <div id="canvasFace" style="width:100%; height:100%;"></div>
+    </div>
+
+    <div id="right">
+      <div class="panel">
+        <h4>Coaxial Ring Magnetic Clutch (100 mm)</h4>
+        <div class="row"><div class="sw" style="background:#6366f1"></div><div class="dim">Inner rotor ring</div></div>
+        <div class="row"><div class="sw" style="background:#10b981"></div><div class="dim">Outer stator ring</div></div>
+        <div class="row"><div class="sw" style="background:#ef476f"></div><div class="dim">Arc magnets — alternating N/S around circumference</div></div>
+        <div style="margin-top:8px">Controls: <button id="flipRing">Flip Polarity</button> <button id="toggleRingLabels">Toggle Labels</button></div>
+      </div>
+      <div id="canvasRing" style="width:100%; height:100%;"></div>
+    </div>
+  </div>
+  <div class="footer">Click magnets to highlight. Air gap shown. Dimensions labeled: 100 mm outer diameter shown for scale.</div>
+
+  <script src="https://unpkg.com/three@0.154.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.154.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    // Utility: create renderer/camera/scene for a container
+    function makeViewer(containerId){
+      const container = document.getElementById(containerId);
+      const scene = new THREE.Scene(); scene.background = new THREE.Color(0xf7fbff);
+      const camera = new THREE.PerspectiveCamera(48, container.clientWidth/container.clientHeight, 0.05, 10);
+      camera.position.set(0.18, 0.12, 0.26);
+      const renderer = new THREE.WebGLRenderer({antialias:true}); renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping=true; controls.dampingFactor=0.08;
+      const amb = new THREE.AmbientLight(0xffffff, 0.9); scene.add(amb);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(3,4,2); scene.add(dir);
+      return { scene, camera, renderer, controls, container };
+    }
+
+    // Face-to-face viewer
+    const face = makeViewer('canvasFace');
+    // Coaxial viewer
+    const ring = makeViewer('canvasRing');
+
+    // COMMON geometry params (scale: meters)
+    const OD = 0.10; const ID = 0.02; const thickness = 0.006; // 100mm OD
+    const airGap = 0.004; // 4 mm gap
+
+    // Helper to create magnet arc segment
+    function magnetArc(radiusOuter, radiusInner, startAngle, angleSize, thickness, color, labelText){
+      const shape = new THREE.Shape();
+      const a0 = startAngle; const a1 = startAngle + angleSize;
+      const rOut = radiusOuter; const rIn = radiusInner;
+      const seg = 32;
+      for(let i=0;i<=seg;i++){ const a = a0 + (a1-a0)*i/seg; const x = rOut*Math.cos(a); const y = rOut*Math.sin(a); if(i===0) shape.moveTo(x,y); else shape.lineTo(x,y);}      
+      for(let i=seg;i>=0;i--){ const a = a0 + (a1-a0)*i/seg; const x = rIn*Math.cos(a); const y = rIn*Math.sin(a); shape.lineTo(x,y);}      
+      const extrude = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled:false });
+      const mat = new THREE.MeshStandardMaterial({ color: color, metalness:0.6, roughness:0.4 });
+      const mesh = new THREE.Mesh(extrude, mat);
+      mesh.rotation.x = Math.PI/2; // lay flat
+      mesh.userData.label = labelText;
+      return mesh;
+    }
+
+    // ---- FACE-TO-FACE MODEL ----
+    (function(){
+      const {scene, camera, renderer, controls} = face;
+      // rotor plate (driven)
+      const plateR = (OD/2); const plateT = thickness;
+      const plateGeo = new THREE.CylinderGeometry(plateR, plateR, plateT, 64);
+      const plateMat = new THREE.MeshStandardMaterial({ color: 0xdbeafe, metalness:0.4, roughness:0.5 });
+      const rotorPlate = new THREE.Mesh(plateGeo, plateMat); rotorPlate.rotation.x = Math.PI/2; rotorPlate.position.set(0, 0, 0);
+      scene.add(rotorPlate);
+      // stator plate (opposing)
+      const statorMat = new THREE.MeshStandardMaterial({ color: 0xfef3c7, metalness:0.4, roughness:0.5 });
+      const statorPlate = new THREE.Mesh(plateGeo, statorMat); statorPlate.rotation.x = Math.PI/2; statorPlate.position.set(0, 0, - (plateT + airGap));
+      scene.add(statorPlate);
+
+      // magnets: split into 8 arc segments (alternating N/S), placed on inner face of each plate
+      const segments = 8; const segAngle = (Math.PI*2)/segments; const rOut = plateR*0.98; const rIn = plateR*0.6; const magTh = 0.002;
+      const rotorMags = []; const statorMags = [];
+      for(let i=0;i<segments;i++){
+        const start = i*segAngle; const color = (i%2===0)? 0xff3b30 : 0x0ea5a4; // red = N, teal = S
+        const label = (i%2===0)? 'N' : 'S';
+        const mag = magnetArc(rOut, rIn, start, segAngle*0.95, magTh, color, 'Rotor mag '+i+' ('+label+')');
+        mag.position.set(0,0,plateT/2 + 0.0005); scene.add(mag); rotorMags.push(mag);
+        const mag2 = magnetArc(rOut, rIn, start, segAngle*0.95, magTh, color, 'Stator mag '+i+' ('+label+')');
+        mag2.position.set(0,0,-(plateT/2 + magTh + airGap + 0.0005)); scene.add(mag2); statorMags.push(mag2);
+      }
+
+      // labels for air gap and diameter
+      const loader = new THREE.FontLoader();
+      // simple arrow/line showing air gap
+      const gapLineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,plateT/2+0.0005), new THREE.Vector3(0,0,-(plateT/2 + magTh + airGap + 0.0005))]);
+      const gapMat = new THREE.LineBasicMaterial({ color:0x111827 }); const gapLine = new THREE.Line(gapLineGeo, gapMat); scene.add(gapLine);
+
+      // dimension text (using sprite)
+      function makeSpriteText(txt){ const c = document.createElement('canvas'); c.width=512; c.height=128; const ctx=c.getContext('2d'); ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,512,128); ctx.font='36px Arial'; ctx.fillStyle='white'; ctx.fillText(txt, 16,72); const tex=new THREE.CanvasTexture(c); const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex})); sp.scale.set(0.12,0.03,1); return sp; }
+      const dim = makeSpriteText('OD = 100 mm'); dim.position.set(0.0, 0.12, 0.0); scene.add(dim);
+      const gapLabel = makeSpriteText('Air gap = 4 mm'); gapLabel.position.set(0.0, -0.08, -0.02); scene.add(gapLabel);
+
+      // interactivity: click to flip polarity (swap colors)
+      let facePolarity = 0; document.getElementById('flipFace').addEventListener('click', ()=>{
+        facePolarity = 1-facePolarity; for(let i=0;i<segments;i++){ const c = ( (i+facePolarity)%2===0)?0xff3b30:0x0ea5a4; rotorMags[i].material.color.setHex(c); statorMags[i].material.color.setHex(c); }
+      });
+      // toggle labels (simple visibility change on sprites)
+      let faceLabels = true; document.getElementById('toggleFaceLabels').addEventListener('click', ()=>{ faceLabels=!faceLabels; dim.visible=faceLabels; gapLabel.visible=faceLabels; });
+
+      // click highlight
+      const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2(); function onClick(ev){ const rect = face.renderer.domElement.getBoundingClientRect(); mouse.x = ( (ev.clientX-rect.left) / rect.width )*2 -1; mouse.y = -((ev.clientY-rect.top)/rect.height)*2 +1; ray.setFromCamera(mouse, face.camera); const hits = ray.intersectObjects(scene.children, true); if(hits.length>0){ const o = hits[0].object; o.scale.set(1.06,1.06,1.06); setTimeout(()=> o.scale.set(1,1,1),200); }}
+      face.renderer.domElement.addEventListener('click', onClick);
+
+      // animate
+      function anim(){ requestAnimationFrame(anim); rotorMags.forEach(m=> m.rotation.z += 0.002); statorMags.forEach(m=> m.rotation.z -= 0.001); controls.update(); renderer.render(scene, camera);} anim();
+
+    })();
+
+    // ---- COAXIAL RING MODEL ----
+    (function(){
+      const {scene, camera, renderer, controls} = ring;
+      // inner rotor ring geometry (inner radius)
+      const outerR = OD/2; const innerR = OD/2 - 0.02; // 20 mm wide ring
+      const ringTh = thickness; const magTh = 0.002; const segments = 12; const segAngle = (Math.PI*2)/segments;
+
+      // inner rotor ring (rotor) - shown elevated
+      const innerRingGeo = new THREE.RingGeometry(innerR-0.002, outerR-0.002, 128);
+      const innerMat = new THREE.MeshStandardMaterial({ color:0xdbeafe, side:THREE.DoubleSide });
+      const innerRing = new THREE.Mesh(innerRingGeo, innerMat); innerRing.rotation.x = Math.PI/2; innerRing.position.set(0,0,0.01); scene.add(innerRing);
+
+      // outer stator ring
+      const outerRingGeo = new THREE.RingGeometry(innerR+0.02, outerR+0.02, 128);
+      const outerMat = new THREE.MeshStandardMaterial({ color:0xfef3c7, side:THREE.DoubleSide });
+      const outerRing = new THREE.Mesh(outerRingGeo, outerMat); outerRing.rotation.x = Math.PI/2; outerRing.position.set(0,0,-(magTh + airGap + 0.01)); scene.add(outerRing);
+
+      // magnets on inner ring (alternating N/S)
+      const innerMags = []; const outerMags = [];
+      for(let i=0;i<segments;i++){
+        const start = i*segAngle; const color = (i%2===0)?0xff3b30:0x0ea5a4; const label = (i%2===0)?'N':'S';
+        const mag = magnetArc(outerR-0.002, innerR-0.002, start, segAngle*0.92, magTh, color, 'Inner mag '+i+' ('+label+')'); mag.position.set(0,0,0.011); scene.add(mag); innerMags.push(mag);
+        const mag2 = magnetArc(outerR+0.02, innerR+0.02, start + segAngle*0.46, segAngle*0.92, magTh, color, 'Outer mag '+i+' ('+label+')'); mag2.position.set(0,0,-(magTh + airGap + 0.011)); scene.add(mag2); outerMags.push(mag2);
+      }
+
+      // dimension label
+      function makeSprite(txt){ const c=document.createElement('canvas'); c.width=512; c.height=128; const ctx=c.getContext('2d'); ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,512,128); ctx.font='36px Arial'; ctx.fillStyle='white'; ctx.fillText(txt, 16,72); const t=new THREE.CanvasTexture(c); const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t})); s.scale.set(0.12,0.03,1); return s; }
+      const dim = makeSprite('OD = 100 mm'); dim.position.set(0.0, 0.12, 0.0); scene.add(dim);
+      const gapLabel = makeSprite('Circumferential air gap ≈ 4 mm'); gapLabel.position.set(0.0, -0.08, -0.02); scene.add(gapLabel);
+
+      // flip polarity
+      let ringPol = 0; document.getElementById('flipRing').addEventListener('click', ()=>{ ringPol = 1-ringPol; for(let i=0;i<segments;i++){ const c = ((i+ringPol)%2===0)?0xff3b30:0x0ea5a4; innerMags[i].material.color.setHex(c); outerMags[i].material.color.setHex(c); }});
+      let ringLabels = true; document.getElementById('toggleRingLabels').addEventListener('click', ()=>{ ringLabels=!ringLabels; dim.visible = ringLabels; gapLabel.visible = ringLabels; });
+
+      // click highlight
+      const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2(); function onClick(ev){ const rect = ring.renderer.domElement.getBoundingClientRect(); mouse.x = ((ev.clientX-rect.left)/rect.width)*2 -1; mouse.y = -((ev.clientY-rect.top)/rect.height)*2 +1; ray.setFromCamera(mouse, ring.camera); const hits = ray.intersectObjects(scene.children, true); if(hits.length>0){ const o=hits[0].object; o.scale.set(1.06,1.06,1.06); setTimeout(()=> o.scale.set(1,1,1),200); }}
+      ring.renderer.domElement.addEventListener('click', onClick);
+
+      function anim(){ requestAnimationFrame(anim); innerMags.forEach(m=> m.rotation.z += 0.0025); outerMags.forEach(m=> m.rotation.z -= 0.0012); controls.update(); renderer.render(scene, camera);} anim();
+
+    })();
+
+    // handle resizing
+    window.addEventListener('resize', ()=>{ [face,ring].forEach(v=>{ v.camera.aspect = v.container.clientWidth / v.container.clientHeight; v.camera.updateProjectionMatrix(); v.renderer.setSize(v.container.clientWidth, v.container.clientHeight); }); });
+
+  </script>
+</body>
+</html>
