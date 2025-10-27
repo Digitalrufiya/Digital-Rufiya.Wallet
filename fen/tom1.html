@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FENTOM — Super Hybrid 3D (Three.js)</title>
+  <title>FENTOM — Debug 3D Preview</title>
   <style>
     html,body{height:100%;margin:0;background:#071021;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#e6eef6}
     #app{display:flex;height:100vh;gap:12px;padding:12px;box-sizing:border-box}
@@ -24,14 +24,14 @@
   <div id="app">
     <div id="viewport"></div>
     <div id="panel">
-      <h2>FENTOM — 3D Hybrid Preview</h2>
+      <h2>FENTOM — 3D Debug Preview</h2>
       <div class="row"><label>Flywheel RPM</label><input id="rpmSlider" type="range" min="0" max="5000" value="800"></div>
       <div class="row"><label>Coil Power</label><input id="coilSlider" type="range" min="0" max="1" step="0.01" value="0.3"></div>
       <div class="row"><label>Clutch Gap (mm)</label><input id="gapSlider" type="range" min="1" max="8" value="3"></div>
       <div style="display:flex;gap:8px;margin-top:8px"><button id="startBtn" class="btn">Start</button><button id="stopBtn" class="btn">Stop</button></div>
 
       <div class="info">
-        <div>Controls: drag to orbit, scroll to zoom. Use sliders to simulate RPM, coil power and clutch gap. This demo uses simplified physics to visualize torque transfer and damping.</div>
+        <div>Controls: drag to orbit, scroll to zoom. This debug build adds helpers and stronger lighting so you can confirm the scene.</div>
 
         <div class="stat">
           <div style="flex:1">
@@ -45,28 +45,28 @@
         </div>
 
       </div>
-      <div style="margin-top:12px;color:#8fa3b8;font-size:13px">Prototype tips: start with low coil power and small clutch gap. Balance flywheel and check vibrations.</div>
+      <div style="margin-top:12px;color:#8fa3b8;font-size:13px">If you still see only zoom, try opening Console (F12) and tell me any errors you see.</div>
     </div>
   </div>
 
-  <!-- Three.js + OrbitControls + lil-gui from CDN -->
+  <!-- Three.js + OrbitControls from CDN -->
   <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://unpkg.com/lil-gui@0.18.0/dist/lil-gui.min.js"></script>
   <script>
-    // Scene setup
+    // DOM
     const container = document.getElementById('viewport');
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x071021, 0.0025);
 
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
-    camera.position.set(0, 180, 420);
-
+    // Renderer (robust sizing using resize observer / fallback)
     const renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.setPixelRatio(Math.max(1, window.devicePixelRatio || 1));
+    renderer.setClearColor(0x071021);
     container.appendChild(renderer.domElement);
+
+    // Scene + camera
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x071021);
+    const camera = new THREE.PerspectiveCamera(45, 2, 0.1, 3000);
+    camera.position.set(300, 220, 420);
 
     // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -74,44 +74,49 @@
     controls.dampingFactor = 0.12;
     controls.rotateSpeed = 0.6;
 
-    // Light
-    const hemi = new THREE.HemisphereLight(0xbfeaf4, 0x202036, 0.8);
-    scene.add(hemi);
-    const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir.position.set(100,200,100);
+    // Lighting - stronger so things are visible
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+    dir.position.set(120,200,120);
     scene.add(dir);
+    const dir2 = new THREE.DirectionalLight(0xfff2c1, 0.3);
+    dir2.position.set(-200,-100,50);
+    scene.add(dir2);
 
-    // Ground / base
+    // helpers to ensure visibility
+    const axes = new THREE.AxesHelper(180); scene.add(axes);
+    const grid = new THREE.GridHelper(500, 20, 0x13303b, 0x082029); grid.position.y = -100; scene.add(grid);
+
+    // Base
+    const baseMat = new THREE.MeshStandardMaterial({color:0x0b1520, metalness:0.4, roughness:0.6});
     const baseGeo = new THREE.CylinderGeometry(220,220,8,64);
-    const baseMat = new THREE.MeshStandardMaterial({color:0x071827,metalness:0.3,roughness:0.6});
     const base = new THREE.Mesh(baseGeo, baseMat);
-    base.rotation.x = Math.PI/2; base.position.y = -8; scene.add(base);
+    base.rotation.x = Math.PI/2; base.position.y = -108; scene.add(base);
 
-    // Helper group for whole assembly
+    // Assembly group
     const assembly = new THREE.Group(); scene.add(assembly);
 
     // Shaft
-    const shaftMat = new THREE.MeshStandardMaterial({color:0xa3a3a3,metalness:1,roughness:0.25});
+    const shaftMat = new THREE.MeshStandardMaterial({color:0xa3a3a3, metalness:1, roughness:0.25});
     const shaftGeo = new THREE.CylinderGeometry(6,6,420,32);
     const shaft = new THREE.Mesh(shaftGeo, shaftMat); shaft.rotation.z = Math.PI/2; assembly.add(shaft);
 
-    // Bearings (visual)
-    const bearingMat = new THREE.MeshStandardMaterial({color:0x9fb0bf,metalness:1,roughness:0.2});
-    const bearingGeo = new THREE.TorusGeometry(18,4,16,60);
-    const bearingTop = new THREE.Mesh(bearingGeo,bearingMat); bearingTop.position.set(0,80,0); bearingTop.rotation.z = Math.PI/2; assembly.add(bearingTop);
-    const bearingBot = bearingTop.clone(); bearingBot.position.set(0,-80,0); assembly.add(bearingBot);
-
-    // Flywheel
-    const flyMat = new THREE.MeshStandardMaterial({color:0x1f2937,metalness:0.8,roughness:0.35});
+    // Flywheel (visible)
+    const flyMat = new THREE.MeshStandardMaterial({color:0x29323b, metalness:0.9, roughness:0.3});
     const flyGeo = new THREE.CylinderGeometry(90,90,20,64);
     const flywheel = new THREE.Mesh(flyGeo, flyMat); flywheel.rotation.z = Math.PI/2; flywheel.position.set(0,0,0); assembly.add(flywheel);
 
-    // Flywheel magnet rim (visual segmented)
+    // test cube (guaranteed visible)
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(40,40,40), new THREE.MeshStandardMaterial({color:0xff6b6b,emissive:0x220000}));
+    cube.position.set(180, 0, 0);
+    assembly.add(cube);
+
+    // magnet group (visual)
     const magnetGroup = new THREE.Group();
-    const magCount = 16;
+    const magCount = 12;
     for(let i=0;i<magCount;i++){
       const magGeo = new THREE.BoxGeometry(18,6,6);
-      const magMat = new THREE.MeshStandardMaterial({color: (i%2?0xff6b6b:0xffd166), metalness:0.6, roughness:0.4});
+      const magMat = new THREE.MeshStandardMaterial({color:(i%2?0xff6b6b:0xffd166), metalness:0.6, roughness:0.4});
       const mag = new THREE.Mesh(magGeo, magMat);
       const angle = i*(Math.PI*2/magCount);
       mag.position.set(Math.cos(angle)*110, Math.sin(angle)*110, 0);
@@ -119,54 +124,12 @@
     }
     assembly.add(magnetGroup);
 
-    // Inner clutch ring (attached to flywheel) - visual
-    const innerClutch = new THREE.Mesh(new THREE.TorusGeometry(120,6,16,200), new THREE.MeshStandardMaterial({color:0xff8c00,metalness:0.5,roughness:0.45}));
-    innerClutch.rotation.z = Math.PI/2; innerClutch.position.set(0,0,6); assembly.add(innerClutch);
-
-    // Outer clutch ring (attached to wheel) - visual
-    const outerClutch = new THREE.Mesh(new THREE.TorusGeometry(170,8,16,200), new THREE.MeshStandardMaterial({color:0x00d1b2,metalness:0.5,roughness:0.45}));
-    outerClutch.rotation.z = Math.PI/2; outerClutch.position.set(0,0,14); assembly.add(outerClutch);
-
-    // Damper ring (stationary)
-    const damper = new THREE.Mesh(new THREE.TorusGeometry(135,6,16,200), new THREE.MeshStandardMaterial({color:0x334155,metalness:0.2,roughness:0.6,transparent:true,opacity:0.95}));
-    damper.rotation.z = Math.PI/2; damper.position.set(0,0,-8); assembly.add(damper);
-
-    // Outer tire with visual magnets
-    const tire = new THREE.Mesh(new THREE.TorusGeometry(250,40,64,200), new THREE.MeshStandardMaterial({color:0x081826,metalness:0.2,roughness:0.8}));
+    // outer tire visual
+    const tireMat = new THREE.MeshStandardMaterial({color:0x081826,metalness:0.15,roughness:0.85});
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(250,40,64,200), tireMat);
     tire.rotation.z = Math.PI/2; tire.position.set(0,0,-30); assembly.add(tire);
 
-    // decorative tire magnets
-    const tireMagGroup = new THREE.Group();
-    const tireMagCount = 20;
-    for(let i=0;i<tireMagCount;i++){
-      const g = new THREE.Mesh(new THREE.BoxGeometry(28,10,8), new THREE.MeshStandardMaterial({color:(i%2?0xff6b6b:0x00d1b2)}));
-      const a = i*(Math.PI*2/tireMagCount);
-      g.position.set(Math.cos(a)*250, Math.sin(a)*250, -30);
-      g.rotation.z = a; tireMagGroup.add(g);
-    }
-    assembly.add(tireMagGroup);
-
-    // coil discs (both sides)
-    const coilMat = new THREE.MeshStandardMaterial({color:0x0b3b4b,metalness:0.6,roughness:0.3});
-    const coilGeo = new THREE.CylinderGeometry(180,180,10,64);
-    const coilLeft = new THREE.Mesh(coilGeo, coilMat); coilLeft.rotation.z = Math.PI/2; coilLeft.position.set(0, -0, -70); assembly.add(coilLeft);
-    const coilRight = coilLeft.clone(); coilRight.position.set(0,0,70); assembly.add(coilRight);
-
-    // small emissive indicator for coil power
-    const coilIndicatorGeo = new THREE.TorusGeometry(170,6,16,200);
-    const coilIndicatorMat = new THREE.MeshBasicMaterial({color:0x00ffcc,transparent:true,opacity:0.15});
-    const coilIndicator = new THREE.Mesh(coilIndicatorGeo, coilIndicatorMat); coilIndicator.rotation.z = Math.PI/2; coilIndicator.position.set(0,0,70); assembly.add(coilIndicator);
-
-    // basic state
-    let state = {
-      running:false,
-      rpm: 800,
-      coilPower: 0.3,
-      clutchGap: 3,
-      torque:0,
-    };
-
-    // UI bindings
+    // UI state & controls binding
     const rpmSlider = document.getElementById('rpmSlider');
     const coilSlider = document.getElementById('coilSlider');
     const gapSlider = document.getElementById('gapSlider');
@@ -175,65 +138,62 @@
     const torqueVal = document.getElementById('torqueVal');
     const energyVal = document.getElementById('energyVal');
 
-    rpmSlider.addEventListener('input',(e)=>{state.rpm = Number(e.target.value)});
-    coilSlider.addEventListener('input',(e)=>{state.coilPower = Number(e.target.value)});
-    gapSlider.addEventListener('input',(e)=>{state.clutchGap = Number(e.target.value)});
-    startBtn.addEventListener('click',()=>{state.running=true});
-    stopBtn.addEventListener('click',()=>{state.running=false});
+    let state = { running:false, rpm: 800, coilPower:0.3, clutchGap:3, torque:0 };
 
-    // simple physics model (very simplified): torque from magnets ~ Nm_per_pole * engagedPoles
-    const Nm_per_pole = 7; // arbitrary base torque per pole
+    rpmSlider.addEventListener('input', e => state.rpm = Number(e.target.value));
+    coilSlider.addEventListener('input', e => state.coilPower = Number(e.target.value));
+    gapSlider.addEventListener('input', e => state.clutchGap = Number(e.target.value));
+    startBtn.addEventListener('click', ()=> state.running = true);
+    stopBtn.addEventListener('click', ()=> state.running = false);
+
+    // simple compute
     function computeTorque(){
-      // clutch engagement factor reduces with gap
-      const gap = state.clutchGap; // mm
-      const gapFactor = Math.max(0, 1 - (gap-1)/6); // 1 -> full, 7 -> zero
+      const Nm_per_pole = 7;
+      const gap = state.clutchGap;
+      const gapFactor = Math.max(0, 1 - (gap-1)/6);
       const engagedPoles = Math.round(magCount * 0.6);
       const magTorque = Nm_per_pole * engagedPoles * gapFactor;
-      const coilTorque = state.coilPower * 25; // coil assist
-      const total = (magTorque + coilTorque) * 0.9; // 10% loss
+      const coilTorque = state.coilPower * 25;
+      const total = (magTorque + coilTorque) * 0.9;
       state.torque = total;
       return total;
     }
 
-    // compute flywheel energy E = 1/2 I w^2
-    // approximate I for solid disc: 0.5*m*r^2, use m=6kg, r=0.1m
-    const flyMass = 6; const flyR = 0.1; const I = 0.5*flyMass*flyR*flyR;
+    const flyMass = 6, flyR = 0.1, I = 0.5*flyMass*flyR*flyR;
     function computeEnergy(rpm){ const omega = rpm * 2*Math.PI/60; return 0.5 * I * omega*omega; }
 
-    // animation
-    let lastTime = performance.now();
-    function animate(t){
+    // render sizing robustly
+    function resizeRenderer(){
+      const rect = container.getBoundingClientRect();
+      renderer.setSize(Math.max(160, Math.floor(rect.width)), Math.max(160, Math.floor(rect.height)), false);
+      camera.aspect = rect.width / rect.height;
+      camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(resizeRenderer).observe(container);
+    resizeRenderer();
+
+    // animation loop
+    let last = performance.now();
+    function animate(now){
       requestAnimationFrame(animate);
-      const dt = (t - lastTime)/1000; lastTime = t;
+      const dt = (now - last)/1000; last = now;
       controls.update();
 
-      // spinning visuals: flywheel and rings rotate according to rpm
       if(state.running){
-        // slightly change RPM based on torque vs friction
         const torque = computeTorque();
-        // simple friction & load
-        const friction = 0.015 * state.rpm; // arbitrary
-        const rpmChange = (torque*10 - friction) * dt; // scale
+        const friction = 0.02 * state.rpm;
+        const rpmChange = (torque*8 - friction) * dt;
         state.rpm = Math.max(0, state.rpm + rpmChange);
+      } else {
+        state.rpm = Number(rpmSlider.value);
       }
-      // target RPM follows slider when not running
-      if(!state.running){ state.rpm = Number(rpmSlider.value); }
 
-      // update rotations
-      const flyRot = (state.rpm/60) * 2*Math.PI * (t/1000);
+      const flyRot = (state.rpm/60) * 2*Math.PI * (now/1000);
       flywheel.rotation.x = flyRot;
       magnetGroup.rotation.x = flyRot*0.98;
-      innerClutch.rotation.x = flyRot*0.98;
+      tire.rotation.x = flyRot * Math.max(0, Math.min(1, computeTorque()/200)) * 0.85;
+      cube.rotation.y += 0.6 * dt;
 
-      // outer rings slightly lag depending on torque transfer
-      const outerSpeedFactor = Math.max(0, Math.min(1, computeTorque()/200));
-      outerClutch.rotation.x = flyRot * outerSpeedFactor * 0.9;
-      tire.rotation.x = flyRot * outerSpeedFactor * 0.85;
-
-      // coil indicator intensity
-      coilIndicator.material.opacity = 0.05 + state.coilPower*0.45;
-
-      // update UI values
       torqueVal.textContent = computeTorque().toFixed(1) + ' Nm';
       energyVal.textContent = computeEnergy(state.rpm).toFixed(1) + ' J';
 
@@ -241,9 +201,7 @@
     }
     animate(performance.now());
 
-    // resize handling
-    window.addEventListener('resize', ()=>{camera.aspect = container.clientWidth/container.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight) });
-
+    // console tip: if still nothing visible -> open console (F12) and paste errors here
   </script>
 </body>
 </html>
