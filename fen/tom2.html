@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Electro-Mechanical Hybrid — 3D Diagram</title>
+  <style>
+    body { margin:0; font-family:Inter, Arial, sans-serif; overflow:hidden; }
+    #canvas-container { position: absolute; inset:0; }
+    #ui { position: absolute; right: 12px; top: 12px; width:320px; background: rgba(255,255,255,0.95); border-radius:12px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.12); }
+    h3{ margin:0 0 8px 0; font-size:16px; }
+    .legend{ font-size:13px; line-height:1.35; }
+    .row{ display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+    .sw{ width:16px; height:10px; border-radius:2px; }
+    .controls{ margin-top:8px; display:flex; gap:8px; }
+    button{ padding:8px 10px; border-radius:8px; border:0; background:#111827; color:white; cursor:pointer; }
+    a.small{ font-size:12px; color:#0366d6; }
+    #footer{ font-size:12px; margin-top:6px; color:#333; }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="ui">
+    <h3>3D Wiring & Component Diagram</h3>
+    <div class="legend">
+      <div class="row"><div class="sw" style="background:#ff3b30"></div> <div><b>Flywheel rotor</b> — rotating disk with N35 magnet layer</div></div>
+      <div class="row"><div class="sw" style="background:#ff9f1c"></div> <div><b>Magnet layer</b> — bonded N35 thin ring on rotor surface</div></div>
+      <div class="row"><div class="sw" style="background:#0ea5a4"></div> <div><b>Inner Magnetic Clutch</b> — axial flux clutch assembly</div></div>
+      <div class="row"><div class="sw" style="background:#6366f1"></div> <div><b>Assist Coils</b> — coil pairs that provide timed torque pulses</div></div>
+      <div class="row"><div class="sw" style="background:#10b981"></div> <div><b>Harvest Coils</b> — coils that extract regenerative energy</div></div>
+      <div class="row"><div class="sw" style="background:#ef476f"></div> <div><b>Supercap</b> — energy buffer (1F / 16V typical)</div></div>
+      <div class="row"><div class="sw" style="background:#06b6d4"></div> <div><b>MCU / Driver</b> — Teensy/STM32 + MOSFET drivers</div></div>
+      <div class="row"><div class="sw" style="background:#94a3b8"></div> <div><b>Sensors</b> — encoder, Hall sensors, IMU</div></div>
+      <div class="row"><div class="sw" style="background:#111827"></div> <div><b>Wiring</b> — labeled wires in 3D (power, charge, sense, ground)</div></div>
+    </div>
+    <div class="controls">
+      <button id="resetBtn">Reset View</button>
+      <button id="toggleLabels">Toggle Labels</button>
+    </div>
+    <div id="footer">Tip: drag to rotate, scroll to zoom. Click parts to highlight.</div>
+  </div>
+
+  <!-- Three.js from CDN -->
+  <script src="https://unpkg.com/three@0.154.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.154.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    // Basic scene + camera
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf7fbff);
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(0.8, 0.6, 1.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.08;
+
+    // Lights
+    const amb = new THREE.AmbientLight(0xffffff, 0.8); scene.add(amb);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(5,10,7); scene.add(dir);
+
+    // Helper function: create labeled sprite
+    function makeLabel(text){
+      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0,0,512,128);
+      ctx.font = '36px Inter, Arial'; ctx.fillStyle = 'white'; ctx.fillText(text, 14, 70);
+      const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate = true;
+      const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.45,0.11,1);
+      return sprite;
+    }
+
+    // MAIN COMPONENTS - sizes chosen for clarity, units in meters roughly
+    // 1) Flywheel rotor
+    const rotorRadius = 0.15; const rotorThickness = 0.02;
+    const rotorGeo = new THREE.CylinderGeometry(rotorRadius, rotorRadius, rotorThickness, 64);
+    const rotorMat = new THREE.MeshStandardMaterial({ color: 0xff3b30, metalness:0.4, roughness:0.5 });
+    const rotor = new THREE.Mesh(rotorGeo, rotorMat); rotor.rotation.x = Math.PI/2; rotor.position.set(0,0,0);
+    scene.add(rotor);
+    rotor.name = 'Flywheel (Rotor)';
+
+    // 2) Magnet layer (thin ring on rotor surface)
+    const magnetInner = rotorRadius * 0.92; const magnetOuter = rotorRadius * 0.99; const magnetThickness = 0.002;
+    const ringGeo = new THREE.RingGeometry(magnetInner, magnetOuter, 128);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff9f1c, side: THREE.DoubleSide });
+    const magnetRing = new THREE.Mesh(ringGeo, ringMat); magnetRing.rotation.x = Math.PI/2; magnetRing.position.z = rotorThickness/2 + 0.0006;
+    scene.add(magnetRing); magnetRing.name = 'N35 Magnet Layer (Thin)';
+
+    // 3) Inner Magnetic Clutch (axial disk assembly)
+    const clutchRadius = 0.07; const clutchGeo = new THREE.CylinderGeometry(clutchRadius, clutchRadius, 0.01, 48);
+    const clutchMat = new THREE.MeshStandardMaterial({ color: 0x0ea5a4, metalness:0.7, roughness:0.3 });
+    const clutch = new THREE.Mesh(clutchGeo, clutchMat); clutch.rotation.x = Math.PI/2; clutch.position.set(0, 0, -0.04);
+    scene.add(clutch); clutch.name = 'Inner Magnetic Clutch (Axial)';
+
+    // 4) Assist coils (two coils 180 deg apart)
+    const coilRadius = 0.045; const coilHeight = 0.03;
+    function makeCoil(angle){
+      const geo = new THREE.TorusGeometry(coilRadius, 0.006, 8, 64);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, metalness:0.3, roughness:0.4 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = Math.PI/2; mesh.rotation.z = angle; mesh.position.set(0, 0, 0.035);
+      return mesh;
+    }
+    const coilA = makeCoil(0); coilA.name='Assist Coil A'; scene.add(coilA);
+    const coilB = makeCoil(Math.PI); coilB.name='Assist Coil B'; scene.add(coilB);
+
+    // 5) Harvest coils (placed near edge)
+    const harvestGeo = new THREE.TorusGeometry(0.11, 0.004, 8, 64);
+    const harvestMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    const harvestCoil = new THREE.Mesh(harvestGeo, harvestMat); harvestCoil.rotation.x = Math.PI/2; harvestCoil.position.set(0,0,0.02);
+    harvestCoil.name='Harvest Coil Array'; scene.add(harvestCoil);
+
+    // 6) Supercap and electronics block (off-axis)
+    const boxGeo = new THREE.BoxGeometry(0.12, 0.08, 0.04);
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0xef476f, metalness:0.2, roughness:0.5 });
+    const supercapBox = new THREE.Mesh(boxGeo, boxMat); supercapBox.position.set(0.42, -0.12, 0.04);
+    supercapBox.name='Supercap (1F / 16V)'; scene.add(supercapBox);
+
+    const mcuGeo = new THREE.BoxGeometry(0.09, 0.04, 0.02);
+    const mcuMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4 });
+    const mcu = new THREE.Mesh(mcuGeo, mcuMat); mcu.position.set(0.42, 0.12, 0.04); mcu.name='MCU & MOSFET Driver'; scene.add(mcu);
+
+    const sensorGeo = new THREE.BoxGeometry(0.04,0.02,0.02);
+    const sensorMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
+    const sensor = new THREE.Mesh(sensorGeo, sensorMat); sensor.position.set(-0.42, 0.08, 0.04); sensor.name='Sensors (Encoder / IMU / Hall)'; scene.add(sensor);
+
+    // 7) Wiring lines (curved tubes) - power, harvest, sense, ground
+    function makeWire(points, color, name){
+      const curve = new THREE.CatmullRomCurve3(points);
+      const tubeGeo = new THREE.TubeGeometry(curve, 96, 0.004, 8, false);
+      const mat = new THREE.MeshStandardMaterial({ color: color, metalness:0.3, roughness:0.6 });
+      const mesh = new THREE.Mesh(tubeGeo, mat); mesh.name = name; return mesh;
+    }
+
+    // Power: MCU -> Assist Coils (orange)
+    const p1 = makeWire([
+      new THREE.Vector3(0.42,0.12,0.04),
+      new THREE.Vector3(0.28,0.08,0.04),
+      new THREE.Vector3(0.12,0.04,0.035),
+      new THREE.Vector3(0.02,0.02,0.035),
+      new THREE.Vector3(0,0.035,0.035)
+    ], 0xff9f1c, 'Power: MCU -> Assist Coils'); scene.add(p1);
+
+    // Harvest: Harvest Coil -> Rectifier -> Supercap (green)
+    const p2 = makeWire([
+      new THREE.Vector3(0,0.02,0.02),
+      new THREE.Vector3(0.12,0.04,0.03),
+      new THREE.Vector3(0.24,0.06,0.035),
+      new THREE.Vector3(0.34,0.02,0.04),
+      new THREE.Vector3(0.42,-0.12,0.04)
+    ], 0x10b981, 'Harvest: Coil -> Rectifier -> Supercap'); scene.add(p2);
+
+    // Sense: Encoder -> MCU (gray)
+    const p3 = makeWire([
+      new THREE.Vector3(-0.42,0.08,0.04),
+      new THREE.Vector3(-0.16,0.06,0.03),
+      new THREE.Vector3(-0.02,0.03,0.03),
+      new THREE.Vector3(0.12,0.04,0.03),
+      new THREE.Vector3(0.42,0.12,0.04)
+    ], 0x94a3b8, 'Sense: Encoder/Hall -> MCU'); scene.add(p3);
+
+    // Ground / Common return (dark)
+    const p4 = makeWire([
+      new THREE.Vector3(0.42,-0.12,0.04),
+      new THREE.Vector3(0.18,-0.06,0.03),
+      new THREE.Vector3(0.05,-0.02,0.03),
+      new THREE.Vector3(-0.12,-0.02,0.03),
+      new THREE.Vector3(-0.42,0.02,0.04)
+    ], 0x111827, 'Ground / Common Return'); scene.add(p4);
+
+    // Labels (sprites)
+    const labels = [];
+    function attachLabel(obj, text, offset){
+      const sprite = makeLabel(text);
+      scene.add(sprite); sprite.position.copy(obj.position).add(offset);
+      labels.push(sprite);
+    }
+    attachLabel(rotor, 'Flywheel Rotor\n(Stores Kinetic Energy)', new THREE.Vector3(0,0.12,0));
+    attachLabel(magnetRing, 'N35 Magnet Layer\n(Thin bonded ring)', new THREE.Vector3(0,-0.12,0.012));
+    attachLabel(clutch, 'Inner Magnetic Clutch\n(Controlled coupling)', new THREE.Vector3(-0.12,-0.02,-0.02));
+    attachLabel(coilA, 'Assist Coil A\n(Timed pulses)', new THREE.Vector3(0.08,0.1,0.02));
+    attachLabel(coilB, 'Assist Coil B\n(180° apart)', new THREE.Vector3(-0.08,-0.1,0.02));
+    attachLabel(harvestCoil, 'Harvest Coil Array\n(Generates during spin)', new THREE.Vector3(0,0,0.14));
+    attachLabel(supercapBox, 'Supercap Bank\n(1F / 16V example)', new THREE.Vector3(0.42,-0.12,0.14));
+    attachLabel(mcu, 'MCU & Driver\n(Teensy/STM32 + MOSFETs)', new THREE.Vector3(0.42,0.12,0.14));
+    attachLabel(sensor, 'Sensors\n(Optical/Magnetic/IMU)', new THREE.Vector3(-0.42,0.08,0.14));
+    attachLabel(p1, 'Power Feed\n(MCU -> Coils)', new THREE.Vector3(0.18,0.06,0.10));
+    attachLabel(p2, 'Harvest Line\n(Coils -> Rectifier -> Supercap)', new THREE.Vector3(0.28,0.00,0.10));
+    attachLabel(p3, 'Sense Lines\n(Encoder/Hall -> MCU)', new THREE.Vector3(-0.08,0.06,0.10));
+    attachLabel(p4, 'Ground / Common\n(Star ground recommended)', new THREE.Vector3(0.0,-0.06,0.10));
+
+    // Interactivity: highlight on click
+    const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+    function onClick(e){
+      mouse.x = (e.clientX / window.innerWidth) * 2 -1; mouse.y = - (e.clientY / window.innerHeight) * 2 + 1;
+      ray.setFromCamera(mouse, camera);
+      const hits = ray.intersectObjects(scene.children, true);
+      if(hits.length>0){
+        const obj = hits[0].object; console.log('Clicked:', obj.name || obj.parent?.name);
+        // pulse scale highlight
+        const root = obj; root.scale.set(1.12,1.12,1.12);
+        setTimeout(()=> root.scale.set(1,1,1), 220);
+      }
+    }
+    window.addEventListener('click', onClick);
+
+    // Toggle labels
+    let labelsVisible = true; document.getElementById('toggleLabels').addEventListener('click', ()=>{
+      labelsVisible = !labelsVisible; labels.forEach(l=> l.visible=labelsVisible);
+    });
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ controls.reset(); camera.position.set(0.8,0.6,1.2); controls.update(); });
+
+    // animate rotor spin for visual
+    let spinSpeed = 0.06; // rad per frame
+    function animate(){ requestAnimationFrame(animate);
+      rotor.rotateZ(spinSpeed); magnetRing.rotateZ(spinSpeed);
+      clutch.rotateZ(spinSpeed*0.95);
+      coilA.rotateZ(spinSpeed*0.0); coilB.rotateZ(spinSpeed*0.0);
+      controls.update(); renderer.render(scene, camera);
+    }
+    animate();
+
+    // responsive
+    window.addEventListener('resize', ()=>{ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+  </script>
+</body>
+</html>
