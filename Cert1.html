@@ -2,234 +2,216 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Certificate - Verification</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>DRF Chain Admin + Blockchain System</title>
 
 <style>
-  body {
-    margin: 0;
-    padding: 0;
-    background: #f4f1ea;
-    font-family: "Georgia", serif;
-  }
+body {
+  font-family: Georgia, serif;
+  background: #f4f1ea;
+  margin: 0;
+}
 
-  .page {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-  }
+.container {
+  display: flex;
+  justify-content: center;
+  padding: 30px;
+}
 
-  .certificate {
-    width: 850px;
-    background: white;
-    padding: 70px;
-    border: 3px solid #b08d57;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
+.panel {
+  width: 900px;
+  background: white;
+  padding: 40px;
+  border: 3px solid #b08d57;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+}
 
-  /* WATERMARK */
-  .watermark {
-    position: absolute;
-    font-size: 140px;
-    opacity: 0.05;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: bold;
-    letter-spacing: 15px;
-  }
+h1, h2 {
+  text-align: center;
+}
 
-  h1 {
-    font-size: 32px;
-    letter-spacing: 3px;
-    margin-bottom: 20px;
-  }
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+}
 
-  .name {
-    font-size: 38px;
-    font-weight: bold;
-    margin: 20px 0;
-  }
+button {
+  padding: 10px 15px;
+  background: #b08d57;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
 
-  .desc {
-    font-size: 18px;
-    line-height: 1.7;
-    max-width: 700px;
-    margin: auto;
-    color: #333;
-  }
+button:hover {
+  background: #8c6d3d;
+}
 
-  /* =========================
-     EMBOSSED SEAL ANIMATION
-  ========================== */
+/* SECTIONS */
+.section {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #d6c6a5;
+  background: #faf8f3;
+}
 
-  .seal {
-    width: 120px;
-    height: 120px;
-    margin: 30px auto;
-    border-radius: 50%;
-    border: 6px double #b08d57;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #b08d57;
-    font-size: 14px;
-    background: radial-gradient(circle, #fff 60%, #f3e7d3);
-    box-shadow:
-      inset 0 4px 10px rgba(0,0,0,0.2),
-      0 10px 20px rgba(0,0,0,0.15);
+/* BLOCKS */
+.block {
+  border-left: 4px solid #b08d57;
+  padding: 10px;
+  margin-top: 10px;
+  background: #fff;
+  font-size: 14px;
+}
 
-    transform: scale(0);
-    opacity: 0;
-    animation: stamp 1.2s ease-out forwards;
-  }
-
-  @keyframes stamp {
-    0% { transform: scale(3); opacity: 0; }
-    60% { transform: scale(0.9); opacity: 1; }
-    80% { transform: scale(1.05); }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* ID BLOCK */
-  .identity-block {
-    margin-top: 25px;
-    padding: 18px;
-    border: 1px solid #d6c6a5;
-    background: #faf8f3;
-    display: inline-block;
-  }
-
-  .identity-block .name {
-    font-size: 24px;
-    font-weight: bold;
-  }
-
-  .identity-block .id {
-    font-size: 18px;
-    margin-top: 8px;
-  }
-
-  .identity-block .note {
-    font-size: 12px;
-    color: #666;
-    margin-top: 10px;
-    max-width: 420px;
-    line-height: 1.5;
-  }
-
-  /* VERIFY BUTTON */
-  .verify-btn {
-    display: inline-block;
-    margin-top: 25px;
-    padding: 12px 25px;
-    background: #b08d57;
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-    border-radius: 6px;
-    transition: 0.3s;
-  }
-
-  .verify-btn:hover {
-    background: #8c6d3d;
-    transform: translateY(-2px);
-  }
-
-  /* FOOTER */
-  .footer {
-    margin-top: 50px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-  }
-
-  .line {
-    border-top: 1px solid #333;
-    width: 200px;
-    margin-top: 8px;
-  }
-
-  #qrcode {
-    margin-top: 15px;
-    padding: 10px;
-    background: white;
-    border: 1px solid #ddd;
-  }
+.verified { color: green; font-weight: bold; }
+.error { color: red; font-weight: bold; }
 </style>
 </head>
 
 <body>
 
-<div class="page">
-  <div class="certificate">
+<div class="container">
+<div class="panel">
 
-    <div class="watermark">DRF</div>
+<h1>DRF Chain Blockchain System</h1>
 
-    <h1>Certificate of Mastery</h1>
+<!-- ================= ADMIN PANEL ================= -->
+<div class="section">
+<h2>👨‍💼 Admin Panel (Issue Certificate)</h2>
 
-    <!-- EMBOSSED SEAL -->
-    <div class="seal">DRF OFFICIAL SEAL</div>
+<input id="name" placeholder="Student Name">
+<input id="govid" placeholder="Government ID (A-XXX**)">
+<input id="course" placeholder="Course Name">
+<button onclick="addCertificate()">Generate Certificate</button>
+</div>
 
-    <div class="name">Hassan Fayaz</div>
+<!-- ================= VERIFY PANEL ================= -->
+<div class="section">
+<h2>🔐 Verification Portal</h2>
 
-    <div class="desc">
-      This certificate recognizes outstanding achievement in Web3 Blockchain Engineering,
-      including DRF Chain ecosystem development, decentralized systems architecture,
-      and AI-integrated blockchain solutions.
-    </div>
+<input id="verifyId" placeholder="Enter Certificate ID">
+<button onclick="verifyCertificate()">Verify</button>
 
-    <!-- IDENTITY BLOCK -->
-    <div class="identity-block">
-      <div class="name">Hassan Fayaz</div>
-      <div class="id"><b>DRF ID:</b> A-303**8</div>
-      <div class="note">
-        DRF Chain Ecosystem Security Policy:  
-        ID card numbers are partially hidden to protect identity and ensure secure verification
-        of the original certificate holder.
-      </div>
-    </div>
+<div id="verifyResult"></div>
+</div>
 
-    <!-- VERIFY BUTTON -->
-    <br>
-    <a class="verify-btn"
-       href="https://www.drfchain.org/Hassanfayaz.html"
-       target="_blank">
-       🔗 Verify on DRF Chain
-    </a>
+<!-- ================= BLOCKCHAIN VIEW ================= -->
+<div class="section">
+<h2>⛓️ Blockchain Ledger</h2>
+<div id="chainView"></div>
+</div>
 
-    <!-- QR CODE -->
-    <div id="qrcode"></div>
-
-    <!-- FOOTER -->
-    <div class="footer">
-      <div>
-        <p><b>Authorized Signature</b></p>
-        <div class="line"></div>
-        <p>DRF Chain Authority</p>
-      </div>
-
-      <div>
-        <p><b>Certificate ID</b></p>
-        <p>DRF-2026-0001</p>
-      </div>
-    </div>
-
-  </div>
+</div>
 </div>
 
 <script>
-  new QRCode(document.getElementById("qrcode"), {
-    text: "https://www.drfchain.org/Hassanfayaz.html",
-    width: 120,
-    height: 120
+
+///////////////////////////////
+// LOAD OR INIT CHAIN
+///////////////////////////////
+let chain = JSON.parse(localStorage.getItem("drf_chain")) || [];
+
+///////////////////////////////
+// SHA-256 HASH FUNCTION
+///////////////////////////////
+async function hash(data) {
+  const enc = new TextEncoder().encode(data);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+///////////////////////////////
+// ADD CERTIFICATE (ADMIN)
+///////////////////////////////
+async function addCertificate() {
+
+  const name = document.getElementById("name").value;
+  const govid = document.getElementById("govid").value;
+  const course = document.getElementById("course").value;
+
+  const certId = "DRF-" + (2026 + chain.length) + "-" + (1000 + chain.length);
+
+  const prevHash = chain.length ? chain[chain.length - 1].hash : "0";
+
+  const dataString = certId + name + govid + course + prevHash;
+
+  const newHash = await hash(dataString);
+
+  const block = {
+    index: chain.length + 1,
+    certId,
+    name,
+    govid,
+    course,
+    prevHash,
+    hash: newHash
+  };
+
+  chain.push(block);
+  localStorage.setItem("drf_chain", JSON.stringify(chain));
+
+  renderChain();
+
+  alert("Certificate Issued: " + certId);
+}
+
+///////////////////////////////
+// VERIFY CERTIFICATE
+///////////////////////////////
+async function verifyCertificate() {
+
+  const id = document.getElementById("verifyId").value;
+  const box = document.getElementById("verifyResult");
+
+  const block = chain.find(b => b.certId === id);
+
+  if (!block) {
+    box.innerHTML = "<p class='error'>❌ NOT FOUND IN BLOCKCHAIN</p>";
+    return;
+  }
+
+  const dataString = block.certId + block.name + block.govid + block.course + block.prevHash;
+  const checkHash = await hash(dataString);
+
+  if (checkHash === block.hash) {
+    box.innerHTML = `
+      <p class='verified'>✔ CERTIFICATE VERIFIED</p>
+      <p><b>Name:</b> ${block.name}</p>
+      <p><b>Gov ID:</b> ${block.govid}</p>
+      <p><b>Course:</b> ${block.course}</p>
+      <p><b>Certificate ID:</b> ${block.certId}</p>
+    `;
+  } else {
+    box.innerHTML = "<p class='error'>⚠ TAMPER DETECTED</p>";
+  }
+}
+
+///////////////////////////////
+// RENDER BLOCKCHAIN
+///////////////////////////////
+function renderChain() {
+
+  const view = document.getElementById("chainView");
+  view.innerHTML = "";
+
+  chain.forEach(b => {
+    view.innerHTML += `
+      <div class="block">
+        <b>${b.certId}</b><br>
+        Name: ${b.name}<br>
+        Course: ${b.course}<br>
+        Hash: ${b.hash}
+      </div>
+    `;
   });
+}
+
+renderChain();
+
 </script>
 
 </body>
