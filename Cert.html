@@ -2,155 +2,104 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Ultra Web3 Certificate System</title>
+<title>DRF Chain Minting System</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 body {
   margin: 0;
-  font-family: "Georgia", serif;
-  background: radial-gradient(circle at top, #1a1a1a, #0b0b0b);
+  font-family: Georgia, serif;
+  background: radial-gradient(circle at top, #111, #000);
   color: white;
 }
 
-/* CENTER */
+/* PANEL */
 .container {
   display: flex;
   justify-content: center;
   padding: 30px;
 }
 
-/* PANEL */
 .panel {
-  width: 1000px;
-}
-
-/* GLASS CARD */
-.card {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.2);
-  backdrop-filter: blur(20px);
+  width: 950px;
+  background: rgba(255,255,255,0.05);
   padding: 40px;
   border-radius: 20px;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 /* INPUT */
 input {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   margin: 6px 0;
-  border-radius: 8px;
-  border: none;
 }
 
+/* BUTTON */
 button {
   padding: 12px 18px;
   background: linear-gradient(90deg,#b08d57,#f5d07a);
   border: none;
   cursor: pointer;
   font-weight: bold;
-  border-radius: 8px;
 }
 
-/* ===================== 3D CERTIFICATE ===================== */
+/* ================= MINT LOADER ================= */
+#loader {
+  display: none;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(255,255,255,0.2);
+  border-top: 6px solid #f5d07a;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: auto;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* ================= CERTIFICATE ================= */
 .certificate {
   display: none;
-  margin-top: 25px;
+  margin-top: 20px;
   padding: 50px;
   border-radius: 20px;
   background: linear-gradient(145deg,#fff,#f6ecd6);
   color: black;
-  position: relative;
-
   transform-style: preserve-3d;
-  perspective: 1200px;
-
-  animation: reveal 1.2s ease-out;
-  box-shadow:
-    0 40px 100px rgba(0,0,0,0.6),
-    inset 0 0 60px rgba(176,141,87,0.3);
+  animation: pop 1s ease-out;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.7);
 }
 
-/* 3D REVEAL */
-@keyframes reveal {
-  0% {
-    transform: rotateX(-30deg) scale(0.7);
-    opacity: 0;
-    filter: blur(10px);
-  }
-  100% {
-    transform: rotateX(0deg) scale(1);
-    opacity: 1;
-    filter: blur(0);
-  }
+@keyframes pop {
+  0% { transform: scale(0.6) rotateX(-30deg); opacity: 0; }
+  100% { transform: scale(1) rotateX(0); opacity: 1; }
 }
 
-/* HOVER 3D TILT */
-.certificate:hover {
-  transform: rotateY(6deg) rotateX(3deg);
-  transition: 0.5s;
+/* MINT SUCCESS TEXT */
+.success {
+  color: #00ff88;
+  font-weight: bold;
+  text-align: center;
+  margin: 10px 0;
 }
 
-/* GOLD BORDER GLOW */
-.certificate::before {
-  content: "";
-  position: absolute;
-  inset: -5px;
-  border-radius: 25px;
-  background: linear-gradient(45deg,#b08d57,transparent,#f5d07a);
-  filter: blur(10px);
-  z-index: -1;
-  opacity: 0.6;
-}
-
-/* SHINE EFFECT */
-.certificate::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -70%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(120deg,transparent,rgba(255,255,255,0.6),transparent);
-  transform: skewX(-25deg);
-  animation: shine 2.5s ease-in-out;
-}
-
-@keyframes shine {
-  0% { left: -70%; }
-  100% { left: 130%; }
-}
-
-/* SEAL */
-.seal {
-  width: 120px;
-  height: 120px;
-  margin: 20px auto;
-  border-radius: 50%;
-  border: 6px double #b08d57;
-  background: radial-gradient(circle,#fff,#f3e7d3);
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
-  animation: sealPop 1s ease-out;
-}
-
-@keyframes sealPop {
-  0% { transform: scale(3) rotate(180deg); opacity: 0; }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
-}
-
-/* BLOCKCHAIN BLOCK */
+/* BLOCK */
 .block {
   background: rgba(255,255,255,0.1);
   padding: 10px;
   margin-top: 10px;
   border-left: 3px solid #f5d07a;
 }
-
-/* STATUS */
-.ok { color: #00ff88; font-weight: bold; }
-.bad { color: #ff4d4d; font-weight: bold; }
 </style>
 </head>
 
@@ -159,124 +108,108 @@ button {
 <div class="container">
 <div class="panel">
 
-<div class="card">
-<h1>🏛️ DRF Ultra Web3 Certificate System</h1>
+<h1>🏛️ DRF Chain Minting System</h1>
 
 <!-- ADMIN -->
-<h3>👨‍💼 Admin Login</h3>
-<input id="u" placeholder="Username">
-<input id="p" type="password" placeholder="Password">
-<button onclick="login()">Unlock Admin</button>
-
-<div id="admin" style="display:none;margin-top:20px;">
-<h3>Issue Certificate</h3>
+<h3>Admin Panel</h3>
 <input id="name" placeholder="Name">
-<input id="gov" placeholder="Government ID">
+<input id="gov" placeholder="Gov ID">
 <input id="course" placeholder="Course">
-<button onclick="add()">Generate Certificate</button>
+<button onclick="mint()">Mint Certificate</button>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p>Minting on DRF Blockchain...</p>
 </div>
 
-<!-- VERIFY -->
-<h3 style="margin-top:30px;">🔐 Verify Certificate</h3>
-<input id="vid" placeholder="Certificate ID">
-<button onclick="verify()">Verify</button>
-
-<div id="result"></div>
-
-<!-- BLOCKCHAIN -->
-<h3>⛓️ Blockchain Ledger</h3>
-<div id="chain"></div>
+<p id="status"></p>
 
 <!-- CERTIFICATE -->
 <div class="certificate" id="cert">
   <h2>DRF CHAIN CERTIFICATE</h2>
   <div id="certData"></div>
-  <div class="seal"></div>
   <div id="qr"></div>
 </div>
 
-</div>
+<!-- BLOCKCHAIN -->
+<h3>Chain</h3>
+<div id="chain"></div>
 
 </div>
 </div>
 
 <script>
 
-let chain = JSON.parse(localStorage.getItem("drf")) || [];
+let chain = JSON.parse(localStorage.getItem("drf") || "[]");
 
-//////////////////// LOGIN ////////////////////
-function login(){
-  if(u.value==="Fayaz91000" && p.value==="91000"){
-    admin.style.display="block";
-  }
-}
-
-//////////////////// HASH ////////////////////
-async function hash(d){
-  const e=new TextEncoder().encode(d);
+async function hash(data){
+  const e=new TextEncoder().encode(data);
   const b=await crypto.subtle.digest("SHA-256",e);
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-//////////////////// ADD ////////////////////
-async function add(){
+/* ================= MINT ANIMATION ================= */
+async function mint(){
 
-let id="DRF-"+Date.now();
-let prev=chain.length?chain[chain.length-1].hash:"0";
+document.getElementById("loader").style.display = "block";
+document.getElementById("status").innerHTML = "";
 
-let data=id+name.value+gov.value+course.value+prev;
-let h=await hash(data);
+await new Promise(r => setTimeout(r, 2000)); // fake blockchain delay
 
-chain.push({id,name:name.value,gov:gov.value,course:course.value,prev,hash:h});
+const id = "DRF-" + Date.now();
+const prev = chain.length ? chain[chain.length-1].hash : "0";
+
+const data = id + name.value + gov.value + course.value + prev;
+const h = await hash(data);
+
+const block = {id,name:name.value,gov:gov.value,course:course.value,prev,hash:h};
+
+chain.push(block);
 localStorage.setItem("drf",JSON.stringify(chain));
 
+document.getElementById("loader").style.display = "none";
+
+document.getElementById("status").innerHTML =
+"<div class='success'>✔ MINT COMPLETE</div>";
+
+showCert(block);
 render();
 }
 
-//////////////////// VERIFY ////////////////////
-async function verify(){
-
-let b=chain.find(x=>x.id===vid.value);
-if(!b){
-result.innerHTML="<p class='bad'>NOT FOUND</p>";
-return;
-}
-
-let data=b.id+b.name+b.gov+b.course+b.prev;
-let h=await hash(data);
-
-if(h===b.hash){
-result.innerHTML="<p class='ok'>VERIFIED ✔</p>";
-showCert(b);
-}else{
-result.innerHTML="<p class='bad'>TAMPERED</p>";
-}
-}
-
-//////////////////// CERT 3D ////////////////////
+/* ================= CERT SHOW ================= */
 function showCert(b){
 
-cert.style.display="block";
-certData.innerHTML=`
+document.getElementById("cert").style.display = "block";
+
+document.getElementById("certData").innerHTML = `
 <h2>${b.name}</h2>
 <p>${b.course}</p>
 <p>${b.id}</p>
 `;
 
-qr.innerHTML="";
-new QRCode(qr,{
-text:location.href+"?id="+b.id,
-width:120,height:120
+document.getElementById("qr").innerHTML = "";
+
+new QRCode(document.getElementById("qr"), {
+  text: location.href + "?id=" + b.id,
+  width: 120,
+  height: 120
 });
 }
 
-//////////////////// RENDER ////////////////////
+/* ================= RENDER ================= */
 function render(){
-chainDiv="";
+let box = document.getElementById("chain");
+box.innerHTML = "";
+
 chain.forEach(b=>{
-chainDiv+=`<div class="block">${b.id} | ${b.name} | ${b.course}</div>`;
+box.innerHTML += `
+<div class="block">
+<b>${b.id}</b><br>
+${b.name} | ${b.course}
+</div>
+`;
 });
-chain.innerHTML=chainDiv;
 }
 
 render();
