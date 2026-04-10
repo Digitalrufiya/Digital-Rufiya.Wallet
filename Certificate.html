@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Government Certificate Authority</title>
+<title>DRF University SaaS Dashboard v3</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -11,7 +11,7 @@
 
 body{
   margin:0;
-  font-family: "Georgia", serif;
+  font-family: Georgia, serif;
   background:#0b0b0b;
   color:white;
 }
@@ -53,93 +53,47 @@ button{
   border:1px solid rgba(255,255,255,0.15);
 }
 
-/* ================= LEGAL CERTIFICATE ================= */
+/* DASHBOARD GRID */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+/* CARD */
+.card{
+  background:rgba(255,255,255,0.07);
+  padding:15px;
+  border-radius:10px;
+}
+
+/* CERTIFICATE */
 .diploma{
   display:none;
   margin-top:20px;
-  padding:90px;
+  padding:70px;
   background:white;
   color:#111;
   position:relative;
-  border:14px solid #b08d37;
-  box-shadow:0 60px 160px rgba(0,0,0,0.95);
-  overflow:hidden;
+  border:10px solid #b08d37;
 }
 
-/* WATERMARK */
-.diploma::before{
-  content:"DRF GOVERNMENT AUTHORITY";
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%) rotate(-25deg);
-  font-size:60px;
-  color:rgba(0,0,0,0.05);
-  font-weight:bold;
-  white-space:nowrap;
-}
-
-/* HEADER */
-.header{
-  text-align:center;
-  font-size:18px;
-  letter-spacing:2px;
-  color:#8b6b1f;
-  font-weight:bold;
-}
-
-/* TITLE */
 .title{
+  text-align:center;
+  font-size:32px;
+  font-weight:bold;
+}
+
+.name{
   text-align:center;
   font-size:34px;
   margin-top:15px;
   font-weight:bold;
-  letter-spacing:1px;
 }
 
-/* BODY TEXT */
-.bodytext{
-  margin-top:30px;
-  font-size:16px;
-  line-height:1.8;
-  text-align:justify;
-}
-
-/* NAME */
-.name{
+.meta,.course{
   text-align:center;
-  font-size:30px;
-  margin-top:25px;
-  font-weight:bold;
-}
-
-/* META */
-.meta{
-  text-align:center;
-  margin-top:8px;
-  font-size:14px;
-}
-
-/* SEAL (GOVERNMENT STYLE EMBLEM) */
-.seal{
-  position:absolute;
-  bottom:40px;
-  right:40px;
-  width:140px;
-  height:140px;
-  border-radius:50%;
-
-  background: radial-gradient(circle at 30% 30%, #fff 0%, #f5e6b0 35%, #caa43a 70%, #6b4f12 100%);
-  border:6px double #8b6b1f;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-
-  font-size:10px;
-  font-weight:bold;
-  color:#3a2a00;
+  margin-top:10px;
 }
 
 /* QR */
@@ -168,11 +122,11 @@ button{
 <div class="container">
 <div class="panel">
 
-<h1>🏛️ DRF GOVERNMENT CERTIFICATE AUTHORITY SYSTEM</h1>
+<h1>🏛️ DRF UNIVERSITY SaaS DASHBOARD v3</h1>
 
 ---
 
-# 👨‍💼 ADMIN PANEL
+# 🔐 ADMIN LOGIN
 
 <div class="section">
 <input id="u" placeholder="Admin Username">
@@ -180,44 +134,53 @@ button{
 <button onclick="login()">Unlock Admin</button>
 </div>
 
+---
+
+# 👨‍💼 ADMIN PANEL
+
 <div class="section" id="adminPanel" style="display:none;">
 
-<h3>Issue Legal Certificate</h3>
+<h3>🎓 Mint Certificate</h3>
 
 <input id="name" placeholder="Full Name">
-<input id="gov" placeholder="National ID / Reference Number">
-<input id="course" placeholder="Program / Qualification Name">
-<input id="tier" placeholder="Classification Level (Distinction / Merit)">
-<input id="desc" placeholder="Legal Description (Optional)">
+<input id="gov" placeholder="ID Number">
+<input id="course" placeholder="Course Name (Manual)">
+<input id="tier" placeholder="Tier">
 
-<button onclick="mint()">Issue Certificate</button>
+<button onclick="mint()">Mint Certificate</button>
+
 </div>
 
 ---
 
-# 🔐 VERIFICATION PORTAL
+# 🌍 VERIFICATION PORTAL
 
 <div class="section">
-<h3>Verify Certificate</h3>
+<h3>🔐 Verify Certificate</h3>
 <input id="vid" placeholder="Enter Certificate ID">
 <button onclick="verify()">Verify</button>
-
 <p id="result"></p>
-<p id="score"></p>
-
 </div>
 
 ---
 
-# 📜 LEGAL CERTIFICATE
+# 📊 ANALYTICS
+
+<div class="section">
+<h3>📊 System Stats</h3>
+<p>Total Certificates: <span id="total">0</span></p>
+<p>Verification Requests: <span id="requests">0</span></p>
+</div>
+
+---
+
+# 🎓 CERTIFICATE VIEW
 
 <div class="diploma" id="diploma">
 
-<div class="header">DRF GOVERNMENT CERTIFICATE AUTHORITY</div>
+<div class="title">DRF UNIVERSITY DIGITAL CREDENTIAL SYSTEM</div>
 
-<div class="title">CERTIFICATE OF DIGITAL CREDENTIAL VERIFICATION</div>
-
-<div class="bodytext" id="d_desc"></div>
+<div class="course">CERTIFICATE OF DIGITAL CREDENTIAL VERIFICATION</div>
 
 <div class="name" id="d_name"></div>
 
@@ -226,23 +189,17 @@ button{
 <div class="meta" id="d_tier"></div>
 <div class="meta" id="d_chain"></div>
 
-<div class="seal">
-DRF<br>
-GOVERNMENT<br>
-AUTHORITY
-</div>
-
 <div id="qr"></div>
 
-<button onclick="downloadPDF()">📄 Export Legal PDF</button>
+<button onclick="downloadPDF()">📄 Download PDF</button>
 
 </div>
 
 ---
 
-# ⛓️ BLOCKCHAIN LEDGER
+# ⛓️ BLOCKCHAIN EXPLORER
 
-<h3>Ledger Explorer</h3>
+<h3>Blockchain Explorer</h3>
 <div id="chain"></div>
 
 </div>
@@ -250,7 +207,9 @@ AUTHORITY
 
 <script>
 
-let chain = JSON.parse(localStorage.getItem("drf_legal") || "[]");
+let chain = JSON.parse(localStorage.getItem("drf_v3") || "[]");
+
+let requests = 0;
 
 /* LOGIN */
 function login(){
@@ -266,26 +225,13 @@ async function hash(data){
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-/* CLEAN */
-function clean(b){
-  return {
-    id: b.id || "DRF-UNKNOWN",
-    name: b.name || "Genuine DRF Chain User",
-    gov: b.gov || "N/A",
-    course: b.course || "Not Assigned",
-    tier: b.tier || "Standard",
-    desc: b.desc || ""
-  };
-}
-
 /* MINT */
 async function mint(){
 
 const id="DRF-"+Date.now();
 const prev=chain.length?chain[chain.length-1].hash:"0";
 
-const data=id+name.value+gov.value+course.value+tier.value+prev;
-const h=await hash(data);
+const h=await hash(id+name.value+gov.value+course.value+tier.value+prev);
 
 chain.push({
   id,
@@ -293,33 +239,31 @@ chain.push({
   gov:gov.value,
   course:course.value,
   tier:tier.value,
-  desc:desc.value,
   prev,
   hash:h
 });
 
-localStorage.setItem("drf_legal",JSON.stringify(chain));
+localStorage.setItem("drf_v3",JSON.stringify(chain));
 
 render();
-alert("Legal Certificate Issued ✔");
+updateStats();
+
+alert("Certificate Minted ✔");
 }
 
 /* VERIFY */
 function verify(){
 
+requests++;
+
 let b=chain.find(x=>x.id===vid.value);
 
 if(!b){
 result.innerHTML="<span class='bad'>NOT FOUND</span>";
-diploma.style.display="none";
 return;
 }
 
-b=clean(b);
-
 diploma.style.display="block";
-
-d_desc.innerHTML=b.desc;
 
 d_name.innerHTML=b.name;
 d_course.innerHTML=b.course;
@@ -327,12 +271,15 @@ d_id.innerHTML="ID: "+b.gov;
 d_tier.innerHTML=b.tier;
 d_chain.innerHTML="⛓️ "+b.id;
 
+/* QR */
+qr.innerHTML="";
 new QRCode(document.getElementById("qr"),{
 text:location.href+"?id="+b.id,
 width:110,height:110
 });
 
-result.innerHTML="<span class='ok'>VERIFIED LEGAL CERTIFICATE ✔</span>";
+result.innerHTML="<span class='ok'>VERIFIED ✔</span>";
+updateStats();
 }
 
 /* PDF */
@@ -340,12 +287,17 @@ function downloadPDF(){
 html2pdf().from(document.getElementById("diploma")).save();
 }
 
+/* STATS */
+function updateStats(){
+document.getElementById("total").innerText=chain.length;
+document.getElementById("requests").innerText=requests;
+}
+
 /* LEDGER */
 function render(){
 let box=document.getElementById("chain");
 box.innerHTML="";
 chain.forEach(b=>{
-b=clean(b);
 box.innerHTML+=`
 <div class="block">
 <b>${b.id}</b> | ${b.name} | ${b.course}
@@ -354,6 +306,7 @@ box.innerHTML+=`
 }
 
 render();
+updateStats();
 
 </script>
 
