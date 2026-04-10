@@ -1,54 +1,267 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>DRF Certificate - Hassan Fayaz</title>
-  <style>
-    body {
-      font-family: 'Georgia', serif;
-      background: #f8f6f2;
-      text-align: center;
-      padding: 50px;
-    }
-    .card {
-      background: white;
-      padding: 40px;
-      border: 2px solid gold;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-    h1 {
-      font-size: 40px;
-      letter-spacing: 2px;
-    }
-    .name {
-      font-size: 36px;
-      margin: 20px 0;
-      font-weight: bold;
-    }
-    .verify {
-      margin-top: 30px;
-      padding: 15px;
-      border: 1px solid #ccc;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>DRF Chain Blockchain Certificate System</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Georgia", serif;
+  background: #f4f1ea;
+}
+
+.page {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.certificate {
+  width: 900px;
+  background: white;
+  padding: 60px;
+  border: 3px solid #b08d57;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  text-align: center;
+  position: relative;
+}
+
+.watermark {
+  position: absolute;
+  font-size: 140px;
+  opacity: 0.05;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+h1 {
+  letter-spacing: 3px;
+}
+
+.name {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+/* SEAL */
+.seal {
+  width: 110px;
+  height: 110px;
+  margin: 20px auto;
+  border-radius: 50%;
+  border: 6px double #b08d57;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: stamp 1.2s ease-out;
+  background: radial-gradient(circle, #fff, #f3e7d3);
+}
+
+@keyframes stamp {
+  0% { transform: scale(3); opacity: 0; }
+  60% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* VERIFY BOX */
+.verify-box {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #b08d57;
+  background: #faf8f3;
+  display: inline-block;
+}
+
+input {
+  padding: 10px;
+  width: 240px;
+}
+
+button {
+  padding: 10px 15px;
+  background: #b08d57;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #8c6d3d;
+}
+
+/* OUTPUT */
+#output {
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+/* BLOCK LIST */
+.chain {
+  margin-top: 40px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.block {
+  border-left: 4px solid #b08d57;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+</style>
 </head>
 
 <body>
-  <div class="card">
-    <h1>MASTER LEVEL CERTIFICATION</h1>
 
-    <div class="name">Hassan Fayaz</div>
+<div class="page">
+<div class="certificate">
 
-    <p>Certified Web3 Blockchain Engineer</p>
+<div class="watermark">DRF</div>
 
-    <p>
-      Recognized for developing DRFchain ecosystem including wallet,
-      coin, social platforms, and AI systems.
-    </p>
+<h1>DRF CHAIN CERTIFICATE</h1>
 
-    <div class="verify">
-      <p><b>Certificate ID:</b> DRF-2026-0001</p>
-      <p><b>Status:</b> ✅ Verified</p>
-    </div>
-  </div>
+<div class="seal">DRF BLOCK</div>
+
+<div class="name">Hassan Fayaz</div>
+
+<p>Blockchain Verified Web3 Engineer Certificate</p>
+
+<!-- QR -->
+<div id="qrcode"></div>
+
+<!-- VERIFY -->
+<div class="verify-box">
+  <h3>Blockchain Verification</h3>
+  <input id="certInput" placeholder="Enter Certificate ID">
+  <button onclick="verify()">Verify</button>
+  <div id="output"></div>
+</div>
+
+<!-- CHAIN VIEW -->
+<div class="chain">
+  <h3>🔗 Blockchain Ledger</h3>
+  <div id="chainView"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+//////////////////////////
+// BLOCKCHAIN DATA
+//////////////////////////
+
+const chain = [
+  {
+    index: 1,
+    certId: "DRF-2026-0001",
+    name: "Hassan Fayaz",
+    id: "A-303**8",
+    prevHash: "0"
+  }
+];
+
+//////////////////////////
+// SHA256 HASH FUNCTION
+//////////////////////////
+
+async function hash(data) {
+  const enc = new TextEncoder().encode(data);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+//////////////////////////
+// BUILD BLOCK HASHES
+//////////////////////////
+
+async function buildChain() {
+  for (let i = 0; i < chain.length; i++) {
+    const block = chain[i];
+    const data = block.certId + block.name + block.id + block.prevHash;
+    block.hash = await hash(data);
+  }
+  renderChain();
+}
+
+//////////////////////////
+// VERIFY CERTIFICATE
+//////////////////////////
+
+async function verify() {
+  const input = document.getElementById("certInput").value;
+  const output = document.getElementById("output");
+
+  const block = chain.find(b => b.certId === input);
+
+  if (!block) {
+    output.innerHTML = "❌ NOT FOUND IN BLOCKCHAIN";
+    output.style.color = "red";
+    return;
+  }
+
+  const data = block.certId + block.name + block.id + block.prevHash;
+  const testHash = await hash(data);
+
+  if (testHash === block.hash) {
+    output.innerHTML =
+      "✔ BLOCK VERIFIED<br>" +
+      "Name: " + block.name + "<br>" +
+      "ID: " + block.id + "<br>" +
+      "HASH MATCHED ✔";
+
+    output.style.color = "green";
+  } else {
+    output.innerHTML = "⚠ TAMPER DETECTED!";
+    output.style.color = "orange";
+  }
+}
+
+//////////////////////////
+// RENDER CHAIN
+//////////////////////////
+
+function renderChain() {
+  const view = document.getElementById("chainView");
+  view.innerHTML = "";
+
+  chain.forEach(b => {
+    view.innerHTML += `
+      <div class="block">
+        <b>${b.certId}</b><br>
+        Name: ${b.name}<br>
+        ID: ${b.id}<br>
+        Hash: ${b.hash}
+      </div>
+    `;
+  });
+}
+
+//////////////////////////
+// QR CODE
+//////////////////////////
+
+new QRCode(document.getElementById("qrcode"), {
+  text: "https://www.drfchain.org/Hassanfayaz.html",
+  width: 120,
+  height: 120
+});
+
+//////////////////////////
+// INIT
+//////////////////////////
+
+buildChain();
+
+</script>
+
 </body>
 </html>
