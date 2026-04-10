@@ -2,216 +2,154 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Certificate Verification</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>DRF Certificate Verification Portal</title>
 
 <style>
-  body {
-    font-family: "Garamond", "Georgia", serif;
-    background: #f4f1ea;
-    margin: 0;
-    padding: 0;
-  }
+body {
+  font-family: "Georgia", serif;
+  background: #f4f1ea;
+  margin: 0;
+  padding: 0;
+}
 
-  .page {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-  }
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
 
-  .certificate {
-    width: 850px;
-    background: white;
-    padding: 70px;
-    border: 3px solid #b08d57;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
+.card {
+  width: 800px;
+  background: white;
+  padding: 50px;
+  border: 3px solid #b08d57;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+  text-align: center;
+}
 
-  /* WATERMARK */
-  .watermark {
-    position: absolute;
-    font-size: 140px;
-    opacity: 0.05;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: bold;
-    letter-spacing: 15px;
-  }
+h1 {
+  letter-spacing: 2px;
+  margin-bottom: 30px;
+}
 
-  h1 {
-    font-size: 32px;
-    letter-spacing: 3px;
-    margin-bottom: 10px;
-  }
+input {
+  width: 300px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  margin-top: 10px;
+}
 
-  .name {
-    font-size: 38px;
-    font-weight: bold;
-    margin: 20px 0;
-  }
+button {
+  padding: 12px 18px;
+  background: #b08d57;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-left: 10px;
+}
 
-  .desc {
-    font-size: 18px;
-    line-height: 1.7;
-    max-width: 700px;
-    margin: auto;
-    color: #333;
-  }
+button:hover {
+  background: #8c6d3d;
+}
 
-  /* =========================
-     EMBOSSED SEAL ANIMATION
-  ========================== */
+/* RESULT BOX */
+.result {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #d6c6a5;
+  background: #faf8f3;
+  text-align: left;
+  display: none;
+}
 
-  .seal-wrapper {
-    margin: 30px auto;
-    width: 120px;
-    height: 120px;
-    position: relative;
-  }
+.status {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
 
-  .seal {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 6px double #b08d57;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #b08d57;
-    font-size: 14px;
-    background: radial-gradient(circle, #fff 60%, #f3e7d3);
-    box-shadow:
-      inset 0 4px 10px rgba(0,0,0,0.2),
-      0 10px 20px rgba(0,0,0,0.15);
-    
-    /* ANIMATION */
-    transform: scale(0);
-    opacity: 0;
-    animation: stamp 1.2s ease-out forwards;
-  }
+.verified {
+  color: green;
+}
 
-  @keyframes stamp {
-    0% {
-      transform: scale(3);
-      opacity: 0;
-    }
-    60% {
-      transform: scale(0.9);
-      opacity: 1;
-    }
-    80% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
-  /* VERIFY BUTTON */
-  .verify-btn {
-    display: inline-block;
-    margin-top: 25px;
-    padding: 12px 25px;
-    background: #b08d57;
-    color: white;
-    text-decoration: none;
-    font-weight: bold;
-    border-radius: 6px;
-    transition: 0.3s;
-  }
-
-  .verify-btn:hover {
-    background: #8c6d3d;
-    transform: translateY(-2px);
-  }
-
-  /* FOOTER */
-  .footer {
-    margin-top: 50px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-  }
-
-  .line {
-    border-top: 1px solid #333;
-    width: 200px;
-    margin-top: 8px;
-  }
-
-  /* QR */
-  #qrcode {
-    margin-top: 10px;
-    padding: 10px;
-    background: white;
-    border: 1px solid #ddd;
-  }
+.invalid {
+  color: red;
+}
 </style>
 </head>
 
 <body>
 
-<div class="page">
-  <div class="certificate">
+<div class="container">
+  <div class="card">
 
-    <div class="watermark">DRF</div>
+    <h1>Certificate Verification Portal</h1>
 
-    <h1>Certificate of Mastery</h1>
+    <p>Enter Certificate ID to verify authenticity</p>
 
-    <!-- EMBOSSED SEAL -->
-    <div class="seal-wrapper">
-      <div class="seal">DRF OFFICIAL SEAL</div>
-    </div>
+    <input type="text" id="certId" placeholder="e.g. DRF-2026-0001">
+    <button onclick="verify()">Verify</button>
 
-    <div class="name">Hassan Fayaz</div>
-
-    <div class="desc">
-      This certificate recognizes outstanding achievement in Web3 Blockchain Engineering,
-      including development of decentralized systems, DRF chain architecture, AI integration,
-      and ecosystem design.
-    </div>
-
-    <!-- VERIFY BUTTON -->
-    <a class="verify-btn"
-       href="https://www.drfchain.org/Hassanfayaz.html"
-       target="_blank">
-       🔗 Verify on DRF Chain
-    </a>
-
-    <!-- QR CODE -->
-    <div id="qrcode"></div>
-
-    <!-- FOOTER -->
-    <div class="footer">
-      <div>
-        <p><b>Authorized Signature</b></p>
-        <div class="line"></div>
-        <p>DRF Chain Authority</p>
-      </div>
-
-      <div>
-        <p><b>Certificate ID</b></p>
-        <p>DRF-2026-0001</p>
-      </div>
-    </div>
+    <div id="result" class="result"></div>
 
   </div>
 </div>
 
 <script>
-  new QRCode(document.getElementById("qrcode"), {
-    text: "https://www.drfchain.org/Hassanfayaz.html",
-    width: 120,
-    height: 120
-  });
+/* =========================
+   DATABASE (BLOCKCHAIN STYLE)
+========================= */
+
+const certificates = {
+  "DRF-2026-0001": {
+    name: "Hassan Fayaz",
+    id: "A-303**8",
+    course: "Master Level Certification in Web3 Blockchain Engineering",
+    status: "Verified"
+  },
+
+  "DRF-2026-0002": {
+    name: "Ali Ahmed",
+    id: "A-889**2",
+    course: "Master Level Certification in Smart Contract Development",
+    status: "Verified"
+  },
+
+  "DRF-2026-0003": {
+    name: "Sara Mohamed",
+    id: "A-112**7",
+    course: "Master Level Certification in AI Blockchain Systems",
+    status: "Verified"
+  }
+};
+
+/* =========================
+   VERIFY FUNCTION
+========================= */
+
+function verify() {
+  const input = document.getElementById("certId").value;
+  const resultBox = document.getElementById("result");
+
+  const cert = certificates[input];
+
+  resultBox.style.display = "block";
+
+  if (cert) {
+    resultBox.innerHTML = `
+      <div class="status verified">✔ CERTIFICATE VERIFIED</div>
+      <p><b>Name:</b> ${cert.name}</p>
+      <p><b>Government ID:</b> ${cert.id}</p>
+      <p><b>Course:</b> ${cert.course}</p>
+      <p><b>Certificate ID:</b> ${input}</p>
+    `;
+  } else {
+    resultBox.innerHTML = `
+      <div class="status invalid">❌ CERTIFICATE NOT FOUND</div>
+      <p>This certificate is not registered in DRF Chain system.</p>
+    `;
+  }
+}
 </script>
 
 </body>
