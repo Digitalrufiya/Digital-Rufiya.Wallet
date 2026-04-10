@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Chain University SaaS</title>
+<title>DRF Chain SaaS Full System</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -28,7 +28,7 @@ body{
   border-radius:20px;
 }
 
-/* INPUT */
+/* INPUTS */
 input,select{
   width:100%;
   padding:12px;
@@ -45,7 +45,14 @@ button{
   font-weight:bold;
 }
 
-/* ================= DIPLOMA ================= */
+/* SECTIONS */
+.section{
+  margin-top:20px;
+  padding:20px;
+  border:1px solid rgba(255,255,255,0.15);
+}
+
+/* DIPLOMA */
 .diploma{
   display:none;
   margin-top:20px;
@@ -57,52 +64,28 @@ button{
   box-shadow:0 40px 120px rgba(0,0,0,0.8);
 }
 
-.title{
-  text-align:center;
-  font-size:28px;
-  letter-spacing:3px;
-}
+.title{text-align:center;font-size:28px;letter-spacing:3px;}
+.name{text-align:center;font-size:34px;font-weight:bold;margin-top:10px;}
+.meta{text-align:center;margin-top:10px;}
+.course{text-align:center;margin-top:10px;}
 
-.name{
-  text-align:center;
-  font-size:34px;
-  margin-top:10px;
-  font-weight:bold;
-}
-
-.course,.meta{
-  text-align:center;
-  margin-top:10px;
-}
-
-/* ================= PROFESSIONAL SEAL ================= */
+/* PROFESSIONAL SEAL */
 .seal{
   position:absolute;
   bottom:40px;
   right:40px;
-
   width:150px;
   height:150px;
   border-radius:50%;
-
-  background:
-    radial-gradient(circle at 30% 30%, #fff 0%, #f6e7c1 30%, #d4af37 70%, #8b6b1f 100%);
-
+  background: radial-gradient(circle,#fff,#f6e7c1,#d4af37,#8b6b1f);
   border:6px double #b08d37;
-
-  box-shadow:
-    inset 0 0 15px rgba(0,0,0,0.25),
-    0 10px 30px rgba(0,0,0,0.3);
-
   display:flex;
   align-items:center;
   justify-content:center;
-
+  text-align:center;
   font-size:11px;
   font-weight:bold;
-  text-align:center;
   color:#3b2a00;
-
   transform:rotate(-8deg);
 }
 
@@ -132,17 +115,59 @@ button{
 <div class="container">
 <div class="panel">
 
-<h1>🏛️ DRF CHAIN UNIVERSITY (Genuine Authority System)</h1>
+<h1>🏛️ DRF CHAIN UNIVERSITY SAAS</h1>
 
-<!-- VERIFY FIRST -->
-<div>
-<h3>🔐 Verification Portal</h3>
+---
+
+# 👨‍💼 ADMIN LOGIN
+
+<div class="section">
+<h3>🔐 Admin Login</h3>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
+<button onclick="login()">Unlock Admin Panel</button>
+</div>
+
+---
+
+# 👨‍💼 ADMIN PANEL (RESTORED)
+
+<div class="section" id="adminPanel" style="display:none;">
+<h3>🎓 Mint Certificate (Admin Only)</h3>
+
+<input id="name" placeholder="Full Name">
+<input id="gov" placeholder="ID Number">
+
+<select id="course">
+  <option>Diploma in Human Resources</option>
+  <option>Diploma in Administrative Office</option>
+  <option>Bachelor in Business Management</option>
+</select>
+
+<select id="tier">
+  <option>Top Ten Tier</option>
+  <option>Distinction</option>
+  <option>Merit</option>
+</select>
+
+<button onclick="mint()">Mint Certificate</button>
+</div>
+
+---
+
+# 🌍 VERIFICATION PORTAL
+
+<div class="section">
+<h3>🔐 Verify Certificate</h3>
 <input id="vid" placeholder="Enter Certificate ID">
 <button onclick="verify()">Verify</button>
 <p id="result"></p>
 </div>
 
-<!-- CERTIFICATE -->
+---
+
+# 🎓 CERTIFICATE DISPLAY
+
 <div class="diploma" id="diploma">
 
 <div class="title">DRF CHAIN UNIVERSITY</div>
@@ -153,18 +178,17 @@ button{
 <div class="meta" id="d_tier"></div>
 <div class="meta" id="d_chain"></div>
 
-<div class="seal">
-DRF CHAIN<br>
-OFFICIAL<br>
-SEAL
-</div>
+<div class="seal">DRF CHAIN<br>OFFICIAL SEAL</div>
 
 <div id="qr"></div>
 
 </div>
 
-<!-- LEDGER -->
-<h3>⛓️ Ledger</h3>
+---
+
+# ⛓️ LEDGER
+
+<h3>Blockchain Ledger</h3>
 <div id="chain"></div>
 
 </div>
@@ -172,10 +196,25 @@ SEAL
 
 <script>
 
-/* ================= STORAGE ================= */
-let chain = JSON.parse(localStorage.getItem("drf_final") || "[]");
+let chain = JSON.parse(localStorage.getItem("drf_saas") || "[]");
 
-/* ================= NORMALIZE (FIX ALL ISSUES) ================= */
+/* LOGIN */
+function login(){
+  if(u.value==="Fayaz91000" && p.value==="91000"){
+    adminPanel.style.display="block";
+  } else {
+    alert("Invalid login");
+  }
+}
+
+/* HASH */
+async function hash(data){
+  const e=new TextEncoder().encode(data);
+  const b=await crypto.subtle.digest("SHA-256",e);
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+/* CLEAN DATA */
 function clean(b){
   return {
     id: b.id || "DRF-UNKNOWN",
@@ -186,46 +225,69 @@ function clean(b){
   };
 }
 
-/* ================= VERIFY ================= */
+/* MINT */
+async function mint(){
+
+const id="DRF-"+Date.now();
+const prev=chain.length?chain[chain.length-1].hash:"0";
+
+const data=id+name.value+gov.value+course.value+tier.value+prev;
+const h=await hash(data);
+
+chain.push({
+  id,
+  name:name.value,
+  gov:gov.value,
+  course:course.value,
+  tier:tier.value,
+  prev,
+  hash:h
+});
+
+localStorage.setItem("drf_saas",JSON.stringify(chain));
+
+render();
+alert("Certificate Minted ✔");
+}
+
+/* VERIFY */
 function verify(){
 
-let b = chain.find(x => x.id === vid.value);
+let b=chain.find(x=>x.id===vid.value);
 
 if(!b){
-  result.innerHTML = "<span class='bad'>NOT FOUND</span>";
-  diploma.style.display = "none";
-  return;
+result.innerHTML="<span class='bad'>NOT FOUND</span>";
+diploma.style.display="none";
+return;
 }
 
 b = clean(b);
 
-/* SHOW SAME CERTIFICATE AFTER VERIFY */
-diploma.style.display = "block";
+diploma.style.display="block";
 
-d_name.innerHTML = b.name;
-d_id.innerHTML = "ID: " + b.gov;
-d_course.innerHTML = b.course;
-d_tier.innerHTML = "🏆 " + b.tier;
-d_chain.innerHTML = "⛓️ " + b.id;
+d_name.innerHTML=b.name;
+d_id.innerHTML="ID: "+b.gov;
+d_course.innerHTML=b.course;
+d_tier.innerHTML="🏆 "+b.tier;
+d_chain.innerHTML="⛓️ "+b.id;
 
-/* QR */
-qr.innerHTML = "";
+qr.innerHTML="";
 new QRCode(document.getElementById("qr"),{
-  text: location.href + "?id=" + b.id,
+  text:location.href+"?id="+b.id,
   width:110,
   height:110
 });
 
-result.innerHTML = "<span class='ok'>VERIFIED ✔</span>";
+result.innerHTML="<span class='ok'>VERIFIED ✔</span>";
 }
 
-/* ================= RENDER ================= */
+/* RENDER */
 function render(){
 let box=document.getElementById("chain");
 box.innerHTML="";
 chain.forEach(b=>{
-b = clean(b);
-box.innerHTML += `
+b=clean(b);
+box.innerHTML+=`
 <div class="block">
 <b>${b.id}</b> | ${b.name} | ${b.course}
 </div>`;
