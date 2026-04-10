@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Chain Admin + Blockchain System</title>
+<title>DRF Chain Full Certificate System</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
 body {
@@ -18,7 +21,7 @@ body {
 }
 
 .panel {
-  width: 900px;
+  width: 950px;
   background: white;
   padding: 40px;
   border: 3px solid #b08d57;
@@ -32,8 +35,7 @@ h1, h2 {
 input {
   width: 100%;
   padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ccc;
+  margin: 6px 0;
 }
 
 button {
@@ -48,25 +50,31 @@ button:hover {
   background: #8c6d3d;
 }
 
-/* SECTIONS */
 .section {
-  margin-top: 30px;
+  margin-top: 25px;
   padding: 20px;
   border: 1px solid #d6c6a5;
   background: #faf8f3;
 }
 
-/* BLOCKS */
 .block {
   border-left: 4px solid #b08d57;
   padding: 10px;
   margin-top: 10px;
-  background: #fff;
-  font-size: 14px;
+  background: white;
 }
 
 .verified { color: green; font-weight: bold; }
 .error { color: red; font-weight: bold; }
+
+/* CERTIFICATE */
+.certificate {
+  display: none;
+  background: white;
+  padding: 40px;
+  border: 2px solid #b08d57;
+  margin-top: 20px;
+}
 </style>
 </head>
 
@@ -75,32 +83,50 @@ button:hover {
 <div class="container">
 <div class="panel">
 
-<h1>DRF Chain Blockchain System</h1>
+<h1>DRF Chain Certificate System</h1>
 
-<!-- ================= ADMIN PANEL ================= -->
+<!-- ================= LOGIN ================= -->
 <div class="section">
-<h2>👨‍💼 Admin Panel (Issue Certificate)</h2>
-
-<input id="name" placeholder="Student Name">
-<input id="govid" placeholder="Government ID (A-XXX**)">
-<input id="course" placeholder="Course Name">
-<button onclick="addCertificate()">Generate Certificate</button>
+<h2>🔐 Admin Login</h2>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+<p id="msg"></p>
 </div>
 
-<!-- ================= VERIFY PANEL ================= -->
+<!-- ================= ADMIN ================= -->
+<div class="section" id="admin" style="display:none;">
+<h2>👨‍💼 Issue Certificate</h2>
+
+<input id="name" placeholder="Student Name">
+<input id="govid" placeholder="Government ID">
+<input id="course" placeholder="Course Name">
+
+<button onclick="addCert()">Generate Certificate</button>
+</div>
+
+<!-- ================= VERIFY ================= -->
 <div class="section">
 <h2>🔐 Verification Portal</h2>
 
 <input id="verifyId" placeholder="Enter Certificate ID">
-<button onclick="verifyCertificate()">Verify</button>
+<button onclick="verify()">Verify</button>
 
-<div id="verifyResult"></div>
+<div id="result"></div>
 </div>
 
-<!-- ================= BLOCKCHAIN VIEW ================= -->
+<!-- ================= BLOCKCHAIN ================= -->
 <div class="section">
 <h2>⛓️ Blockchain Ledger</h2>
-<div id="chainView"></div>
+<div id="chain"></div>
+</div>
+
+<!-- ================= CERTIFICATE OUTPUT ================= -->
+<div class="certificate" id="certificate">
+<h2>DRF CHAIN CERTIFICATE</h2>
+<div id="certData"></div>
+<div id="qr"></div>
+<button onclick="downloadPDF()">Download PDF</button>
 </div>
 
 </div>
@@ -108,109 +134,138 @@ button:hover {
 
 <script>
 
-///////////////////////////////
-// LOAD OR INIT CHAIN
-///////////////////////////////
-let chain = JSON.parse(localStorage.getItem("drf_chain")) || [];
+//////////////////////////
+// STORAGE
+//////////////////////////
+let chain = JSON.parse(localStorage.getItem("drf")) || [];
 
-///////////////////////////////
-// SHA-256 HASH FUNCTION
-///////////////////////////////
+//////////////////////////
+// LOGIN
+//////////////////////////
+function login() {
+  if (
+    document.getElementById("user").value === "Fayaz91000" &&
+    document.getElementById("pass").value === "91000"
+  ) {
+    document.getElementById("admin").style.display = "block";
+    document.getElementById("msg").innerHTML = "✔ Access Granted";
+  } else {
+    document.getElementById("msg").innerHTML = "❌ Invalid Login";
+  }
+}
+
+//////////////////////////
+// HASH
+//////////////////////////
 async function hash(data) {
   const enc = new TextEncoder().encode(data);
   const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-///////////////////////////////
-// ADD CERTIFICATE (ADMIN)
-///////////////////////////////
-async function addCertificate() {
+//////////////////////////
+// ADD CERTIFICATE
+//////////////////////////
+async function addCert() {
 
   const name = document.getElementById("name").value;
   const govid = document.getElementById("govid").value;
   const course = document.getElementById("course").value;
 
-  const certId = "DRF-" + (2026 + chain.length) + "-" + (1000 + chain.length);
+  const certId = "DRF-2026-" + (1000 + chain.length);
+  const prev = chain.length ? chain[chain.length-1].hash : "0";
 
-  const prevHash = chain.length ? chain[chain.length - 1].hash : "0";
+  const data = certId + name + govid + course + prev;
+  const h = await hash(data);
 
-  const dataString = certId + name + govid + course + prevHash;
-
-  const newHash = await hash(dataString);
-
-  const block = {
-    index: chain.length + 1,
-    certId,
-    name,
-    govid,
-    course,
-    prevHash,
-    hash: newHash
-  };
+  const block = { certId, name, govid, course, prev, hash: h };
 
   chain.push(block);
-  localStorage.setItem("drf_chain", JSON.stringify(chain));
+  localStorage.setItem("drf", JSON.stringify(chain));
 
-  renderChain();
-
-  alert("Certificate Issued: " + certId);
+  render();
 }
 
-///////////////////////////////
-// VERIFY CERTIFICATE
-///////////////////////////////
-async function verifyCertificate() {
+//////////////////////////
+// VERIFY (AUTO QR SUPPORT)
+//////////////////////////
+window.onload = function () {
+  const url = new URLSearchParams(window.location.search);
+  const id = url.get("id");
+  if (id) {
+    document.getElementById("verifyId").value = id;
+    verify();
+  }
+};
 
+async function verify() {
   const id = document.getElementById("verifyId").value;
-  const box = document.getElementById("verifyResult");
+  const r = document.getElementById("result");
 
-  const block = chain.find(b => b.certId === id);
+  const b = chain.find(x => x.certId === id);
 
-  if (!block) {
-    box.innerHTML = "<p class='error'>❌ NOT FOUND IN BLOCKCHAIN</p>";
+  if (!b) {
+    r.innerHTML = "<p class='error'>❌ NOT FOUND</p>";
     return;
   }
 
-  const dataString = block.certId + block.name + block.govid + block.course + block.prevHash;
-  const checkHash = await hash(dataString);
+  r.innerHTML = `
+    <p class='verified'>✔ VERIFIED</p>
+    <p>Name: ${b.name}</p>
+    <p>Gov ID: ${b.govid}</p>
+    <p>Course: ${b.course}</p>
+  `;
 
-  if (checkHash === block.hash) {
-    box.innerHTML = `
-      <p class='verified'>✔ CERTIFICATE VERIFIED</p>
-      <p><b>Name:</b> ${block.name}</p>
-      <p><b>Gov ID:</b> ${block.govid}</p>
-      <p><b>Course:</b> ${block.course}</p>
-      <p><b>Certificate ID:</b> ${block.certId}</p>
-    `;
-  } else {
-    box.innerHTML = "<p class='error'>⚠ TAMPER DETECTED</p>";
-  }
+  showCertificate(b);
 }
 
-///////////////////////////////
-// RENDER BLOCKCHAIN
-///////////////////////////////
-function renderChain() {
+//////////////////////////
+// CERTIFICATE + QR
+//////////////////////////
+function showCertificate(b) {
 
-  const view = document.getElementById("chainView");
-  view.innerHTML = "";
+  document.getElementById("certificate").style.display = "block";
+
+  document.getElementById("certData").innerHTML = `
+    <h3>${b.name}</h3>
+    <p>${b.course}</p>
+    <p>ID: ${b.certId}</p>
+  `;
+
+  document.getElementById("qr").innerHTML = "";
+
+  new QRCode(document.getElementById("qr"), {
+    text: window.location.href.split('?')[0] + "?id=" + b.certId,
+    width: 120,
+    height: 120
+  });
+}
+
+//////////////////////////
+// PDF DOWNLOAD
+//////////////////////////
+function downloadPDF() {
+  html2pdf().from(document.getElementById("certificate")).save();
+}
+
+//////////////////////////
+// RENDER CHAIN
+//////////////////////////
+function render() {
+  const c = document.getElementById("chain");
+  c.innerHTML = "";
 
   chain.forEach(b => {
-    view.innerHTML += `
+    c.innerHTML += `
       <div class="block">
         <b>${b.certId}</b><br>
-        Name: ${b.name}<br>
-        Course: ${b.course}<br>
-        Hash: ${b.hash}
+        ${b.name} | ${b.course}
       </div>
     `;
   });
 }
 
-renderChain();
+render();
 
 </script>
 
