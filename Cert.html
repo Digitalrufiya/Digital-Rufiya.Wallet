@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Chain SaaS Full System</title>
+<title>DRF Chain SaaS PDF System</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
 
@@ -29,12 +30,12 @@ body{
 }
 
 /* INPUTS */
-input,select{
+input{
   width:100%;
   padding:12px;
   margin:6px 0;
-  border-radius:8px;
   border:none;
+  border-radius:8px;
 }
 
 button{
@@ -64,30 +65,10 @@ button{
   box-shadow:0 40px 120px rgba(0,0,0,0.8);
 }
 
+/* TEXT */
 .title{text-align:center;font-size:28px;letter-spacing:3px;}
 .name{text-align:center;font-size:34px;font-weight:bold;margin-top:10px;}
-.meta{text-align:center;margin-top:10px;}
-.course{text-align:center;margin-top:10px;}
-
-/* PROFESSIONAL SEAL */
-.seal{
-  position:absolute;
-  bottom:40px;
-  right:40px;
-  width:150px;
-  height:150px;
-  border-radius:50%;
-  background: radial-gradient(circle,#fff,#f6e7c1,#d4af37,#8b6b1f);
-  border:6px double #b08d37;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  font-size:11px;
-  font-weight:bold;
-  color:#3b2a00;
-  transform:rotate(-8deg);
-}
+.course,.meta{text-align:center;margin-top:10px;}
 
 /* QR */
 #qr{
@@ -115,7 +96,7 @@ button{
 <div class="container">
 <div class="panel">
 
-<h1>🏛️ DRF CHAIN UNIVERSITY SAAS</h1>
+<h1>🏛️ DRF CHAIN SAAS (PDF CERTIFICATE SYSTEM)</h1>
 
 ---
 
@@ -125,37 +106,31 @@ button{
 <h3>🔐 Admin Login</h3>
 <input id="u" placeholder="Username">
 <input id="p" type="password" placeholder="Password">
-<button onclick="login()">Unlock Admin Panel</button>
+<button onclick="login()">Unlock Admin</button>
 </div>
 
 ---
 
-# 👨‍💼 ADMIN PANEL (RESTORED)
+# 👨‍💼 MINT CERTIFICATE (MANUAL COURSE INPUT)
 
 <div class="section" id="adminPanel" style="display:none;">
-<h3>🎓 Mint Certificate (Admin Only)</h3>
+
+<h3>🎓 Create Certificate</h3>
 
 <input id="name" placeholder="Full Name">
 <input id="gov" placeholder="ID Number">
 
-<select id="course">
-  <option>Diploma in Human Resources</option>
-  <option>Diploma in Administrative Office</option>
-  <option>Bachelor in Business Management</option>
-</select>
+<!-- MANUAL COURSE INPUT -->
+<input id="course" placeholder="Enter Course Name (ANY COURSE YOU WANT)">
 
-<select id="tier">
-  <option>Top Ten Tier</option>
-  <option>Distinction</option>
-  <option>Merit</option>
-</select>
+<input id="tier" placeholder="Achievement (Top Ten Tier / Distinction)">
 
 <button onclick="mint()">Mint Certificate</button>
 </div>
 
 ---
 
-# 🌍 VERIFICATION PORTAL
+# 🌍 VERIFICATION
 
 <div class="section">
 <h3>🔐 Verify Certificate</h3>
@@ -166,7 +141,7 @@ button{
 
 ---
 
-# 🎓 CERTIFICATE DISPLAY
+# 🎓 CERTIFICATE
 
 <div class="diploma" id="diploma">
 
@@ -178,9 +153,12 @@ button{
 <div class="meta" id="d_tier"></div>
 <div class="meta" id="d_chain"></div>
 
-<div class="seal">DRF CHAIN<br>OFFICIAL SEAL</div>
-
 <div id="qr"></div>
+
+<!-- DOWNLOAD BUTTON -->
+<div style="text-align:center;margin-top:30px;">
+<button onclick="downloadPDF()">📄 Download PDF Certificate</button>
+</div>
 
 </div>
 
@@ -196,7 +174,7 @@ button{
 
 <script>
 
-let chain = JSON.parse(localStorage.getItem("drf_saas") || "[]");
+let chain = JSON.parse(localStorage.getItem("drf_pdf") || "[]");
 
 /* LOGIN */
 function login(){
@@ -214,7 +192,7 @@ async function hash(data){
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-/* CLEAN DATA */
+/* CLEAN */
 function clean(b){
   return {
     id: b.id || "DRF-UNKNOWN",
@@ -244,7 +222,7 @@ chain.push({
   hash:h
 });
 
-localStorage.setItem("drf_saas",JSON.stringify(chain));
+localStorage.setItem("drf_pdf",JSON.stringify(chain));
 
 render();
 alert("Certificate Minted ✔");
@@ -261,24 +239,27 @@ diploma.style.display="none";
 return;
 }
 
-b = clean(b);
+b=clean(b);
 
 diploma.style.display="block";
 
 d_name.innerHTML=b.name;
 d_id.innerHTML="ID: "+b.gov;
 d_course.innerHTML=b.course;
-d_tier.innerHTML="🏆 "+b.tier;
+d_tier.innerHTML=b.tier;
 d_chain.innerHTML="⛓️ "+b.id;
 
-qr.innerHTML="";
 new QRCode(document.getElementById("qr"),{
-  text:location.href+"?id="+b.id,
-  width:110,
-  height:110
+text:location.href+"?id="+b.id,
+width:110,height:110
 });
 
 result.innerHTML="<span class='ok'>VERIFIED ✔</span>";
+}
+
+/* PDF DOWNLOAD */
+function downloadPDF(){
+html2pdf().from(document.getElementById("diploma")).save();
 }
 
 /* RENDER */
