@@ -2,78 +2,81 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DRF Certificate Verification Portal</title>
+<title>DRF Chain System</title>
 
 <style>
 body {
-  font-family: "Georgia", serif;
+  font-family: Georgia, serif;
   background: #f4f1ea;
   margin: 0;
-  padding: 0;
 }
 
 .container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  padding: 30px;
 }
 
-.card {
-  width: 800px;
+.panel {
+  width: 900px;
   background: white;
-  padding: 50px;
+  padding: 40px;
   border: 3px solid #b08d57;
   box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+}
+
+h1, h2 {
   text-align: center;
 }
 
-h1 {
-  letter-spacing: 2px;
-  margin-bottom: 30px;
-}
-
 input {
-  width: 300px;
-  padding: 12px;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
   border: 1px solid #ccc;
-  margin-top: 10px;
 }
 
 button {
-  padding: 12px 18px;
+  padding: 10px 15px;
   background: #b08d57;
   color: white;
   border: none;
   cursor: pointer;
-  margin-left: 10px;
 }
 
 button:hover {
   background: #8c6d3d;
 }
 
-/* RESULT BOX */
-.result {
+.section {
   margin-top: 30px;
   padding: 20px;
   border: 1px solid #d6c6a5;
   background: #faf8f3;
-  text-align: left;
+}
+
+.block {
+  border-left: 4px solid #b08d57;
+  padding: 10px;
+  margin-top: 10px;
+  background: #fff;
+  font-size: 14px;
+}
+
+.verified { color: green; font-weight: bold; }
+.error { color: red; font-weight: bold; }
+
+/* ADMIN PANEL HIDE */
+#adminPanel {
   display: none;
 }
 
-.status {
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.verified {
-  color: green;
-}
-
-.invalid {
-  color: red;
+/* LOGIN BOX */
+.loginBox {
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid #999;
+  background: #fff;
 }
 </style>
 </head>
@@ -81,75 +84,180 @@ button:hover {
 <body>
 
 <div class="container">
-  <div class="card">
+<div class="panel">
 
-    <h1>Certificate Verification Portal</h1>
+<h1>DRF Chain System</h1>
 
-    <p>Enter Certificate ID to verify authenticity</p>
+<!-- ================= ADMIN LOGIN ================= -->
+<div class="section">
+<h2>🔐 Admin Login</h2>
 
-    <input type="text" id="certId" placeholder="e.g. DRF-2026-0001">
-    <button onclick="verify()">Verify</button>
+<div class="loginBox">
+  <input id="adminUser" placeholder="Admin Username">
+  <input id="adminPass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="loginMsg"></p>
+</div>
 
-    <div id="result" class="result"></div>
+</div>
 
-  </div>
+<!-- ================= ADMIN PANEL ================= -->
+<div class="section" id="adminPanel">
+
+<h2>👨‍💼 Admin Panel (Issue Certificate)</h2>
+
+<input id="name" placeholder="Student Name">
+<input id="govid" placeholder="Government ID (A-XXX**)">
+<input id="course" placeholder="Course Name">
+<button onclick="addCertificate()">Generate Certificate</button>
+
+</div>
+
+<!-- ================= VERIFY PANEL ================= -->
+<div class="section">
+<h2>🔐 Public Verification Portal</h2>
+
+<input id="verifyId" placeholder="Enter Certificate ID">
+<button onclick="verifyCertificate()">Verify</button>
+
+<div id="verifyResult"></div>
+</div>
+
+<!-- ================= BLOCKCHAIN ================= -->
+<div class="section">
+<h2>⛓️ Blockchain Ledger</h2>
+<div id="chainView"></div>
+</div>
+
+</div>
 </div>
 
 <script>
-/* =========================
-   DATABASE (BLOCKCHAIN STYLE)
-========================= */
 
-const certificates = {
-  "DRF-2026-0001": {
-    name: "Hassan Fayaz",
-    id: "A-303**8",
-    course: "Master Level Certification in Web3 Blockchain Engineering",
-    status: "Verified"
-  },
+//////////////////////////////
+// ADMIN LOGIN
+//////////////////////////////
 
-  "DRF-2026-0002": {
-    name: "Ali Ahmed",
-    id: "A-889**2",
-    course: "Master Level Certification in Smart Contract Development",
-    status: "Verified"
-  },
+function login() {
+  const u = document.getElementById("adminUser").value;
+  const p = document.getElementById("adminPass").value;
 
-  "DRF-2026-0003": {
-    name: "Sara Mohamed",
-    id: "A-112**7",
-    course: "Master Level Certification in AI Blockchain Systems",
-    status: "Verified"
-  }
-};
-
-/* =========================
-   VERIFY FUNCTION
-========================= */
-
-function verify() {
-  const input = document.getElementById("certId").value;
-  const resultBox = document.getElementById("result");
-
-  const cert = certificates[input];
-
-  resultBox.style.display = "block";
-
-  if (cert) {
-    resultBox.innerHTML = `
-      <div class="status verified">✔ CERTIFICATE VERIFIED</div>
-      <p><b>Name:</b> ${cert.name}</p>
-      <p><b>Government ID:</b> ${cert.id}</p>
-      <p><b>Course:</b> ${cert.course}</p>
-      <p><b>Certificate ID:</b> ${input}</p>
-    `;
+  if (u === "Fayaz91000" && p === "91000") {
+    document.getElementById("adminPanel").style.display = "block";
+    document.getElementById("loginMsg").innerHTML = "✔ Access Granted";
+    document.getElementById("loginMsg").style.color = "green";
   } else {
-    resultBox.innerHTML = `
-      <div class="status invalid">❌ CERTIFICATE NOT FOUND</div>
-      <p>This certificate is not registered in DRF Chain system.</p>
-    `;
+    document.getElementById("loginMsg").innerHTML = "❌ Invalid Credentials";
+    document.getElementById("loginMsg").style.color = "red";
   }
 }
+
+//////////////////////////////
+// BLOCKCHAIN STORAGE
+//////////////////////////////
+
+let chain = JSON.parse(localStorage.getItem("drf_chain")) || [];
+
+//////////////////////////////
+// SHA-256 HASH
+//////////////////////////////
+
+async function hash(data) {
+  const enc = new TextEncoder().encode(data);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+//////////////////////////////
+// ADD CERTIFICATE (ADMIN)
+//////////////////////////////
+
+async function addCertificate() {
+
+  const name = document.getElementById("name").value;
+  const govid = document.getElementById("govid").value;
+  const course = document.getElementById("course").value;
+
+  const certId = "DRF-2026-" + (1000 + chain.length);
+
+  const prevHash = chain.length ? chain[chain.length - 1].hash : "0";
+
+  const data = certId + name + govid + course + prevHash;
+
+  const newHash = await hash(data);
+
+  const block = {
+    certId,
+    name,
+    govid,
+    course,
+    prevHash,
+    hash: newHash
+  };
+
+  chain.push(block);
+  localStorage.setItem("drf_chain", JSON.stringify(chain));
+
+  renderChain();
+
+  alert("Certificate Created: " + certId);
+}
+
+//////////////////////////////
+// VERIFY CERTIFICATE
+//////////////////////////////
+
+async function verifyCertificate() {
+
+  const id = document.getElementById("verifyId").value;
+  const box = document.getElementById("verifyResult");
+
+  const block = chain.find(b => b.certId === id);
+
+  if (!block) {
+    box.innerHTML = "<p class='error'>❌ NOT FOUND</p>";
+    return;
+  }
+
+  const data = block.certId + block.name + block.govid + block.course + block.prevHash;
+  const check = await hash(data);
+
+  if (check === block.hash) {
+    box.innerHTML = `
+      <p class='verified'>✔ VERIFIED</p>
+      <p><b>Name:</b> ${block.name}</p>
+      <p><b>Gov ID:</b> ${block.govid}</p>
+      <p><b>Course:</b> ${block.course}</p>
+      <p><b>ID:</b> ${block.certId}</p>
+    `;
+  } else {
+    box.innerHTML = "<p class='error'>⚠ TAMPER DETECTED</p>";
+  }
+}
+
+//////////////////////////////
+// RENDER CHAIN
+//////////////////////////////
+
+function renderChain() {
+  const view = document.getElementById("chainView");
+  view.innerHTML = "";
+
+  chain.forEach(b => {
+    view.innerHTML += `
+      <div class="block">
+        <b>${b.certId}</b><br>
+        ${b.name} | ${b.course}<br>
+        Hash: ${b.hash}
+      </div>
+    `;
+  });
+}
+
+renderChain();
+
 </script>
 
 </body>
