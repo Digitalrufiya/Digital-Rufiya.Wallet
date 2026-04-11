@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DRF Wallet</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0d1117"/>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0d1117;
+  color:#fff;
+  text-align:center;
+}
+
+/* HEADER */
+.header {
+  padding:15px;
+  background:#161b22;
+}
+.header img {
+  width:70px;
+  border-radius:15px;
+}
+
+/* SEARCH */
+.search {
+  padding:10px;
+}
+.search input {
+  width:90%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:#21262d;
+  color:#fff;
+}
+
+/* GRID */
+.grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+  padding:15px;
+}
+.icon {
+  background:#161b22;
+  padding:10px;
+  border-radius:15px;
+}
+.icon img {
+  width:50px;
+  height:50px;
+}
+.icon div {
+  font-size:12px;
+  margin-top:5px;
+}
+
+/* BUTTON */
+.btn {
+  display:block;
+  margin:15px;
+  padding:15px;
+  background:#ff9800;
+  border-radius:10px;
+  color:white;
+  text-decoration:none;
+}
+
+/* VERSE */
+.card {
+  background:#161b22;
+  margin:15px;
+  padding:15px;
+  border-radius:15px;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- LOGO -->
+
+<div class="header">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg">
+</div>
+
+<!-- SEARCH -->
+
+<div class="search">
+  <input type="search" placeholder="Search or open page..." onkeydown="handleSearch(event)">
+</div>
+
+<!-- GRID -->
+
+<div class="grid">
+
+  <div class="icon" onclick="go('wallet.html')">
+    <img src="https://img.icons8.com/fluency/96/wallet.png">
+    <div>Wallet</div>
+  </div>
+
+  <div class="icon" onclick="go('Mint certificate.html')">
+    <img src="https://img.icons8.com/fluency/96/certificate.png">
+    <div>Mint</div>
+  </div>
+
+  <div class="icon" onclick="go('DRFRobo.html')">
+    <img src="https://img.icons8.com/fluency/96/robot.png">
+    <div>Robo</div>
+  </div>
+
+  <div class="icon" onclick="go('DRFuniversity.html')">
+    <img src="https://img.icons8.com/fluency/96/graduation-cap.png">
+    <div>University</div>
+  </div>
+
+  <div class="icon" onclick="go('Media/media.html')">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png">
+    <div>Social</div>
+  </div>
+
+  <div class="icon" onclick="go('DRFtube/tube.html')">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png">
+    <div>Tube</div>
+  </div>
+
+  <div class="icon" onclick="go('Quran/quran.html')">
+    <img src="https://img.icons8.com/fluency/96/quran.png">
+    <div>Quran</div>
+  </div>
+
+  <div class="icon" onclick="go('aboutus.html')">
+    <img src="https://img.icons8.com/fluency/96/info.png">
+    <div>About</div>
+  </div>
+
+</div>
+
+<!-- WITHDRAW -->
+
+<a href="redotpay.html" class="btn">💳 Withdraw to ATM</a>
+
+<!-- QURAN -->
+
+<div class="card">
+  <h3>📖 Daily Quran Verse</h3>
+  <div id="verse">Loading...</div>
+</div>
+
+<script>
+function go(url){
+  window.location.href = url;
+}
+
+function handleSearch(e){
+  if(e.key === 'Enter'){
+    let q = e.target.value;
+    if(q.endsWith('.html')) location.href = q;
+    else window.open("https://google.com/search?q="+q);
+  }
+}
+
+async function loadVerse(){
+  try{
+    let res = await fetch("https://api.alquran.cloud/v1/ayah/random");
+    let data = await res.json();
+    document.getElementById("verse").innerHTML =
+      data.data.text + "<br><b>" + data.data.surah.name + "</b>";
+  }catch{
+    document.getElementById("verse").innerText = "Failed";
+  }
+}
+loadVerse();
+</script>
+
+</body>
+</html>
