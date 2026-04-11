@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DRF Wallet</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0d1117"/>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0d1117;
+  color:#fff;
+}
+
+/* HEADER */
+.header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+  background:#161b22;
+}
+.header img {
+  width:45px;
+  border-radius:10px;
+}
+.balance {
+  font-size:18px;
+  font-weight:bold;
+}
+
+/* SEARCH */
+.search {
+  margin:15px;
+}
+.search input {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:#21262d;
+  color:#fff;
+}
+
+/* ACTION BUTTONS */
+.actions {
+  display:flex;
+  justify-content:space-around;
+  margin:15px 0;
+}
+.action {
+  text-align:center;
+}
+.action button {
+  background:#238636;
+  border:none;
+  padding:12px;
+  border-radius:50%;
+  color:#fff;
+  font-size:18px;
+}
+.action div {
+  margin-top:5px;
+  font-size:13px;
+}
+
+/* GRID */
+.grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+  padding:15px;
+}
+.icon {
+  text-align:center;
+}
+.icon img {
+  width:60px;
+  height:60px;
+  border-radius:15px;
+}
+.icon div {
+  margin-top:5px;
+  font-size:12px;
+}
+
+/* CARD */
+.card {
+  background:#161b22;
+  margin:15px;
+  padding:15px;
+  border-radius:15px;
+}
+
+/* BUTTON */
+.btn {
+  display:block;
+  margin:15px;
+  padding:15px;
+  text-align:center;
+  background:#ff9800;
+  border-radius:10px;
+  font-weight:bold;
+  text-decoration:none;
+  color:white;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<div class="header">
+  <img src="https://ik.imagekit.io/ttbbg9ocv/viber_image_2025-09-16_11-04-58-865.jpg">
+  <div class="balance">💰 0.00 DRF</div>
+</div>
+
+<!-- SEARCH -->
+
+<div class="search">
+  <input type="search" placeholder="Search anything..." onkeydown="handleSearch(event)">
+</div>
+
+<!-- QUICK ACTIONS -->
+
+<div class="actions">
+  <div class="action">
+    <button onclick="navigateTo('wallet.html')">💸</button>
+    <div>Send</div>
+  </div>
+  <div class="action">
+    <button onclick="navigateTo('wallet.html')">📥</button>
+    <div>Receive</div>
+  </div>
+  <div class="action">
+    <button onclick="navigateTo('Mint certificate.html')">🪙</button>
+    <div>Mint</div>
+  </div>
+  <div class="action">
+    <button onclick="navigateTo('redotpay.html')">🏧</button>
+    <div>Withdraw</div>
+  </div>
+</div>
+
+<!-- GRID MENU -->
+
+<div class="grid">
+
+  <div class="icon" onclick="navigateTo('wallet.html')">
+    <img src="https://img.icons8.com/fluency/96/wallet.png">
+    <div>Wallet</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('Mint certificate.html')">
+    <img src="https://img.icons8.com/fluency/96/certificate.png">
+    <div>Mint NFT</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('DRFRobo.html')">
+    <img src="https://img.icons8.com/fluency/96/robot.png">
+    <div>DRF Robo</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('DRFuniversity.html')">
+    <img src="https://img.icons8.com/fluency/96/graduation-cap.png">
+    <div>University</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('Media/media.html')">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2001_10_55%20PM.png">
+    <div>Social</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('DRFtube/tube.html')">
+    <img src="https://ik.imagekit.io/ttbbg9ocv/ChatGPT%20Image%20Jun%202,%202025,%2009_15_02%20AM.png">
+    <div>DRFTube</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('Quran/quran.html')">
+    <img src="https://img.icons8.com/fluency/96/quran.png">
+    <div>Quran</div>
+  </div>
+
+  <div class="icon" onclick="navigateTo('aboutus.html')">
+    <img src="https://img.icons8.com/fluency/96/info.png">
+    <div>About</div>
+  </div>
+
+</div>
+
+<!-- CARD -->
+
+<div class="card">
+  <h3>📖 Daily Quran Verse</h3>
+  <div id="verse">Loading...</div>
+</div>
+
+<!-- BUTTON -->
+
+<a href="redotpay.html" class="btn">💳 Withdraw via ATM</a>
+
+<script>
+function navigateTo(url){
+  window.location.href = url;
+}
+
+function handleSearch(e){
+  if(e.key === 'Enter'){
+    let q = e.target.value;
+    if(q.startsWith('http')) location.href = q;
+    else window.open("https://google.com/search?q="+q);
+  }
+}
+
+async function loadVerse(){
+  try{
+    let res = await fetch("https://api.alquran.cloud/v1/ayah/random");
+    let data = await res.json();
+    document.getElementById("verse").innerHTML =
+      data.data.text + "<br><b>" + data.data.surah.name + "</b>";
+  }catch{
+    document.getElementById("verse").innerText = "Failed to load";
+  }
+}
+loadVerse();
+</script>
+
+</body>
+</html>
