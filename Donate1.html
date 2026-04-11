@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRF Smart Donation</title>
+
+<style>
+body {
+  font-family: Arial;
+  background:#0d1117;
+  color:white;
+  text-align:center;
+  padding:20px;
+}
+
+h2 {
+  margin-bottom:5px;
+}
+
+.card {
+  background:#161b22;
+  padding:20px;
+  border-radius:15px;
+  max-width:400px;
+  margin:auto;
+  box-shadow:0 5px 20px rgba(0,0,0,0.6);
+}
+
+input {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  margin:10px 0;
+  background:#21262d;
+  color:white;
+  font-size:16px;
+}
+
+.quick {
+  display:flex;
+  gap:10px;
+  justify-content:center;
+}
+
+.quick button {
+  flex:1;
+  background:#30363d;
+}
+
+button {
+  margin-top:10px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+  width:100%;
+}
+
+.primary { background:#238636; color:white; }
+.wallet { background:#ff9800; color:white; }
+.copy { background:#1f6feb; color:white; }
+
+img {
+  width:180px;
+  margin:15px 0;
+  border-radius:10px;
+}
+
+.address {
+  background:#21262d;
+  padding:10px;
+  border-radius:10px;
+  font-size:13px;
+  word-break:break-all;
+}
+
+.warning {
+  margin-top:15px;
+  font-size:12px;
+  color:#ffcc00;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>💖 Support DRF Project</h2>
+<p>Send USDC (BNB Chain)</p>
+
+<div class="card">
+
+  <!-- AMOUNT INPUT -->
+
+  <input type="number" id="amount" placeholder="Enter amount (USDC)">
+
+  <!-- QUICK AMOUNTS -->
+
+  <div class="quick">
+    <button onclick="setAmount(5)">5</button>
+    <button onclick="setAmount(10)">10</button>
+    <button onclick="setAmount(50)">50</button>
+  </div>
+
+  <!-- OPEN WALLET -->
+
+<button class="wallet" onclick="openWallet()">🚀 Send via Wallet</button>
+
+  <!-- QR -->
+
+  <img id="qr" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=0x88253D87990EdD1E647c3B6eD21F57fb061a3040">
+
+  <!-- ADDRESS -->
+
+  <div class="address" id="wallet">
+    0x88253D87990EdD1E647c3B6eD21F57fb061a3040
+  </div>
+
+  <!-- COPY -->
+
+<button class="copy" onclick="copyAddress()">📋 Copy Address</button>
+
+  <div class="warning">
+    ⚠️ Only send USDC via BNB Smart Chain (BEP20)
+  </div>
+
+</div>
+
+<script>
+
+const address = "0x88253D87990EdD1E647c3B6eD21F57fb061a3040";
+
+// SET QUICK AMOUNT
+function setAmount(val){
+  document.getElementById("amount").value = val;
+}
+
+// COPY
+function copyAddress(){
+  navigator.clipboard.writeText(address);
+  alert("✅ Address copied!");
+}
+
+// SMART WALLET OPEN
+function openWallet(){
+  let amount = document.getElementById("amount").value;
+
+  let url = `https://link.trustwallet.com/send?address=${address}`;
+
+  if(amount){
+    url += `&amount=${amount}`;
+  }
+
+  window.location.href = url;
+
+  setTimeout(()=>{
+    alert("If wallet didn’t open, use QR or copy address.");
+  },2000);
+}
+
+</script>
+
+</body>
+</html>
